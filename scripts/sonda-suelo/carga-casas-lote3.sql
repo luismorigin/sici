@@ -1,0 +1,25 @@
+INSERT INTO propiedades_v2
+ (url, fuente, tipo_operacion, tipo_propiedad_original, latitud, longitud,
+  area_total_m2, area_terreno_m2, dormitorios, banos, precio_usd, moneda_original,
+  tipo_cambio_detectado, depende_de_tc, status, es_activa, id_condominio_master, metodo_match)
+VALUES
+('https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-1200164217-35',
+ 'remax','venta','casa',-17.70036861,-63.17705725,
+ 160,233,4,3,220000,'USD',
+ 'no_especificado',false,'completado',true,16,'carga_piloto_casas_19jun'),
+('https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-120033133-23',
+ 'remax','venta','casa',-17.70155424,-63.19072008,
+ 304,NULL,4,4,270000,'USD',
+ 'no_especificado',false,'completado',true,27,'carga_piloto_casas_19jun'),
+('https://c21.com.bo/propiedad/106414_hermosa-casa-en-venta-zona-norte-km-8-1-2-entrando-por-mainter',
+ 'c21','venta','casa',-17.700956719473485,-63.1761702501068,
+ 121,150,3,2,115000,'BOB',
+ 'no_especificado',false,'completado',true,25,'carga_piloto_casas_19jun'),
+('https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-120034064-108',
+ 'remax','venta','casa',-17.69979624,-63.17900419,
+ 487,NULL,4,4,550000,'USD',
+ 'no_especificado',false,'completado',true,16,'carga_piloto_casas_19jun'),
+('https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-1250013600-5',
+ 'remax','venta','casa',-17.68295131,-63.14572025,
+ 175,NULL,4,3,132632,'USD',
+ 'no_especificado',false,'completado',true,3,'carga_piloto_casas_19jun');

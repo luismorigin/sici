@@ -8,7 +8,11 @@ Variante liviana del audit mensual. Cubre props nuevas en una ventana temporal u
 
 Cuándo usarlo: lunes a la mañana (o cualquier día) para limpiar la deuda de props nuevas mientras están frescas. Complementa al `/audit-feed-ventas-mensual` que cubre todo el feed + drift Firecrawl.
 
-## Versión actual: v1.7 — 17-jun-2026
+## Versión actual: v1.8 — 23-jun-2026
+
+v1.8 **agrega el check 2.9 — flag TC `paralelo` contradicho por el texto** (props que cotizan al oficial/TC7 pero quedaron marcadas paralelo → el feed las infla ×1.43 con `precio_usd` ya correcto). Es **complementario al 2.1**, no lo pisa: el 2.1 caza `precio_usd` mal (ratio `precio_usd/billete`≈1.4), el 2.9 caza el **flag** mal (ratio≈1.0, invisible al 2.1). Detectado 23-jun al destapar 169 props en Equipetrol (137 corregidas vía migraciones 263/264). Usa la **señal del portal** (`BOB/monto_anuncio`≈7=oficial / ≈10=paralelo) + agente-lector, y **NO viola la regla de oro** (solo mira `tc=paralelo`, nunca no_especificado/oficial). Causa raíz: el detector de TC ("Extractor Century21 v16.5") no tuvo rama 'oficial' hasta ~16-jun; el founder decidió NO tocar el detector (riesgo de FP en props nuevas) y cubrirlo con este check recurrente. Memoria `project_bug_tc_flag_paralelo_historico`.
+
+## v1.7 — 17-jun-2026
 
 v1.7 **convierte el check 3.1 de regex-juez a regex-filtro + juez LLM** (nuevo paso 3.1b). El query SQL del 3.1 sigue filtrando gratis, pero los flaggeados ya NO se discriminan a ojo (generaba falsos positivos/negativos en clusters numerados) — se escalan a un agente que **lee el anuncio** y da veredicto con el número/torre exacto (OK / ALIAS_FALTANTE / MISMATCH / SIN_NOMBRE). Lección de la sesión 17-jun: auditando la cola de matching ZN, un agente-lector cazó ~58 falsos positivos del motor (score 90-95) que el token/GPS no veían (atractor "CONDOMINIO ONE", "Macororó 15"≠"19"). Costo: créditos solo en los flaggeados. Ver `BACKLOG.md` → "PLAN — Upgrade auditoría de matching" para los items B/C/D y las otras 3 skills. Memoria: `project_matching_zn_aprobacion_16jun2026`.
 
@@ -122,7 +126,7 @@ ORDER BY 1 DESC, 2;
 > ```
 > Si `ultima` es de hoy/ayer → corrió. Solo alarmar si una fuente NO tiene discovery reciente.
 
-### 3. Capa 2 — Inconsistencias internas (7 checks)
+### 3. Capa 2 — Inconsistencias internas (8 checks)
 
 #### ⚠️ MODELO TC — leer antes de cualquier check de precio (evita el falso positivo del 25-may-2026)
 
@@ -289,6 +293,54 @@ ORDER BY v.area_total_m2 DESC;
 Análisis humano por caso: leer la cruda. Si dice claramente "N dormitorio(s)" para **la unidad** (no el rango del proyecto, ej "departamentos de 1 y 2 dormitorios") → corregir `dormitorios = N` + candar con el **formato objeto** (`'bloqueado', true, 'por', 'audit_dormitorios'` — ver "FORMATO CANÓNICO DEL CANDADO" en paso 8, NUNCA candar con string). Si es rango de proyecto sin especificar la unidad → dejar, no concluyente.
 
 **Por qué solo esta dirección**: el caso inverso (cruda dice "monoambiente" pero dorms≥1) NO se chequea — el "LLM-gana sobre discovery" del merge ya lo resuelve y genera falsos positivos de proyectos multi-tipología (Rhodium, Lofty Island). Ver memoria `audit_overrides_llm_dorms.md`.
+
+#### 2.9 Flag TC `paralelo` contradicho por el texto (props OFICIALES mal marcadas) 🔴 (NUEVO v1.8)
+
+**Distinto del 2.1 — no confundir.** El 2.1 detecta `precio_usd` MAL (quedó en oficial dentro de `tc=paralelo`, ratio `precio_usd/billete` ≈ 1.4). El 2.9 detecta el **FLAG mal con `precio_usd` correcto**: props marcadas `tc=paralelo` que en realidad cotizan al **oficial** → `precio_normalizado()` las infla ×1.43 en el feed, pero su `precio_usd` ya es el dólar correcto del anuncio (ratio `precio_usd/billete` ≈ **1.0**, por eso el 2.1 las da "OK" y se escapan). **NO viola la regla de oro** (que prohíbe flaguear no_especificado/oficial): este check SOLO mira `tc=paralelo`.
+
+**Causa raíz** (descubierto 23-jun-2026, migraciones 263/264): el detector `detectarTipoCambio()` ("Extractor Century21 v16.5") no tuvo rama 'oficial' hasta ~16-jun → props C21 viejas con "TC oficial/TC7" en el texto quedaron marcadas paralelo, y el pipeline no re-procesa props ya `completado`. Goteo nuevo posible por gaps de formato del detector ("T.C. Oficial" con puntos, "TC 6,96" decimales, inglés "Official Exchange Rate", "Bs.7"). Memoria `project_bug_tc_flag_paralelo_historico`.
+
+**🔑 Señal del portal (criterio avalado por el founder):** C21 convierte el precio USD a Bs al TC que el vendedor elige. `BOB / monto_del_anuncio ≈ 7` → cotiza **oficial** (el flag paralelo es un error → infla mal). `≈ 10` → cotiza **paralelo** (flag OK). Como `precio_usd = BOB/6.96`, una prop con `precio_usd ≈ BOB/6.96` (ratio `BOB/precio_usd` ≈ 6.96-7.0) es la que el portal convirtió al oficial.
+
+SQL filtro barato — props `tc=paralelo` + moneda BOB que el portal convirtió al oficial y NO mencionan "paralelo":
+
+```sql
+SELECT v.id, v.fuente, v.nombre_edificio, v.precio_usd,
+       ROUND(v.precio_usd / NULLIF(v.area_total_m2,0)) AS m2_billete,
+       ROUND(precio_normalizado(v.precio_usd, v.tipo_cambio_detectado) / NULLIF(v.area_total_m2,0)) AS m2_feed,
+       ROUND(p.precio_usd_original::numeric / NULLIF(v.precio_usd,0), 2) AS bob_div_preciousd
+FROM v_mercado_venta v JOIN propiedades_v2 p ON p.id = v.id
+WHERE <filtro args>
+  AND v.tipo_cambio_detectado = 'paralelo'
+  AND v.moneda_original = 'BOB'
+  AND p.precio_usd_original::numeric / NULLIF(v.precio_usd,0) BETWEEN 6.7 AND 7.2   -- portal convirtió al OFICIAL
+  AND lower(coalesce(p.datos_json_enrichment->>'descripcion','')) !~ 'paralelo|blue|tc del d[ií]a|cambio del d[ií]a'
+  AND NOT (p.campos_bloqueados ? 'tipo_cambio_detectado')
+ORDER BY m2_feed DESC;
+```
+
+El SQL **solo filtra** — el veredicto lo da el agente-lector (no flaguear a ojo; el texto trae mil formatos de TC).
+
+##### 2.9b — Juez LLM (lectura del anuncio)
+
+Si el query devuelve >0, lanzar agente(s) `general-purpose` (repartir en lotes de ~25 si son muchos) que para cada prop lean el texto y clasifiquen el TC real. Pasarles:
+
+```sql
+SELECT v.id, v.precio_usd, ROUND(p.precio_usd_original::numeric) AS bob,
+       left(regexp_replace(coalesce(p.datos_json_enrichment->>'descripcion',''), E'\\s+',' ','g'), 600) AS texto
+FROM v_mercado_venta v JOIN propiedades_v2 p ON p.id=v.id
+WHERE v.id IN (<ids del 2.9>);
+```
+
+Clasificación de cada prop (⚠️ REGLA: "TC 7"/"tipo de cambio 7" SIN la palabra "paralelo" = **OFICIAL**, no paralelo; el paralelo está en ~10):
+- **oficial** 🔴 — declara "TC oficial / TC7 / TC 6,96 / tipo de cambio 7 / Bs.7 / Official Exchange Rate" → flag debe ser `oficial`.
+- **bs_real** 🔴 — precio cotizado en bolivianos (Bs X) → flag `no_especificado` (se convierte al oficial).
+- **sin_tc** 🟡 — precio USD sin TC: aplicar señal del portal → BOB/monto≈7 ⇒ `no_especificado` (no inflar); BOB/monto≈10 ⇒ es el otro caso (precio_usd inflado, corregir el monto, ver 2.1/canónico).
+- **paralelo** 🟢 — declara "paralelo/blue/TC del día" → flag OK, dejar (no debería aparecer, el SQL ya excluye estos textos).
+
+##### 2.9c — Acción (migración versionada, NO script suelto)
+
+Las `oficial`/`bs_real`/`sin_tc`-oficial → juntar los ids y emitir una **migración versionada** (`sql/migrations/NNN_fix_tc_*.sql`, patrón de mig 263/264): UPDATE con guard `tipo_cambio_detectado='paralelo' AND fuente='century21'`, rollback inline, registrar en `MIGRATION_INDEX.md`. El founder la corre en Supabase (el MCP es readonly). **Verificar post-fix que el $/m² baja al rango normal** (~1900-2200 Equipetrol). **Las correcciones a producción van a migraciones del repo, NUNCA scripts sueltos** (corrección del founder 23-jun). Excluir props cuyo `precio_usd` mezcla extras (depto+parqueos) o sea corrupto → revisar a mano.
 
 ### 4. Capa 3 — Matching audit (4 checks recalibrados)
 
@@ -566,9 +618,13 @@ Antes de armar el reporte, marcar como **ruido conocido**:
 
 ## 🔴 CRÍTICO (X props con acción inmediata sugerida)
 
-### Doble normalización TC paralelo (N props)
+### Doble normalización TC paralelo (N props) [check 2.1]
 Solo `tc=paralelo` con ratio `precio_usd/billete_desc` ≈ 1.2–1.6 (precio_usd quedó en oficial). NO incluir no_especificado.
 | ID | Edificio | precio_usd (oficial) | billete desc | ratio | corregir a |
+
+### Flag TC paralelo contradicho — props oficiales mal marcadas (N props) [check 2.9]
+Props `tc=paralelo` con `BOB/precio_usd`≈7 (portal convirtió al oficial) cuyo texto declara TC oficial/TC7/Bs.7. `precio_usd` OK; el flag las infla ×1.43. Veredicto del agente-lector 2.9b. Acción → migración versionada (patrón 263/264).
+| ID | Edificio | precio_usd | m2_feed (inflado) | TC en texto | clasificación 2.9b |
 
 ### Cambio de precio explícito (N props)
 | ID | Edificio | precio BD | desc dice | diff% |
@@ -659,13 +715,14 @@ Si `protegido = false`, el candado quedó en formato string → re-aplicar con l
 - **Total feed / volumen semanal**: ver conteo base del paso 2 (no hardcodear).
 - **Casos canónicos**:
   - **Doble normalización paralelo (check 2.1)**: #1948 IFE (precio_usd 229.885 = oficial, billete desc $160K), #1949 Element (76.698 vs $53.650). Corregidos 25-may. Correctas de contraste (ratio 1.0, NO tocar): #317 La Riviera ($350K billete), #1573 Sirari ($1.5M billete). **#1939 You Smart (precio_usd=223) NO es este bug — es parse de magnitud (223 vs 223.000), lo agarra check 2.4.**
+  - **Flag paralelo contradicho (check 2.9, 23-jun-2026)**: #2703 Stone By Portobello (anuncio "TC7", feed $106.917 → real ~$72K), #347 Stone 3 ("69.480 $us TC7", feed $99.428), #383 Concret ("71.300 T.C. Oficial"), #1412 Uptown Drei ("Official Exchange Rate 7", inglés), #1204 ("TC 6,96"), #1057-1071 ("Precios al cambio Bs.7"). Todas `tc=paralelo` con `BOB/precio_usd`≈6.96-7.0 y precio_usd correcto (ratio precio_usd/billete≈1.0 → invisibles al 2.1). Corregidas en migraciones 263 (62 oficial + 7 bs_real) + 264 (58 sin-TC → no_especificado + 10 con precio_usd inflado [BOB/monto≈10] → corregir monto). **Contraste — NO tocar (paralelo legítimo):** #622, #2656, #2819 ("TC del día" = paralelo). **Excluidos:** #1736 (precio_usd mezcla depto+parqueos), #1387 (precio_usd corrupto $10.273).
   - **Cambio de precio explícito**: #1702 Nano Smart ($66K→$55K)
   - **GPS del listing mal cargado por broker** (no requiere acción): #1713 Cond Mirage (broker C21 puso GPS errado, pm tenía el correcto), #1733 Santorini Suites (broker puso GPS mal en 1 de 18 listings)
   - **GPS del pm errado** (requiere actualizar pm): caso teórico no detectado aún en práctica
   - **Matching errado por GPS — pm realmente distinto**: 7 Eurodesign Tower asignadas a Residences (A1)
   - **Área absurda**: #1788 Aguaí (237,960 m² real 237.96)
   - **Precio absurdo**: #1827 Eurodesign Le Blanc ($18,678 real $130K)
-  - **Alquiler/anticrético clasificado como venta** (8-jun-2026, check 2.4 sub-caso): #2597 Sky Elite (alquiler Bs 4.200 → $603, $17/m²), #2641 Ziri Zwei (alquiler Bs 6.000 → $862, $9/m²), #2613/#2614/#2615 (anticrético Radial 26, $343-366/m²). Detectados por $/m² absurdo pero el bug era `tipo_operacion`, no el precio. Reclasificados + candados.
+  - **Alquiler/anticrético clasificado como venta** (8-jun-2026, check 2.4 sub-caso): #2597 Sky Elite (alquiler Bs 4.200 → $603, $17/m²), #2641 Ziri Zwei (alquiler Bs 6.000 → $862, $9/m²), #2613/#2614/#2615 (anticrético Radial 26, $343-366/m²). Detectados por $/m² absurdo pero el bug era `tipo_operacion`, no el precio. Reclasificados + candados. **#2701 Sky Aqualina (ZN, 23-jun-2026)**: alquiler Bs 6.500 → $934, ~$10/m²; reclasificado a alquiler (`precio_mensual_bob=6500`, `precio_mensual_usd=933.91`) + candado formato objeto. Fix verificado: sale de `v_mercado_venta`, entra a `v_mercado_alquiler`. Persiste el patrón (ver `CALIDAD_DATOS_BACKLOG.md` → decisión de NO automatizar por duales).
   - **Candado en formato string NO protege** (8-jun-2026): candar con `'{"precio_usd":"audit_..."}'::jsonb` (string) pasa el check `?` pero `campo_esta_bloqueado()` lo lee como FALSE → el merge repisa. Usar SIEMPRE formato objeto `{"bloqueado":true,...}` (ver paso 8). #2596/#2579 quedaron bien porque se corrigieron desde el panel admin (escribe objeto).
   - **nombre_edificio basura**: #1824 "Solo\npiso", #1820 "De Edificio Habitacional", #1819 "PLANTA BAJA", #1688 "Venta", #1700 "Sky Blue Calle"
   - **Sky Plaza Italia matching dudoso**: #874 era Eurodesign Soho asignado mal
@@ -677,7 +734,7 @@ Si `protegido = false`, el candado quedó en formato string → re-aplicar con l
 | Frecuencia | 1 vez/mes | 1 vez/semana o ad-hoc |
 | Costo | $1.75 (Firecrawl) | $0 |
 | Capa 1 (drift portal) | ✅ Sí | ❌ No |
-| Capa 2 (internas) | ✅ 4 checks | ✅ 7 checks recalibrados |
+| Capa 2 (internas) | ✅ 4 checks | ✅ 8 checks recalibrados |
 | Capa 3 (matching) | ✅ 1 check | ✅ 4 checks |
 | Capa 4 (anomalías) | ⚠️ Parcial | ✅ 3 checks |
 | Race condition guard | ❌ No | ✅ Sí (30 min) |
@@ -686,6 +743,20 @@ Si `protegido = false`, el candado quedó en formato string → re-aplicar con l
 | Detección de listings muertos | ✅ Sí | ❌ Requiere Firecrawl |
 
 ## Lecciones de calibración (changelog)
+
+### v1.8 — 2026-06-23 (check 2.9 — flag paralelo contradicho)
+
+Surge al revisar el feed nuevo `/zona-norte/ventas` (prop #2703 "Stone By Portobello": anuncio "51.000 dólares", feed mostraba $106.917). Destapó un bug de producción **que el check 2.1 no veía**: 169 deptos C21 en Equipetrol con `precio_usd` correcto pero `tipo_cambio_detectado='paralelo'` mal puesto → `precio_normalizado()` los inflaba ×1.43. El 2.1 no los agarra porque su firma es `precio_usd/billete`≈1.4 (precio_usd mal), y acá `precio_usd` está bien (ratio≈1.0).
+
+**Lección 1 — dos bugs de TC distintos:** (a) precio_usd mal [2.1: ratio 1.4], (b) flag mal [2.9: ratio 1.0 + texto dice oficial]. Confundirlos lleva a un FP o a no verlo.
+
+**Lección 2 — la señal del portal resuelve "sin TC declarado" sin decisión arbitraria:** `BOB/monto_anuncio`≈7 ⇒ el vendedor cotiza oficial (no inflar); ≈10 ⇒ paralelo. Validado: las 69 que decían "oficial" tenían ≈7; los 10 con precio_usd inflado tenían ≈10.
+
+**Lección 3 — el regex no alcanza, los agentes-lectores sí:** "TC 6,96", "Official Exchange Rate 7" (inglés), "Bs.7", "T.C. Oficial" (puntos) se escapan de cualquier regex. 4 agentes-lectores sobre 100 descripciones destaparon 21 oficiales que el regex no veía.
+
+**Lección 4 — la auditoría daba "Equipetrol limpio" en falso:** validaba `precio_usd` (correcto) y nunca el flag vs el TC del texto. El 2.9 cierra ese hueco.
+
+**Decisión:** NO tocar el detector del pipeline (riesgo de FP masivo en props nuevas); cubrir el goteo con este check recurrente + migración versionada cuando detecte. Histórico corregido con migraciones 263 (69 props) + 264 (68 props). Memoria `project_bug_tc_flag_paralelo_historico`.
 
 ### v1.3 — 2026-05-25 (post-falso-positivo TC)
 

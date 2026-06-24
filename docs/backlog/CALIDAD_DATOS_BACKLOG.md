@@ -57,7 +57,7 @@ El bug de monoambientes es un caso del patrón "el campo estructurado del portal
 
 ## `tipo_operacion` mal cargado en origen por C21 — NO automatizar mientras el volumen sea bajo (8 Jun 2026)
 
-**Problema:** corredores de Century21 cargan listings de **alquiler/anticrético** con el campo estructurado `tipoOperacion="venta"` en el origen. SICI copia ese campo y la prop entra al feed `/ventas` con precio basura (el canon mensual o el monto de anticrético en Bs ÷ 6.96 → ej. $603, $9/m²). Detectado en el audit semanal del 8-jun: 7 props (#2597, #2641 alquiler; #2613, #2614, #2615, #2599, #2616 anticrético). Todas reclasificadas + candadas (`tipo_operacion`, formato objeto).
+**Problema:** corredores de Century21 cargan listings de **alquiler/anticrético** con el campo estructurado `tipoOperacion="venta"` en el origen. SICI copia ese campo y la prop entra al feed `/ventas` con precio basura (el canon mensual o el monto de anticrético en Bs ÷ 6.96 → ej. $603, $9/m²). Detectado en el audit semanal del 8-jun: 7 props (#2597, #2641 alquiler; #2613, #2614, #2615, #2599, #2616 anticrético). Todas reclasificadas + candadas (`tipo_operacion`, formato objeto). **+1 (23-jun-2026): #2701** (alquiler "Sky Aqualina", Zona Norte, canon Bs 6.500 → precio_usd $934, ~$10/m²) — detectado de rebote al auditar el bug TC de ZN (no por el audit semanal), reclasificado a `alquiler` + `precio_mensual_bob=6500` + candado. El patrón persiste (4ª tanda); confirma que el clasificador `tipo_operacion` del discovery C21 sigue colando alquileres a venta — mantener la decisión de NO automatizar (volumen bajo, riesgo de duales).
 
 **Causa raíz — NO es bug de SICI:** el dato entra **envenenado desde C21**. El monto lo delata (4.200 Bs ≈ $603 es imposible para una venta — es canon mensual). El scraper de venta le pide a C21 "sección venta", y C21 devuelve estos listings *dentro* de esa sección porque el corredor los indexó como venta.
 
@@ -80,6 +80,19 @@ WHERE p.tipo_operacion='venta' AND p.fuente='century21'
   AND NOT campo_esta_bloqueado(campos_bloqueados,'tipo_operacion')
   AND p.url ~* 'anticretico';  -- 'en-alquiler' añade FP de duales ("alquiler o venta"), filtrar a mano
 ```
+
+## Precio/área rotos por parsing de C21 — barrido 23-jun-2026
+
+**Problema:** el campo `precioVenta`/área de C21 llega mal parseado al feed, generando $/m² absurdos. Tres sabores, detectados en el barrido del 23-jun (props con `precio_usd / area_total_m2 < $500`):
+1. **Separador de miles mal parseado**: "504.000" Bs → leído como 504 → $72 (#2123 Community Alto Norte); "617.500" → 617,5 → $89 (#2821 Macororó 10). El punto boliviano es separador de miles, pero el extractor/portal lo trata como decimal.
+2. **Captura errada del precio**: #1911 (Sky Art) — el portal muestra $201.149 (1,4M Bs) pero la BD tenía $19.397 (factor ~10). El extractor agarró un número equivocado.
+3. **Área ×100 / sin decimal / del condominio**: #2823 (4449 = 44,49 m²); #2060 (187 m² para un monoambiente — la desc dice 32,60); #2013/#2014 (el área es la del condominio = 400 m², no la unidad).
+
+**Detección:** `SELECT ... WHERE precio_usd / area_total_m2 < 500` sobre `v_mercado_venta` (= el check 2.4 "precio absurdo" de `/audit-feed-ventas-semanal`). **El precio/área real está en el portal** (`{url}?json=true` → `entity.precioVenta`, `entity.m2T`), recuperable con un fetch.
+
+**Corregidos 23-jun** (candado formato objeto sobre `precio_usd`/`area_total_m2`): #2123 ($72→$72.414), #2821 ($89→$88.721), #1911 ($19.397→$201.149), #2823 ($71→$71.121 + 4449→44,49 m²), #2060 (187→32,60 m²). #1387 dado de **baja** (`es_activa=false`, anuncio basura). **Pendientes:** #2013/#2014 (área del condominio → fetch para el área de la unidad). #2126 **dejado** ($38.655 barato pero real, preventa económica).
+
+**Causa de fondo:** parsing de precio/área en el extractor C21 ("Extractor Century21"). Como el TC (ver el bug de flag paralelo, migraciones 263-265), es lógica de extracción frágil enterrada en n8n. NO automatizar la corrección (riesgo de FP); se caza con el check 2.4 + fetch del portal cuando aparece. **Argumento más para el script híbrido** (parsing robusto + validación $/m² + captura del crudo).
 
 ## Baños Corregidos (14 props) - 21 Ene 2026
 

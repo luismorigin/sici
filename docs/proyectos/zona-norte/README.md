@@ -4,9 +4,11 @@
 
 ---
 
-## Estado actual — 16 Jun 2026
+## Estado actual — 23 Jun 2026
 
-**Fases 1-4 + #8 microzonas aplicadas (29-may):** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN. **Matching depurado (16-jun): venta 85.8%, alquiler 83.3%** (ver BITACORA). Próximo: #6 frontend `/mercado/zona-norte` → #7 alquiler.
+**Foco actual: pipeline de casas/vivienda ZN.** 305 casas ZN activas cargadas (con contacto del captador, 45 condominios en `condominios_master` mig 260+261); flujo híbrido manual (`scripts/sonda-suelo` + agentes-lectores, NO n8n). **Backfill 21-jun: las casas ya tienen todos los campos del contrato de deptos** — `fotos_urls`+`cantidad_fotos`, `descripcion`, `fecha_publicacion`, `codigo_propiedad`, `estacionamientos`/`oficina_telefono` (solo C21), además del `id` propio (ref pública `SIM-V<id>`) y `fuente` (Remax/C21). Script reusable `scripts/auditoria-cola-matching/backfill-campos-casas.mjs`. **Pendiente: feed `/ventas/casas` + cron (vista `v_mercado_casas` ✅ aplicada mig 262, 298 casas).**
+
+**Fases 1-4 + #8 microzonas aplicadas (29-may):** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN. **Matching de deptos depurado (16-19 jun): venta 85.8%, alquiler 83.3%** (ver BITACORA). **Feeds públicos ZN construidos 23-jun (dark launch / noindex):** `/zona-norte/ventas` + `/zona-norte/alquileres` (ver memoria `project_feed_zona_norte_aislamiento`). Próximo: feed casas → #6 frontend `/mercado/zona-norte`.
 
 | Hito | Estado |
 |---|---|
@@ -18,7 +20,8 @@
 | Match rate ZN venta | ✅ **85.8%** (16-jun, desde 19.7%) — aprobar sugerencias `pendiente_zona_norte` + 7 pm nuevos |
 | Match rate ZN alquiler | ✅ **83.3%** (16-jun) — mismo método; sin nombre → matchea por GPS, validación por URL de anuncio |
 | **#8 Microzonas (14 — grilla anillos×avenidas)** | ✅ **aplicado 29-may** (mig 254 + `lib/zonas.ts` + workflows discovery). Snapshot v4 descartado → ver #12 |
-| Fase 5 / #7: alquiler (replicar patrón) | ⬜ pendiente |
+| Fase 5 / #7: alquiler (replicar patrón) | ✅ feed `/zona-norte/alquileres` construido 23-jun (dark launch/noindex); discovery ZN activo desde Fase 3 |
+| Asset `og:image` ZN | ⬜ pendiente — subir `simon-mvp/public/skyline-zona-norte.jpg`. Los feeds ZN ya apuntan a esa ruta (commit `4ba18b2`); hasta subirla, compartir el link no muestra imagen de preview |
 | #6 Frontend `/mercado/zona-norte` | ⬜ pendiente — prototipo multi-macrozona |
 | #1.7 Detector automático de clusters emergentes | ⬜ pendiente — infraestructura escalable |
 | #5 Exposición pública | ⬜ post-validación 90 días |
@@ -113,4 +116,7 @@ Cuando llegue el momento de incorporar Zona Norte al flujo HITL formal (post-val
 
 **SÍ (MVP):** discovery de departamentos venta + alquiler de Zona Norte; pasar esa data por el pipeline real (enrichment → merge → verificador); validar calidad.
 
-**NO (por ahora):** matching con `proyectos_master`, fichas técnicas, posicionamiento de marca, landing, rutas públicas `/mercado/zona-norte`, comunicación a clientes B2B, casas/terrenos. Todo eso se decide **después** de que el motor funcione.
+**NO (por ahora):** matching con `proyectos_master`, fichas técnicas, posicionamiento de marca, landing, rutas públicas `/mercado/zona-norte`, comunicación a clientes B2B. Todo eso se decide **después** de que el motor funcione.
+
+> **Nota (20-jun):** casas/vivienda ZN YA es frente activo (305 casas cargadas con contacto, 45 condominios en `condominios_master`); falta el feed público. Terrenos siguen fuera de scope por ahora.
+> **Nota (21-jun):** backfill completado — las casas ya tienen fotos, descripción, fecha de publicación y código del portal (faltaban respecto al contrato de deptos). El feed público ya tiene todos los datos para renderizar cards completas; solo falta construirlo.

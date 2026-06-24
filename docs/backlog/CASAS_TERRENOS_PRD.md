@@ -1,6 +1,67 @@
 # PRD: Casas y Terrenos en Equipetrol
 
-> Status: Fase 1 ✓ + Fase 2 ✓ completadas | Autor: Lucho + Claude | Fecha: 2026-04-17 (Fases 1-2)
+> Status: Fase 1 ✓ + Fase 2 ✓ + **Fase 4 ✓ (condominios)** completadas | Fase 3 (feed público) pendiente | Autor: Lucho + Claude | Fecha: 2026-04-17 (Fases 1-2)
+> Actualización 2026-06-18: sonda de expansión a Zona Norte + Urubó (ver sección 0).
+> Actualización 2026-06-20: **Fase 4 implementada** (tabla `condominios_master` mig 260+261, 45 condominios curados, matcher areal `matchear_condominio()`, FK `id_condominio_master`). **Zona Norte tiene 305 casas activas cargadas** (vía flujo híbrido manual). Solo resta Fase 3: el feed `/ventas/casas` (vista `v_mercado_casas` ✅ aplicada mig 262, 298 casas).
+> Actualización 2026-06-21: **backfill de campos faltantes** — las casas ya tienen el contrato completo de deptos en `datos_json_enrichment`: `fotos_urls`+`cantidad_fotos`, `descripcion`, `fecha_publicacion` (columna), `codigo_propiedad`, `estacionamientos`/`oficina_telefono` (solo C21, Remax no los expone). Identificadores: `id` propio (ref `SIM-V<id>`) + `fuente` (Remax/C21) + `oficina_nombre` (franquicia). Cobertura: fotos 305/306, descripción 304/306, fecha 305/306, código 306/306. Script reusable `scripts/auditoria-cola-matching/backfill-campos-casas.mjs` (función `extraerCampos()` lista para el cron). **Fase 3 ya no depende de extraer fotos — todo el dato del feed está cargado.**
+
+---
+
+## 0. Sonda de expansión ZN + Urubó (18 jun 2026)
+
+Antes de escalar el pipeline fuera de Equipetrol se corrió una **sonda standalone**
+(`scripts/sonda-suelo/`, read-only, no toca producción) para medir dos incógnitas: **volumen**
+real y **suciedad** de los datos del broker. Resultados:
+
+**Volumen (únicos, polígono real + dedup cross-portal):**
+
+| Zona | Terrenos | Casas | Carácter |
+|---|---:|---:|---|
+| Zona Norte | 153 | **264** | Consolidada — dominan casas (mayoría vivienda final, ~17% demolibles) |
+| Urubó | **179** | 44 | Expansión — dominan terrenos (suelo puro / loteamientos) |
+
+Contra ~38 en Equipetrol. El volumen justifica la expansión. Precio/m² terreno coherente entre
+fuentes: ZN ~$236-250, Urubó ~$157-180.
+
+**Suciedad:**
+- ✅ Base física limpia en la fuente: área 93-100%, precio presente 100%, GPS 100%.
+- 🔴 **Moneda C21 47% sucia**: el listado marca `BOB` con texto en USD (subvalúa ~7×). El precio
+  del listado NO es confiable solo. **Resoluble**: el detalle C21 (`{url}?json=true` → `entity.moneda`)
+  trae moneda propia al 100%.
+- 🟡 Atributos finos escasos (el broker no los carga): frente 12-39%, uso de suelo 0-33%, esquina 0-18%.
+
+**Dos segmentos, no uno (corrección de encuadre):** las casas no son solo suelo para
+desarrolladores. La mayoría de las 264 de ZN son **vivienda final** (familia compradora). Esto
+parte el producto en dos audiencias con campos distintos:
+- **Vivienda final** (casa habitable): dormitorios, baños, área construida, garage, estado,
+  amenidades, **$/m² construido**, barrio. Mayor volumen en ZN.
+- **Suelo** (terreno + casa demolible): frente, fondo, esquina, uso de suelo, **$/m² terreno**.
+  Urubó (terrenos) + ZN (casas demolibles).
+
+**Pasada de vivienda (18 jun, `vivienda.mjs`):** 308 casas únicas (ZN 264, Urubó 44), tipología
+familiar real (mediana 3 dorms, $/m² construido ~$934-954). Área construida 97-100%, dorms 63-100%,
+baños 59-98%. **EL HALLAZGO:** lo que más valora una familia NO está estructurado en ningún portal
+(vive en el texto) pero está presente en alta proporción → **condominio/barrio cerrado 25-75%**
+(Remax 60-75%, la 1ª pregunta de una familia en SC, nadie la ofrece como filtro), jardín 70-75%,
+quincho 30-75%, piscina 20-50%, dependencia 10-30%. **Fotos: 95-100% con ≥5, mediana 10-15**
+(vs terreno, pobre). → MOAT del feed de vivienda = extraer con LLM lo que el portal no estructura
+y permitir filtrar por ello. Recomendación: **feed de vivienda en ZN** = mayor valor inmediato,
+menor riesgo visual; suelo (Urubó) = herramienta de datos B2B, no feed de consumo.
+**2º "bug" de captura Remax (resuelto 19-jun):** `number_parking` daba garage 0% — pero es **campo FANTASMA** (NO existe en la API `/api/search/casa/...`, verificado), no el mismo patrón que `land_m2`. Remax no expone parking estructurado → se fijó `estacionamientos: null` explícito en el discovery (extraerlo del texto en enrichment si se necesita).
+
+**Hallazgos técnicos reusables:**
+- Estrategia escalable (ya en ADR-004 zona-norte): traer todo SC + filtrar por GPS; no depender
+  de slugs Remax.
+- C21 detalle: `{url}?json=true` → `entity.{descripcion, metrosFrente, metrosFondo, tipoTerreno, moneda, precioFormat}`.
+- Remax detalle: parsear `data-page` (Inertia) → `props.listing.{description_website, marketing_description}`.
+
+**✅ Bug `land_m2` CORREGIDO Y APLICADO EN PRODUCCIÓN (n8n, 19-jun):** el discovery Remax casas/terrenos
+(`n8n/workflows/casas_terrenos/discovery_remax_casas_terrenos_v1.0.0.json`, nodo "Extraer Propiedades") parseaba
+`listing_information.land_area_m`, campo que **no existe** (el real es **`land_m2`**, vive en la API de búsqueda
+`remax.bo/api/search/terreno/...`, NO en el `data-page` del detalle). Se aplicaron 3 fixes en el mismo nodo:
+`land_area_m`→`land_m2`, `+toLowerCase()` en `subtype_property.name`, y `number_parking`→`null` (campo fantasma).
+Corrió limpio. **Impacto 0 hoy** (Equipetrol no tiene terrenos Remax reales); **recién importa al extender a Urubó**
+(~179 terrenos Remax). Ver `docs/backlog/DEUDA_TECNICA.md` + memoria `project_sonda_suelo_zn_urubo_jun2026`.
 
 ---
 
@@ -104,7 +165,7 @@ Equipetrol tiene volumen bajo de casas (~15-40 listings) y terrenos (~10-30 list
 **Entregable:** Feed publico en simonbo.com.
 
 **Dependencias:**
-- Volumen suficiente (esperar 2-3 semanas de capturas nocturnas)
+- ✓ **Volumen suficiente — ALCANZADO** (al 20-jun-2026 hay **305 casas ZN activas cargadas**). La vista `v_mercado_casas` ✅ ya está aplicada (mig 262, 298 casas); lo único que queda de Fase 3 es el feed `/ventas/casas`.
 - Evaluar si el card de casa necesita badges para ambientes adicionales (piscina, cuarto servicio, etc.)
 - Definir cómo mostrar TC en el feed (mostrar solo USD normalizado o también badge "TC paralelo"?)
 
@@ -120,9 +181,11 @@ Evidencia validada: al 18 Abr hay 5 casas en `inactivo_pending` (Remax) listas p
 **Snapshots de absorción:** ⏳ Backlog — esperar volumen.
 
 Razones para NO hacer ahora:
-- 19 props activas (13 casas + 6 terrenos dentro Equipetrol). Volumen insuficiente para métricas significativas.
+- 19 props activas (13 casas + 6 terrenos) **en Equipetrol**. Volumen insuficiente para métricas significativas en esa macrozona.
 - Umbral mínimo recomendado: ~50 props por tipo. Con 19, 1 prop = 5% de absorción → varianza enorme, conclusiones falsas.
 - El snapshot existente `market_absorption_snapshots` (mig 193) es para deptos venta.
+
+> **Actualización 20-jun-2026:** el conteo de 19 props era de **Equipetrol**. En **Zona Norte ya hay 305 casas** activas cargadas (umbral ≥50 superado holgadamente). Aun así, los snapshots de absorción para casas **siguen pendientes de implementar** — el volumen ya no es el bloqueante, falta la mecánica.
 
 Cuando extender a casas/terrenos:
 - [ ] Cuando haya ≥50 casas Y ≥30 terrenos activos (estimado 2-3 meses de captura nocturna)
@@ -141,7 +204,7 @@ Cuando extender a casas/terrenos:
   - **Casa**: dormitorios, baños, niveles, garage, piscina, jardín, cuarto servicio, ambientes_adicionales (chips), amenities, equipamiento, estado_propiedad, plan_pagos
   - **Terreno**: area_terreno, frente, fondo, uso_suelo, tiene_construccion, servicios_disponibles (toggles), topografía, plan_pagos
 - [ ] Candados (`campos_bloqueados`) para campos tipo-específicos nuevos (area_terreno, frente, fondo, niveles, etc.)
-- [ ] Galería de fotos + lightbox (cuando Fase 2 extraiga fotos)
+- [ ] Galería de fotos + lightbox (✅ fotos ya extraídas para ZN: `datos_json_enrichment->fotos_urls`, backfill 21-jun)
 - [ ] Descripción original + descripción limpia LLM side-by-side para validar
 - [ ] Badge de `excluida_zona` si el LLM detectó otra zona — con CTA "confirmar exclusión" o "override y volver a completado"
 - [ ] Badge de TC detectado (oficial/paralelo/no_especificado) con link para corregir
@@ -168,12 +231,16 @@ Cuando extender a casas/terrenos:
 - [ ] Alerta específica: si >5 props en `status='nueva'` con >3 días → problema en enrichment
 - [ ] Alerta: si `zona_mencionada_en_texto` se dispara >3 veces por semana → revisar polígonos
 
-### Fase 4 — Matching y condominios (futuro)
+### Fase 4 — Matching y condominios ✅ IMPLEMENTADO
 **Objetivo:** Matching inteligente para casas en barrios cerrados.
 
-- [ ] Concepto `condominios_master`: tabla nueva o extension de `proyectos_master` con `tipo_proyecto`
-- [ ] Matching condicional: departamento → `proyectos_master`, casa en condominio → `condominios_master`, terreno/casa individual → sin matching
-- [ ] Absorcion de mercado por tipo
+- [x] Concepto `condominios_master`: **tabla nueva (mig 260 + mig 261)** con **45 condominios cerrados curados**
+- [x] Matcher areal `matchear_condominio(lat, lon, nombre)` (nombre-primario + GPS, point-in-polígono) funcionando
+- [x] FK `id_condominio_master` en `propiedades_v2`
+- [x] Matching condicional: departamento → `proyectos_master`, casa en condominio → `condominios_master`, terreno/casa individual → sin matching
+- [ ] Absorcion de mercado por tipo (pendiente — ver sección Snapshots de absorción)
+
+Ya NO es "futuro". Detalle del pipeline de casas-vivienda + matcher: `docs/proyectos/zona-norte/DISENO_PIPELINE_CASAS_VIVIENDA.md`.
 
 ### Fase 5 — Casas en alquiler y anticrético en Equipetrol (futuro)
 **Objetivo:** Extender el pipeline a operaciones distintas a venta para casas.
@@ -246,6 +313,8 @@ tipo_terreno/operacion_venta/layout_mapa/coordenadas_{N},{E},{S},{W},15?json=tru
 
 **Workflow n8n:** Un workflow de discovery por portal (2 total). Cada uno captura casas+terrenos en una corrida. El portal devuelve `tipo_propiedad_original` que los distingue en BD.
 
+> **Caveat n8n vs híbrido (20-jun-2026):** el pipeline n8n de casas/terrenos descrito acá es **Equipetrol-only** y **NO captura el contacto del agente ni hace matching de condominios**. La carga de las **305 casas de Zona Norte se hizo con un flujo HÍBRIDO manual** (scripts en `scripts/sonda-suelo/` — discovery/dedup/fetch-contacto/merge — + agentes-lectores para el MOAT), que SÍ captura el contacto del captador (WhatsApp en `datos_json_enrichment`) y SÍ hace matching a `condominios_master`. El plan a futuro es **unificar ambos bajo el flujo híbrido** (retirar el n8n viejo).
+
 ### 5.3 Enrichment LLM — Prompts separados
 
 | Prompt | Campos clave que extrae | Campos que NO extrae (vs deptos) |
@@ -267,6 +336,11 @@ WHERE lower(COALESCE(p.tipo_propiedad_original, '')) IN ('departamento', 'pentho
 ```
 
 Casas y terrenos quedan con `id_proyecto_master = NULL`. No es un problema — el feed no depende de tener proyecto asignado.
+
+> **Actualización 18-jun-2026 (supera este "skip"):** para CASAS-vivienda en ZN el matching SÍ
+> aplica, pero a `condominios_master` (barrios cerrados), no a `proyectos_master`, y con mecánica
+> AREAL (point-in-polígono), no fuzzy de edificio. Ver `docs/proyectos/zona-norte/DISENO_PIPELINE_CASAS_VIVIENDA.md` §5.
+> Terrenos y casas individuales en calle abierta sí quedan con NULL (estado válido).
 
 ### 5.5 Feed UI — Cards por tipo
 

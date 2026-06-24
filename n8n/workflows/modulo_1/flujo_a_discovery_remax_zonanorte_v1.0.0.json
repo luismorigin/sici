@@ -131,7 +131,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, url, status\n  FROM propiedades_v2\n  WHERE fuente = 'remax'\n    AND status NOT IN ('inactivo_confirmed')\n    AND zona IN (SELECT nombre FROM zonas_geograficas WHERE zona_general = ANY(ARRAY['Zona Norte']::text[]) AND activo = true)",
+        "query": "SELECT id, url, status\n  FROM propiedades_v2\n  WHERE fuente = 'remax'\n    AND status NOT IN ('inactivo_confirmed') AND lower(coalesce(tipo_propiedad_original,'')) NOT IN ('casa', 'terreno', 'lote')\n    AND zona IN (SELECT nombre FROM zonas_geograficas WHERE zona_general = ANY(ARRAY['Zona Norte']::text[]) AND activo = true)",
         "options": {}
       },
       "id": "obtener-bd-zn-rmx",
@@ -255,7 +255,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE propiedades_v2\n  SET status = 'inactivo_pending',\n      fecha_discovery = NOW(),\n      primera_ausencia_at = COALESCE(primera_ausencia_at, NOW())\n  WHERE id = $1 AND tipo_operacion = 'venta'\n    AND status NOT IN ('inactivo_pending', 'inactivo_confirmed')",
+        "query": "UPDATE propiedades_v2\n  SET status = 'inactivo_pending',\n      fecha_discovery = NOW(),\n      primera_ausencia_at = COALESCE(primera_ausencia_at, NOW())\n  WHERE id = $1 AND tipo_operacion = 'venta'\n    AND status NOT IN ('inactivo_pending', 'inactivo_confirmed') AND lower(coalesce(tipo_propiedad_original,'')) NOT IN ('casa', 'terreno', 'lote')",
         "options": {
           "queryReplacement": "={{ [$json.id] }}"
         }

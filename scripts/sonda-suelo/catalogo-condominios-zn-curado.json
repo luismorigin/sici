@@ -1,0 +1,770 @@
+{
+  "generado": "2026-06-18T20:20:35.784Z",
+  "resumen": {
+    "verificado": 21,
+    "dudoso_revisar": 3,
+    "abierto_descartar": 3,
+    "gps_disperso_descartar": 1,
+    "no_encontrado": 4
+  },
+  "total": 32,
+  "catalogo": [
+    {
+      "nombre": "Bosques de la Colina",
+      "n_casas": 3,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.700463,
+        "lon": -63.189682
+      },
+      "spread_m": 382,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "club house",
+        "piscina comun",
+        "sauna",
+        "areas verdes",
+        "piscina",
+        "churrasquera",
+        "parque infantil",
+        "bicisendas (5 km)",
+        "áreas verdes"
+      ],
+      "ubicacion_web": "Radial 26 km 8.5, zona norte",
+      "url": "https://www.ultracasas.com/inmueble/casa-en-venta-carretera-norte-condominio-santa-cruz-de-la-sierra-96924",
+      "nota": "Condominio privado con 3 ha de bosques y 2 ha de áreas verdes. Página de Facebook activa (@bosquesdelacolinascz). También aparece en Waze."
+    },
+    {
+      "nombre": "La Pradera",
+      "n_casas": 3,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.700587,
+        "lon": -63.178033
+      },
+      "spread_m": 287,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina comun",
+        "sauna",
+        "gimnasio",
+        "cancha de futbol",
+        "cancha polifuncional",
+        "parque infantil",
+        "sala de eventos",
+        "seguridad 24h",
+        "piscina",
+        "sauna seco",
+        "salón multiusos",
+        "churrasqueras",
+        "parques infantiles (2)",
+        "cancha de fútbol",
+        "sala de billar y metegol"
+      ],
+      "ubicacion_web": "Av. Banzer km 8, Remanso, ingresando por Mainter",
+      "url": "https://www.infocasas.com.bo/casa-condominio-la-pradera-norte/193279620",
+      "nota": "Confirmado como 'Barrio Privado' en listing de InfoCasas. Amenidades verificadas en listado detallado."
+    },
+    {
+      "nombre": "La Fontana Riviera I",
+      "n_casas": 2,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.694587,
+        "lon": -63.130077
+      },
+      "spread_m": 392,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina comun",
+        "gimnasio",
+        "sala de eventos",
+        "parque infantil",
+        "cancha polifuncional",
+        "seguridad 24h",
+        "piscinas",
+        "cancha de fútbol",
+        "cine",
+        "parques infantiles",
+        "salón de eventos"
+      ],
+      "ubicacion_web": "Km 8.5 norte, Av. Internacional y Av. G-77",
+      "url": "https://vymaps.com/BO/La-Fontana-Riviera-14397/",
+      "nota": "Teléfono +591 3 3222441. Sitio web: www.lafontanariviera.com. Aparece en Moovit y Waze. Proyecto con fase Smart Life en marketing."
+    },
+    {
+      "nombre": "La Fontana Family Club",
+      "n_casas": 2,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.687905,
+        "lon": -63.139767
+      },
+      "spread_m": 17,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "cancha polifuncional",
+        "piscina comun",
+        "gimnasio",
+        "sauna",
+        "sala de eventos",
+        "areas verdes",
+        "piscina semi-olímpica",
+        "parque acuático",
+        "cancha de tenis",
+        "cine (61 butacas)",
+        "churrasqueras",
+        "salones de eventos",
+        "patio gastronómico",
+        "supermercado",
+        "guardería",
+        "consultorio dental",
+        "bus privado"
+      ],
+      "ubicacion_web": "Av. Banzer km 8.5–9, zona norte (La Comarca / Vallecito)",
+      "url": "http://www.condominiolafontana.com/",
+      "nota": "Descrito como el condominio más completo de Bolivia. Listado en Remax, UltraCasas, InfoCasas, BienesOnLine. Condominio hermano de La Fontana Riviera I."
+    },
+    {
+      "nombre": "Paraiso Norte 1",
+      "n_casas": 2,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.684315,
+        "lon": -63.178615
+      },
+      "spread_m": 25,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina",
+        "churrasquera",
+        "parque infantil"
+      ],
+      "ubicacion_web": "Km 8.5 carretera al norte, ingresando por retorno de La Cho",
+      "url": "https://www.remax.bo/es-bo/propiedades/casa/en-venta/santa-cruz-de-la-sierra/condominio-paraiso-norte-i/120045049-8",
+      "nota": "Listado como 'Condominio Paraiso Norte I' en Remax. MUY PROBABLE que sea el mismo condominio que 'Paraíso Norte' (ver siguiente entrada); la diferencia sería solo el número de fase. | PROBABLE DUPLICADO con 'Paraiso Norte 1': ambos nombres apuntan al mismo condominio o a fases del mismo proyecto en km 8.5. Verificar si existe una fase II distinta.",
+      "duplicados_unidos": [
+        "Paraiso Norte 1",
+        "Paraíso Norte"
+      ]
+    },
+    {
+      "nombre": "Bavaria",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.713225,
+        "lon": -63.16507
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina",
+        "cancha de futbol",
+        "parque infantil",
+        "sala de eventos",
+        "club house",
+        "churrasqueras",
+        "parques infantiles",
+        "cancha de fútbol",
+        "cancha de básquet"
+      ],
+      "ubicacion_web": "Av. Banzer km 8, Remanso, 8vo anillo norte",
+      "url": "https://www.waze.com/live-map/directions/condominio-bavaria-santa-cruz-de-la-sierra?to=place.w.194512471.1945386853.7207772",
+      "nota": "Condominio cerrado confirmado. Aparece en Waze, C21, OmniMLS, Mapcarta. Propiedades de lujo con superficies de 400–500 m² construidos."
+    },
+    {
+      "nombre": "Los Jardines",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.710106,
+        "lon": -63.169028
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina",
+        "parque infantil",
+        "areas verdes",
+        "seguridad 24h"
+      ],
+      "ubicacion_web": "8vo Anillo a 200m de Av. Banzer, zona norte (Remanso)",
+      "url": "https://yandex.com/maps/org/condominio_jardines_del_norte_1_santa_cruz_bolivia/141406560491/",
+      "nota": "Existen múltiples fases: Jardines del Norte I, II, III, IV. El nombre 'Los Jardines' refiere a esta familia de condominios en el área del 8vo anillo norte."
+    },
+    {
+      "nombre": "Almería Sumuque",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.698631,
+        "lon": -63.166987
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina comun",
+        "cancha polifuncional",
+        "parque infantil",
+        "club house",
+        "piscina",
+        "cancha de uso múltiple",
+        "salón de eventos",
+        "sala de reuniones",
+        "seguridad 24h"
+      ],
+      "ubicacion_web": "Av. Banzer Km 8.5, zona Remanso, zona norte",
+      "url": "https://casaalmeriasumuque.blogspot.com/",
+      "nota": "38 casas, 7 modelos distintos. Condominio bien documentado con blog propio y listings en Infocasas y BienesOnline. Gas domiciliario e internet incluidos en infraestructura."
+    },
+    {
+      "nombre": "Hamburgo Norte",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.713676,
+        "lon": -63.162933
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina comun",
+        "parque infantil",
+        "seguridad 24h",
+        "acceso controlado"
+      ],
+      "ubicacion_web": "8vo anillo Av. Banzer, zona norte (Remanso), coords 17°42'48\"S 63°9'45\"W",
+      "url": "http://wikimapia.org/26727472/es/Condominio-Hamburgo-Norte",
+      "nota": "Confirmado en Wikimapia, Waze, Mapcarta y Remax (listado con 795m² casa 6 dorms). Clasificado como 'urbanización cerrada' en Wikimapia. Amenidades comunes no detalladas en web más allá de seguridad."
+    },
+    {
+      "nombre": "La Hacienda 2",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.740103,
+        "lon": -63.162588
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina climatizada",
+        "piscina exterior",
+        "tenis",
+        "cancha de básquetbol",
+        "cancha de fútbol",
+        "salón de eventos",
+        "sauna",
+        "parque infantil",
+        "gimnasio",
+        "seguridad 24h"
+      ],
+      "ubicacion_web": "5to y 6to anillo norte, entre Av. Banzer y Av. Beni",
+      "url": "https://www.ultracasas.com/inmueble/casa-en-venta-entre-5to-y-6to-anillo-norte-santa-cruz-de-la-sierra-8905",
+      "nota": "Condominio consolidado con amplia oferta de amenidades. Listado en UltraCasas e Infocasas. Transporte público: línea de micro 82 en la puerta."
+    },
+    {
+      "nombre": "Portales del Norte",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.684893,
+        "lon": -63.15333
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "sala de eventos",
+        "piscina comun",
+        "sauna",
+        "gimnasio",
+        "acceso controlado"
+      ],
+      "ubicacion_web": "Av. Banzer, zona Condominios Sevilla, norte",
+      "url": "https://www.infocasas.com.bo/condominio-portales-del-norte-pre-venta/189655511",
+      "nota": "19 casas exclusivas de 3-4 dorms. Listado como pre-venta (2022) desarrollado por CVM Group. Barrio privado confirmado en Infocasas. Amenidades comunes no detalladas en los listados disponibles."
+    },
+    {
+      "nombre": "Sevilla Norte II",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.695871,
+        "lon": -63.15804
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "cancha de tenis",
+        "cancha de futbol",
+        "piscina comun",
+        "sauna",
+        "gimnasio",
+        "sala de eventos",
+        "parque infantil",
+        "piscina adultos",
+        "piscina niños",
+        "tenis",
+        "cancha de fútbol",
+        "cancha polifuncional",
+        "jacuzzi",
+        "salón de eventos",
+        "minimarket",
+        "churrasquera",
+        "seguridad 24h"
+      ],
+      "ubicacion_web": "Carretera al Norte km 8.5-9, a media cuadra de Av. Banzer",
+      "url": "https://moovitapp.com/index/en/public_transit-Condominio_Sevilla_Norte_II-Santa_Cruz_de_la_Sierra-stop_36421039-4977",
+      "nota": "Bien documentado: tiene parada de bus propia (Moovit), Facebook, Waze y múltiples listings. Forma parte del cluster 'Condominios Sevilla' en la zona norte. ~4.293 check-ins en Facebook."
+    },
+    {
+      "nombre": "Valle Norte II",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.704191,
+        "lon": -63.168959
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina",
+        "club house",
+        "áreas verdes",
+        "parque infantil",
+        "acceso controlado"
+      ],
+      "ubicacion_web": "Av. Banzer km 8.5, a 200m del Cambridge College, zona norte",
+      "url": "https://condominioprivadovallenorte2.business.site/",
+      "nota": "Tiene sitio web propio (Google Business). Listado también en UltraCasas y Waze. Proyecto ambicioso cerca de colegios. Teléfono contacto: +591 75548780."
+    },
+    {
+      "nombre": "Alameda Fontana",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.685895,
+        "lon": -63.143643
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "cancha polifuncional",
+        "piscina comun",
+        "parque infantil",
+        "areas verdes",
+        "áreas sociales"
+      ],
+      "ubicacion_web": "Av. G77, zona norte carretera norte",
+      "url": "https://www.ultracasas.com/inmueble/terreno-en-venta-carretera-norte-condominio-santa-cruz-de-la-sierra-1018681",
+      "nota": "Listado en UltraCasas con terrenos en venta. La web menciona 'áreas sociales' pero no detalla amenidades específicas. Precio ~$180/m². Distinto de 'La Fontana Family Club' (que tiene piscina, gimnasio, cine, sauna) aunque ambos son condominios cerrados en zona norte."
+    },
+    {
+      "nombre": "Barcelona",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.695585,
+        "lon": -63.155981
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina comun",
+        "sauna",
+        "gimnasio",
+        "sala de eventos",
+        "parque infantil",
+        "cancha polifuncional",
+        "piscina",
+        "churrasquera",
+        "club house",
+        "seguridad 24h"
+      ],
+      "ubicacion_web": "Av. Banzer km 8.5–9, Zona Norte",
+      "url": "https://www.ultracasas.com/inmueble/departamento-en-alquiler-carretera-norte-santa-cruz-de-la-sierra-949200",
+      "nota": "Condominio privado cerrado confirmado en Av. Banzer km 8.5–9 zona norte. Distinto de 'Barceló Residence Club' (mismo sector). Múltiples listings en UltraCasas y SantaCruzBienesRaices. Facebook page verificada."
+    },
+    {
+      "nombre": "Campo Verde",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.720973,
+        "lon": -63.172546
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "cancha polifuncional",
+        "parque infantil",
+        "piscina privada (por unidad)",
+        "churrasquera",
+        "áreas verdes"
+      ],
+      "ubicacion_web": "Zona El Remanso, entre 7mo y 8vo anillo norte (al lado del Colegio San Lorenzo)",
+      "url": "https://www.ultracasas.com/inmueble/casa-en-venta-entre-7mo-y-8vo-anillo-norte-santa-cruz-de-la-sierra-977865",
+      "nota": "Condominio cerrado confirmado en zona norte entre 7mo y 8vo anillo. Múltiples listings en UltraCasas. No se detectaron amenidades comunes de club house; algunas casas tienen piscina privada."
+    },
+    {
+      "nombre": "Palmeras II",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.697466,
+        "lon": -63.176108
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina comun",
+        "sala de eventos",
+        "gimnasio",
+        "areas verdes",
+        "piscina (adultos y niños)",
+        "club house",
+        "churrasquera",
+        "parque infantil",
+        "zona de mascotas",
+        "senderos peatonales"
+      ],
+      "ubicacion_web": "Av. Banzer km 8.5, detrás de condominios Asaí Norte, Zona Norte",
+      "url": "https://www.condominioasai.com/las-palmeras-de-asai/",
+      "nota": "Condominio Asaí Las Palmeras II, condominio privado cerrado confirmado en Av. Banzer km 8.5. También aparece como 'Las Palmas II' / 'Las Palmeras II' en distintos portales. Casas desde $59,500."
+    },
+    {
+      "nombre": "Florencia",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.735229,
+        "lon": -63.164649
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina comun",
+        "piscina",
+        "salón de eventos",
+        "sala de juegos",
+        "churrasquera",
+        "estacionamiento amplio",
+        "seguridad 24h",
+        "elevadores"
+      ],
+      "ubicacion_web": "Av. Rosita Pochi esq. Av. Hilandería entre Av. Piraí y Radial 17, Alto Las Palmas (Zona Oeste)",
+      "url": "https://www.facebook.com/florenciacondominio/",
+      "nota": "ALERTA: Condominio Florencia está en zona OESTE (Alto Las Palmas, entre Av. Piraí y Radial 17), NO en zona norte. Dos torres de 7 pisos, 56 dptos. Si la lista original lo ubica en zona norte, puede ser un homónimo diferente o un error de zona."
+    },
+    {
+      "nombre": "Versalles",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.697588,
+        "lon": -63.170357
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina",
+        "canchas polifuncionales",
+        "sauna seco y vapor",
+        "gimnasio",
+        "churrasquera",
+        "parque infantil",
+        "plaza",
+        "seguridad 24h"
+      ],
+      "ubicacion_web": "Carretera al Norte km 8.5, Zona Norte",
+      "url": "https://www.ultracasas.com/inmueble/casa-en-venta-carretera-norte-condominio-santa-cruz-de-la-sierra-578870",
+      "nota": "Condominio cerrado bien establecido en km 8.5 norte. Numerosos listings en UltraCasas, Infocasas, C21, Mapcarta y Moovit. Casas desde $79k a $260k."
+    },
+    {
+      "nombre": "Sevillas Las Terrazas II",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.682951,
+        "lon": -63.14572
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "piscina comun",
+        "cancha de futbol",
+        "cancha de tenis",
+        "cancha polifuncional",
+        "club house",
+        "gimnasio",
+        "seguridad 24h",
+        "piscina",
+        "jacuzzi",
+        "sauna",
+        "canchas de tenis y fútbol",
+        "salón de té/eventos",
+        "supermercado interno",
+        "churrasquera",
+        "parque infantil",
+        "áreas verdes"
+      ],
+      "ubicacion_web": "Carretera al Norte km 9–10, Calle Tarazona Este, Zona Norte",
+      "url": "https://santacruzbienesraices.com/propiedad/casa-en-venta-sevilla-las-terrazas-ii-zona-norte-km-9-condominio-sevilla-las-terrazas-ii-norte-santa-cruz/",
+      "nota": "Condominio cerrado bien documentado en km 9–10 norte. Facebook page verificada, listado en Waze, múltiples portales (Infocasas, UltraCasas, SantaCruzBienesRaices, AgentInmobiliario). Construido ~2012."
+    },
+    {
+      "nombre": "San Andrés del Norte",
+      "n_casas": 1,
+      "veredicto": "verificado",
+      "gps_centroide": {
+        "lat": -17.723507,
+        "lon": -63.160486
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "churrasquera",
+        "seguridad"
+      ],
+      "ubicacion_web": "Av. Beni, 7mo–8vo anillo, Zona Norte",
+      "url": "https://www.ultracasas.com/inmueble/casa-en-venta-entre-7mo-y-8vo-anillo-norte-av-santa-cruz-de-la-sierra-71649",
+      "nota": "Condominio cerrado confirmado en Av. Beni 7mo-8vo anillo zona norte. Facebook page y Mapcarta lo verifican. Amenidades comunes limitadas según listings encontrados (no se detectó piscina compartida ni club house)."
+    },
+    {
+      "nombre": "San Rafael II",
+      "n_casas": 3,
+      "veredicto": "dudoso_revisar",
+      "gps_centroide": {
+        "lat": -17.719254,
+        "lon": -63.181781
+      },
+      "spread_m": 1954,
+      "existe_web": true,
+      "es_cerrado_web": true,
+      "amenidades": [
+        "seguridad 24h",
+        "áreas sociales",
+        "locales comerciales",
+        "piscina",
+        "seguridad"
+      ],
+      "ubicacion_web": "Zona norte, 6to anillo, entre radiales 26 y 27",
+      "url": "https://www.ultracasas.com/inmueble/departamento-en-alquiler-entre-6to-y-7mo-santa-cruz-de-la-sierra-1026635",
+      "nota": "Se presenta como 'Urbanización San Rafael II', construida 2023, cerca de UCEBOL y Viru Viru. No se confirma explícitamente como condominio cerrado con control de acceso; el listado no especifica 'barrio privado'. | Urbanización San Rafael II confirmada en zona norte, 6to anillo. Condominios construidos ~2023. Booking.com y UltraCasas la listan. Amenidades básicas de condominio cerrado.",
+      "duplicados_unidos": [
+        "San Rafael II",
+        "San Rafael 2"
+      ]
+    },
+    {
+      "nombre": "Riviera Norte Bethel",
+      "n_casas": 1,
+      "veredicto": "dudoso_revisar",
+      "gps_centroide": {
+        "lat": -17.70599,
+        "lon": -63.185452
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": "dudoso",
+      "amenidades": [
+        "acceso controlado",
+        "seguridad 24h con cámaras"
+      ],
+      "ubicacion_web": "Av. Banzer km 8.5, ingresando por Mainter, calle Bethel II, zona Remanso",
+      "url": "https://www.ultracasas.com/inmueble/casa-en-alquiler-entre-8vo-y-9no-anillo-santa-cruz-de-la-sierra-567626",
+      "nota": "Llamado 'Urbanización Riviera Norte' en la mayoría de listados; 'Bethel' es el nombre de la calle interna (Bethel I y Bethel II). Es urbanización cerrada con control de acceso pero podría no tener áreas comunes extensas tipo condominio. C21 lo lista como 'Urbanizacion Riviera 2 10'."
+    },
+    {
+      "nombre": "Norte de La Molina",
+      "n_casas": 1,
+      "veredicto": "dudoso_revisar",
+      "gps_centroide": {
+        "lat": -17.68475,
+        "lon": -63.177396
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": "dudoso",
+      "amenidades": [
+        "cancha de tenis",
+        "cancha de futbol",
+        "gimnasio",
+        "piscina comun",
+        "areas verdes",
+        "lagunas naturales",
+        "áreas verdes",
+        "parques",
+        "club house",
+        "piscina",
+        "canchas deportivas (fútbol, tenis, padel)",
+        "ciclovía"
+      ],
+      "ubicacion_web": "Radial 26 / Av. El Paraíso, acceso por Mainter km 8.5 Av. Banzer, Zona Norte",
+      "url": "https://www.ultracasas.com/inmueble/terreno-en-venta-carretera-norte-pre-venta-santa-cruz-de-la-sierra-631461",
+      "nota": "Se trata de una urbanización (no condominio cerrado tradicional). Vende lotes y casas. Club house con amenidades confirmadas pero acceso al barrio puede ser abierto. C21, Remax e Infocasas la listan como 'Urbanización Norte La Molina'."
+    },
+    {
+      "nombre": "El Vallecito",
+      "n_casas": 2,
+      "veredicto": "abierto_descartar",
+      "gps_centroide": {
+        "lat": -17.704774,
+        "lon": -63.144715
+      },
+      "spread_m": 19,
+      "existe_web": true,
+      "es_cerrado_web": false,
+      "amenidades": [],
+      "ubicacion_web": "Av. Banzer y G-77, ingresando por La Chonta, km 8.5 zona norte",
+      "url": "https://www.ultracasas.com/inmueble/casa-en-venta-carretera-norte-urbanizacion-santa-cruz-de-la-sierra-599160",
+      "nota": "Se referencia siempre como 'Urbanización El Vallecito', no condominio cerrado. El nombre también corresponde al Instituto de Investigaciones Agrícolas de la UAGRM (referencia universitaria conocida). Sin evidencia de acceso controlado ni áreas comunes."
+    },
+    {
+      "nombre": "Villa Real",
+      "n_casas": 1,
+      "veredicto": "abierto_descartar",
+      "gps_centroide": {
+        "lat": -17.767268,
+        "lon": -63.187596
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": false,
+      "amenidades": [
+        "seguridad 24h",
+        "áreas verdes",
+        "calles pavimentadas",
+        "drenaje pluvial"
+      ],
+      "ubicacion_web": "Zona norte, Av. principal 25 de Mayo (múltiples fases: I al V)",
+      "url": "https://villareal.com.bo/",
+      "nota": "Es una urbanización abierta con varias fases (Villa Real I–V), no un condominio cerrado. Hay un 'Condominio Villa Real' separado en Urubo (diferente proyecto). El villareal.com.bo corresponde a urbanizaciones zona norte sin acceso controlado."
+    },
+    {
+      "nombre": "Villa Fátima",
+      "n_casas": 1,
+      "veredicto": "abierto_descartar",
+      "gps_centroide": {
+        "lat": -17.738591,
+        "lon": -63.183007
+      },
+      "spread_m": 0,
+      "existe_web": true,
+      "es_cerrado_web": false,
+      "amenidades": [
+        "piscina comun",
+        "sala de eventos",
+        "seguridad 24h"
+      ],
+      "ubicacion_web": "Radial 16 entre 3er y 4to anillo, zona sur-este (no zona norte)",
+      "url": "https://bolivia.bienesonline.com/ficha-casa-venta-santa-cruz-de-la-sierra-santa-cruz_CAV5299.php",
+      "nota": "Villa Fátima es un barrio/zona residencial, no un condominio cerrado. Está ubicado en Radial 16 entre 3er y 4to anillo, que corresponde a zona sur/este de Santa Cruz, NO zona norte. No confirma como condominio cerrado en zona norte."
+    },
+    {
+      "nombre": "Roma",
+      "n_casas": 3,
+      "veredicto": "gps_disperso_descartar",
+      "gps_centroide": {
+        "lat": -17.716237,
+        "lon": -63.170175
+      },
+      "spread_m": 7841,
+      "existe_web": true,
+      "es_cerrado_web": "dudoso",
+      "amenidades": [
+        "parque infantil",
+        "areas verdes"
+      ],
+      "ubicacion_web": "Zona norte, entre 2do y 3er anillo (UltraCasas); hay referencias a 'Urbanización Roma' en Av. Banzer km 8.5",
+      "url": "https://www.ultracasas.com/inmueble/departamento-en-alquiler-entre-2do-y-3er-santa-cruz-de-la-sierra-567653",
+      "nota": "Nombre genérico; se encontraron referencias dispersas (departamento zona norte + urbanización distinta). No hay evidencia de un único condominio cerrado llamado Roma en zona norte con identidad propia."
+    },
+    {
+      "nombre": "4 Reyes",
+      "n_casas": 2,
+      "veredicto": "no_encontrado",
+      "gps_centroide": {
+        "lat": -17.684654,
+        "lon": -63.144408
+      },
+      "spread_m": 26,
+      "existe_web": false,
+      "es_cerrado_web": "dudoso",
+      "amenidades": [],
+      "ubicacion_web": "",
+      "url": "",
+      "nota": "No se encontró ningún resultado específico para 'Condominio 4 Reyes' ni 'Cuatro Reyes' en zona norte de Santa Cruz en ningún portal (UltraCasas, InfoCasas, BienesOnLine, C21, Remax, Waze). Posible nombre incorrecto o proyecto sin presencia web."
+    },
+    {
+      "nombre": "Leonardo",
+      "n_casas": 1,
+      "veredicto": "no_encontrado",
+      "gps_centroide": {
+        "lat": -17.730456,
+        "lon": -63.143449
+      },
+      "spread_m": 0,
+      "existe_web": false,
+      "es_cerrado_web": "dudoso",
+      "amenidades": [],
+      "ubicacion_web": "",
+      "url": "",
+      "nota": "Sin evidencia en ninguna plataforma (Infocasas, UltraCasas, Remax, C21, BienesOnline, Waze, Facebook). No aparece con búsquedas directas ni variantes del nombre. Posible nombre informal, interno o erróneo."
+    },
+    {
+      "nombre": "Moliere",
+      "n_casas": 1,
+      "veredicto": "no_encontrado",
+      "gps_centroide": {
+        "lat": -17.734023,
+        "lon": -63.150841
+      },
+      "spread_m": 0,
+      "existe_web": false,
+      "es_cerrado_web": "dudoso",
+      "amenidades": [],
+      "ubicacion_web": "",
+      "url": "",
+      "nota": "No se encontró evidencia en ningún portal (UltraCasas, Infocasas, C21, Remax, BienesOnline, Facebook, Waze) de un condominio llamado 'Moliere' en zona norte de Santa Cruz. Posible nombre incorrecto, muy reciente o muy pequeño para aparecer online."
+    },
+    {
+      "nombre": "Ciudad Jardín",
+      "n_casas": 1,
+      "veredicto": "no_encontrado",
+      "gps_centroide": {
+        "lat": -17.732541,
+        "lon": -63.172672
+      },
+      "spread_m": 0,
+      "existe_web": false,
+      "es_cerrado_web": null,
+      "amenidades": [],
+      "ubicacion_web": "",
+      "url": "",
+      "nota": ""
+    }
+  ]
+}

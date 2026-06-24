@@ -1,0 +1,542 @@
+[
+  {
+    "fuente": "c21",
+    "url": "https://c21.com.bo/propiedad/112121_casa-en-venta",
+    "lat": -17.7132247,
+    "lon": -63.1650705,
+    "area_const_m2": 206.4,
+    "area_terreno_m2": 240,
+    "dorms": null,
+    "banos": null,
+    "garage": null,
+    "precio_raw": 1260000,
+    "moneda": "BOB",
+    "cond_cercano": {
+      "nombre": "Bavaria",
+      "dist": 0
+    },
+    "descripcion": "8vo Anillo Av. Banzer, zona El Remanso (3 cuadras de la Av. Banzer)\r\nCONDOMINIO BAVARIA\r\n\r\nSuperficie terreno: 220 m2\r\n\r\nConstrucción: 240 m2\r\n\r\nPLANTA ALTA:\r\n1 MASTER Suite con baño privado, vestidor y balcón.\r\n2 SUITE JUNIOR, cada una con baño privado y ropero.\r\n1 Sala de estar familiar.\r\n\r\nPLANTA BAJA:\r\nAmplia sala, comedor independiente, cocina amoblada, baño de visitas, galería, área de servicio, jardín trasero y garaje para 2 vehículos.\r\n\r\nÁREAS COMUNES:\r\nPiscina, churrasqueras, salón social, cancha de fútbol y parque infantil.\r\n\r\nEQUIPAMIENTOS INCLUIDOS\r\n\r\nAires acondicionados en todos los ambientes\r\nMuebles de cocina superiores e inferiores\r\nMuebles de baños\r\nTermotanque\r\nGas domiciliario\r\nAlcantarillado\r\nRed de agua\r\nLuz\r\n\r\nPrecio: 180.000$ (pago en dólares)"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-1200164217-37",
+    "lat": -17.69863105,
+    "lon": -63.16698738,
+    "area_const_m2": 171.33,
+    "area_terreno_m2": 293.89,
+    "dorms": 3,
+    "banos": 2,
+    "garage": null,
+    "precio_raw": 161000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Almería Sumuque",
+      "dist": 0
+    },
+    "descripcion": "Descubre la casa de tus sueños en el exclusivo Condominio Almería Sumuque, ubicado en la zona norte de Santa Cruz. Esta hermosa casa de 3 habitaciones, 2 baños, ofrece un estilo de vida segura y cómoda.\nCaracterísticas destacadas:\n- 3 habitaciones, una en suite con baño privado\n- 1 baño para compartir\n- Living comedor amplio y luminoso\n- Cocina equipada con cajonería y extractor de aire\n- Amplia galería y jardín\n- Lavandería y garaje para 2 autos\nÁreas sociales:\n- Piscina\n- Cancha polifuncional\n- Churrasqueros\n- Parque infantil\n- Club social\nUbicación:\nZona norte de Santa Cruz, un lugar exclusivo y seguro.\n¡No te pierdas la oportunidad de hacer de esta casa tu hogar!\nContáctanos para programar una visita y descubrir por qué Almería Sumuque es el lugar perfecto para ti y tu familia.\nLA CASA QUE BUSCAS EN LA ZONA NORTE DE SANTA CRUZ CÓMODA SEGURA , CERCA A UNO DE LOS MEJORES COLEGIOS DE LA CIUDAD DE SANTA CRUZ ( CAMBRIDGE COLLEGE ) NO  ESPERES MÁS Y ADQUIERE TU CASA SOÑADA"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-120033133-30",
+    "lat": -17.71367577,
+    "lon": -63.16293294,
+    "area_const_m2": 304.83,
+    "area_terreno_m2": 397.5,
+    "dorms": 4,
+    "banos": 4,
+    "garage": null,
+    "precio_raw": 255000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Hamburgo Norte",
+      "dist": 0
+    },
+    "descripcion": "CASA EN VENTA – CONDOMINIO HAMBURGO NORTE (Zona Norte, 8vo anillo)\nDescubre esta hermosa casa diseñada para brindar confort, amplitud y una excelente calidad de vida.\n🌿 *Ubicación privilegiada:* frente a las áreas comunes\n📐 *Terreno*: 397,5 m²\n🏗️ *Construcción*: 304,83 m²\n✨ *Planta Baja:*\n• Amplio living-comedor en desnivel\n• Sala de TV o escritorio\n• Baño de visitas\n• Cocina espaciosa con despensa\n• Área de lavado y dependencia de servicio\n• Galería con churrasquera\n• Jardín privado\n• Garaje para 3 movilidades\n✨ *Planta Alta*:\n• 3 suites junior\n• 1 Master suite con vestidor\n🏘️ *Áreas comunes del condominio:*\n• Piscina\n• Parque infantil\n• Churrasquera con horno de barro\n💰*Precio*: 255.000 $us ( Tipo de cambio del   día )\n💡 Ideal para *familias* que buscan *comodidad, seguridad y espacios amplios en la zona norte.*\nSu diseño funcional permite integrar armoniosamente cada ambiente, generando una sensación de amplitud y confort.\r\n Los dormitorios han sido pensados para ofrecer privacidad y descanso, con excelente iluminación y ventilación. \r\n Perfecta tanto para vivir como para invertir, gracias a su ubicación privilegiada y proyección de valorización"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-125001005-1550",
+    "lat": -17.74010318,
+    "lon": -63.16258816,
+    "area_const_m2": 524,
+    "area_terreno_m2": 535,
+    "dorms": 5,
+    "banos": 4,
+    "garage": null,
+    "precio_raw": 530000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "La Hacienda 2",
+      "dist": 0
+    },
+    "descripcion": "Ubicación: Av Beni entre 5to y 6to anillo Condominio La Hacienda 2\nSuperficie de terreno: 535 m2\nSuperficie construida: 524 m2\nCaracterísticas\nPlanta baja:\n2 dormitorios en suite\nLiving comedor\nBaño de visitas\nCocina con comedor de diario\nDependencia de servicio completa\nÁrea de lavandería\nChurrasquera\n2 parqueos\nPlata alta:\n3 dormitorios (1 en suite)\nBaño a compartir\nSala de TV\nPrecio de venta: $us. 530.000\nPrecio de alquiler: $us. 2.500\nUbicación: Av Beni entre 5to y 6to anillo Condominio La Hacienda 2\r\nSuperficie de terreno: 535 m2\r\nSuperficie construida: 524 m2\r\nPrecio de venta: $us. 530.000\r\nPrecio de alquiler: $us. 2.500"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-1200646343-1",
+    "lat": -17.72097282,
+    "lon": -63.17254613,
+    "area_const_m2": 180,
+    "area_terreno_m2": 180,
+    "dorms": 4,
+    "banos": 3,
+    "garage": null,
+    "precio_raw": 150862.06896551725,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Campo Verde",
+      "dist": 0
+    },
+    "descripcion": "🔥🏡 Zona Norte | 𝐂𝐀𝐒𝐀 𝐀𝐌𝐎𝐁𝐋𝐀𝐃𝐀 𝐄𝐍 VENTA  🏡🔥\n📍 𝐂𝐨𝐧𝐝𝐨𝐦𝐢𝐧𝐢𝐨 Campo Verde\n💰 𝐁𝐬 1,050,000.- ¡¡¡Se recibe como parte de pago vehículos o cualquier otro bien inmueble¡¡¡¡¡\n🏠 1 𝐩𝐥𝐚𝐧𝐭𝐚𝐬 | 1 𝐬𝐮𝐢𝐭𝐞𝐬 | 3 𝐛𝐚ñ𝐨𝐬\n📐 𝐓𝐞𝐫𝐫𝐞𝐧𝐨: 360 𝐦²\n🔻 𝐏𝐋𝐀𝐍𝐓𝐀 𝐁𝐀𝐉𝐀\n• Living – comedor amplio\n• Cocina independiente equipada\n• Dependencias de servicio\n• Patio trasero\n• Galería\n• 𝐂𝐡𝐮𝐫𝐫𝐚𝐬𝐪𝐮𝐞𝐫𝐚 🍖🔥\n• 𝐌𝐚𝐬𝐭𝐞𝐫 𝐬𝐮𝐢𝐭𝐞\n• 1 Suite Junior\n• 2 Dormitorio con baño compartido\n• Sala de estar\n• Balcón\n🏊 Á𝐑𝐄𝐀𝐒 𝐒𝐎𝐂𝐈𝐀𝐋𝐄𝐒\nCanchas | Parque infantil\n⚡ 𝐄𝐧𝐭𝐫á𝐬 𝐚 𝐯𝐢𝐯𝐢𝐫, 𝐩𝐮𝐧𝐭𝐨.\n🔥🏡 Zona Norte | 𝐂𝐀𝐒𝐀 𝐀𝐌𝐎𝐁𝐋𝐀𝐃𝐀 𝐄𝐍 VENTA  🏡🔥\r\n\r\n 📍 𝐂𝐨𝐧𝐝𝐨𝐦𝐢𝐧𝐢𝐨 Campo Verde\r\n💰 𝐁𝐬 1,050,000.-\r\n 🏠 1 𝐩𝐥𝐚𝐧𝐭𝐚𝐬 | 1 𝐬𝐮𝐢𝐭𝐞𝐬 | 3 𝐛𝐚ñ𝐨𝐬\r\n📐 𝐓𝐞𝐫𝐫𝐞𝐧𝐨: 360 𝐦² \r\n\r\n🔻 𝐏𝐋𝐀𝐍𝐓𝐀 𝐁𝐀𝐉𝐀\r\n • Living – comedor amplio\r\n • Cocina independiente equipada\r\n • Dependencias de servicio\r\n • Patio trasero\r\n • Galería"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-120107313-4",
+    "lat": -17.69746585,
+    "lon": -63.17610786,
+    "area_const_m2": 209,
+    "area_terreno_m2": 200,
+    "dorms": 4,
+    "banos": 4,
+    "garage": null,
+    "precio_raw": 160000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Palmeras II",
+      "dist": 0
+    },
+    "descripcion": "escubre esta elegante y amplia propiedad diseñada para brindar confort, funcionalidad y un estilo de vida exclusivo en una de las zonas de mayor crecimiento.\n🏡 Superficie de terreno: 200 m²\n🏗️ Superficie construida: 209 m²\n🔹 Distribución ideal para tu comodidad:\n* 4 dormitorios, 2 en suite 🛏️\n* Amplio living-comedor con excelente iluminación natural 🌿\n* Cocina moderna y funcional con isla 🍽️\n* ⁠Escritorio en planta baja\n* Área de servicio independiente 🧺\n* Churrasquera perfecta para compartir momentos especiales 🔥\n🌴 Vive dentro de un condominio completo y seguro:\n* Piscina 🏊‍♂️\n* Salón de eventos 🎉\n* Churrasquera 🍖\n* Gimnasio 💪\n* Áreas sociales para toda la familia\nCASA EXCLUSIVA EN CONDOMINO PALMERAS II"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-125001007-1624",
+    "lat": -17.7235073,
+    "lon": -63.1604864,
+    "area_const_m2": 100,
+    "area_terreno_m2": 300,
+    "dorms": 3,
+    "banos": 3,
+    "garage": null,
+    "precio_raw": 145000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "San Andrés del Norte",
+      "dist": 0
+    },
+    "descripcion": "𝗖𝗮𝘀𝗮 𝗲𝗻 𝗩𝗲𝗻𝘁𝗮 𝗖𝗼𝗻𝗱. 𝗦𝗮𝗻 𝗔𝗻𝗱𝗿𝗲́𝘀 𝗱𝗲𝗹 𝗡𝗼𝗿𝘁𝗲\nSe vende propiedad funcional ubicada en la zona norte de la ciudad. La casa destaca por su distribución en una sola planta y amplios espacios exteriores.\nCaracterísticas principales:\n𝗦𝘂𝗽. 𝗧𝗲𝗿𝗿𝗲𝗻𝗼: 𝟯𝟬𝟬 𝗺𝟮\n𝗦𝘂𝗽. 𝗖𝗼𝗻𝘀𝘁.: 𝟭𝟬𝟬 𝗺𝟮\n- Una suite y dos habitaciones con baño compartido.\n- Living-comedor integrado.\n- Cocina equipada con muebles altos y bajos.\n- Baño de visitas.\n- Amplio patio trasero.\n- Área de lavado y dependencia de servicio.\n- Garaje para dos vehículos."
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-120034113-66",
+    "lat": -17.69621,
+    "lon": -63.1308,
+    "area_const_m2": 93,
+    "area_terreno_m2": 262.5,
+    "dorms": 3,
+    "banos": 2,
+    "garage": null,
+    "precio_raw": 138000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "La Fontana Riviera 1",
+      "dist": 4
+    },
+    "descripcion": "✨🏡 *CASA EN VENTA – CONDOMINIO FONTANA LA RIVIERA I* 🌴\n📍 En Fontana La Riviera I\n📐 Terreno: 262,5 m²\n🏠 Construcción: 93 m²\n🛏 3 dormitorios\n🌟 Disfruta de increíbles áreas sociales:\n🏊 Piscinas | 🏋️ Gimnasio | 🎬 Cine | ⚽ Canchas deportivas | 🛝 Parques infantiles | 🔥 Churrasqueras | 🛡 Seguridad 24/7\n💰 Precio: 138.000 $us\n💱 Tipo de cambio: 7\n📲 Agenda tu visita y conoce tu próximo hogar"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-120033054-98",
+    "lat": -17.69587135,
+    "lon": -63.15804012,
+    "area_const_m2": 121,
+    "area_terreno_m2": 220,
+    "dorms": 3,
+    "banos": 3,
+    "garage": null,
+    "precio_raw": 120000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Sevilla Norte II",
+      "dist": 7
+    },
+    "descripcion": "Casa en venta Zona Norte km9 . Condominio Sevilla Norte II\nSup. del terreno : 220 m2\nSup. Construída : 121 m2\nCaracterísticas:\n•3 Dormitorios (1 en suite)\n•1 Baño compartido\n•Sala de TV\n•Living-Comedor\n•Cocina\n•Área de lavandería\n•Dependencia de servicio\n•Depósito\nÁreas Sociales:\n•Canchas de Tennis\n•Canchas de fútbol\n•Piscina\n•Jacuzzi\n•Sauna a vapor y seco\n•Gimnasio\n•Salón de eventos\n•Parques Infantiles\n•Micromercado\nPrecio : 120.000 $us TC 7\nCasa en venta Zona Norte km9 . Condominio Sevilla Norte II\r\n\r\nSup. del terreno : 220 m2\r\nSup. Construída : 121 m2 \r\n\r\nCaracterísticas:\r\n•3 Dormitorios (1 en suite)\r\n•1 Baño compartido\r\n•Sala de TV\r\n•Living-Comedor\r\n•Cocina\r\n•Área de lavandería \r\n•Dependencia de servicio \r\n•Depósito \r\n\r\nPRECIO : 120.000 $US TC 7"
+  },
+  {
+    "fuente": "c21",
+    "url": "https://c21.com.bo/propiedad/105352_casa-departamento-independiente-en-condominio-la-fontana-family-club",
+    "lat": -17.6878901,
+    "lon": -63.13968980000001,
+    "area_const_m2": 155,
+    "area_terreno_m2": 231,
+    "dorms": 3,
+    "banos": null,
+    "garage": null,
+    "precio_raw": 1085000,
+    "moneda": "BOB",
+    "cond_cercano": {
+      "nombre": "La Fontana Family Club",
+      "dist": 8
+    },
+    "descripcion": "Viví, invertí y generá ingresos en una sola propiedad. Ubicada en uno de los condominios más completos de la zona norte.\r\n\r\nUbicación: Zona Norte, Km 8 1/2 (Por la Chonta)\r\n\r\nPrecio de venta: $us 155.000 (T/C 7)\r\nSuperficie de terreno: 231 m²\r\n\r\nDistribución de la casa:\r\n\r\n1 dormitorio en suite\r\n2 dormitorios con roperos empotrados\r\nBaño compartido\r\nLiving – comedor ampliado\r\nAire acondicionado en todos los ambientes\r\nCocina con cajonería alta y baja\r\nÁrea de lavandería techada\r\nTermotanque\r\nGas domiciliario\r\n\r\nExterior:\r\n\r\nGalería\r\nChurrasquera\r\nAmpliación en la parte posterior\r\n\r\nDepartamento independiente (ideal para renta):\r\n\r\n1 dormito"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-120040111-15",
+    "lat": -17.68791909,
+    "lon": -63.1398441,
+    "area_const_m2": 150,
+    "area_terreno_m2": 231,
+    "dorms": 3,
+    "banos": 2,
+    "garage": null,
+    "precio_raw": 119646,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "La Fontana Family Club",
+      "dist": 8
+    },
+    "descripcion": "ZONA NORTE CASA LA FONTANA CONDOMINIO FAMILY CLUB DE 231 M2\nSuperficie de terreno: 231 m2\nSuperficie construida: 150 m2\nAño de construcción: 2016\nDimensiones:\n\tFrente: 10,50 m.\n\tProfundidad: 22 m.\nUbicación: Zona Norte LA FONTANA CONDOMINIO FAMILY CLUB (UV S1-3, MZA L-13, LOTE 11)\nFacilidades de Transporte: Micro privado del condominio y transporte publico hasta el centro de la ciudad.\nServicios Básicos en el Condominio: Agua Potable – Electricidad CRE – Gas domiciliario, Calefón.\nCaracterísticas de la Casa\n\t1 dormitorio en Suit\n\t2 dormitorios\n\t1 baño\n\tGaraje a cielo visto\n\tBarda\n\tCosina\n\tSala - Comedor\n\tJardín en Patio Trasero\nÁreas Sociales (450 Bs de expensas)\n\tCanchas deportivas en césped y concreto\n\tPiscina amplia a cielo visto\n\tChurrasquera en cercanías de la Piscina\n\tPiscina amplia Atemperada\n\tCine propio\n\tAmplia sala de reuniones de Co-Propietarios\n\tAmplia sala de eventos familiares con Churrasquera\n\tAmplio Gimnasio\n\tÁrea de Boxeo y entrenamiento\n\tSuper Market dentro del condominio\n\tSauna\nVENTA: 119.646,00 $U$ T/C 7\nGOOGLE MAP:\nhttps://maps.app.goo.gl/rNCTrtm2UQHaWyjCA?g_st=aw\nVENTA: 119.646,00 $U$ T/C 7 \r\nGOOGLE MAP:\r\nhttps://maps.app.goo.gl/rNCTrtm2UQHaWyjCA?g_st=aw"
+  },
+  {
+    "fuente": "c21",
+    "url": "https://c21.com.bo/propiedad/111769_casa-en-pre-venta-zona-norte-urbanizacion-paraiso-norte-1-conodminio-cerrado",
+    "lat": -17.68426011233604,
+    "lon": -63.17871834867095,
+    "area_const_m2": 160,
+    "area_terreno_m2": 160,
+    "dorms": 4,
+    "banos": 3,
+    "garage": null,
+    "precio_raw": 125000,
+    "moneda": "BOB",
+    "cond_cercano": {
+      "nombre": "Paraiso Norte 1",
+      "dist": 13
+    },
+    "descripcion": "CASA DE 4 DORMITORIOS 1 EN SUITE, COCINA EQUIPADA, SALA COMEDOR, PATIO TRASERO, ESTACIONAMIENTO PARA 2 VEHICULOS"
+  },
+  {
+    "fuente": "c21",
+    "url": "https://c21.com.bo/propiedad/103551_casa-en-pre-venta-zona-norte",
+    "lat": -17.6843699,
+    "lon": -63.1785114,
+    "area_const_m2": 160,
+    "area_terreno_m2": 160,
+    "dorms": 4,
+    "banos": 3,
+    "garage": 2,
+    "precio_raw": 861000,
+    "moneda": "BOB",
+    "cond_cercano": {
+      "nombre": "Paraiso Norte 1",
+      "dist": 13
+    },
+    "descripcion": "CASA EN VENTA – CONDOMINIO CERRADO PARAÍSO NORTE\r\n Ingreso por Mainter – Zona Norte, Santa Cruz\r\n Precio: $us 123.000\r\n\r\n Una opción única para quienes buscan comodidad, exclusividad y plusvalía.\r\nUbicada en una urbanización cerrada, segura y de gran crecimiento en la zona norte. Detalles que la hacen especial:\r\n\r\n3 dormitorios (1 en suite con vestidor y balcón privado)\r\n\r\nCocina tipo americana con cajonería alta y baja \r\n\r\nLiving comedor con ventanales Blindex \r\n\r\nEscritorio ideal para home office \r\n\r\nÁrea de lavandería techada \r\n\r\nPatio trasero y despensa\r\n\r\nGaraje para 2 vehículos \r\n\r\nUrbanización exclusiva \r\n\r\n Ideal para familias o inversores que buscan calidad de vida y revalorización garantizada"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-125001359-20",
+    "lat": -17.69558516,
+    "lon": -63.15598128,
+    "area_const_m2": 119,
+    "area_terreno_m2": 192,
+    "dorms": 3,
+    "banos": 2,
+    "garage": null,
+    "precio_raw": 142000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Barcelona",
+      "dist": 18
+    },
+    "descripcion": "📍 Esta impecable casa en el condominio Barcelona, ubicada en la Av. Banzer (Ingreso UCB), ¡lo tiene todo!\n•\t📏 192 m2 de terreno | 119 m2 construidos.\n•\t🛌 3 Dormitorios (incluye Suite Principal).\n•\t👩‍🍳 Cocina independiente y amplio living-comedor.\n•\t🍖 Galería con churrasquera propia.\nLo mejor: Un área social que parece un club privado:\n•\t🏊 Piscina y Saunas.\n•\t🏋️ Gimnasio equipado.\n•\t🎮 Salón de juegos y parques infantiles.\n•\t🏀 Cancha polifuncional.\n💵 $us. 142.000 (Tipo de cambio 7)\n¿Querés seguridad, comodidad y diversión para tu familia?\n¡Contactame para conocerla hoy! 📩\n¿Buscando casa en condominio de la Zona Norte de Santa Cruz?\n📍 Condominio Barcelona, ubicada en la Av. Banzer (Ingreso UCB)\n📏 192 m2 de terreno | 119 m2 construidos.\n🛌 3 Dormitorios (incluye Suite Principal).\n👩‍🍳 Cocina independiente y amplio living-comedor.\n🍖 Galería con churrasquera propia.\nAREAS SOCIALES COMPLETAS\n💵 $us. 142.000 (TC7)"
+  },
+  {
+    "fuente": "c21",
+    "url": "https://c21.com.bo/propiedad/106973_casa-en-preventa-en-urb-los-sauces-con-3-dorm-en-suite",
+    "lat": -17.70785569059932,
+    "lon": -63.18439926736449,
+    "area_const_m2": 156.6,
+    "area_terreno_m2": 200,
+    "dorms": null,
+    "banos": null,
+    "garage": null,
+    "precio_raw": 939600,
+    "moneda": "BOB",
+    "cond_cercano": {
+      "nombre": "Riviera del Remanso A",
+      "dist": 34
+    },
+    "descripcion": "*CASA EN PRE VENTA EN LA ZONA NORTE*\r\n\r\nZona Norte Entre radial 26 y Canal pedro Velez por el ingreso a Mainter Urb. Los Sauces. \r\n\r\nSuperficie de terreno: 200 m2\r\nSuperficie construida: 156,6 m2\r\n\r\n*DESCRIPCION:*\r\n\r\nPlanta Baja:\r\n- Estudio / Escritorio \r\n- Parqueo para 2 vehículos \r\n- Baño de visitas\r\n- Sala\r\n- Comedor\r\n- Cocina Americana\r\n- Despensa\r\n- Galeria \r\n- Patio posterior\r\nPlanta Alta\r\n- 1 master suite ( con amplio vestidor y balcon)\r\n- 2 dormitorios en suite  ( con ropero empotrado y area de escritorio)\r\n\r\n*Precio: 138.000 $us TC Oficial*\r\n\r\nAgenda tu visita!!\r\n\r\nID 106907"
+  },
+  {
+    "fuente": "c21",
+    "url": "https://c21.com.bo/propiedad/107583_casa-en-venta-barrio-el-remanso-condominio-los-jardines",
+    "lat": -17.71010589776176,
+    "lon": -63.169027821213916,
+    "area_const_m2": 179,
+    "area_terreno_m2": 422,
+    "dorms": null,
+    "banos": null,
+    "garage": null,
+    "precio_raw": 2325000,
+    "moneda": "BOB",
+    "cond_cercano": {
+      "nombre": "Los Jardines",
+      "dist": 37
+    },
+    "descripcion": "CASA EN VENTA Barrio El Remanso Condominio Los Jardines\r\nS250.000.-\r\nSup: 422 m2\r\nSup. Cont.: 179\r\nFrente: 10 mt\r\nFondo: 32 mt\r\n3 Dormitorios\r\nLiving Comedor\r\nBaño de Visita\r\nGaleria\r\nChurrasquera\r\n2 Garaje"
+  },
+  {
+    "fuente": "c21",
+    "url": "https://c21.com.bo/propiedad/100647_casa-en-venta-en-zona-norte-ingresando-por-mainter",
+    "lat": -17.71002839625144,
+    "lon": -63.16915291904907,
+    "area_const_m2": 174,
+    "area_terreno_m2": 212.4,
+    "dorms": 4,
+    "banos": 3,
+    "garage": 3,
+    "precio_raw": 1113000,
+    "moneda": "BOB",
+    "cond_cercano": {
+      "nombre": "Los Jardines",
+      "dist": 39
+    },
+    "descripcion": "Zona Norte, Avenida principal ingresando por Mainter. \r\nTerreno: 212 m2\r\nConstrucción: 174 m2\r\n\r\nCARACTERISTICAS:\r\n* SALA DE ESTAR Y COMEDOR\r\n* ⁠COCINA INTEGRADA\r\n* ⁠1 SUITE  BAÑO  CLOSET\r\n* ⁠2 DORMITORIOS\r\n* ⁠2 BAÑOS\r\n* ⁠ESCRITORIO\r\n* ⁠PARQUEO PARA 3 VEHICULOS\r\n* ⁠LAVANDERIA\r\n* ⁠LOS DORMITORIOS CON BALCÓN \r\n\r\nPrecio: 159.000 USD"
+  },
+  {
+    "fuente": "c21",
+    "url": "https://c21.com.bo/propiedad/107431_casa-en-preventa-en-urb-los-sauces-con-3-dorm-en-suite",
+    "lat": -17.707998777563578,
+    "lon": -63.18444218270873,
+    "area_const_m2": 156.6,
+    "area_terreno_m2": 200,
+    "dorms": null,
+    "banos": null,
+    "garage": null,
+    "precio_raw": 939600,
+    "moneda": "BOB",
+    "cond_cercano": {
+      "nombre": "Riviera del Remanso A",
+      "dist": 42
+    },
+    "descripcion": "*CASA EN PRE VENTA EN LA ZONA NORTE*\r\n\r\nZona Norte Entre radial 26 y Canal pedro Velez por el ingreso a Mainter Urb. Los Sauces. \r\n\r\nSuperficie de terreno: 200 m2\r\nSuperficie construida: 156,6 m2\r\n\r\n*DESCRIPCION:*\r\n\r\nPlanta Baja:\r\n- Estudio / Escritorio \r\n- Parqueo para 2 vehículos \r\n- Baño de visitas\r\n- Sala\r\n- Comedor\r\n- Cocina Americana\r\n- Despensa\r\n- Galeria \r\n- Patio posterior\r\nPlanta Alta\r\n- 1 master suite ( con amplio vestidor y balcon)\r\n- 2 dormitorios en suite  ( con ropero empotrado y area de escritorio)\r\n\r\n*Precio: 138.000 $us TC Oficial*\r\n\r\nAgenda tu visita!!\r\n\r\nID 106907"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-1200796309-5",
+    "lat": -17.73522881,
+    "lon": -63.16464896,
+    "area_const_m2": 260,
+    "area_terreno_m2": 360,
+    "dorms": 4,
+    "banos": 3,
+    "garage": null,
+    "precio_raw": 250000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Florencia",
+      "dist": 47
+    },
+    "descripcion": "CASA DE 4 DORMITORIOS EN VENTA O ALQUILER – CONDOMINIO FLORENCIA\nZona Norte, 5to anillo Banzer\nTerreno: 360 m²\nConstrucción: 260 m²\nAlquiler: 9.100 Bs\nVenta: 250.000$us Dólares\nDistribución ideal para tu comodidad:\nPlanta Alta\n2 suites con vestidor\n2 dormitorios con baño compartido\nSala de TV\nPlanta Baja\nLiving comedor amplio\nCocina cerrada\nGalería amplia con churrasquera\nDependencia de servicio + depósito\nÁreas sociales del condominio:\nPiscina\nChurrasquera social\nCASA DE 4 DORMITORIOS EN VENTA O ALQUILER – CONDOMINIO FLORENCIA \r\nZona Norte, 5to anillo Banzer  \r\nTerreno: 360 m²  \r\nConstrucción: 260 m²  \r\nAlquiler: 9.100 Bs  \r\nVenta: 250.000$us Dólares"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-noroeste-1200164217-59",
+    "lat": -17.70159512,
+    "lon": -63.1780386,
+    "area_const_m2": 200,
+    "area_terreno_m2": 219.88,
+    "dorms": 4,
+    "banos": 3,
+    "garage": null,
+    "precio_raw": 170000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "La Pradera",
+      "dist": 50
+    },
+    "descripcion": "CASA EN VENTA | CONDOMINIO PRIVADO \"LA PRADERA\"\nDescubre este hermoso hogar ubicado dentro del exclusivo condominio privado \"La Pradera\", ZONA NORTE  un lugar donde la comodidad moderna se combina perfectamente con la tranquilidad y el contacto directo con la naturaleza.\nLa propiedad cuenta con espacios amplios, distribuidos de manera funcional para el disfrute de toda la familia. En su interior encontrarás:\n4 Dormitorios (2 en suite)\nbaño para compartir\ncocina integrada\ncomedor\nliving\ncuarto de lavado y planchado\npatio\n• Áreas al aire libre: espacios verdes que invitan a disfrutar de la brisa natural, con plantas y zonas amplias para recreación o descanso.\npiscina\nsauna\ngimnasio\nparques para niños\ncancha de futbol\ncancha polifuncional\nEl condominio se destaca por contar con bellas áreas sociales pensadas para el esparcimiento, además de ofrecer una conexión única con el entorno natural, rodeado de vegetación y paisajes que crean un ambiente sereno y armonioso. Es el lugar perfecto para quienes buscan vivir en un entorno seguro, tranquilo y rodeado de naturaleza, sin renunciar a las comodidades de un hogar moderno y bien cuidado.\n¡Una oportunidad única de adquirir un hogar en un entorno privilegiado!\nCASA EN VENTA CONDOMINIO LA PRADERA\r\n4 Dormitorios (2 en suite)\r\ncocina \r\nliving \r\ncomedor \r\ncuarto de lavado\r\npatio\r\nAREAS SOCIALES \r\npiscina \r\nsauna \r\ngimnasio\r\nparques infantiles \r\ncancha de futbol\r\ncancha polifuncional \r\nseguridad 24/7"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-banzer-km9-y-km10-120045017-59",
+    "lat": -17.697588,
+    "lon": -63.17563406,
+    "area_const_m2": 110,
+    "area_terreno_m2": 250,
+    "dorms": 3,
+    "banos": 1,
+    "garage": null,
+    "precio_raw": 105000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Palmeras II",
+      "dist": 52
+    },
+    "descripcion": "𝑶𝑷𝑶𝑹𝑻𝑼𝑵𝑰𝑫𝑨𝑫 𝑬𝑵 𝒁𝑶𝑵𝑨 𝑵𝑶𝑹𝑻𝑬 𝑲𝑴 8 1/2\n🏡 𝑪𝒂𝒔𝒂 𝑬𝒏 𝑽𝒆𝒏𝒕𝒂 | $us 105.000 (TC 7)\n📍 Ingreso por Mainter km 8 1/2 o Av. Pedro Velez\n📐 250 m² de terreno | 110 m² construidos\n✨ La construcción consta de :\n4 cuartos | Sala comedor | Cocina | Galeria| Patio | Garaje\n🚗 A minutos de Av. Banzer y a metros de Av. Pedro Vélez zona rodeada de Condominios y urbanizaciónes\n📈 Perfecta para inversionistas en  la zona de mayor crecimiento y plusvalía de la ciudad.\nZona de urbanizaciones y Condominios, atras de Condominio Pinares del Norte y a metros de Cond. Asai Norte I y II\nCasa en venta en zona norte Km 9 ingreso por Mainter, una oportunidad de inversión en un sector de alta plusvalía 💰🏡. Cuenta con 3 dormitorios, jardín, parqueo para 2 vehículos 🚗 y 110 m² construidos sobre 250 m² de terreno 📐. Ubicación estratégica cerca de Av. Banzer 📍."
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-120099002-261",
+    "lat": -17.7009001,
+    "lon": -63.18993792,
+    "area_const_m2": 371,
+    "area_terreno_m2": 1,
+    "dorms": 3,
+    "banos": 4,
+    "garage": null,
+    "precio_raw": 269000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Bosques de la Colina",
+      "dist": 56
+    },
+    "descripcion": "🏡 Casa en Venta – Bosques de la Colina\nHermosa casa en exclusiva urbanización, ideal para vivir con confort y seguridad.\n📐 Terreno: 372 m² | Construcción: 249 m²\n✨ Características:\n• 3 suites\n• Baño de visitas\n• Living y comedor\n• Cocina\n• Parqueo para 2 vehículos\n🌿 Áreas sociales:\n4 Club House con piscinas, churrasqueras, canchas, sauna, hidromasajes, lagunas y amplias áreas verdes\n💰 Precio: $us 269.000 (T/C 7)\n📲 Viví rodeado de naturaleza y comodidad\n🏡 Casa en Venta – Bosques de la Colina\nHermosa casa en exclusiva urbanización, ideal para vivir con confort y seguridad.\n📐 Terreno: 372 m² | Construcción: 249 m²\n💰 Precio: $us 269.000 (T/C 7)"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-120034083-38",
+    "lat": -17.70419124,
+    "lon": -63.1689589,
+    "area_const_m2": 240,
+    "area_terreno_m2": 419,
+    "dorms": 4,
+    "banos": 4,
+    "garage": null,
+    "precio_raw": 289000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Valle Norte II",
+      "dist": 60
+    },
+    "descripcion": "✨𝙃𝙚𝙧𝙢𝙤𝙨𝙖 𝙘𝙖𝙨𝙖 𝙚𝙣 v𝙚𝙣𝙩𝙖 𝙚𝙣 𝘾𝙤𝙣𝙙𝙤𝙢𝙞𝙣𝙞𝙤✨\n📍Condominio “Valle Norte ll”\n📐 Superficie terreno: 420m2\n📐 Superficie construida: 240 m²\n𝘾𝙖𝙧𝙖𝙘𝙩𝙚𝙧í𝙨𝙩𝙞𝙘𝙖𝙨\n🔺3 dormitorios, 1 en suite\n🔺Escritorio o 4 dorm en plata baja\n🔺Cocina americana\n🔺Sala de estar intima\n🔺Churrasquera cerrada con A/C\n💵 250.000$us tc paralelo\n📲\n▪️𝘊𝘰𝘯𝘵á𝘤𝘵𝘢𝘮𝘦 𝘩𝘰𝘺 𝘮𝘪𝘴𝘮𝘰 𝘺 𝘤𝘰𝘯𝘰𝘤𝘦 𝘵𝘶 𝘱𝘳ó𝘹𝘪𝘮𝘰 𝘩𝘰𝘨𝘢𝘳▪️\n✨𝙃𝙚𝙧𝙢𝙤𝙨𝙖 𝙘𝙖𝙨𝙖 𝙚𝙣 v𝙚𝙣𝙩𝙖 𝙚𝙣 𝘾𝙤𝙣𝙙𝙤𝙢𝙞𝙣𝙞𝙤✨\n📍Condominio “Valle Norte ll”\n📐 Superficie terreno: 420m2\n📐 Superficie construida: 240 m²\n𝘾𝙖𝙧𝙖𝙘𝙩𝙚𝙧í𝙨𝙩𝙞𝙘𝙖𝙨\n🔺3 dormitorios, 1 en suite\n🔺Escritorio o 4 dorm en plata baja\n🔺Cocina americana\n🔺Sala de estar intima\n🔺Churrasquera cerrada con A/C\n💵 250.000$us tc paralel"
+  },
+  {
+    "fuente": "c21",
+    "url": "https://c21.com.bo/propiedad/112688_casa-en-pre-venta-riviera-del-remanso-townhouses",
+    "lat": -17.7093074117792,
+    "lon": -63.18762262327881,
+    "area_const_m2": 151,
+    "area_terreno_m2": 127,
+    "dorms": 3,
+    "banos": 2,
+    "garage": 2,
+    "precio_raw": 937300,
+    "moneda": "BOB",
+    "cond_cercano": {
+      "nombre": "Riviera del Remanso - Paraíso 1",
+      "dist": 63
+    },
+    "descripcion": "De 3 o 4 dormitorios,, sala de estar,  amplio living comedor, cocina integrada, galería, lavandería, patio y parqueo para 2 vehículos."
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-norte-1200346183-4",
+    "lat": -17.68515923,
+    "lon": -63.15289113,
+    "area_const_m2": 186,
+    "area_terreno_m2": 216,
+    "dorms": 4,
+    "banos": 4,
+    "garage": null,
+    "precio_raw": 190000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Portales del Norte",
+      "dist": 65
+    },
+    "descripcion": "Hermosa casa de 2 plantas 🏠, ubicada en un exclusivo condominio con todas las comodidades para tu familia 👨‍👩‍👧‍👦💖\n💰 Precio: $us 190,000\n📐 Superficie de terreno: 216.37 m²\n🏗️ Superficie construida: 186.14 m²\n🔹 Planta Alta:\n🛏️ 3 dormitorios (1 en suite con baño privado 🚿)\n🛁 1 baño compartido\n🪜 Sala TV.\n🌅 Balcón\n🔹 Planta Baja:\n🛏️ 1 dormitorio o escritorio\n🍳 Cocina independiente\n🔥 Incluye gas domiciliario\n🛁 2 baño\n🌳 Amplio patio\n🔥 Churrasquera\n🌟 Áreas Sociales del Condominio:\n🏊 Piscina\n🛝 Parque para niños\n💪 Gimnasio\n🧖 Sauna\n📲 ¡Agenda tu visita y conoce tu próximo hogar! 🏡✨\n✨ Ideal para vivir con comodidad, seguridad y disfrutar en familia"
+  },
+  {
+    "fuente": "c21",
+    "url": "https://c21.com.bo/propiedad/90724_casa-en-venta-riviera-del-remanso-townhouses",
+    "lat": -17.70930741177924,
+    "lon": -63.18745096190186,
+    "area_const_m2": 179,
+    "area_terreno_m2": 198,
+    "dorms": 3,
+    "banos": 3,
+    "garage": null,
+    "precio_raw": 1399300,
+    "moneda": "BOB",
+    "cond_cercano": {
+      "nombre": "Riviera del Remanso - Paraíso 1",
+      "dist": 69
+    },
+    "descripcion": "Casa de 2 plantas\r\nPlanta baja: garaje para 2 vehículos, living comedor, cocina, baño de visitas, lavandería techada, galería, patio posterior, dormitorio y baño de servicio.\r\nPlanta alta: 1 suite con vestidor y baño privado, 1 suite con baño privado, 1 dormitorio, baño compartido, sala de tv o 4to. dormitorio."
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-noroeste-125001007-1637",
+    "lat": -17.70939347,
+    "lon": -63.18752289,
+    "area_const_m2": 127,
+    "area_terreno_m2": 151,
+    "dorms": 3,
+    "banos": 2,
+    "garage": null,
+    "precio_raw": 133900,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Riviera del Remanso - Paraíso 1",
+      "dist": 75
+    },
+    "descripcion": "CASAS FUERA DE CONDOMINIO\n11 CASAS EXCLUSIVAS\nCASAS DE 2 PLANTAS- CASAS DESDE 151 M2- TERRENOS DESDE 127 M2- PATIO POSTERIOR DE 52 M2- 2 PARQUEOS- 3 Y 4 DORMITORIOS CON BAÑO COMPARTIDO- LIVING – COMEDOR- COCINA AMERICANA- BAÑO DE VISITAS- LAVANDERIA TECHADA- GALERIA TECHADA- SUITE CON BAÑO Y VESTIDOR- HOME OFFICE- SALA DE TV Y ESCRITORIO\nCASAS EN VENTA - RADIAL 26 9NO ANILLO"
+  },
+  {
+    "fuente": "remax",
+    "url": "https://remax.bo/propiedad/venta-casa-santa-cruz-de-la-sierra-noroeste-125001292-223",
+    "lat": -17.70599004,
+    "lon": -63.18545222,
+    "area_const_m2": 1,
+    "area_terreno_m2": 300,
+    "dorms": 3,
+    "banos": 2,
+    "garage": null,
+    "precio_raw": 93000,
+    "moneda": "USD",
+    "cond_cercano": {
+      "nombre": "Riviera del Remanso I",
+      "dist": 77
+    },
+    "descripcion": "🏡 CASA EN VENTA EN URBANIZACIÓN BETHEL – COMODIDAD, SEGURIDAD Y ESPACIOS PARA DISFRUTAR 🌿\n📍 Ubicada en Urbanización Bethel – acceso controlado y ambiente tranquilo para tu familia\n✨ La combinación perfecta entre seguridad, funcionalidad y confort\n📐 DISTRIBUCIÓN IDEAL\n✔ 3 dormitorios\n✔ 1 dormitorio en suite\n✔ Cocina comedor amplia y funcional 🍽️\n✔ Jardín privado 🌿\n💡 PERFECTA PARA:\n✔ Familias que buscan tranquilidad\n✔ Personas que desean vivir en urbanización cerrada\n✔ Quienes valoran privacidad y seguridad\n🔒 BENEFICIOS DE LA URBANIZACIÓN\n✔ Acceso controlado\n✔ Mayor seguridad para tu familia\n✔ Ambiente residencial tranquilo\n✔ Excelente opción para vivir o invertir\n🌟 UNA CASA PARA DISFRUTAR TODOS LOS DÍAS\nEl jardín crea el espacio ideal para compartir, descansar o disfrutar en familia\n📲 AGENDA TU VISITA HOY\nLas casas en urbanizaciones con acceso controlado tienen alta demanda\nUrbanizacion RIVIERA NORTE BETHEL l con acceso controlado \nCasa en venta de 3 Dormitorios \nPrecio: 93.000$"
+  },
+  {
+    "fuente": "c21",
+    "url": "https://c21.com.bo/propiedad/106907_casa-en-preventa-en-urb-los-sauces-con-3-dorm-en-suite",
+    "lat": -17.708366714947772,
+    "lon": -63.18409885995482,
+    "area_const_m2": 156.6,
+    "area_terreno_m2": 200,
+    "dorms": null,
+    "banos": null,
+    "garage": null,
+    "precio_raw": 939600,
+    "moneda": "BOB",
+    "cond_cercano": {
+      "nombre": "Riviera del Remanso A",
+      "dist": 97
+    },
+    "descripcion": "CASA EN PRE VENTA EN LA ZONA NORTE\r\n\r\nZona Norte Entre radial 26 y Canal pedro Velez por el ingreso a Mainter.\r\n\r\nSuperficie de terreno: 200 m2\r\nSuperficie construida: 156,6 m2\r\n\r\nDESCRIPCION:\r\n\r\nPlanta Baja:\r\n- Estudio / Escritorio \r\n- Parqueo para 2 vehículos \r\n- Baño de visitas\r\n- Sala\r\n- Comedor\r\n- Cocina Americana\r\n- Despensa\r\n- Galeria \r\n- Patio posterior\r\nPlanta Alta\r\n- 1 master suite ( con amplio vestidor y balcon)\r\n- 2 dormitorios en suite  ( con ropero empotrado y area de escritorio)\r\n\r\nPrecio: 135.000 $us TC Oficial \r\n\r\nAgenda tu visita!!"
+  },
+  {
+    "fuente": "c21",
+    "url": "https://c21.com.bo/propiedad/102443_casita-pequena-anticretico-2-habitaciones-radial-26-y-7mo-anillo",
+    "lat": -17.72164211590217,
+    "lon": -63.173164249829085,
+    "area_const_m2": 85,
+    "area_terreno_m2": 100,
+    "dorms": null,
+    "banos": null,
+    "garage": null,
+    "precio_raw": 160000,
+    "moneda": "BOB",
+    "cond_cercano": {
+      "nombre": "Campo Verde",
+      "dist": 99
+    },
+    "descripcion": "Casita pequeña Bs. 160.000 Anticrético 2 habitaciones Radial 26 y 7mo anillo\r\n\r\nDentro de una Quinta privada \r\n\r\n 4% comisión inmobiliaria\r\nRegistrable en DDRR como anticrético (propietario tiene NIT)\r\n\r\n 2 habitaciones\r\nBaño a compartir \r\nParqueo\r\n Cocina remodelada\r\n\r\nEntrega en 7 días posta contrato ( esta en últimos detalles de remodelacion)\r\nPodemos adecuar a tu requerimiento"
+  }
+]

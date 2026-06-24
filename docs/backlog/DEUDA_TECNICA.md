@@ -1,6 +1,34 @@
 # Deuda Técnica — SICI
 
-> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 24 Mar 2026.
+> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 19 Jun 2026.
+
+## Módulo TC dinámico — DEPRECADO (19 Jun 2026)
+
+**Qué era:** cron `recalcular-precios-diario` (7:05 AM) + `recalcular_precios_batch_nocturno`/`recalcular_precio_propiedad` que cacheaban `precio_usd_actualizado` cuando cambiaba el TC.
+
+**Por qué se deprecó:** superado por `precio_normalizado()` que normaliza EN VIVO en cada consulta del feed. Verificado que NINGÚN consumidor final usa `precio_usd_actualizado` (ni RPCs del feed, ni snapshots de absorción, ni `buscar_acm`, ni estudio de mercado, ni frontend salvo setearlo a null al editar). Cron desagendado + funciones marcadas DEPRECADO via COMMENT.
+
+**Pendiente (opcional, baja):** las funciones siguen en la BD (huérfanas, inertes). Borrarlas formalmente algún día. Doc actualizada: `sql/functions/tc_dinamico/README.md` + `docs/arquitectura/TIPO_CAMBIO_SICI.md` §11.7. Memoria: `project_bug_mig174_tc_paralelo_n8n_incompleta`.
+
+## config_global — limpieza de claves TC fósiles (19 Jun 2026)
+
+La migración 174 (7-mar) había **desactivado** las claves MAYÚSCULAS duplicadas (`TIPO_CAMBIO_OFICIAL`/`TIPO_CAMBIO_PARALELO`) pero NO las borró ni completó el paso n8n. El 19-jun se **borraron** (solo quedan las minúsculas activas: `tipo_cambio_oficial`=6.96, `tipo_cambio_paralelo`=9.88 dinámico). El `flujo_b_processing_v3.0` de producción ya estaba arreglado (usa minúsculas) — el archivo del repo estaba stale y se sincronizó. **Lección: el repo n8n ≠ producción; verificar contra el export real del founder.**
+
+## Paralelo en alquiler — IMPLEMENTADO (19 Jun 2026), causa raíz pendiente
+
+**Hecho:** `v_mercado_alquiler` ahora deriva `precio_mensual = bob / CASE WHEN solo_tc_paralelo THEN <tc_paralelo> ELSE 6.96 END` (ver ADR-012 ZN + `TIPO_CAMBIO_SICI.md`). Permite Bs-real + USD-correcto en alquileres cotizados al paralelo. Tag `solo_tc_paralelo` manual (1 prop hoy: 1970).
+
+**Pendiente (baja):** que el LLM de enrichment de alquiler **detecte y setee `solo_tc_paralelo`** automáticamente (como ya detecta paralelo en venta), para no taggear a mano.
+
+## `tipo_cambio_detectado='paralelo'` espurio en alquiler — limpiado, MONITOREAR (19 Jun 2026)
+
+240 alquileres tenían `tipo_cambio_detectado='paralelo'` espurio (heredado de migraciones de normalización de VENTA — 059/168/175 — que corrieron sobre props `moneda='BOB'` sin distinguir operación). Inocuo (la vista de alquiler no lee ese campo), pero se limpió a NULL (alineado con la detección real del LLM). **Monitorear ~1 semana:** si vuelven alquileres en `'paralelo'`, hay un setter activo no hallado (improbable por la evidencia — ninguna función/workflow/trigger de alquiler lo setea). NO limpiar de nuevo sin hallar la causa.
+
+## Discovery Remax casas/terrenos — fix `land_m2` aplicado + parking inexistente (19 Jun 2026)
+
+**Hecho (n8n prod):** nodo "Extraer Propiedades" de `discovery_remax_casas_terrenos` — `land_area_m`→`land_m2` (campo real de la API `/api/search`, confirmado por la sonda con 94% de área en terrenos reales) + `.toLowerCase()` en `subtype_property.name` (la API devuelve "Casa"/"Terreno", el pipeline filtra minúscula) + `estacionamientos: null` (la API de Remax **NO expone parking** — `number_parking` era campo fantasma; el área del terreno tampoco está en el HTML del detalle, solo en la API de búsqueda).
+
+**Impacto:** 0 hoy en Equipetrol (Remax no tiene terrenos reales ahí — los pocos "Terreno" son deptos mal subtipados). **Crítico al extender el pipeline a Urubó** (~179 terrenos Remax). Ver memoria `project_sonda_suelo_zn_urubo_jun2026`.
 
 ## Merge y amenities — RIESGO ACEPTADO (9 Mar 2026)
 
