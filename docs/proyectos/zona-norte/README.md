@@ -21,6 +21,7 @@
 | Match rate ZN alquiler | ✅ **83.3%** (16-jun) — mismo método; sin nombre → matchea por GPS, validación por URL de anuncio |
 | **#8 Microzonas (14 — grilla anillos×avenidas)** | ✅ **aplicado 29-may** (mig 254 + `lib/zonas.ts` + workflows discovery). Snapshot v4 descartado → ver #12 |
 | Fase 5 / #7: alquiler (replicar patrón) | ✅ feed `/zona-norte/alquileres` construido 23-jun (dark launch/noindex); discovery ZN activo desde Fase 3 |
+| Asset `og:image` ZN | ⬜ pendiente — subir `simon-mvp/public/skyline-zona-norte.jpg`. Los feeds ZN ya apuntan a esa ruta (commit `4ba18b2`); hasta subirla, compartir el link no muestra imagen de preview |
 | #6 Frontend `/mercado/zona-norte` | ⬜ pendiente — prototipo multi-macrozona |
 | #1.7 Detector automático de clusters emergentes | ⬜ pendiente — infraestructura escalable |
 | #5 Exposición pública | ⬜ post-validación 90 días |
