@@ -687,3 +687,23 @@ FASE 5-7 (no dependen del snapshot): `lib/zonas.ts` (14 microzonas en filtro adm
 **Lección arquitectónica:** deptos (n8n) y casas (híbrido) comparten `propiedades_v2` → **cada pipeline debe filtrar por tipo para ignorar lo ajeno**. La frontera es por TIPO de propiedad, no por zona. El híbrido es multizona (genérico por polígono) pero solo para casas/terrenos; los deptos siguen en n8n.
 
 **Pendiente:** construir feed `/ventas/casas` (vista mig 262 ✅ aplicada, 298 casas) → piloto del cron del híbrido vía routine de Claude Code (MOAT sin costo de API, una sola routine corre todo el flujo lineal).
+
+---
+
+## 24 Jun 2026 — Feed /ventas/casas construido (dark launch)
+
+Feed público de casas ZN sobre `v_mercado_casas` (**SSG + filtrado client-side, sin API/RPC nueva** — las ~291 casas caben embebidas), aislado del feed de deptos, `noindex`. Branch `feat/feed-casas-zn` (commit `c0d0372`), **sin merge a main ni deploy**. Archivos nuevos: `pages/ventas/casas.tsx` + `lib/casas.ts` (`UnidadCasa`/`FiltrosCasa` + `mapCasaRow` + filtros).
+
+**Qué incluye:** cards desktop/mobile, bottom sheet, mapa + `CasaMapFloatCard`, `PhotoViewer`, filtros completos (microzona/precio/dorms/condominio cerrado-individual/amenidades/terreno/orden), spotlight `?id`, contacto WhatsApp al captador (`agente_telefono`, ref `SIM-V`). Mobile = mismos componentes que el feed de deptos (search pill arriba + botón de mapa + overlay full-screen), no el FAB.
+
+**Bugs/ajustes resueltos en la sesión (verificados en navegador):**
+- Bottom sheet salía con texto invisible (tema claro de `alquileres.css` pisaba) → overrides scopeados bajo `.bs-venta` (convención del repo).
+- Sheet desktop abría a la izquierda tapando el filtro → corregido a la derecha.
+- Faltaba el `MapFloatCard` al clickear un pin → clonado adaptado a casas.
+- Zona en cards mostraba la abreviatura (`displayZona`) en vez del nombre del filtro → helper `zonaChip` (`chipLabelZN(getZonaLabel())`).
+- Área construida sin etiqueta ("152 m²" ambiguo) → "152 m² constr."
+
+**Verificación:** `tsc --noEmit` limpio; `/ventas/casas` carga 200 con las 291 casas embebidas, `noindex` presente, 0 errores de runtime.
+
+**Pendiente:** merge a main + deploy + **cron de captura** (routine Claude Code, cablear `extraerCampos()`) + asset `og:image` (`skyline-zona-norte.jpg`).
+**Deuda detectada:** `VentaMap` reconstruye el mapa y resetea el zoom al seleccionar un pin (afecta a todos los feeds) → anotada en `docs/backlog/DEUDA_TECNICA.md`.

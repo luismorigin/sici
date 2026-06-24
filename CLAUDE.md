@@ -6,7 +6,7 @@
 - Pipeline nocturno: Discovery → Enrichment → Merge → Matching (venta + alquiler)
 - Tabla principal: `propiedades_v2` — conteos actuales via `v_mercado_venta` y `v_mercado_alquiler`
 - Tabla proyectos: `proyectos_master` (99%+ con GPS)
-- Tabla condominios (casas ZN): `condominios_master` (mig 260+261, FK `id_condominio_master`; matcher `matchear_condominio(lat,lon,nombre)` nombre-primario + GPS). Casas ZN (`tipo_propiedad_original='casa'`) cargadas con **flujo híbrido manual** (`scripts/sonda-suelo/` discovery/dedup/fetch-contacto/merge + agentes-lectores para el MOAT — NO el n8n viejo de Equipetrol, que no captura contacto), **con contacto del captador (WhatsApp)** y contrato completo de deptos (fotos/descripción/fecha/código tras backfill 21-jun, script `scripts/auditoria-cola-matching/backfill-campos-casas.mjs` con `extraerCampos()` reusable para el cron). **Aisladas del feed de deptos** (0 en `v_mercado_venta`, 0 con `id_proyecto_master`). Vista feed: `v_mercado_casas` (mig 262 ✅). Pendiente: feed `/ventas/casas` + cron. Conteos vivos en `v_mercado_casas`/`condominios_master`. Diseño: `docs/proyectos/zona-norte/DISENO_PIPELINE_CASAS_VIVIENDA.md`
+- Tabla condominios (casas ZN): `condominios_master` (mig 260+261, FK `id_condominio_master`; matcher `matchear_condominio(lat,lon,nombre)` nombre-primario + GPS). Casas ZN (`tipo_propiedad_original='casa'`) cargadas con **flujo híbrido manual** (`scripts/sonda-suelo/` discovery/dedup/fetch-contacto/merge + agentes-lectores para el MOAT — NO el n8n viejo de Equipetrol, que no captura contacto), **con contacto del captador (WhatsApp)** y contrato completo de deptos (fotos/descripción/fecha/código tras backfill 21-jun, script `scripts/auditoria-cola-matching/backfill-campos-casas.mjs` con `extraerCampos()` reusable para el cron). **Aisladas del feed de deptos** (0 en `v_mercado_venta`, 0 con `id_proyecto_master`). Vista feed: `v_mercado_casas` (mig 262 ✅). Feed `/ventas/casas` **construido** (dark launch/noindex, branch `feat/feed-casas-zn`, sin merge/deploy). Pendiente: merge + cron de captura + asset og:image. Conteos vivos en `v_mercado_casas`/`condominios_master`. Diseño: `docs/proyectos/zona-norte/DISENO_PIPELINE_CASAS_VIVIENDA.md`
 - Tracking: `workflow_executions` (health check)
 - Fuentes: Century21, Remax, Bien Inmuebles
 
@@ -150,7 +150,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Seguridad Supabase (reglas)** | `docs/canonical/SEGURIDAD_SUPABASE.md` — checklists antes de RLS, DROP, API routes, views, funciones RPC |
 | **Deuda tecnica** | `docs/backlog/DEUDA_TECNICA.md` |
 | **Retención usuarios** | `docs/backlog/RETENCION_USUARIOS.md` — Google OAuth, favoritos BD, alertas email (6 fases) |
-| **Casas y Terrenos PRD** | `docs/backlog/CASAS_TERRENOS_PRD.md` — Fases 1-2-4 completadas (incl. condominios mig 260+261, 45 condominios; 305 casas ZN cargadas con contacto vía flujo híbrido), feed público pendiente (Fase 3: vista `v_mercado_casas` ✅ aplicada mig 262; falta `/ventas/casas`) |
+| **Casas y Terrenos PRD** | `docs/backlog/CASAS_TERRENOS_PRD.md` — Fases 1-2-4 completadas (incl. condominios mig 260+261, 45 condominios; 305 casas ZN cargadas con contacto vía flujo híbrido), feed `/ventas/casas` construido (dark launch, branch `feat/feed-casas-zn`, sin merge; vista `v_mercado_casas` ✅ mig 262); pendiente merge + cron (Fase 3) |
 | **Agente Desarrolladoras PRD** | `docs/backlog/AGENTE_DESARROLLADORAS_PRD.md` — Idea de skill/agente para análisis de mercado a desarrolladoras, cruzando SICI + normativas + costos construcción |
 | **Meta Pixel & eventos** | `docs/meta/META_PIXEL_EVENTOS.md` — Pixel ID, eventos Tier 1-2 implementados, Tier 3 backlog, CAPI futuro |
 | **Producto informe mercado** | `docs/backlog/PRODUCTO_INFORME_MERCADO.md` |
@@ -289,6 +289,7 @@ simon-mvp/src/
 │   ├── format-utils.ts            → dormLabel, formatPriceBob
 │   ├── mercado-data.ts            → Fetch datos mercado ventas (getStaticProps)
 │   ├── mercado-alquiler-data.ts   → Fetch datos mercado alquileres + yield (getStaticProps)
+│   ├── casas.ts                   → Feed casas ZN: UnidadCasa/FiltrosCasa + mapCasaRow + filtros (alimenta /ventas/casas)
 │   ├── meta-pixel.ts              → fbqTrack() helper — Meta Pixel events (no-op si pixel no cargado)
 │   └── informe/                   → Generacion informes PDF (split de api/informe.ts)
 │       ├── types.ts                → Propiedad, DatosUsuario, Analisis, LeadData, TemplateData
@@ -346,6 +347,7 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 | `/alquileres` | **Feed alquileres** |
 | `/zona-norte/ventas` | **Feed ventas Zona Norte** `[dark launch / noindex]` — copia de `/ventas` filtrando las 14 microzonas ZN (`getMicrozonasZN()`), sin tocar Equipetrol. Archivos: `pages/zona-norte/ventas.tsx` + `lib/mercado-data-zn.ts` (23-jun-2026). No linkeada desde la landing. Ver memoria `project_feed_zona_norte_aislamiento`. |
 | `/zona-norte/alquileres` | **Feed alquileres Zona Norte** `[dark launch / noindex]` — copia de `/alquileres` filtrando las 14 microzonas ZN (`getMicrozonasZN()`), sin tocar Equipetrol. Archivos: `pages/zona-norte/alquileres.tsx` + `lib/mercado-alquiler-data-zn.ts` (23-jun-2026). No linkeada desde la landing. Selector de microzonas con etiqueta legible (`chipLabelZN`, ej. `2º-3º · La Salle/Banzer`) — mismo helper en ambos feeds ZN. Ver memoria `project_feed_zona_norte_aislamiento`. |
+| `/ventas/casas` | **Feed casas Zona Norte** `[dark launch / noindex]` — feed sobre `v_mercado_casas` (SSG + filtrado client-side, sin API/RPC nueva). Aislado del feed de deptos. Filtros: microzona/precio/dorms/condominio cerrado/amenidades/terreno. Mobile = mismos componentes que `/ventas` (search pill + mapa). Archivos: `pages/ventas/casas.tsx` + `lib/casas.ts` (24-jun-2026, branch `feat/feed-casas-zn`, sin merge). No linkeado desde la landing. |
 | `/mercado/equipetrol` | **Mercado hub** — índice ventas + alquileres (Schema.org CollectionPage) |
 | `/mercado/equipetrol/ventas` | **Mercado ventas** — precios/m2, zonas, tipologías, tendencias (Article + Dataset + FAQPage) |
 | `/mercado/equipetrol/alquileres` | **Mercado alquileres** — rentas Bs, zonas, yield estimado (Article + Dataset + FAQPage) |
