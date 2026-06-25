@@ -51,7 +51,15 @@ node verificador-casas.mjs --apply      # marca pending / baja confirmada / revi
 Agregá UNA línea a `scripts/casas-zn/cron-casas-log.md` con la fecha y los números
 (nuevas, cargadas, retenidas, pending, baja, feed antes→después). Formato: ver el archivo.
 
-### 7. Reportar al usuario
+### 7. Commit del log (para que el historial sea durable/versionado)
+El log está trackeado; commiteá la línea nueva para que perdure (no se pierda en un reset, se vea en GitHub):
+```
+git add scripts/casas-zn/cron-casas-log.md scripts/casas-zn/output/moat-output.json
+git commit -m "chore(cron-casas): log <fecha> (N nuevas, M cargadas)"
+```
+(Push opcional, con OK del usuario.)
+
+### 8. Reportar al usuario
 Resumen corto: cuántas nuevas, cargadas, retenidas (con motivo), bajas, y el estado del feed.
 
 ## Reglas
