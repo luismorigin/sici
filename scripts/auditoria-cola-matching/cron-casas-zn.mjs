@@ -131,16 +131,37 @@ log(`   → NUEVAS (en portal, no en BD): ${nuevas.length}`);
 log(`   → existentes (en ambas): ${existentes.length}`);
 log(`   → desaparecidas (activas en BD, no vistas en portal → CANDIDATAS A BAJA, verificar): ${desaparecidas.length}\n`);
 
-// ---------- 3. DETALLE de las NUEVAS ----------
+// ---------- 2b. PRE-FILTRO BARATO POR SLUG ----------
+// Descarta rechazos OBVIOS por la URL antes de gastar el fetch de detalle.
+// Solo /anticretico/ (alta confianza: ningún casa-venta lo usa en el slug).
+// Alquiler y departamento NO se filtran acá (riesgo: "casa-departamento" es una
+// casa real); esos los atrapa el GATE del MOAT leyendo el texto.
+const RECHAZO_SLUG = /anticretico|anticr[eé]tico/i;
+const preFiltradas = nuevas.filter(p => RECHAZO_SLUG.test(p.url));
+const nuevasReales = nuevas.filter(p => !RECHAZO_SLUG.test(p.url));
+if (preFiltradas.length) log(`2b) Pre-filtro slug: ${preFiltradas.length} descartadas (anticrético obvio) → quedan ${nuevasReales.length} para detalle\n`);
+
+// ---------- 3. DETALLE de las NUEVAS (post pre-filtro) ----------
 let detalladas = [];
-if (!NO_DET && nuevas.length) {
-  const target = LIMIT ? nuevas.slice(0, LIMIT) : nuevas;
+if (!NO_DET && nuevasReales.length) {
+  const target = LIMIT ? nuevasReales.slice(0, LIMIT) : nuevasReales;
   log(`3) Detalle de ${target.length} nuevas${LIMIT ? ` (--limit=${LIMIT})` : ''}…`);
   let okTel = 0, okDesc = 0, okFotos = 0;
   for (const [i, p] of target.entries()) {
     try {
       const d = await detalleCasa(p.url, p.fuente);
-      const rec = { ...p, ...d, fetch_ok: true };
+      // Físicos/precio: el detalle COMPLEMENTA al listado, no lo pisa con null.
+      // (Remax expone área/precio en el listado pero a veces null en el detalle.)
+      const rec = {
+        ...p, ...d,
+        area_const_m2: d.area_const_m2 ?? p.area_const_m2 ?? null,
+        area_terreno_m2: d.area_terreno_m2 ?? p.area_terreno_m2 ?? null,
+        dorms: d.dorms ?? p.dorms ?? null,
+        banos: d.banos ?? p.banos ?? null,
+        precio_fuente_usd: d.precio_fuente_usd ?? p.precio_usd ?? null,
+        moneda: p.moneda ?? null,
+        fetch_ok: true,
+      };
       detalladas.push(rec);
       if (d.agente_telefono) okTel++;
       if ((d.descripcion || '').length > 50) okDesc++;
@@ -164,15 +185,17 @@ const outPath = join(outDir, `cron-casas-dryrun-${ts}.json`);
 writeFileSync(outPath, JSON.stringify({
   generado: new Date().toISOString(), zona: ZONA, modo: 'DRY-RUN',
   resumen: { portal: portal.length, bd_casas: dbRows.length, bd_activas: dbRows.filter(r => r.es_activa).length,
-    nuevas: nuevas.length, existentes: existentes.length, desaparecidas: desaparecidas.length },
-  nuevas, existentes_urls: existentes.map(p => p.url),
+    nuevas: nuevas.length, pre_filtradas: preFiltradas.length, nuevas_reales: nuevasReales.length,
+    existentes: existentes.length, desaparecidas: desaparecidas.length },
+  nuevas: nuevasReales, pre_filtradas: preFiltradas.map(p => ({ url: p.url, fuente: p.fuente })),
+  existentes_urls: existentes.map(p => p.url),
   desaparecidas: desaparecidas.map(r => ({ id: r.id, url: r.url, status: r.status })),
   detalladas,
 }, null, 2), 'utf8');
 
 log('='.repeat(64));
 log(`  DRY-RUN listo. NO se escribió nada a la BD.`);
-log(`  Nuevas a cargar: ${nuevas.length} · Desaparecidas a verificar: ${desaparecidas.length}`);
+log(`  Nuevas: ${nuevas.length} (-${preFiltradas.length} anticretico obvio = ${nuevasReales.length} a evaluar por MOAT) · Desaparecidas a verificar: ${desaparecidas.length}`);
 log(`  💾 ${outPath}`);
 log(`\n  Siguiente fase (NO en este script): MOAT (agente) sobre las nuevas → amenidades/condominio/precio_billete/TC,`);
 log(`  matchear_condominio, y UPSERT (--apply, service_role) + verificador sobre las desaparecidas.\n`);
