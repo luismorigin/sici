@@ -104,9 +104,9 @@ export function mapCasaRow(row: any): UnidadCasa {
   const precioUsd = parseFloat(String(row.precio_usd)) || 0
   const precioNorm = parseFloat(String(row.precio_norm ?? row.precio_usd)) || 0
   const areaTotalM2 = row.area_total_m2 ? parseFloat(String(row.area_total_m2)) : null
-  const precioM2 = areaTotalM2 && areaTotalM2 > 0
-    ? Math.round(precioNorm / areaTotalM2)
-    : (parseFloat(String(row.precio_m2)) || 0)
+  // precio_m2 canónico de la vista (= precio_normalizado()/area); recalcular solo si falta
+  const precioM2 = parseFloat(String(row.precio_m2))
+    || (areaTotalM2 && areaTotalM2 > 0 ? Math.round(precioNorm / areaTotalM2) : 0)
 
   return {
     id: Number(row.id),

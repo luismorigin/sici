@@ -16,6 +16,19 @@
 //   7. UPSERT a propiedades_v2 (onConflict url,fuente, respetando candados)  ← --apply, service_role
 //   8. Verificador sobre las "desaparecidas" (baja real solo tras confirmar)
 //
+// ⚠️ CONTRATO DE ESCRITURA (a respetar SÍ o SÍ cuando se implemente --apply):
+//   - fuente='c21' para casas C21 (NO 'century21'): es la salvaguarda que aísla las
+//     casas del híbrido del discovery C21 viejo (ver BITACORA 21-jun). NO canonizar a century21.
+//   - precio_usd = BILLETE (precio_billete_usd del MOAT); NO el normalizado. moneda_original
+//     según fuente. tipo_cambio_detectado = del MOAT (no de heurística de slug/precio).
+//   - depende_de_tc = true para paralelo/oficial-normalizado.
+//   - Candados: leer la fila existente y NO pisar campos en campos_bloqueados
+//     (formato-OBJETO vía _is_campo_bloqueado; un string suelto NO protege).
+//   - onConflict: cuidado con el espacio de URLs c21.com.bo (existen dups históricos
+//     c21/century21). Chequear existencia por URL contra TODAS las fuentes antes de insertar.
+//   - Nunca auto-baja de "desaparecidas" sin pasar por el verificador HTTP.
+//   - tipo_propiedad_original='casa' SIEMPRE (no degradar/contaminar el feed de deptos).
+//
 // Uso:
 //   node cron-casas-zn.mjs                 -> dry-run completo (discovery + diff + detalle de nuevas)
 //   node cron-casas-zn.mjs --limit=10      -> limita el fetch de detalle de nuevas (test rápido)
@@ -28,7 +41,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { c21Listado, remaxListadoSC } from '../sonda-suelo/lib/portales.mjs';
 import { enZona } from '../sonda-suelo/lib/zonas.mjs';
-import { sleep } from '../sonda-suelo/lib/fetcher.mjs';
+import { sleep, fetchRetry } from '../sonda-suelo/lib/fetcher.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -61,8 +74,8 @@ const pickPrecioC21 = (e) => {
 };
 
 async function detalleC21(url) {
-  const r = await fetch(`${url}?json=true`, { headers: UA });
-  const j = await r.json();
+  const j = await fetchRetry(`${url}?json=true`, { json: true, headers: UA });
+  if (!j) throw new Error('fetch C21 falló (timeout/HTTP)');
   const e = j.entity || j.data?.entity || j;
   const tel = telNorm(e.whatsapp || e.usuatelMovil);
   const fotos = uniq((Array.isArray(j.fotos) && j.fotos.length ? j.fotos : (j.fotosNew || [])).map(f => f.large || f.large1 || f.path));
@@ -81,8 +94,8 @@ async function detalleC21(url) {
   };
 }
 async function detalleRemax(url) {
-  const r = await fetch(url, { headers: UA });
-  const html = await r.text();
+  const html = await fetchRetry(url, { json: false, headers: UA });
+  if (!html) throw new Error('fetch Remax falló (timeout/HTTP)');
   const m = html.match(/data-page="([^"]+)"/); if (!m) throw new Error('sin data-page');
   const props = JSON.parse(dec(m[1])).props;
   const l = props.listing || {}; const a = props.agent || {}; const li = l.listing_information || {};
@@ -118,15 +131,30 @@ log(`   → portal: ${portal.length} casas ZN únicas por URL (${listings.length
 
 // ---------- 2. DIFF vs BD (select-only) ----------
 log('2) Diff vs propiedades_v2 (casas)…');
-const { data: dbRows, error } = await sb.from('propiedades_v2')
-  .select('id, url, status, es_activa').eq('tipo_propiedad_original', 'casa');
-if (error) { console.error('   ERROR leyendo BD:', error.message); process.exit(1); }
+// Paginado explícito: Supabase corta en 1000 filas. Sin esto, al pasar de 1000
+// (expansión multi-macrozona) el diff truncaría → falsos "nuevas" → en --apply
+// inserts duplicados masivos.
+const dbRows = [];
+for (let from = 0; ; from += 1000) {
+  const { data, error } = await sb.from('propiedades_v2')
+    .select('id, url, status, es_activa, latitud, longitud')
+    .eq('tipo_propiedad_original', 'casa')
+    .range(from, from + 999);
+  if (error) { console.error('   ERROR leyendo BD:', error.message); process.exit(1); }
+  dbRows.push(...data);
+  if (data.length < 1000) break;
+}
+// nuevas/existentes: por URL contra TODAS las casas (una URL ya en BD bajo
+// cualquier fuente/zona NO es nueva → robusto al dup c21/century21).
 const dbByUrl = new Map(dbRows.map(r => [r.url, r]));
 const portalUrls = new Set(portal.map(p => p.url));
 const nuevas = portal.filter(p => !dbByUrl.has(p.url));
 const existentes = portal.filter(p => dbByUrl.has(p.url));
-const desaparecidas = dbRows.filter(r => r.es_activa && !portalUrls.has(r.url));
-log(`   → en BD (casas): ${dbRows.length} (${dbRows.filter(r => r.es_activa).length} activas)`);
+// desaparecidas: SOLO contra el universo que el discovery puede ver (polígono ZN).
+// Una casa activa fuera de ZN no es "desaparecida" — el discovery no la mira.
+const dbZN = dbRows.filter(r => enZona(r.latitud, r.longitud, ZONA));
+const desaparecidas = dbZN.filter(r => r.es_activa && !portalUrls.has(r.url));
+log(`   → en BD (casas, todas): ${dbRows.length} · en polígono ZN: ${dbZN.length} (${dbZN.filter(r => r.es_activa).length} activas)`);
 log(`   → NUEVAS (en portal, no en BD): ${nuevas.length}`);
 log(`   → existentes (en ambas): ${existentes.length}`);
 log(`   → desaparecidas (activas en BD, no vistas en portal → CANDIDATAS A BAJA, verificar): ${desaparecidas.length}\n`);
