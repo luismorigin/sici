@@ -1,0 +1,12 @@
+{
+  "name": "casas-zn",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pipeline del cron de casas Zona Norte: discovery + diff + MOAT + upsert + verificador. Reusa scripts/sonda-suelo/lib. Ver cron-casas.command.md.",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5"
+  },
+  "engines": { "node": ">=20" }
+}

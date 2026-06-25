@@ -221,12 +221,88 @@ traés deptos —el adaptador con la especificidad ya resuelta— como el movimi
 
 ---
 
-## 11. El cron: una routine de Claude Code (MOAT sin API)
+## 11. El cron: orquestación + modelo del MOAT (decisión 25-jun-2026)
 
-El único paso con costo del híbrido es el **MOAT** (LLM sobre la descripción). Una **routine de
-Claude Code** (`/schedule`) corre bajo la suscripción Max, **sin API facturada aparte**. Una sola
-routine corre TODO el flujo lineal (no hace falta separar por horas como n8n, que separa por
-dependencias entre workflows). Los pasos deterministas (discovery/fetch/carga) son $0.
+> Esta sección reemplaza la idea original ("routine de Claude Code `/schedule`, MOAT sin API").
+> Se probó empíricamente y NO es viable; abajo el porqué y el plan real.
+
+### 11.1 Lo que se descartó: `/schedule` (routine remota en la nube de Anthropic)
+
+Se creó una routine de test (`run_once`, 25-jun). **Disparó bien (el mecanismo funciona)**, pero el
+**entorno remoto NO puede correr este cron**:
+- ❌ **Red saliente bloqueada** a los portales (remax.bo → HTTP 000, `CONNECT tunnel failed`, proxy 403).
+  Es el bloqueante de fondo: el sandbox solo permite destinos en allowlist (GitHub, npm, APIs de
+  Anthropic), no sitios externos arbitrarios. **No se arregla con config simple.**
+- ❌ Sin `.env.local` (el `SUPABASE_SERVICE_ROLE_KEY` está gitignored, no se clona).
+- ❌ Sin `node_modules` (deps gitignored).
+- ⚠️ Clona `main` (el script vivía en la branch).
+- ⚠️ Cron recurrente mínimo = 1 hora (no "cada 2 min").
+
+**Aclaración importante:** el modelo SÍ corrió bajo la cuenta (no es tema de API vs suscripción); lo que
+bloquea es la **red del sandbox**. Por eso la nube no sirve para un cron que scrapea portales externos.
+
+### 11.2 Lo que se eligió: n8n como disparador fino + scripts versionados
+
+Corre en el **server de n8n existente** (always-on, con red a los portales, donde ya vive el pipeline de
+deptos). Esto **NO contradice la visión de retirar n8n**: el doc (§10.2) dice *"Lógica → script Node
+versionado; Orquestación → n8n (1 nodo) o cron"*. n8n acá es **solo el trigger**; la lógica vive en los
+`.mjs` portables → el orquestador es **swappeable** (n8n hoy → cron de un box / Claude Code mañana) sin
+reescribir nada. Cero lock-in.
+
+```
+n8n Schedule (nocturno)
+ → Execute Command: node cron-casas-zn.mjs            (discovery → diff → detalle)   [HECHO]
+ → Execute Command: node moat-casas.mjs               (MOAT vía LLM API → moat-output.json)  [FALTA]
+ → Execute Command: node cargar-casas-nuevas.mjs --apply                              [HECHO]
+ → Execute Command: node verificador-casas.mjs --apply                                [HECHO]
+ → Slack (reusa el webhook existente)
+```
+**Setup una vez en el server:** mergear la branch → `git pull` → `npm install` (en
+`scripts/casas-zn/`) → agregar la key del proveedor LLM y
+`MOAT_MODEL` al `.env` → armar el workflow de 5 nodos.
+
+### 11.3 El MOAT: modelo por API, **agnóstico y swappeable**
+
+En n8n no hay "agente Claude que lee"; el MOAT (leer descripción → amenidades/precio_billete/TC +
+**gate** anticrético/alquiler/depto) va por **API de un LLM**. `moat-casas.mjs` debe ser
+**model-agnóstico vía OpenRouter** (modelo = env var `MOAT_MODEL`) → cambiar de modelo = 1 línea.
+
+**Modelo por VOLUMEN** (no uno solo para todo):
+- Alto volumen (deptos) → modelo barato (ya usan Haiku hoy).
+- Bajo volumen (casas/terrenos) → modelo fuerte.
+
+**Candidatos (precios ~jun-2026, por millón de tokens — verificar vigentes):**
+
+| Modelo | Lab | Input | Output | Notas |
+|---|---|---|---|---|
+| **GLM-5.2** | Z.ai (Zhipu) | ~$1.4 | ~$4.4 | 1M contexto, **MIT open-weight**, fuerte. Candidato principal. ~2-3× más barato que Sonnet. |
+| GLM-4.7-FlashX | Z.ai | ~$0.07 | ~$0.4 | ~40× más barato (casi gratis). **Riesgo de calidad en el gate** (modelo chico). Solo si pasa la validación. |
+| Claude Sonnet 4.x | Anthropic | ~$3 | ~$15 | Default probado por el diseño (Haiku falló el gate). |
+| DeepSeek-V3 / Qwen | DeepSeek / Alibaba | barato | barato | Alternativas a evaluar. |
+
+**Costo (escala con avisos NUEVOS/noche, NO con el tamaño de la base):**
+- Por casa ≈ 2.5k input + 0.4k output. GLM-5.2 ≈ **0.5¢/casa**; FlashX ≈ **0.03¢/casa**; Sonnet ≈ **1.4¢/casa**.
+- ZN (~10 nuevas/noche): GLM-5.2 ~$1.5/mes · Sonnet ~$4/mes.
+- Matriz completa (~150 nuevas/noche): GLM-5.2 ~$22/mes · FlashX ~$1.5/mes · Sonnet ~$20-40/mes.
+- **A esta escala la API NO es un costo relevante.** El "sin API" de Claude Code era un lujo, no un requisito.
+
+### 11.4 Protocolo de validación del modelo (OBLIGATORIO antes de confiarle el feed)
+
+"Bueno en benchmarks" ≠ "confiable en el gate". El gate (rechazar anticrético/alquiler/depto + TC
+"7"=oficial / "9"=paralelo / "TCP"=paralelo, en español boliviano) es lo difícil — un modelo que se
+equivoca ahí mete basura al feed.
+
+- **Gold standard:** `scripts/casas-zn/output/moat-output.json` (16 casas MOAT-eadas a mano,
+  **7 rechazos** correctos + casos de TC). Es la verdad contra la que comparar.
+- **Protocolo:** correr cada candidato (FlashX → GLM-5.2 → Sonnet) sobre esas 16 y verificar que
+  (a) rechaza las 7, (b) acierta el TC. **Quedarse con el más barato que pase el gate al 100%.**
+- **Default seguro** si no se valida: GLM-5.2 (o Sonnet).
+
+### 11.5 Escape a self-host (futuro, si el volumen explota)
+
+GLM-5.2 es **open-weight (MIT)**: si algún día la matriz completa genera cientos de $/mes de API, se
+puede **self-hostear** (true $0, sin sandbox, sin proxy) en un box con GPU. Da las dos opciones: API
+barata hoy, self-host mañana.
 
 ---
 
@@ -234,7 +310,8 @@ dependencias entre workflows). Los pasos deterministas (discovery/fetch/carga) s
 
 | Riesgo | Mitigación |
 |---|---|
-| **Routines a escala** (límites de la suscripción Max) | Pasos deterministas (discovery/fetch/carga, $0) pueden correr en infra propia barata; reservar el agente solo para el MOAT. Para cientos de props/noche entra bien. |
+| **Ejecución del cron** (la nube `/schedule` bloquea la red a los portales — ver §11.1) | Correr en el server de n8n existente (always-on + red), n8n como trigger fino de los `.mjs` versionados. Orquestador swappeable, sin lock-in (§11.2). |
+| **Costo del MOAT por API** | Escala con avisos nuevos/noche, no con la base; ~$1.5-40/mes según volumen/modelo (§11.3). Modelo swappeable vía OpenRouter; GLM-5.2 open-weight permite self-host si explota (§11.5). |
 | **Robustez** (n8n es infra dedicada; el híbrido es scripts+agente) | El híbrido es código versionado/testeable, lo que compensa. Por eso deptos (producción) se migra al final. |
 | **Dos paradigmas durante la transición** | Frontera nítida y estable (deptos vs no-deptos) mientras dura; el contrato común los hace convivir sin fricción; n8n tiene fecha de defunción (Bloque 3), no es permanente. |
 | **Migrar deptos rompe el producto vivo** | Correr en paralelo + validar contra n8n (mismas columnas/conteos) antes de cortar. Nunca un corte ciego. |
@@ -243,7 +320,7 @@ dependencias entre workflows). Los pasos deterministas (discovery/fetch/carga) s
 
 ## 13. Qué se reúsa de lo ya hecho (no se construye de cero)
 
-Piezas genéricas ya existentes en `scripts/sonda-suelo/` y `scripts/auditoria-cola-matching/`:
+Piezas genéricas ya existentes en `scripts/sonda-suelo/`, `scripts/casas-zn/` y `scripts/auditoria-cola-matching/`:
 
 - `enZona(polígono)` → adaptador de **zona** ✅
 - `c21Listado` / `remaxListadoSC` → discovery, parametrizable por sección (tipo) ✅
@@ -251,7 +328,7 @@ Piezas genéricas ya existentes en `scripts/sonda-suelo/` y `scripts/auditoria-c
 - `backfill-campos-casas.mjs` → `extraerCampos()` (fotos/descripción/fecha/código), reusable ✅
 - `matchear_condominio()` (SQL) → adaptador de matching de **casas** ✅
 - `precio_normalizado()` (SQL) → adaptador de precio de **venta** ✅
-- `sonda-suelo/discovery-dedup.mjs` (dedup) + `auditoria-cola-matching/verificador-casas.mjs` (verificador) ✅
+- `sonda-suelo/discovery-dedup.mjs` (dedup) + `casas-zn/verificador-casas.mjs` (verificador) ✅
 
 Lo que falta es **organizarlas** detrás de una interfaz `pipeline({tipo, operación, zona})` y escribir
 los adaptadores que faltan (matching de edificios para deptos, normalización de alquiler/anticrético,
