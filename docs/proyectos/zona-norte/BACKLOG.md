@@ -17,7 +17,9 @@
 - Revisado por `sici-code-reviewer` (atajó 2 blockers: `fecha_publicacion` columna, diff acotado a ZN).
 - **Decisiones de fondo (ver doc):** fuente = **portal** no pipeline (congruente/escalable); aislamiento por **TIPO** (verificado en los discovery), no por string de fuente; precio **descripción-first** con fallback a metadata coherente; **Binance solo en query-time** (`precio_normalizado()`, anti doble-normalización); legibilidad para agentes vía la **vista** + contrato JSON documentado (`sql/schema/propiedades_v2_schema.md`).
 
-**Pendiente para automatizar (próxima sesión):**
+**✅ Camino $0 YA disponible (sin API, sin servidor):** el comando **`/cron-casas`** (`scripts/auditoria-cola-matching/cron-casas.command.md`) corre el flujo COMPLETO en una sesión bajo Max — el MOAT lo hace el agente leyendo (gratis). Abrís Claude Code cada 1-3 días, `/cron-casas`, y registra en `cron-casas-log.md`. Es lo más cercano a "set & forget" sin gastar. La automatización full (abajo) solo agrega correr-solo a cambio de ~$4/mes de API.
+
+**Pendiente para automatizar SIN tocar (opcional, ~$4/mes):**
 1. **`moat-casas.mjs`** — el MOAT por **API de LLM, model-agnóstico** (OpenRouter, env `MOAT_MODEL`). Reemplaza el MOAT que hoy hace el agente a mano. Con **protocolo de validación** contra el gold standard `output/moat-output.json` (16 casas, 7 rechazos + casos TC).
 2. **Workflow n8n** (orquestador fino de los `.mjs`) en el **server n8n existente** — porque la nube `/schedule` **bloquea la red a los portales** (probado 25-jun) y no tiene secrets/deps. Ver **`PLATAFORMA_HIBRIDA_GENERICA.md` §11** (decisión completa + costos + modelos).
 3. **Modelo del MOAT:** candidato principal **GLM-5.2** (Z.ai, ~$1.4/$4.4 por M, MIT open-weight, ~$22/mes a matriz completa); **GLM-4.7-FlashX** (~40× más barato) **si pasa el gate**; **Sonnet** default probado. Costo escala con avisos nuevos/noche, NO con la base (~$1.5-6/mes ZN).
