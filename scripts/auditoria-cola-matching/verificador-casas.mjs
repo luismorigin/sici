@@ -64,7 +64,10 @@ const ahora = Date.now();
 const revive = [], pending = [], confirm = [];
 let viva = 0, error = 0;
 for (const c of casas) {
-  const st = await chequear(c);
+  let st = await chequear(c);
+  // Doble-chequeo: una caída se re-consulta antes de contarla, para filtrar 404
+  // transitorios / glitches. Solo cuenta como caída si el 2do intento también falla.
+  if (st === 'caida') { await sleep(1500); st = await chequear(c); }
   if (st === 'error') { error++; await sleep(150); continue; }
   if (st === 'viva') {
     viva++;
@@ -81,6 +84,7 @@ console.log(`  vivas: ${viva}  ·  errores transitorios (ignorados): ${error}`);
 console.log(`  → marcar PENDING (1ra ausencia): ${pending.length}`);
 console.log(`  → BAJA confirmada (>${GRACE_DAYS}d caídas): ${confirm.length}`);
 console.log(`  → REVIVEN (estaban pending, volvieron): ${revive.length}`);
+pending.forEach(c => console.log(`     pending id ${c.id} (${c.fuente}) — ${c.url}`));
 confirm.forEach(c => console.log(`     baja id ${c.id} (${c.fuente})`));
 
 if (!APPLY) { console.log(`\n  (DRY-RUN: no se escribió nada. Correr con --apply.)\n`); process.exit(0); }
