@@ -215,6 +215,33 @@ CREATE TYPE estado_construccion_enum AS ENUM (
 
 ---
 
+## Contrato `datos_json_enrichment` — Casas (vivienda, flujo híbrido)
+
+> Claves del JSON de las casas (`tipo_propiedad_original='casa'`, fuente `century21`/`remax`, flujo híbrido `scripts/sonda-suelo` + cron) para que un agente que lee la BD **no tenga que muestrear una fila**. Para consultar casas usá la **vista `v_mercado_casas`** (plana y tipada) — el JSON es solo para lo genuinamente libre.
+
+**Principio (anti-drift / escalable):** lo que se filtra o consulta va en **columnas o FK**; el `datos_json_enrichment` guarda SOLO lo libre. Cada tipo expone su **vista** (`v_mercado_casas`, futura `v_mercado_terrenos`) como capa legible. Al sumar tipos/zonas, NO se inventan claves nuevas: un único loader (`moatToRow()`) escribe siempre el mismo contrato.
+
+**Claves que el FEED lee** (las únicas críticas para el render — `simon-mvp/src/lib/casas.ts::mapCasaRow`):
+
+| Clave | Tipo | Notas |
+|---|---|---|
+| `fotos_urls` | string[] | URLs grandes; `cantidad_fotos` = length |
+| `amenidades` | string[] | Amenidades de la CASA (texto libre; el feed normaliza sin tildes para filtrar) |
+| `descripcion` | string | Texto crudo del aviso |
+| `agente_nombre` | string | Captador |
+| `agente_telefono` | string | E.164 `+591…` (CTA WhatsApp) |
+| `oficina_nombre` | string | Franquicia |
+
+**Claves de contacto/metadata** (presentes, hoy NO las lee el feed): `url_whatsapp`, `oficina_telefono`, `contacto_visible`, `codigo_propiedad`, `fecha_publicacion`, `estacionamientos`, `fuente_enrichment`, `fuente_backfill`.
+
+**Metadata MOAT** (extra, **redundante** con columnas/FK — un agente debe usar la columna/FK, NO estas): `es_cerrado` (bool; el discriminante real es la FK `id_condominio_master`), `estado_construccion` (también es columna), `nombre_condominio_detectado` (el nombre real viene del JOIN a `condominios_master` → `condominio_nombre` en la vista).
+
+**Lo estructurado vive en COLUMNAS/FK, no en el JSON** (consultá acá, no el JSON): `id_condominio_master` (FK → `condominios_master`; define "en condominio cerrado"), `estado_construccion`, `precio_usd` (= billete), `tipo_cambio_detectado`, `depende_de_tc`, `area_terreno_m2`, `frente_m`, `fondo_m`, `latitud/longitud`, `zona`/`microzona`.
+
+> **Loader único:** todo cargador de casas (cron `cron-casas-zn.mjs`, backfills) usa el mismo mapeo MOAT→fila. El prompt MOAT v4 (`scripts/llm-enrichment/prompt-casas-vivienda-v4.md`) emite `es_condominio_cerrado`/`estado`/`nombre_condominio_mencionado`; el loader los mapea a las claves/columnas de arriba. **No agregar claves nuevas sin actualizar este contrato.**
+
+---
+
 ## CHECK Constraints (10)
 
 ```sql
