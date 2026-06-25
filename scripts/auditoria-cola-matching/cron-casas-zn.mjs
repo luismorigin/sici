@@ -17,8 +17,10 @@
 //   8. Verificador sobre las "desaparecidas" (baja real solo tras confirmar)
 //
 // ⚠️ CONTRATO DE ESCRITURA (a respetar SÍ o SÍ cuando se implemente --apply):
-//   - fuente='c21' para casas C21 (NO 'century21'): es la salvaguarda que aísla las
-//     casas del híbrido del discovery C21 viejo (ver BITACORA 21-jun). NO canonizar a century21.
+//   - fuente='century21' para casas C21 (canónica del portal, igual que las casas Remax
+//     usan 'remax'). El aislamiento casas↔deptos NO depende del string de fuente sino del
+//     filtro por TIPO en los discovery (verificado 25-jun: C21 ZN excluye casa/terreno/lote;
+//     C21 EQ filtra por zona). Backfill c21->century21: canonizar-fuente-casas-c21.sql.
 //   - precio_usd = BILLETE (precio_billete_usd del MOAT); NO el normalizado. moneda_original
 //     según fuente. tipo_cambio_detectado = del MOAT (no de heurística de slug/precio).
 //   - depende_de_tc = true para paralelo/oficial-normalizado.
@@ -114,7 +116,8 @@ async function detalleRemax(url) {
     estacionamientos: null,
   };
 }
-const detalleCasa = (url, fuente) => (fuente === 'c21' ? detalleC21(url) : detalleRemax(url));
+// Dispatch por portal: 'remax' → Remax; todo lo demás (century21/c21) → C21.
+const detalleCasa = (url, fuente) => (fuente === 'remax' ? detalleRemax(url) : detalleC21(url));
 
 // ============================== MAIN ==============================
 log(`\n🏠 CRON CASAS ZN — DRY-RUN (read-only)  ·  zona=${ZONA} · tipo=casa · operacion=venta\n`);
@@ -122,7 +125,7 @@ log(`\n🏠 CRON CASAS ZN — DRY-RUN (read-only)  ·  zona=${ZONA} · tipo=casa
 // ---------- 1. DISCOVERY ----------
 log('1) Discovery (C21 + Remax, filtrado por polígono ZN)…');
 const listings = [];
-for (const p of await c21Listado(ZONA, 'casa', { log })) if (p.url && enZona(p.lat, p.lon, ZONA)) listings.push({ ...p, fuente: 'c21' });
+for (const p of await c21Listado(ZONA, 'casa', { log })) if (p.url && enZona(p.lat, p.lon, ZONA)) listings.push({ ...p, fuente: 'century21' });
 for (const p of await remaxListadoSC('casa', { log })) if (p.url && enZona(p.lat, p.lon, ZONA)) listings.push({ ...p, fuente: 'remax' });
 const byUrl = new Map();
 for (const p of listings) if (!byUrl.has(p.url)) byUrl.set(p.url, p);
