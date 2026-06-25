@@ -51,9 +51,8 @@ async function matchCondominio(lat, lon, nombre) {
   return (data && data.length) ? data[0] : null;
 }
 
-async function moatToRow(m, d) {
+async function moatToRow(m, d, pr) {
   const cond = m.es_condominio_cerrado ? await matchCondominio(d.lat, d.lon, m.nombre_condominio_mencionado) : null;
-  const tc = m.tipo_cambio_detectado || 'no_especificado';
   const enr = {
     agente_nombre: d.agente_nombre || null,
     agente_telefono: d.agente_telefono || null,
@@ -81,10 +80,10 @@ async function moatToRow(m, d) {
     latitud: d.lat, longitud: d.lon,
     area_total_m2: d.area_const_m2 ?? null, area_terreno_m2: d.area_terreno_m2 ?? null,
     dormitorios: d.dorms ?? null, banos: d.banos ?? null, estacionamientos: d.estacionamientos ?? null,
-    precio_usd: m.precio_billete_usd,                 // BILLETE (del MOAT, leído del texto)
-    moneda_original: 'USD',
-    tipo_cambio_detectado: tc,
-    depende_de_tc: tc === 'paralelo' || tc === 'oficial',
+    precio_usd: pr.precio_usd,                         // descripción manda; si muda, metadata (USD / BOB÷6.96)
+    moneda_original: pr.moneda_original,
+    tipo_cambio_detectado: pr.tc,
+    depende_de_tc: pr.tc === 'paralelo' || pr.tc === 'oficial',
     estado_construccion: ESTADO_MAP[m.estado] ?? null, // COLUMNA enum (mapeada del MOAT; null si no mapea)
     // fecha_publicacion: la vista v_mercado_casas filtra dias_en_mercado = CURRENT_DATE
     // - COALESCE(fecha_publicacion, fecha_discovery). SIN esto la casa queda fuera del feed.
@@ -98,14 +97,36 @@ async function moatToRow(m, d) {
   return { row, cond };
 }
 
+// ---------- precio: la DESCRIPCIÓN manda; si está muda, fallback a metadata ----------
+// USD → directo; BOB → ÷6.96 (oficial; ya viene convertido en precio_fuente_usd).
+// Coherencia $/m² constr para descartar absurdos (ej. BOB tomado como USD). no_especificado=oficial.
+// NUNCA se aplica el TC paralelo (Binance) acá: eso vive en precio_normalizado()/la vista, en query-time.
+function resolverPrecio(m, d) {
+  if (m.precio_en_texto && m.precio_billete_usd > 0) {            // 1) descripción
+    return { precio_usd: m.precio_billete_usd, moneda_original: m.precio_en_bob ? 'BOB' : 'USD',
+             tc: m.tipo_cambio_detectado || 'no_especificado', origen: 'texto' };
+  }
+  const pm = d.precio_fuente_usd;                                  // 2) metadata (ya en USD)
+  if (!pm || pm <= 0) return null;                                // sin precio en ningún lado → retener
+  if (d.area_const_m2 > 0) {                                       // coherencia $/m² constr
+    const ppm2 = pm / d.area_const_m2;
+    if (ppm2 < 300 || ppm2 > 3500) return null;                   // absurdo → retener para revisión
+  }
+  return { precio_usd: Math.round(pm), moneda_original: d.moneda || 'USD', tc: 'no_especificado', origen: 'metadata' };
+}
+
 // ---------- clasificar las MOAT-aceptadas ----------
 const aCargar = [], retenidas = [], rechazadas = [], sinDetalle = [];
 for (const m of moat.resultados) {
   if (!m.gate?.acepta) { rechazadas.push(m); continue; }
   const d = detBySlug.get(m.slug);
   if (!d) { sinDetalle.push(m); continue; }                 // MOAT aceptada pero no en el detalle actual
-  if (!m.precio_en_texto || !m.precio_billete_usd) { retenidas.push({ m, d }); continue; } // sin precio confiable
-  aCargar.push({ m, d });
+  // La vista v_mercado_casas exige área construida (>0). Sin ella la casa no entra
+  // al feed Y no se puede chequear coherencia $/m² → retener (incompleta).
+  if (!(d.area_const_m2 > 0)) { retenidas.push({ m, d, motivo: 'sin área construida (no entra al feed)' }); continue; }
+  const pr = resolverPrecio(m, d);
+  if (!pr) { retenidas.push({ m, d, motivo: 'sin precio coherente' }); continue; }
+  aCargar.push({ m, d, pr });
 }
 
 console.log(`\n🏠 CARGAR CASAS NUEVAS ZN — ${APPLY ? 'APPLY' : 'DRY-RUN'}`);
@@ -113,16 +134,16 @@ console.log(`   input cron: ${cronFile}  ·  MOAT aceptadas: ${moat.resultados.f
 
 // ---------- construir filas + reporte legible ----------
 const filas = [];
-for (const { m, d } of aCargar) {
-  const { row, cond } = await moatToRow(m, d);
+for (const { m, d, pr } of aCargar) {
+  const { row, cond } = await moatToRow(m, d, pr);
   filas.push(row);
   const condTxt = cond ? `condominio ${cond.nombre_oficial} (#${cond.id_condominio_master})` : (m.es_condominio_cerrado ? 'cerrado SIN match (curar catálogo)' : 'individual');
-  console.log(`  ✅ ${row.dormitorios ?? '?'}dorm · ${row.area_total_m2 ?? '?'}m² constr · ${row.area_terreno_m2 ?? '?'}m² terr · $us ${row.precio_usd?.toLocaleString('en-US')} (${row.tipo_cambio_detectado}) · ${condTxt} · ${row.datos_json_enrichment.cantidad_fotos} fotos · tel ${row.datos_json_enrichment.agente_telefono ? 'sí' : 'NO'}`);
+  console.log(`  ✅ ${row.dormitorios ?? '?'}dorm · ${row.area_total_m2 ?? '?'}m² constr · ${row.area_terreno_m2 ?? '?'}m² terr · $us ${row.precio_usd?.toLocaleString('en-US')} (${row.tipo_cambio_detectado}, precio de ${pr.origen}, ${row.moneda_original}) · ${condTxt} · ${row.datos_json_enrichment.cantidad_fotos} fotos · tel ${row.datos_json_enrichment.agente_telefono ? 'sí' : 'NO'}`);
   console.log(`     ${row.url}`);
 }
 
 console.log(`\n  RESUMEN: ${filas.length} a cargar · ${retenidas.length} retenidas (sin precio en texto) · ${sinDetalle.length} sin detalle · ${rechazadas.length} rechazadas por gate`);
-if (retenidas.length) console.log(`  ⏸️  Retenidas (revisar a mano): ${retenidas.map(r => r.m.slug).join(', ')}`);
+if (retenidas.length) { console.log('  ⏸️  Retenidas (revisar a mano):'); retenidas.forEach(r => console.log(`     - ${r.m.slug} — ${r.motivo || 'sin precio'}`)); }
 
 writeFileSync(join(OUT, 'upsert-preview.json'), JSON.stringify({ generado: new Date().toISOString(), a_cargar: filas, retenidas: retenidas.map(r => r.m.slug) }, null, 2));
 console.log(`  💾 preview: output/upsert-preview.json`);
