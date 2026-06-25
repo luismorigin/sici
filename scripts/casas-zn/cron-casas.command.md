@@ -7,7 +7,9 @@
 > "modelo" (el MOAT) lo hacés VOS (el agente) leyendo las descripciones → **$0, bajo la suscripción
 > Max, sin API, sin servidor**. Pensado para correr cada 1-3 días (casas es bajo volumen, no tiempo real).
 
-## Pasos (ejecutá en orden, todo desde `scripts/auditoria-cola-matching/`)
+## Pasos (ejecutá en orden, todo desde `scripts/casas-zn/`)
+
+> Primera vez en una máquina nueva: `cd scripts/casas-zn && npm install`.
 
 ### 1. Discovery + diff + detalle (read-only, no escribe)
 ```
@@ -46,7 +48,7 @@ node verificador-casas.mjs --apply      # marca pending / baja confirmada / revi
 ```
 
 ### 6. Registrar en el log
-Agregá UNA línea a `scripts/auditoria-cola-matching/cron-casas-log.md` con la fecha y los números
+Agregá UNA línea a `scripts/casas-zn/cron-casas-log.md` con la fecha y los números
 (nuevas, cargadas, retenidas, pending, baja, feed antes→después). Formato: ver el archivo.
 
 ### 7. Reportar al usuario

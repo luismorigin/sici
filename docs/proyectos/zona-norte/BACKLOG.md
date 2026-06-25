@@ -12,12 +12,12 @@
 
 **El cron de casas ZN está completo y corrió en producción** (todo en branch `feat/cron-casas-zn`, pusheada, ~10 commits):
 - Flujo: `discovery → diff (acotado a ZN, paginado) → pre-filtro slug → detalle (fetchRetry) → MOAT → matchear_condominio → upsert (INSERT-only) → verificador (contador + gracia 2d)`.
-- Scripts: `scripts/auditoria-cola-matching/`: `cron-casas-zn.mjs`, `cargar-casas-nuevas.mjs`, `verificador-casas.mjs`, `canonizar-fuente-casas-c21.sql`. Reusan `scripts/sonda-suelo/lib`.
+- Scripts: `scripts/casas-zn/`: `cron-casas-zn.mjs`, `cargar-casas-nuevas.mjs`, `verificador-casas.mjs`, `canonizar-fuente-casas-c21.sql`, `cron-casas.command.md`, `cron-casas-log.md` (+ `package.json` propio). Reusan `scripts/sonda-suelo/lib`. (Los one-offs `backfill-campos-casas.mjs`/`recuperar-casas-pending.mjs` quedan en `auditoria-cola-matching/`.)
 - **Aplicado en prod:** fuente canonizada **`c21`→`century21`** (backfill, 0 c21); **8 casas nuevas cargadas** (feed `v_mercado_casas` 290→294); **4 listings muertos** a `inactivo_pending` (verificador, doble-chequeo + cruce con el diff).
 - Revisado por `sici-code-reviewer` (atajó 2 blockers: `fecha_publicacion` columna, diff acotado a ZN).
 - **Decisiones de fondo (ver doc):** fuente = **portal** no pipeline (congruente/escalable); aislamiento por **TIPO** (verificado en los discovery), no por string de fuente; precio **descripción-first** con fallback a metadata coherente; **Binance solo en query-time** (`precio_normalizado()`, anti doble-normalización); legibilidad para agentes vía la **vista** + contrato JSON documentado (`sql/schema/propiedades_v2_schema.md`).
 
-**✅ Camino $0 YA disponible (sin API, sin servidor):** el comando **`/cron-casas`** (`scripts/auditoria-cola-matching/cron-casas.command.md`) corre el flujo COMPLETO en una sesión bajo Max — el MOAT lo hace el agente leyendo (gratis). Abrís Claude Code cada 1-3 días, `/cron-casas`, y registra en `cron-casas-log.md`. Es lo más cercano a "set & forget" sin gastar. La automatización full (abajo) solo agrega correr-solo a cambio de ~$4/mes de API.
+**✅ Camino $0 YA disponible (sin API, sin servidor):** el comando **`/cron-casas`** (`scripts/casas-zn/cron-casas.command.md`) corre el flujo COMPLETO en una sesión bajo Max — el MOAT lo hace el agente leyendo (gratis). Abrís Claude Code cada 1-3 días, `/cron-casas`, y registra en `cron-casas-log.md`. Es lo más cercano a "set & forget" sin gastar. La automatización full (abajo) solo agrega correr-solo a cambio de ~$4/mes de API.
 
 **Pendiente para automatizar SIN tocar (opcional, ~$4/mes):**
 1. **`moat-casas.mjs`** — el MOAT por **API de LLM, model-agnóstico** (OpenRouter, env `MOAT_MODEL`). Reemplaza el MOAT que hoy hace el agente a mano. Con **protocolo de validación** contra el gold standard `output/moat-output.json` (16 casas, 7 rechazos + casos TC).

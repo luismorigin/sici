@@ -258,7 +258,7 @@ n8n Schedule (nocturno)
  → Slack (reusa el webhook existente)
 ```
 **Setup una vez en el server:** mergear la branch → `git pull` → `npm install` (en
-`scripts/auditoria-cola-matching/` y `scripts/sonda-suelo/`) → agregar la key del proveedor LLM y
+`scripts/casas-zn/`) → agregar la key del proveedor LLM y
 `MOAT_MODEL` al `.env` → armar el workflow de 5 nodos.
 
 ### 11.3 El MOAT: modelo por API, **agnóstico y swappeable**
@@ -292,7 +292,7 @@ En n8n no hay "agente Claude que lee"; el MOAT (leer descripción → amenidades
 "7"=oficial / "9"=paralelo / "TCP"=paralelo, en español boliviano) es lo difícil — un modelo que se
 equivoca ahí mete basura al feed.
 
-- **Gold standard:** `scripts/auditoria-cola-matching/output/moat-output.json` (16 casas MOAT-eadas a mano,
+- **Gold standard:** `scripts/casas-zn/output/moat-output.json` (16 casas MOAT-eadas a mano,
   **7 rechazos** correctos + casos de TC). Es la verdad contra la que comparar.
 - **Protocolo:** correr cada candidato (FlashX → GLM-5.2 → Sonnet) sobre esas 16 y verificar que
   (a) rechaza las 7, (b) acierta el TC. **Quedarse con el más barato que pase el gate al 100%.**
@@ -320,7 +320,7 @@ barata hoy, self-host mañana.
 
 ## 13. Qué se reúsa de lo ya hecho (no se construye de cero)
 
-Piezas genéricas ya existentes en `scripts/sonda-suelo/` y `scripts/auditoria-cola-matching/`:
+Piezas genéricas ya existentes en `scripts/sonda-suelo/`, `scripts/casas-zn/` y `scripts/auditoria-cola-matching/`:
 
 - `enZona(polígono)` → adaptador de **zona** ✅
 - `c21Listado` / `remaxListadoSC` → discovery, parametrizable por sección (tipo) ✅
@@ -328,7 +328,7 @@ Piezas genéricas ya existentes en `scripts/sonda-suelo/` y `scripts/auditoria-c
 - `backfill-campos-casas.mjs` → `extraerCampos()` (fotos/descripción/fecha/código), reusable ✅
 - `matchear_condominio()` (SQL) → adaptador de matching de **casas** ✅
 - `precio_normalizado()` (SQL) → adaptador de precio de **venta** ✅
-- `sonda-suelo/discovery-dedup.mjs` (dedup) + `auditoria-cola-matching/verificador-casas.mjs` (verificador) ✅
+- `sonda-suelo/discovery-dedup.mjs` (dedup) + `casas-zn/verificador-casas.mjs` (verificador) ✅
 
 Lo que falta es **organizarlas** detrás de una interfaz `pipeline({tipo, operación, zona})` y escribir
 los adaptadores que faltan (matching de edificios para deptos, normalización de alquiler/anticrético,
