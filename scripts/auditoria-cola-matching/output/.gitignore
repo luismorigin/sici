@@ -1,0 +1,6 @@
+# Outputs efímeros del cron de casas ZN (se regeneran en cada corrida).
+# moat-output.json SÍ se versiona: es el gold standard del protocolo de
+# validación del MOAT (ver PLATAFORMA_HIBRIDA_GENERICA.md §11.4).
+cron-casas-dryrun-*.json
+upsert-preview.json
+moat-input.json
