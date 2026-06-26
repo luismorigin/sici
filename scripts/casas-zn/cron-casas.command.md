@@ -41,11 +41,17 @@ node cargar-casas-nuevas.mjs            # dry-run: muestra qué cargaría (legib
 node cargar-casas-nuevas.mjs --apply    # escribe (INSERT-only) + verifica feed/aislamiento
 ```
 
-### 5. Verificador (baja con contador + gracia 2d)
+### 5. Verificador (status-code-only + 2 señales + gracia 2d)
+Corre DESPUÉS del paso 1 (lee la lista `desaparecidas` del JSON del cron).
 ```
 node verificador-casas.mjs              # dry-run
-node verificador-casas.mjs --apply      # marca pending / baja confirmada / revive
+node verificador-casas.mjs --apply      # revive / arranca contador / baja confirmada
 ```
+Modelo (igual que deptos, adaptado): una casa baja SOLO si las 2 señales coinciden
+sostenidas >2d — ausente del crawl (señal 1) **y** HTTP status-code de baja (señal 2:
+C21 4xx / Remax redirect; placeholder/bloqueo/timeout = ambiguo → se ignora, NO baja).
+Durante la gracia la casa SIGUE en `completado`/feed (nunca usa `inactivo_pending`).
+Disyuntor: si >40% de las activas "desaparecen", el crawl es sospechoso → no confirma bajas.
 
 ### 6. Registrar en el log
 Agregá UNA línea a `scripts/casas-zn/cron-casas-log.md` con la fecha y los números

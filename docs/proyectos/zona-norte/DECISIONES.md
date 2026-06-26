@@ -205,3 +205,31 @@ Formato ADR (Architecture Decision Record): contexto → opciones → decisión 
 
 **Consecuencias:** Bs real + USD correcto a la vez. Hoy ~1 prop marcada (1970); el tag se setea manual. A futuro el LLM de enrichment de alquiler podría detectarlo. Ver `docs/arquitectura/TIPO_CAMBIO_SICI.md` y memoria `project_bug_mig174_tc_paralelo_n8n_incompleta`.
 
+## ADR-013 — Cron de casas ZN: pipeline propio + orquestación local `/cron-casas` ($0 Max), n8n/API opcional
+
+**Fecha:** 25-jun-2026.
+
+**Contexto:** las casas ZN se capturan con el flujo híbrido (scripts Node + agente-lector para el MOAT), no con n8n. Faltaba decidir cómo correrlo recurrente. Se probó `/schedule` (routine remota de Claude Code en la nube de Anthropic): **dispara bien pero BLOQUEA la red saliente a los portales** (proxy 403) + no tiene `.env.local` ni `node_modules` → inviable para un cron que scrapea. Además `claude -p` factura como **API** (no Max), y usar el OAuth de la suscripción en un servidor está **prohibido/baneado**. Local cron bajo Max **sí** está permitido pero requiere la PC prendida.
+
+**Decisión:** pipeline en su propia carpeta **`scripts/casas-zn/`** (separado de la app `simon-mvp/` y de la skill `auditoria-cola-matching/`). Orquestación: comando **`/cron-casas`** corrido **EN SESIÓN bajo Max = $0** (el MOAT lo hace el agente leyendo). Para "corre solo" (opcional): n8n/Task Scheduler local + MOAT por **API model-agnóstica** (OpenRouter; Sonnet/GLM-5.2 swappables) ~$4/mes. Validación del MOAT contra el gold standard `scripts/casas-zn/output/moat-output.json`.
+
+**Por qué:** a ~10-15 casas nuevas/noche el camino $0 en sesión alcanza; la automatización es opcional y barata. El costo del MOAT escala con **avisos nuevos/noche, NO con el tamaño de la base**. El precio sale de la descripción (fallback a metadata coherente); el TC paralelo (Binance) se aplica solo en query-time (`precio_normalizado()`/vista), nunca al insertar (anti doble-normalización).
+
+**Consecuencias:** rutina = `/cron-casas` cada 2-3 días (ver `operacion.md`). Detalle completo y cuadro de costos/modelos en `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md` §11.
+
+**Vinculado a:** ADR-009 (strangler — no tocar el n8n de deptos), ADR-011 (agente-lector en skill), ADR-014 (fuente).
+
+## ADR-014 — Fuente canónica = PORTAL (`century21`/`remax`); aislamiento por TIPO, no por string de fuente
+
+**Fecha:** 25-jun-2026.
+
+**Contexto:** las casas C21 del híbrido se cargaron con `fuente='c21'` (one-off), mientras TODO el sistema usa `'century21'` (2003 deptos + casas/terrenos viejos). Se creía que el naming `'c21'` era una salvaguarda contra el discovery C21 viejo (que busca `'century21'`).
+
+**Decisión:** la `fuente` identifica el **PORTAL** (`century21`/`remax`/`bien_inmuebles`), no el pipeline. Backfill **`c21`→`century21`** (193 filas) + dedup de 7 viejas duplicadas. El aislamiento casas↔deptos se sostiene por el **filtro por TIPO** en los discovery (verificado en los workflows reales: el discovery C21 ZN excluye `casa/terreno/lote`; el de Equipetrol filtra por zona), **NO** por el string de fuente.
+
+**Por qué:** congruencia + escalabilidad — el tipo/origen se trackean aparte (`tipo_propiedad_original`, `metodo_match`). Verificado que renombrar a `century21` NO re-expone las casas (el filtro por tipo las protege). Las casas **Remax ya usaban su canónica `'remax'`** → el `'c21'` era la inconsistencia, no la regla.
+
+**Consecuencias:** los cargadores de casas escriben `'century21'`/`'remax'`. Contrato del JSON documentado en `sql/schema/propiedades_v2_schema.md`. SQL del backfill: `scripts/casas-zn/canonizar-fuente-casas-c21.sql`.
+
+**Vinculado a:** ADR-006 (blindaje de contaminación), ADR-009.
+

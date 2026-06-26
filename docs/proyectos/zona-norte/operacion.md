@@ -128,6 +128,30 @@ Cron schedules:
 
 ---
 
+## Rutina de captura de casas ZN — `/cron-casas` ($0)
+
+Las **casas ZN** NO las captura n8n (eso es solo deptos). Se capturan con el flujo híbrido, y la
+forma operativa de hoy es **manual-asistida, $0 bajo Max**:
+
+**Cada 2-3 días** (casas es bajo volumen, no tiempo real) → abrí Claude Code en el repo y corré:
+
+```
+/cron-casas
+```
+
+El agente hace TODO en la sesión: discovery → diff → MOAT (lo lee el agente, sin API) → cargar
+nuevas (INSERT-only) → verificador (baja con gracia 2d) → registra y commitea el log. Es gratis
+porque corre bajo tu suscripción Max, sin API ni servidor.
+
+- **Historial de corridas:** `scripts/casas-zn/cron-casas-log.md` (una línea por corrida).
+- **Pipeline + comando:** `scripts/casas-zn/` (fuente del comando: `cron-casas.command.md`).
+- **No corras dos veces seguidas** — el diff ya vería 0 nuevas.
+- **Automatizar (opcional, "corre solo"):** n8n/Task Scheduler local + MOAT por API (~$4/mes).
+  Requiere la PC prendida (la nube de Claude Code NO sirve: bloquea la red a los portales).
+  Decisión y costos: **ADR-013** + `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md` §11.
+
+---
+
 ## Qué monitorear día a día
 
 > **Patrón post-mig 254:** las props ZN se identifican con
