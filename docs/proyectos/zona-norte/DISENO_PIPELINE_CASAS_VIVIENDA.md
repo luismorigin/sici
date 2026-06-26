@@ -1,6 +1,6 @@
 # Diseño — Pipeline de Casas (vivienda final) en Zona Norte
 
-> Status: Fase 1-2 núcleo IMPLEMENTADO (mig 260+261 aplicadas, matcher funcionando, 305 casas ZN cargadas) · Feed `/ventas/casas` construido (dark launch, branch `feat/feed-casas-zn`, sin merge) · Fecha: 2026-06-20 · Autor: Lucho + Claude
+> Status: Fase 1-2 núcleo IMPLEMENTADO (mig 260+261 aplicadas, matcher funcionando, casas ZN cargadas — conteos vivos en `v_mercado_casas`) · Feed `/ventas/casas` en prod (mergeado, dark launch/noindex) + cron `/cron-casas` (`scripts/casas-zn/`, verificador modelo deptos — ADR-015) · Fecha: 2026-06-20 · Autor: Lucho + Claude
 > Basado en la sonda `scripts/sonda-suelo/` (ver memoria `project_sonda_suelo_zn_urubo_jun2026`)
 > y en el estudio del sistema TC (`docs/arquitectura/TIPO_CAMBIO_SICI.md`) y de matching/amenidades.
 
@@ -295,6 +295,6 @@ cubre con logging + reporte que el script ya escribe + `try/catch`→Slack.
 | 3 | **Catálogo curado + FK + carga** | ✅ **HECHO**: FK `id_condominio_master` (mig 261), `alias_conocidos` (13), catálogo **45** (mig 260 cargó 36; curado a 39 y luego 45), **305 casas ZN activas cargadas** en `propiedades_v2` (marcadores `metodo_match` en `carga_piloto_casas_19jun/20jun`, `carga_casas_escala_20jun`, `carga_casas_nuevas_20jun`), todas con contacto/WhatsApp del captador en `datos_json_enrichment`, 0 contaminan feed deptos. |
 | 4 | **Cargar casas individuales** (`id_condominio_master` NULL) + condominios no catalogados (Los Sauces) | ✅ **HECHO** (305 casas con contacto) |
 | 5 | **`datos_json_enrichment`** (es_cerrado, amenidades propias) con contacto/amenidades | ✅ **HECHO** (305 casas con contacto). **Backfill 21-jun: contrato completo de deptos** — `fotos_urls`+`cantidad_fotos`, `descripcion`, `fecha_publicacion`, `codigo_propiedad`, `estacionamientos`/`oficina_telefono` (solo C21); + `id` propio (`SIM-V<id>`) + `fuente` (Remax/C21). Script reusable `scripts/auditoria-cola-matching/backfill-campos-casas.mjs` (`extraerCampos()`). Cron n8n (solo dispara) queda para el cron nocturno. |
-| 6 | **Feed** `v_mercado_casas` + `/ventas/casas` | ✅ vista (mig 262) + feed `/ventas/casas` construido (dark launch, branch `feat/feed-casas-zn`, sin merge); pendiente merge + cron |
+| 6 | **Feed** `v_mercado_casas` + `/ventas/casas` | ✅ vista (mig 262) + feed `/ventas/casas` en prod (mergeado, dark launch/noindex) + cron `/cron-casas` (`scripts/casas-zn/`); pendiente validar unos días → og:image → público |
 
 Nota: el modelo de carga reusa `propiedades_v2` (mig 221 ya le dio `area_terreno_m2`/`frente_m`/`fondo_m`); campos ricos van en `datos_json_enrichment`; amenidades del condominio se HEREDAN de `condominios_master`. Detalle de la sesión en memoria `project_sonda_suelo_zn_urubo_jun2026`.

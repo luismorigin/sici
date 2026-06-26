@@ -1,8 +1,8 @@
 # PRD: Casas y Terrenos en Equipetrol
 
-> Status: Fase 1 ✓ + Fase 2 ✓ + **Fase 4 ✓ (condominios)** completadas | Fase 3 (feed público): casas `/ventas/casas` construido (dark launch, sin merge), terrenos pendiente | Autor: Lucho + Claude | Fecha: 2026-04-17 (Fases 1-2)
+> Status: Fase 1 ✓ + Fase 2 ✓ + **Fase 4 ✓ (condominios)** completadas | Fase 3 (feed público): casas `/ventas/casas` en prod (mergeado, dark launch/noindex) + cron `/cron-casas` (`scripts/casas-zn/`); terrenos pendiente | Autor: Lucho + Claude | Fecha: 2026-04-17 (Fases 1-2)
 > Actualización 2026-06-18: sonda de expansión a Zona Norte + Urubó (ver sección 0).
-> Actualización 2026-06-20: **Fase 4 implementada** (tabla `condominios_master` mig 260+261, 45 condominios curados, matcher areal `matchear_condominio()`, FK `id_condominio_master`). **Zona Norte tiene 305 casas activas cargadas** (vía flujo híbrido manual). Fase 3: el feed `/ventas/casas` está **construido** (dark launch, branch `feat/feed-casas-zn`, sin merge; vista `v_mercado_casas` ✅ mig 262, 298 casas); resta merge + cron de captura.
+> Actualización 2026-06-20: **Fase 4 implementada** (tabla `condominios_master` mig 260+261, matcher areal `matchear_condominio()`, FK `id_condominio_master`). **Zona Norte tiene casas activas cargadas** (conteos vivos en `v_mercado_casas` / `condominios_master`) vía flujo híbrido manual. Fase 3: el feed `/ventas/casas` está **en prod (mergeado, dark launch/noindex)** con cron `/cron-casas` (`scripts/casas-zn/`, verificador modelo deptos — ADR-015); vista `v_mercado_casas` ✅ mig 262. Pendiente: validar unos días → og:image → público.
 > Actualización 2026-06-21: **backfill de campos faltantes** — las casas ya tienen el contrato completo de deptos en `datos_json_enrichment`: `fotos_urls`+`cantidad_fotos`, `descripcion`, `fecha_publicacion` (columna), `codigo_propiedad`, `estacionamientos`/`oficina_telefono` (solo C21, Remax no los expone). Identificadores: `id` propio (ref `SIM-V<id>`) + `fuente` (Remax/C21) + `oficina_nombre` (franquicia). Cobertura: fotos 305/306, descripción 304/306, fecha 305/306, código 306/306. Script reusable `scripts/auditoria-cola-matching/backfill-campos-casas.mjs` (función `extraerCampos()` lista para el cron). **Fase 3 ya no depende de extraer fotos — todo el dato del feed está cargado.**
 
 ---
@@ -147,13 +147,13 @@ Equipetrol tiene volumen bajo de casas (~15-40 listings) y terrenos (~10-30 list
 - TC Binance viene en `config_global` con claves en minúscula (`tipo_cambio_oficial`, `tipo_cambio_paralelo`)
 - GPS portal no siempre coincide con zona real — LLM detecta mención explícita de otra zona (Cotoca, Urubo) y marca `excluida_zona`
 
-### Fase 3 — Feed publico ⏳ PENDIENTE
+### Fase 3 — Feed publico 🟡 EN PROD (casas; terrenos pendiente)
 **Objetivo:** Paginas publicas en simonbo.com para casas y terrenos.
 **Criterio de avance:** Feed funcional con filtros relevantes por tipo, mobile-first.
 
 - [ ] RPC `buscar_unidades_simple_casas()` y `buscar_unidades_simple_terrenos()` (o parametrizar existente con `tipo_propiedad`)
 - [ ] Vistas `v_mercado_casas` y `v_mercado_terrenos` con filtros canónicos (status='completado', zona IS NOT NULL, area_total_m2 >= 20 para casas, area_terreno_m2 >= 100 para terrenos)
-- [x] Ruta `/ventas/casas` — feed casas con card adaptado (dark launch, branch `feat/feed-casas-zn`, sin merge)
+- [x] Ruta `/ventas/casas` — feed casas con card adaptado (en prod, mergeado, dark launch/noindex)
 - [ ] Ruta `/ventas/terrenos` — feed terrenos con card adaptado
 - [ ] Cards: renderizado condicional por tipo (terreno no muestra dorms, casa muestra ambientes_adicionales)
 - [ ] Filtros específicos:
@@ -165,7 +165,7 @@ Equipetrol tiene volumen bajo de casas (~15-40 listings) y terrenos (~10-30 list
 **Entregable:** Feed publico en simonbo.com.
 
 **Dependencias:**
-- ✓ **Volumen suficiente — ALCANZADO** (al 20-jun-2026 hay **305 casas ZN activas cargadas**). La vista `v_mercado_casas` ✅ ya está aplicada (mig 262, 298 casas); el feed `/ventas/casas` está construido (dark launch, branch `feat/feed-casas-zn`, sin merge) — resta merge + cron.
+- ✓ **Volumen suficiente — ALCANZADO** (casas ZN activas cargadas; conteos vivos en `v_mercado_casas`). La vista `v_mercado_casas` ✅ ya está aplicada (mig 262); el feed `/ventas/casas` está en prod (mergeado, dark launch/noindex) con cron `/cron-casas`. Pendiente: validar unos días → og:image → público.
 - Evaluar si el card de casa necesita badges para ambientes adicionales (piscina, cuarto servicio, etc.)
 - Definir cómo mostrar TC en el feed (mostrar solo USD normalizado o también badge "TC paralelo"?)
 

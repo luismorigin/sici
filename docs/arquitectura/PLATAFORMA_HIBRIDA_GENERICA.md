@@ -203,7 +203,7 @@ vivo— se migra **al final, en paralelo, con validación antes de cortar**.
 
 ```
 BLOQUE 1 — Validar la plataforma con lo NUEVO (bajo riesgo)
-  - Casas (✅ hecho) + feed /ventas/casas (✅ construido — dark launch, branch sin merge)
+  - Casas (✅ hecho) + feed /ventas/casas (✅ en prod, mergeado, dark launch/noindex) + cron /cron-casas (verificador modelo deptos, ADR-015)
   - Terrenos: afinar adaptador + feed
   → con esto la plataforma genérica queda probada end-to-end
 
@@ -341,7 +341,7 @@ extractor de terrenos).
 - ✅ Casas ZN venta: producidas por el híbrido (305 cargadas, contrato completo, vista `v_mercado_casas`).
 - ✅ Deptos (venta+alquiler) Equipetrol + ZN: en n8n, traje completo, en las vistas.
 - ❌ Feed deptos ZN: capturado pero filtrado en el frontend (`mercado-data.ts` → `ZONAS_EQUIPETROL_DB`).
-- 🟡 Feed casas ZN (`/ventas/casas`): **construido** (dark launch, branch `feat/feed-casas-zn`, sin merge/deploy); pendiente merge + cron.
+- 🟡 Feed casas ZN (`/ventas/casas`): **en prod** (mergeado, dark launch/noindex) + cron `/cron-casas` (`scripts/casas-zn/`, verificador modelo deptos — ADR-015); pendiente validar unos días → og:image → público.
 - ❌ Terrenos, anticrético, otras zonas: no empezados.
 
 **Primer movimiento de mayor ROI / menor riesgo:** destapar el feed de **deptos ZN** (ya capturado,
