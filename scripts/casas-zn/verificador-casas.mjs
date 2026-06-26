@@ -8,10 +8,17 @@
 // Por cada casa ACTIVA del híbrido (carga_* + cron_casas_zn):
 //   - VIVA  → si estaba pendiente, REVIVE (limpia primera_ausencia_at, status=completado).
 //   - CAÍDA (404 / sin entity / redirect Home):
-//       · 1ra ausencia:   status=inactivo_pending + sella primera_ausencia_at  (NO baja)
-//       · >GRACE días:    status=inactivo_confirmed + es_activa=false          (BAJA final)
-//       · dentro gracia:  espera (no toca nada)
+//       · 1ra ausencia:   sella primera_ausencia_at (CONTADOR). status SIGUE 'completado'
+//                         → la casa NO sale del feed mientras está dentro de la gracia.
+//       · >GRACE días:    status=inactivo_confirmed + es_activa=false (BAJA final → sale del feed)
+//       · dentro gracia:  espera (no toca nada, sigue en feed)
 //   - ERROR transitorio (timeout / 5xx / red) → se IGNORA (no cuenta como caída).
+//
+// PRINCIPIO (por qué la 1ra ausencia NO esconde la casa): el discovery/HTTP de los
+// portales es volátil y puede BLOQUEAR una corrida entera (Remax devuelve 'Home' para
+// URLs válidas cuando rate-limitea) → marcaría como caídas decenas de casas VIVAS. Si
+// eso sacara del feed al toque, vaciaríamos el feed por un glitch. Nunca escondemos una
+// casa de la que NO estamos seguros que cayó: solo sale tras ausencia SOSTENIDA (>2d).
 //
 // Uso:  node verificador-casas.mjs          -> DRY-RUN (reporta, no escribe)
 //       node verificador-casas.mjs --apply  -> aplica pending / confirmed / revive
@@ -73,18 +80,18 @@ for (const c of casas) {
     viva++;
     if (c.primera_ausencia_at) revive.push(c);                 // estaba pendiente → revive
   } else { // caida
-    if (!c.primera_ausencia_at) pending.push(c);               // 1ra ausencia
+    if (!c.primera_ausencia_at) pending.push(c);               // 1ra ausencia → solo contador (sigue en feed)
     else if (ahora - new Date(c.primera_ausencia_at).getTime() > GRACE_MS) confirm.push(c); // gracia vencida → baja
-    // else: pendiente dentro de gracia → espera
+    // else: ausente dentro de gracia → espera (sigue en feed)
   }
   await sleep(150);
 }
 
 console.log(`  vivas: ${viva}  ·  errores transitorios (ignorados): ${error}`);
-console.log(`  → marcar PENDING (1ra ausencia): ${pending.length}`);
-console.log(`  → BAJA confirmada (>${GRACE_DAYS}d caídas): ${confirm.length}`);
-console.log(`  → REVIVEN (estaban pending, volvieron): ${revive.length}`);
-pending.forEach(c => console.log(`     pending id ${c.id} (${c.fuente}) — ${c.url}`));
+console.log(`  → AUSENTE 1ra vez (contador, SIGUE en feed): ${pending.length}`);
+console.log(`  → BAJA confirmada (>${GRACE_DAYS}d ausente → sale del feed): ${confirm.length}`);
+console.log(`  → REVIVEN (estaban ausentes, volvieron): ${revive.length}`);
+pending.forEach(c => console.log(`     ausente id ${c.id} (${c.fuente}) — ${c.url}`));
 confirm.forEach(c => console.log(`     baja id ${c.id} (${c.fuente})`));
 
 if (!APPLY) { console.log(`\n  (DRY-RUN: no se escribió nada. Correr con --apply.)\n`); process.exit(0); }
@@ -96,7 +103,8 @@ async function upd(ids, patch, label) {
   console.log(error ? `   ✖ ${label}: ${error.message}` : `   ✓ ${label}: ${ids.length}`);
 }
 const nowIso = new Date().toISOString();
-await upd(pending.map(c => c.id), { status: 'inactivo_pending', primera_ausencia_at: nowIso }, 'pending');
+// 1ra ausencia: SOLO el contador. status NO se toca (sigue 'completado') → la casa NO sale del feed.
+await upd(pending.map(c => c.id), { primera_ausencia_at: nowIso }, 'ausente 1ra vez (contador, sigue en feed)');
 await upd(confirm.map(c => c.id), { status: 'inactivo_confirmed', es_activa: false, fecha_inactivacion: nowIso }, 'baja confirmada');
 await upd(revive.map(c => c.id), { status: 'completado', primera_ausencia_at: null }, 'revividas');
 console.log('');
