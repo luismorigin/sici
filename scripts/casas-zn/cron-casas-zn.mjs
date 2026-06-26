@@ -38,12 +38,12 @@
 // ============================================================================
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { c21Listado, remaxListadoSC } from '../sonda-suelo/lib/portales.mjs';
 import { enZona } from '../sonda-suelo/lib/zonas.mjs';
-import { sleep, fetchRetry } from '../sonda-suelo/lib/fetcher.mjs';
+import { sleep, pace, fetchRetry, circuit } from '../sonda-suelo/lib/fetcher.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -52,8 +52,26 @@ const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABA
 
 const ZONA = 'zona-norte';
 const NO_DET = process.argv.includes('--no-detalle');
+const FORCE = process.argv.includes('--force');
 const LIMIT = (() => { const a = process.argv.find(x => x.startsWith('--limit=')); return a ? Number(a.split('=')[1]) : null; })();
 const log = (m) => console.log(m);
+
+// COOLDOWN anti-stacking: re-crawlear seguido desde tu IP de casa la puede bloquear.
+// Si la última corrida fue hace < COOLDOWN_MIN, frená (salvo --force). Para verificar/cargar
+// SIN re-crawlear, usá verificador-casas.mjs / cargar-casas-nuevas.mjs sobre el JSON existente.
+const COOLDOWN_MIN = 20;
+try {
+  const dir = join(__dirname, 'output');
+  const last = readdirSync(dir).filter(x => x.startsWith('cron-casas-dryrun')).sort().pop();
+  if (last && !FORCE) {
+    const ageMin = (Date.now() - statSync(join(dir, last)).mtimeMs) / 60000;
+    if (ageMin < COOLDOWN_MIN) {
+      console.log(`\n⏳ Última corrida hace ${ageMin.toFixed(0)} min (< ${COOLDOWN_MIN} min). Re-crawlear tan seguido puede bloquear tu IP.`);
+      console.log(`   Esperá un rato, o forzá con --force. (Para verificar/cargar sin re-crawlear, corré los otros scripts sobre el JSON ya generado.)\n`);
+      process.exit(0);
+    }
+  }
+} catch { /* primera corrida / sin output dir → seguir */ }
 
 // ---------- helpers de extracción de detalle (lógica probada de nuevas-paso2 + extraerCampos) ----------
 const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36' };
@@ -132,6 +150,14 @@ for (const p of listings) if (!byUrl.has(p.url)) byUrl.set(p.url, p);
 const portal = [...byUrl.values()];
 log(`   → portal: ${portal.length} casas ZN únicas por URL (${listings.length} listings crudos)\n`);
 
+// Si el circuit breaker se disparó, el discovery quedó INCOMPLETO → abortar.
+// Seguir con datos parciales metería falsas "desaparecidas" en el diff/verificador.
+if (circuit.tripped) {
+  console.error(`🛑 Discovery incompleto: circuit breaker disparado (${circuit.fails} fallos seguidos) — IP probablemente bloqueada.`);
+  console.error(`   Abortando para NO escribir un diff con datos parciales. Reintentá en unas horas (la IP se destraba sola).\n`);
+  process.exit(1);
+}
+
 // ---------- 2. DIFF vs BD (select-only) ----------
 log('2) Diff vs propiedades_v2 (casas)…');
 // Paginado explícito: Supabase corta en 1000 filas. Sin esto, al pasar de 1000
@@ -201,7 +227,8 @@ if (!NO_DET && nuevasReales.length) {
       detalladas.push({ url: p.url, fuente: p.fuente, lat: p.lat, lon: p.lon, fetch_ok: false, error: e.message });
     }
     if ((i + 1) % 20 === 0) log(`   …${i + 1}/${target.length}`);
-    await sleep(300);
+    if (circuit.tripped) { log(`   🛑 corte de detalle por circuit breaker (${circuit.fails} fallos) — IP probablemente bloqueada`); break; }
+    await pace(300);
   }
   const n = detalladas.filter(d => d.fetch_ok).length || 1;
   log(`   → detalle OK: ${detalladas.filter(d => d.fetch_ok).length}/${target.length}  ·  con tel: ${okTel} (${Math.round(okTel / n * 100)}%)  ·  desc>50: ${okDesc}  ·  con fotos: ${okFotos}\n`);
