@@ -65,8 +65,15 @@ git commit -m "chore(cron-casas): log <fecha> (N nuevas, M cargadas)"
 ```
 (Push opcional, con OK del usuario.)
 
-### 8. Reportar al usuario
-Resumen corto: cuántas nuevas, cargadas, retenidas (con motivo), bajas, y el estado del feed.
+### 8. Chequeo de salud + reporte
+Corré el chequeo read-only (mira BD + log y da veredicto 🔴/🟡/✅):
+```
+node salud-casas.mjs
+```
+Después reportá al usuario: el veredicto de salud + resumen de la corrida (nuevas,
+cargadas, retenidas con motivo, bajas). Si dio 🔴/🟡, explicá qué revisar.
+`salud-casas.mjs` también se puede correr SUELTO cuando quieras, sin correr el cron,
+para ver "¿está todo OK?" del feed de casas.
 
 ## Reglas
 - **$0:** todo corre bajo Max en la sesión. NO usar API ni `--apply` automático fuera de sesión.
