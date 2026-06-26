@@ -150,6 +150,20 @@ porque corre bajo tu suscripción Max, sin API ni servidor.
   Requiere la PC prendida (la nube de Claude Code NO sirve: bloquea la red a los portales).
   Decisión y costos: **ADR-013** + `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md` §11.
 
+### ⚠️ Evitar bloqueos de IP de los portales (aprendido 26-jun)
+Cuando crawleás **desde tu casa**, los portales (sobre todo **C21**, que hace 30+ requests por
+cuadrantes) pueden **bloquear tu IP residencial** si acumulás mucho tráfico en poco tiempo. El
+26-jun se juntaron el cron de venta + 2 sondeos + tests → C21 dropeó la IP de casa (`ERR_CONNECTION_TIMED_OUT`
+en navegador y Node; en 4G andaba → era la IP). Para evitarlo:
+- **Una operación pesada por día desde casa.** No apilar cron + sondeos + tests en la misma sesión.
+- **No re-crawlear:** el `/cron-casas` ya guarda el discovery en `output/cron-casas-dryrun-*.json`; el
+  verificador y el loader lo **reusan**. No re-corras el discovery en la misma sesión.
+- **Sondeos/exploración:** preferí el **buscador del portal por navegador** (1 página con el total)
+  antes que crawlear cuadrantes.
+- **Si ya te bloquearon:** esperá (se destraba en horas), no insistas (reintentar lo alarga).
+- El **cron nocturno de n8n NO se ve afectado** (sale por la IP del server, no por tu casa).
+- El `/cron-casas` normal (1 pasada c/2-3 días) es suave; el riesgo es **acumular**.
+
 ---
 
 ## Qué monitorear día a día
