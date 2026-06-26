@@ -4,7 +4,30 @@
 
 **Última actualización:** 26 Jun 2026 (feed `/ventas/casas` + cron `/cron-casas` mergeados a `main`, en prod dark launch/noindex).
 
-**🎯 Próxima sesión:** **Validar el feed `/ventas/casas` unos días → og:image → hacerlo público** (sacar noindex + link). Feed + cron `/cron-casas` (`scripts/casas-zn/`, verificador modelo deptos — ADR-015) ya en prod (mergeado, dark launch/noindex). Contexto ya hecho: carga (casas ZN con contacto, FK `id_condominio_master` + matcher nombre+GPS), vista `v_mercado_casas` ✅ mig 262, feed con filtros MOAT. La tabla `condominios_master` (mig 260+261) ya existe aislada. Después: extender pipeline a Urubó (~179 terrenos, `land_m2` ya corregido). Ver `project_sonda_suelo_zn_urubo_jun2026` + `DISENO_PIPELINE_CASAS_VIVIENDA.md`. **Recordar reactivar el workflow `auditoria_diaria_sici_v3.0` en n8n** si sigue desactivado.
+**🎯 Próxima sesión:** **Validar el feed `/ventas/casas` unos días → og:image → hacerlo público** (sacar noindex + link). **+ pendiente mañana: sondeo de volumen casa × alquiler × ZN** (ticket abajo — C21 quedó sin medir hoy por connection timeout). Feed + cron `/cron-casas` (`scripts/casas-zn/`, verificador modelo deptos — ADR-015) ya en prod (mergeado, dark launch/noindex). Contexto ya hecho: carga (casas ZN con contacto, FK `id_condominio_master` + matcher nombre+GPS), vista `v_mercado_casas` ✅ mig 262, feed con filtros MOAT. La tabla `condominios_master` (mig 260+261) ya existe aislada. Después: extender pipeline a Urubó (~179 terrenos, `land_m2` ya corregido). Ver `project_sonda_suelo_zn_urubo_jun2026` + `DISENO_PIPELINE_CASAS_VIVIENDA.md`. **Recordar reactivar el workflow `auditoria_diaria_sici_v3.0` en n8n** si sigue desactivado.
+
+---
+
+## 🟡 PENDIENTE (mañana) — Sondeo de volumen casa × alquiler × ZN
+
+**Por qué:** decidir si vale construir el tile **casa × alquiler × ZN** (es un build ~50% nuevo: discovery casa+alquiler, MOAT alquiler con GATE invertido, `precio_mensual_bob`, matching/condominio alquiler, feed + `v_mercado_casas_alquiler`). La decisión depende del **volumen real** — el director está seguro de que hay varias.
+
+**Medido el 26-jun (PARCIAL, no concluyente):**
+- **Remax: 10 casas-alquiler en ZN** (de 31 en todo SC; 0 perdidas por GPS) — confiable.
+- **Bien Inmuebles: ~14 alquiler total SC** (`id_fami=1`, que es **departamento**; el `id_fami` de **casa** NO se encontró — `2/3/4` devuelven 0). Falta resolver el filtro de tipo de BI.
+- **C21: INCONCLUSO.** Funcionó en el cron de la mañana (249 casas venta), pero a la tarde **no conecta**: `UND_ERR_CONNECT_TIMEOUT` (connection timeout, NO un 429/403). Venta y renta fallan igual → **no es rate-limit clásico ni el slug**, sino **bloqueo a nivel de conexión por IP** tras el crawling del día (o bajón transitorio). El portal grande quedó sin medir → el número de hoy NO es la realidad.
+
+**Endpoints correctos (ya verificados contra los workflows de deptos-alquiler):**
+- C21: `c21.com.bo/v/resultados/tipo_casa/operacion_renta/...` — es **`operacion_renta`**, NO `operacion_alquiler`.
+- Remax: `api/search/casa/santa-cruz-de-la-sierra` + filtro `transaction_type` alquiler (client-side).
+- BI: POST `bieninmuebles.com.bo/common/php/procesos.php`, body `modalidad=2` (alquiler), respuesta JSON-en-string; **falta el `id_fami` de casa**.
+
+**Cómo hacerlo mañana (fresco, C21 debería conectar):**
+1. Re-correr `scripts/casas-zn/sondeo-alquiler-zn.mjs` (ya tiene C21 `operacion_renta` + Remax + diagnóstico crudo→GPS→ZN). **Agregar BI** (resolver `id_fami` de casa) y sumarlo.
+2. Si C21 vuelve a no conectar → método **autoritativo sin crawlear:** leer el **total que reporta el buscador** de cada portal (casa+alquiler+Norte) por navegador (1 página c/u).
+3. Si el conteo en los 3 portales sigue bajo → la hipótesis es que el alquiler de casas vive en **canales que SICI NO cubre** (Facebook Marketplace, Ultracasas, InfoCasas). Eso sería otra decisión (no es construible con el pipeline actual).
+
+**Decisión a tomar con el número real:** volumen suficiente → construir tile; bajo → archivar "casa-alquiler por volumen" y priorizar público de venta / Urubó.
 
 ---
 
