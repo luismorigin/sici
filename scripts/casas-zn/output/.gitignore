@@ -2,5 +2,6 @@
 # moat-output.json SÍ se versiona: es el gold standard del protocolo de
 # validación del MOAT (ver PLATAFORMA_HIBRIDA_GENERICA.md §11.4).
 cron-casas-dryrun-*.json
+muestra-alquiler-zn-*.json
 upsert-preview.json
 moat-input.json

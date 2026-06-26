@@ -2,15 +2,23 @@
 
 > Tickets pendientes que surgieron de la validación Fase 3+4. Organizados por prioridad y por scope.
 
-**Última actualización:** 26 Jun 2026 (feed `/ventas/casas` + cron `/cron-casas` mergeados a `main`, en prod dark launch/noindex).
+**Última actualización:** 26 Jun 2026 (noche — tile casa×alquiler ZN: C21 reconectó, extracción + clasificador de uso validados read-only; decisión de producto = filtro de uso, no exclusión).
 
-**🎯 Próxima sesión:** **Validar el feed `/ventas/casas` unos días → og:image → hacerlo público** (sacar noindex + link). **+ pendiente mañana: sondeo de volumen casa × alquiler × ZN** (ticket abajo — C21 quedó sin medir hoy por connection timeout). Feed + cron `/cron-casas` (`scripts/casas-zn/`, verificador modelo deptos — ADR-015) ya en prod (mergeado, dark launch/noindex). Contexto ya hecho: carga (casas ZN con contacto, FK `id_condominio_master` + matcher nombre+GPS), vista `v_mercado_casas` ✅ mig 262, feed con filtros MOAT. La tabla `condominios_master` (mig 260+261) ya existe aislada. Después: extender pipeline a Urubó (~179 terrenos, `land_m2` ya corregido). Ver `project_sonda_suelo_zn_urubo_jun2026` + `DISENO_PIPELINE_CASAS_VIVIENDA.md`. **Recordar reactivar el workflow `auditoria_diaria_sici_v3.0` en n8n** si sigue desactivado.
+**🎯 Próxima sesión:** **Validar el feed `/ventas/casas` unos días → og:image → hacerlo público** (sacar noindex + link). **+ tile casa × alquiler × ZN EN CURSO** (ticket abajo — clasificador `clasificar-uso.mjs` cerrado; falta el pipeline+feed de alquiler, campo `uso_inmueble`, y volumen total con BI). Feed + cron `/cron-casas` (`scripts/casas-zn/`, verificador modelo deptos — ADR-015) ya en prod (mergeado, dark launch/noindex). Contexto ya hecho: carga (casas ZN con contacto, FK `id_condominio_master` + matcher nombre+GPS), vista `v_mercado_casas` ✅ mig 262, feed con filtros MOAT. La tabla `condominios_master` (mig 260+261) ya existe aislada. Después: extender pipeline a Urubó (~179 terrenos, `land_m2` ya corregido). Ver `project_sonda_suelo_zn_urubo_jun2026` + `DISENO_PIPELINE_CASAS_VIVIENDA.md`. **Recordar reactivar el workflow `auditoria_diaria_sici_v3.0` en n8n** si sigue desactivado.
 
 ---
 
-## 🟡 PENDIENTE (mañana) — Sondeo de volumen casa × alquiler × ZN
+## 🟡 EN CURSO — Tile casa × alquiler × ZN (sondeo + clasificador de uso)
 
 **Por qué:** decidir si vale construir el tile **casa × alquiler × ZN** (es un build ~50% nuevo: discovery casa+alquiler, MOAT alquiler con GATE invertido, `precio_mensual_bob`, matching/condominio alquiler, feed + `v_mercado_casas_alquiler`). La decisión depende del **volumen real** — el director está seguro de que hay varias.
+
+**Avance 26-jun (noche) — C21 reconectó + extracción y clasificador validados (read-only, sin BD):**
+- **C21 ya conecta** (HTTP 200, prueba de 1 request): el `UND_ERR_CONNECT_TIMEOUT` de la tarde era bloqueo transitorio de IP, **ya levantado**. La IP de casa se destraba sola en horas (consistente con el circuit-breaker del fetcher).
+- **Extracción de detalle de alquiler validada** (no solo conteo): prototipo `scripts/casas-zn/muestra-alquiler-zn.mjs` (discovery C21 `operacion_renta` + detalle completo: desc, WhatsApp del captador, fotos, área, código, fecha). Read-only, vuelca a JSON local (gitignored), NO toca BD. Bugs a resolver en el MOAT antes de cargar: precio de alquiler viene convertido BOB→USD con etiqueta USD errada (la 3ª de la muestra "5.500 bs" → "USD 790"); WhatsApp a veces enmascarado (`...9999`).
+- **🔑 Hallazgo de producto — separar comercial de residencial:** ~1 de cada 3 casas-alquiler en ZN son **locales comerciales** (sobre avenida, "ideal para empresa/oficina/clínica"). El filtro por keywords NO sirve (casi toda casa grande en avenida se promociona "también para negocio"). **La señal que separa = dormitorios en el TEXTO de la descripción** (el campo `recamaras` viene NULL en casas C21). Comercial puro = 0 dorms en texto + usos empresariales; residencial = enumera dorms/suites/cocina.
+- **Clasificador `clasificar-uso.mjs` (capa 1 regex + capa 2 agente-lector):** `residencial | mixto | comercial`, marca `posible_depto` y manda los ambiguos al lector. Validado sobre muestra de 10: 🟢5 / 🟡2 / 🔴3, 7/10 en firme por regex; el lector resolvió los 3 dudosos (1 era un depto colado en `tipo_casa` → excluido; 2 mixtos confirmados casas reales). Reusable por el futuro cron.
+- **Decisión de producto confirmada (Lucho):** NO excluir el comercial → **clasificar `uso_inmueble` y exponerlo como FILTRO** en el feed. Default: residencial+mixto on, comercial off (visible para activar). El `mixto` es categoría legítima (casa habitable + apta negocio). Hace el sistema tolerante a errores de clasificación → capa 1 basta para el MVP, el lector refina. Ver memoria `project_feed_alquiler_casas_zn_uso`.
+- **Falta de verdad (no es el filtro):** el PIPELINE de alquiler de casas (cron discovery+detalle+clasificador+MOAT+upsert) y el FEED de alquiler de casas — ninguno existe. Más: el campo `uso_inmueble` en `propiedades_v2` (migración pendiente) y resolver volumen total (BI `id_fami` de casa sigue sin encontrarse).
 
 **Medido el 26-jun (PARCIAL, no concluyente):**
 - **Remax: 10 casas-alquiler en ZN** (de 31 en todo SC; 0 perdidas por GPS) — confiable.
