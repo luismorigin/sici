@@ -233,3 +233,21 @@ Formato ADR (Architecture Decision Record): contexto → opciones → decisión 
 
 **Vinculado a:** ADR-006 (blindaje de contaminación), ADR-009.
 
+## ADR-015 — Verificador de casas: status-code-only + 2 señales, sin `inactivo_pending`
+
+**Fecha:** 26-jun-2026.
+
+**Contexto:** el 1er verificador de casas parseaba el contenido del aviso (C21 `entity` / Remax `data-page`) para decidir "caída". Eso confunde un **placeholder / página de mantenimiento / bloqueo / cambio de markup** (que devuelven 200/403/503) con un borrado → falsos positivos masivos que vaciaron el feed (294→103 el 26-jun). Además marcaba `inactivo_pending` a la 1ra ausencia → la casa **salía del feed** (la vista exige `completado`) antes de estar confirmada de baja.
+
+**Decisión:** reescribirlo con el modelo del verificador de **deptos** (n8n), más robusto:
+1. **Status-code-only:** confía SOLO en el código HTTP (C21 4xx; Remax redirect con `redirect:'manual'`). `200`=viva; `5xx`/timeout/otros=`ambiguo`→se ignora. Nunca parsea contenido.
+2. **Dos señales exigidas juntas y sostenidas >2d:** ausente del crawl (lista `desaparecidas` del cron) **y** HTTP caída. El discovery de casas es **volátil**, por eso se exigen ambas (más conservador que deptos, que puede bajar por tiempo solo).
+3. **Elimina `inactivo_pending`** del flujo de casas: la casa es `completado` (en feed durante la gracia, contador en `primera_ausencia_at`) o `inactivo_confirmed` (baja). Nunca sale del feed por una ausencia suelta.
+4. **Disyuntor:** si >40% de las activas "desaparecen", el crawl es sospechoso → no confirma bajas esa corrida.
+
+**Por qué:** deptos ya era robusto (status-code) y nunca tuvo este bug; casas era la excepción frágil. Eliminar `inactivo_pending` cumple el principio "no esconder del feed lo que no estás seguro que cayó".
+
+**Consecuencias:** feed estable ante bloqueos/placeholders. Trade-off (igual que deptos): no detecta soft-deletes (200 con página vacía) → quedan en el feed (lado seguro). Chequeo de salud: `scripts/casas-zn/salud-casas.mjs`. Seguridad de estados verificada contra los 5 triggers de `propiedades_v2` (solo toca status/es_activa/primera_ausencia_at/fecha_inactivacion/razon_inactiva → ninguno hace daño).
+
+**Vinculado a:** ADR-013 (cron casas ZN).
+
