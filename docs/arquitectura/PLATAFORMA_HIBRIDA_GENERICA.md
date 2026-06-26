@@ -315,6 +315,7 @@ barata hoy, self-host mañana.
 | **Robustez** (n8n es infra dedicada; el híbrido es scripts+agente) | El híbrido es código versionado/testeable, lo que compensa. Por eso deptos (producción) se migra al final. |
 | **Dos paradigmas durante la transición** | Frontera nítida y estable (deptos vs no-deptos) mientras dura; el contrato común los hace convivir sin fricción; n8n tiene fecha de defunción (Bloque 3), no es permanente. |
 | **Migrar deptos rompe el producto vivo** | Correr en paralelo + validar contra n8n (mismas columnas/conteos) antes de cortar. Nunca un corte ciego. |
+| **Bloqueo de IP al crawlear** (a escala, un solo IP residencial se bloquea — pasó 26-jun: C21 dropeó la IP de casa tras apilar cron+sondeos) | **El discovery NO necesita Firecrawl** (son endpoints JSON baratos: C21 `?json=true`, Remax `/api/search`, BI `procesos.php` → fetch directo, $0). El fix a escala es **crawlear desde el server de n8n** (otra IP, throttle, 1 vez/noche) — deptos ya corre 3 pipelines así sin bloqueos. `/cron-casas` desde la laptop es solo para la fase manual de bajo volumen. Proxies pagos (Firecrawl/ScraperAPI) **solo** si un IP de server no alcanza a escala muy grande (lejos hoy). Ver `docs/proyectos/zona-norte/operacion.md` (sección anti-bloqueo). |
 
 ---
 
