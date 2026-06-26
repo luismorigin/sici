@@ -1,5 +1,5 @@
 // Adaptadores C21 + Remax: listado (volumen) y detalle (campos ricos).
-import { fetchRetry, sleep } from './fetcher.mjs';
+import { fetchRetry, sleep, pace, circuit } from './fetcher.mjs';
 import { bboxDe } from './zonas.mjs';
 
 const TC = 6.96; // TC oficial para conversión BOB→USD del listado (aproximado; el detalle refina)
@@ -22,6 +22,7 @@ export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {} 
 
   const vistos = new Set(), out = [];
   for (const [idx, c] of cuadrantes.entries()) {
+    if (circuit.tripped) { log(`    🛑 C21 ${zonaKey}/${tipo}: circuit breaker (${circuit.fails} fallos seguidos) — corte temprano, IP probablemente bloqueada`); break; }
     const coord = `coordenadas_${c.N.toFixed(6)},${c.E.toFixed(6)},${c.S.toFixed(6)},${c.O.toFixed(6)}`;
     const url = `https://c21.com.bo/v/resultados/tipo_${tipo}/operacion_venta/layout_mapa/${coord},15?json=true`;
     const j = await fetchRetry(url, { json: true, headers: C21_HEADERS() });
@@ -45,7 +46,7 @@ export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {} 
       });
     }
     if ((idx + 1) % 15 === 0) log(`    C21 ${zonaKey}/${tipo}: ${idx + 1}/${cuadrantes.length} cuadrantes, ${out.length} props`);
-    await sleep(rateMs);
+    await pace(rateMs);
   }
   return out;
 }
@@ -72,6 +73,7 @@ export async function c21Detalle(url) {
 export async function remaxListadoSC(tipo, { rateMs = 1200, maxPages = 60, log = () => {} } = {}) {
   const out = [];
   for (let page = 1; page <= maxPages; page++) {
+    if (circuit.tripped) { log(`    🛑 Remax ${tipo}: circuit breaker (${circuit.fails} fallos seguidos) — corte temprano, IP probablemente bloqueada`); break; }
     const j = await fetchRetry(`https://remax.bo/api/search/${tipo}/santa-cruz-de-la-sierra?page=${page}`, { json: true });
     const data = j?.data ?? [];
     if (!data.length) { log(`    Remax ${tipo}: fin en pág ${page} (${out.length} props SC)`); break; }
@@ -94,7 +96,7 @@ export async function remaxListadoSC(tipo, { rateMs = 1200, maxPages = 60, log =
       });
     }
     if (page % 10 === 0) log(`    Remax ${tipo}: ${page} págs, ${out.length} props venta`);
-    await sleep(rateMs);
+    await pace(rateMs);
   }
   return out;
 }

@@ -79,4 +79,9 @@ para ver "¿está todo OK?" del feed de casas.
 - **$0:** todo corre bajo Max en la sesión. NO usar API ni `--apply` automático fuera de sesión.
 - **Seguridad:** los `.mjs` son INSERT-only / candado-safe / con verificación. El MOAT es el único
   juicio — sé estricto con el GATE.
+- **Anti-bloqueo de IP (`fetcher.mjs`):** el paso 1 tiene **cooldown** (frena si la última corrida fue
+  hace < 20 min — `--force` para saltarlo), **circuit breaker** (aborta si 5 requests fallan seguidos →
+  IP probablemente bloqueada), **jitter** en las pausas y **backoff** en reintentos. Si ves el 🛑 del
+  circuit breaker: **no insistas**, esperá unas horas (la IP se destraba sola). No re-crawlees: para
+  verificar/cargar usá los otros scripts sobre el JSON ya generado. Ver `operacion.md` (anti-bloqueo).
 - Contexto completo: `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md` §11 + `docs/proyectos/zona-norte/BACKLOG.md`.

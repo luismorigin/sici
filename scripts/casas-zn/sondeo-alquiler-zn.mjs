@@ -6,7 +6,7 @@
 //   node sondeo-alquiler-zn.mjs
 // ============================================================================
 import { bboxDe, enZona } from '../sonda-suelo/lib/zonas.mjs';
-import { fetchRetry, sleep } from '../sonda-suelo/lib/fetcher.mjs';
+import { fetchRetry, pace, circuit } from '../sonda-suelo/lib/fetcher.mjs';
 
 const ZONA = 'zona-norte', STEP = 0.02, TC = 6.96;
 const num = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : null; };
@@ -18,6 +18,7 @@ async function c21Alquiler() {
     cuad.push({ N: Math.min(lat + STEP, b.N), E: Math.min(lon + STEP, b.E), S: lat, O: lon });
   const vistos = new Set(), out = [];
   for (const [idx, c] of cuad.entries()) {
+    if (circuit.tripped) { log(`    🛑 C21: circuit breaker (${circuit.fails} fallos) — corte (IP probablemente bloqueada; conteo parcial)`); break; }
     const coord = `coordenadas_${c.N.toFixed(6)},${c.E.toFixed(6)},${c.S.toFixed(6)},${c.O.toFixed(6)}`;
     const url = `https://c21.com.bo/v/resultados/tipo_casa/operacion_renta/layout_mapa/${coord},15?json=true`; // C21 usa operacion_RENTA (no alquiler)
     const j = await fetchRetry(url, { json: true, headers: { accept: 'application/json', cookie: `PHPSESSID=sondeo_${Math.random().toString(36).slice(2, 10)}` } });
@@ -27,7 +28,7 @@ async function c21Alquiler() {
       out.push({ fuente: 'century21', lat: parseFloat(p.lat), lon: parseFloat(p.lon), precio_raw: num(p.precio), moneda: (p.moneda || '').toUpperCase(), url: p.urlCorrectaPropiedad ? `https://c21.com.bo${p.urlCorrectaPropiedad}` : null });
     }
     if ((idx + 1) % 15 === 0) log(`    C21 alquiler: ${idx + 1}/${cuad.length} cuadrantes, ${out.length} props`);
-    await sleep(1500);
+    await pace(1500);
   }
   return out;
 }
@@ -35,6 +36,7 @@ async function c21Alquiler() {
 async function remaxAlquiler() {
   const out = [];
   for (let page = 1; page <= 60; page++) {
+    if (circuit.tripped) { log(`    🛑 Remax: circuit breaker (${circuit.fails} fallos) — corte (conteo parcial)`); break; }
     const j = await fetchRetry(`https://remax.bo/api/search/casa/santa-cruz-de-la-sierra?page=${page}`, { json: true });
     const data = j?.data ?? []; if (!data.length) { log(`    Remax alquiler: fin pág ${page}`); break; }
     for (const p of data) {
@@ -42,7 +44,7 @@ async function remaxAlquiler() {
       out.push({ fuente: 'remax', lat: parseFloat(p.location?.latitude), lon: parseFloat(p.location?.longitude), precio_raw: num(p.price?.amount), precio_usd: num(p.price?.price_in_dollars), moneda: p.price?.currency_id === 1 ? 'BOB' : 'USD', url: p.slug ? `https://remax.bo/propiedad/${p.slug}` : null });
     }
     if (page % 10 === 0) log(`    Remax alquiler: ${page} págs, ${out.length} props`);
-    await sleep(1200);
+    await pace(1200);
   }
   return out;
 }
