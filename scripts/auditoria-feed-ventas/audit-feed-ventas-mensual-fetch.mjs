@@ -1,0 +1,604 @@
+import { config as loadEnv } from 'dotenv';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { dirname, resolve, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+
+import { getSupabaseClient, getPropsViejasFromFeed } from './lib/db.mjs';
+import { compararDescripciones } from './lib/similarity.mjs';
+import { runChecks as runInternalChecks, extraerPreciosCercanosKeyword } from './lib/internal-checks.mjs';
+import { checkMatching } from './lib/matching-checks.mjs';
+// Capa 1 con fetcher directo ($0) en vez de Firecrawl — reusa el del híbrido ZN.
+import { c21Detalle, remaxDetalle } from '../sonda-suelo/lib/portales.mjs';
+import { pace, circuit } from '../sonda-suelo/lib/fetcher.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ENV_CANDIDATES = [
+  resolve(__dirname, '../../simon-mvp/.env.local'),
+  resolve(__dirname, '../../../sici/simon-mvp/.env.local'),
+  process.env.ENV_FILE,
+].filter(Boolean);
+const ENV_PATH = ENV_CANDIDATES.find((p) => existsSync(p));
+if (ENV_PATH) loadEnv({ path: ENV_PATH });
+
+const args = parseArgs(process.argv.slice(2));
+const USE_CACHED = args['use-cached'];
+const CONCURRENCY = args.concurrency ? parseInt(args.concurrency, 10) : 5;
+const SKIP_INSERT = !!args['skip-insert'];
+const LIMIT = args.limit ? parseInt(args.limit, 10) : 1000; // tope de props (para probar: --limit 5)
+
+// Las 6 zonas canónicas de Equipetrol. Aislar de Zona Norte (que también vive en
+// v_mercado_venta / propiedades_v2 desde que ZN entró a prod). Principio P1:
+// filtrar en CONSUMIDORES, nunca en las vistas. Ver ticket #15 del backlog ZN.
+const EQ_ZONAS = [
+  'Equipetrol Centro',
+  'Equipetrol Norte',
+  'Sirari',
+  'Villa Brigida',
+  'Equipetrol Oeste',
+  'Eq. 3er Anillo',
+];
+
+// --macrozona: alcance del audit (default equipetrol).
+//   equipetrol  -> solo las 6 zonas canónicas de EQ (modo 'in')
+//   zona-norte  -> todo lo que NO es Equipetrol (modo 'notin'); ZN vive en las
+//                  mismas tablas, así no hay que hardcodear sus 14 microzonas
+//   todas       -> sin filtro (EQ + ZN)
+const MACROZONA = (args.macrozona || 'equipetrol').toLowerCase();
+const ZONA_FILTER = (() => {
+  if (MACROZONA === 'equipetrol') return { modo: 'in', zonas: EQ_ZONAS, label: 'Equipetrol' };
+  if (['zona-norte', 'zonanorte', 'zn'].includes(MACROZONA)) return { modo: 'notin', zonas: EQ_ZONAS, label: 'Zona Norte' };
+  if (MACROZONA === 'todas') return { modo: 'none', zonas: [], label: 'todas (EQ + ZN)' };
+  console.error(`✖ --macrozona desconocida: "${MACROZONA}". Usá: equipetrol | zona-norte | todas`);
+  process.exit(1);
+})();
+
+// Aplica el filtro de macrozona a cualquier query builder de supabase (capas 2 y 3).
+function aplicarZona(q) {
+  if (ZONA_FILTER.modo === 'in') return q.in('zona', ZONA_FILTER.zonas);
+  if (ZONA_FILTER.modo === 'notin') return q.not('zona', 'in', `(${ZONA_FILTER.zonas.map((z) => `"${z}"`).join(',')})`);
+  return q;
+}
+
+async function main() {
+  const tStart = Date.now();
+  const runDir = resolve(
+    __dirname,
+    'reports',
+    'mensual-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+  );
+  await mkdir(runDir, { recursive: true });
+
+  console.log('▶ Audit mensual — orquestador');
+  console.log(`  Macrozona: ${ZONA_FILTER.label} (--macrozona ${MACROZONA})`);
+  console.log(`  Modo: ${USE_CACHED ? 'CACHED (--use-cached ' + USE_CACHED + ')' : 'FETCHER DIRECTO ($0, sin Firecrawl)'}`);
+  console.log(`  Run dir: ${runDir}`);
+
+  const supabase = getSupabaseClient();
+
+  // === FASE 1: Drift via fetcher directo (capa 1) ===
+  console.log('\n▶ Capa 1: Drift (fetcher directo $0)');
+  const capa1Items = USE_CACHED
+    ? await loadCapa1FromCached(USE_CACHED)
+    : await runCapa1Fresh(supabase);
+  console.log(`  ${capa1Items.length} props procesadas en capa 1`);
+  const scrapeOk = capa1Items.filter((c) => c.scrape_status === 'ok').length;
+  const scrapeFail = capa1Items.length - scrapeOk;
+
+  // === FASE 2: Inconsistencias internas (capa 2) ===
+  console.log('\n▶ Capa 2: Inconsistencias internas');
+  const capa2Items = await runCapa2(supabase);
+  console.log(`  ${capa2Items.size} props con issues internos`);
+
+  // === FASE 3: Audit matching (capa 3) ===
+  console.log('\n▶ Capa 3: Audit matching');
+  const capa3Items = await runCapa3(supabase, capa1Items);
+  console.log(`  ${capa3Items.size} props con issues de matching`);
+
+  // === Combinar resultados ===
+  const combined = combinarResultados(capa1Items, capa2Items, capa3Items);
+
+  // === Stats ===
+  const stats = computeStats(combined);
+  console.log('\n=== Stats globales ===');
+  Object.entries(stats).forEach(([k, v]) => console.log(`  ${k}: ${v}`));
+
+  const costoFirecrawl = 0; // fetcher directo — sin gasto Firecrawl
+
+  // === Persistir a Supabase (si la migración 242 está aplicada) ===
+  let runId = null;
+  if (!SKIP_INSERT) {
+    runId = await persistRunAndItems(supabase, {
+      modo: USE_CACHED ? 'cached' : 'fetch',
+      cached_run_dir: USE_CACHED || null,
+      total_props: combined.length,
+      scrape_ok: scrapeOk,
+      scrape_failed: scrapeFail,
+      summary_stats: stats,
+      costo_firecrawl: costoFirecrawl,
+      items: combined,
+    });
+  }
+
+  // === Generar reportes locales ===
+  await writeFile(join(runDir, 'combined.json'), JSON.stringify(combined, null, 2), 'utf8');
+  await writeFile(
+    join(runDir, 'meta.json'),
+    JSON.stringify({ runId, stats, costoFirecrawl, modo: USE_CACHED ? 'cached' : 'fetch', cachedFrom: USE_CACHED || null, durationMs: Date.now() - tStart }, null, 2),
+    'utf8'
+  );
+  await writeFile(join(runDir, 'summary.md'), renderSummary(combined, stats, runId, USE_CACHED), 'utf8');
+
+  console.log(`\n✔ Reportes en ${runDir}`);
+  console.log(`  - combined.json: detalle completo de ${combined.length} props`);
+  console.log(`  - summary.md: reporte ejecutivo (esto es lo que la skill lee)`);
+  if (runId) console.log(`  - DB run_id: ${runId}`);
+}
+
+// ============================================================
+// CAPA 1
+// ============================================================
+
+// Diff de PRECIOS dentro del drift: compara el precio escrito en la desc
+// guardada (vieja) vs la del portal hoy. Caza rebajas/subas reales que el
+// check de Capa 2 no ve (Capa 2 compara contra la cruda vieja, no el portal).
+// Mismo principio que el diff de texto, aplicado al monto.
+function calcularPrecioDrift(descBd, descScraped) {
+  const pv = extraerPreciosCercanosKeyword(descBd || '');
+  const pn = extraerPreciosCercanosKeyword(descScraped || '');
+  if (pv.length === 0 || pn.length === 0) return null;
+  const viejo = pv[0]; // precio principal (mayor) de cada texto, igual que Capa 2
+  const nuevo = pn[0];
+  if (!viejo || !nuevo) return null;
+  const diff = (nuevo - viejo) / viejo;
+  const abs = Math.abs(diff);
+  // Piso de 1% solo para descartar artefactos de redondeo/parseo. Cualquier
+  // cambio real >=1% se reporta, graduado por tamaño (no se esconde nada real).
+  if (abs < 0.01) return null;
+  return {
+    viejo,
+    nuevo,
+    diff_pct: Math.round(diff * 1000) / 10,
+    direccion: nuevo > viejo ? 'suba' : 'rebaja',
+    severidad: abs >= 0.1 ? 'alta' : abs >= 0.03 ? 'media' : 'baja',
+  };
+}
+
+const _esC21 = (f) => /c21|century/i.test(f || '');
+const _esRemax = (f) => /remax/i.test(f || '');
+
+async function runCapa1Fresh(supabase) {
+  const props = await getPropsViejasFromFeed(supabase, LIMIT, 0, [], [], ZONA_FILTER);
+  console.log(`  ${props.length} props desde v_mercado_venta (${ZONA_FILTER.label})`);
+
+  // Fetcher directo ($0): C21 ?json=true / Remax data-page. Secuencial con pace()
+  // + circuit breaker (si la IP se bloquea, corta temprano en vez de profundizar).
+  const out = [];
+  let done = 0, lastPct = -1;
+  for (const p of props) {
+    if (circuit.tripped) {
+      console.warn(`  🛑 Circuit breaker (${circuit.fails} fallos seguidos) — IP probablemente bloqueada. Corte en ${done}/${props.length}; reintentá en horas.`);
+      break;
+    }
+    const descBd = p.descripcion_bd || '';
+    let det = null;
+    try {
+      if (_esC21(p.fuente)) det = await c21Detalle(p.url);
+      else if (_esRemax(p.fuente)) det = await remaxDetalle(p.url);
+    } catch { det = null; }
+    const descScraped = (det?.descripcion || '').trim();
+
+    if (!descScraped) {
+      out.push({
+        id: p.id, fuente: p.fuente, url: p.url,
+        descripcion_bd: descBd, descripcion_scraped: '', title_scraped: '',
+        scrape_status: 'failed',
+        error: det === null ? 'fetch falló' : 'descripción vacía',
+        ...emptyCmp(),
+        len_bd: descBd.length,
+        precio_drift: null,
+      });
+    } else {
+      const cmp = compararDescripciones(descBd, descScraped);
+      out.push({
+        id: p.id, fuente: p.fuente, url: p.url,
+        descripcion_bd: descBd,
+        descripcion_scraped: descScraped,
+        // El fetcher no da el <title> del HTML como Firecrawl. La Capa 3 (matching)
+        // busca el nombre del edificio en title_scraped → le pasamos la descripción
+        // completa, que es mejor señal que el title.
+        title_scraped: descScraped,
+        scrape_status: 'ok',
+        ...cmp,
+        precio_drift: calcularPrecioDrift(descBd, descScraped),
+      });
+    }
+
+    done++;
+    const pct = Math.floor((done / props.length) * 100);
+    if (pct !== lastPct && pct % 10 === 0) { console.log(`  fetch ${done}/${props.length} (${pct}%)`); lastPct = pct; }
+    await pace(800); // amable + jitter anti-bloqueo
+  }
+  return out;
+}
+
+async function loadCapa1FromCached(runDirName) {
+  const runDir = resolve(__dirname, 'reports', runDirName);
+  const resultsPath = join(runDir, 'results.json');
+  if (!existsSync(resultsPath)) {
+    throw new Error(`No existe ${resultsPath}`);
+  }
+  const items = JSON.parse(readFileSync(resultsPath, 'utf8'));
+  const rawDir = join(runDir, 'raw');
+  if (existsSync(rawDir)) {
+    const titlesById = new Map();
+    for (const file of readdirSync(rawDir)) {
+      try {
+        const data = JSON.parse(readFileSync(join(rawDir, file), 'utf8'));
+        if (data.id && data.title_scraped) titlesById.set(data.id, data.title_scraped);
+      } catch {}
+    }
+    for (const item of items) {
+      if (titlesById.has(item.id)) item.title_scraped = titlesById.get(item.id);
+    }
+  }
+  for (const item of items) {
+    if (item.precio_drift === undefined) {
+      item.precio_drift = calcularPrecioDrift(item.descripcion_bd || '', item.descripcion_scraped || '');
+    }
+  }
+  return items;
+}
+
+function emptyCmp() {
+  return {
+    similitud_pct: 0,
+    len_bd: 0,
+    len_scraped: 0,
+    palabras_agregadas: [],
+    palabras_quitadas: [],
+    flags_semanticos: {},
+    bucket: 'identicas',
+    tiene_flag_semantico: false,
+  };
+}
+
+// ============================================================
+// CAPA 2
+// ============================================================
+
+async function runCapa2(supabase) {
+  const { data, error } = await aplicarZona(
+    supabase
+      .from('propiedades_v2')
+      .select('id, precio_usd, tipo_cambio_detectado, nombre_edificio, datos_json, datos_json_enrichment')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
+  );
+  if (error) throw error;
+
+  const issuesByProp = new Map();
+  for (const p of data) {
+    const issues = runInternalChecks({
+      precio_usd: parseFloat(p.precio_usd) || 0,
+      tipo_cambio_detectado: p.tipo_cambio_detectado,
+      nombre_edificio: p.nombre_edificio,
+      contenido_desc: p.datos_json?.contenido?.descripcion || '',
+      enrichment_desc: p.datos_json_enrichment?.descripcion || '',
+    });
+    if (issues.length > 0) issuesByProp.set(p.id, issues);
+  }
+  return issuesByProp;
+}
+
+// ============================================================
+// CAPA 3
+// ============================================================
+
+async function runCapa3(supabase, capa1Items) {
+  const { data: props, error } = await aplicarZona(
+    supabase
+      .from('propiedades_v2')
+      .select('id, fuente, url, nombre_edificio, id_proyecto_master, status, datos_json')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
+  );
+  if (error) throw error;
+
+  const proyectoIds = [...new Set(props.map((p) => p.id_proyecto_master).filter(Boolean))];
+  const proyectosById = new Map();
+  if (proyectoIds.length > 0) {
+    const { data: proys, error: e2 } = await supabase
+      .from('proyectos_master')
+      .select('id_proyecto_master, nombre_oficial, alias_conocidos')
+      .in('id_proyecto_master', proyectoIds);
+    if (e2) throw e2;
+    for (const pm of proys || []) proyectosById.set(pm.id_proyecto_master, pm);
+  }
+
+  const titlesByPropId = new Map();
+  for (const c of capa1Items) {
+    if (c.title_scraped) titlesByPropId.set(c.id, c.title_scraped);
+  }
+
+  const issuesByProp = new Map();
+  for (const p of props) {
+    const pm = p.id_proyecto_master ? proyectosById.get(p.id_proyecto_master) : null;
+    const aliases = collectAliases(p, pm);
+    const enriched = {
+      id: p.id,
+      url: p.url,
+      nombre_edificio: p.nombre_edificio,
+      aliases,
+      contenido_desc: p.datos_json?.contenido?.descripcion || '',
+    };
+    const scraped = { title_scraped: titlesByPropId.get(p.id) || '' };
+    const result = checkMatching(enriched, scraped);
+    if (result.check !== 'ok') issuesByProp.set(p.id, result);
+  }
+  return issuesByProp;
+}
+
+function collectAliases(prop, pm) {
+  const set = new Set();
+  if (prop.nombre_edificio) set.add(prop.nombre_edificio);
+  if (pm) {
+    if (pm.nombre_oficial) set.add(pm.nombre_oficial);
+    if (Array.isArray(pm.alias_conocidos)) {
+      for (const a of pm.alias_conocidos) if (a) set.add(a);
+    }
+  }
+  return [...set];
+}
+
+// ============================================================
+// COMBINAR
+// ============================================================
+
+function combinarResultados(capa1, capa2, capa3) {
+  return capa1.map((c1) => {
+    const c2 = capa2.get(c1.id) || [];
+    const c3 = capa3.get(c1.id) || null;
+
+    const sevC2 = c2.length > 0 ? maxSeveridad(c2.map((i) => i.severidad)) : null;
+    const sevC3 = c3 ? c3.severidad : null;
+    const sevDrift = c1.precio_drift ? c1.precio_drift.severidad : null;
+    const sevMax = maxSeveridad([sevC2, sevC3, sevDrift]);
+
+    return {
+      id: c1.id,
+      fuente: c1.fuente,
+      url: c1.url,
+      capa1: {
+        bucket: c1.bucket,
+        similitud_pct: c1.similitud_pct,
+        scrape_status: c1.scrape_status,
+        len_bd: c1.len_bd,
+        len_scraped: c1.len_scraped,
+        descripcion_bd: c1.descripcion_bd,
+        descripcion_scraped: c1.descripcion_scraped,
+        title_scraped: c1.title_scraped || '',
+        flags_semanticos: c1.flags_semanticos,
+        palabras_agregadas: c1.palabras_agregadas,
+        palabras_quitadas: c1.palabras_quitadas,
+        precio_drift: c1.precio_drift || null,
+      },
+      capa2: c2,
+      capa3: c3,
+      severidad_max: sevMax,
+    };
+  });
+}
+
+function maxSeveridad(arr) {
+  const orden = { alta: 3, media: 2, baja: 1 };
+  let max = null;
+  let maxVal = 0;
+  for (const s of arr) {
+    if (s && (orden[s] || 0) > maxVal) {
+      max = s;
+      maxVal = orden[s];
+    }
+  }
+  return max;
+}
+
+// ============================================================
+// STATS
+// ============================================================
+
+function computeStats(combined) {
+  const stats = {
+    total: combined.length,
+    identicas: 0,
+    cambio_menor: 0,
+    cambio_relevante: 0,
+    reescritas: 0,
+    listings_muertos: 0,
+    con_flag_semantico: 0,
+    con_inconsistencia_interna: 0,
+    con_mismatch_matching: 0,
+    con_precio_drift_portal: 0,
+    severidad_alta: 0,
+    severidad_media: 0,
+    severidad_baja: 0,
+    scrape_failed: 0,
+  };
+  for (const r of combined) {
+    if (r.capa1.scrape_status !== 'ok') stats.scrape_failed++;
+    const b = r.capa1.bucket;
+    if (b === 'identicas') stats.identicas++;
+    else if (b === 'cambio_menor') stats.cambio_menor++;
+    else if (b === 'cambio_relevante') stats.cambio_relevante++;
+    else if (b === 'reescrita') {
+      if (r.capa1.len_scraped === 0) stats.listings_muertos++;
+      else stats.reescritas++;
+    }
+    if (r.capa1.flags_semanticos && Object.keys(r.capa1.flags_semanticos).length > 0) {
+      stats.con_flag_semantico++;
+    }
+    if (r.capa2.length > 0) stats.con_inconsistencia_interna++;
+    if (r.capa3 && r.capa3.check === 'mismatch_real') stats.con_mismatch_matching++;
+    if (r.capa1.precio_drift) stats.con_precio_drift_portal++;
+    if (r.severidad_max === 'alta') stats.severidad_alta++;
+    else if (r.severidad_max === 'media') stats.severidad_media++;
+    else if (r.severidad_max === 'baja') stats.severidad_baja++;
+  }
+  return stats;
+}
+
+// ============================================================
+// PERSISTIR A SUPABASE
+// ============================================================
+
+async function persistRunAndItems(supabase, payload) {
+  try {
+    const { data: runRow, error: e1 } = await supabase
+      .from('audit_descripciones_runs')
+      .insert({
+        tipo_operacion: 'venta',
+        modo: payload.modo,
+        cached_run_dir: payload.cached_run_dir,
+        total_props: payload.total_props,
+        scrape_ok: payload.scrape_ok,
+        scrape_failed: payload.scrape_failed,
+        summary_stats: payload.summary_stats,
+        costo_firecrawl: payload.costo_firecrawl,
+      })
+      .select('id')
+      .single();
+    if (e1) throw e1;
+
+    const runId = runRow.id;
+    const itemsForInsert = payload.items.map((r) => ({
+      run_id: runId,
+      tipo_operacion: 'venta',
+      prop_id: r.id,
+      fuente: r.fuente,
+      url: r.url,
+      bucket: r.capa1.bucket,
+      similitud_pct: r.capa1.similitud_pct,
+      descripcion_bd_snapshot: r.capa1.descripcion_bd,
+      descripcion_scraped: r.capa1.descripcion_scraped,
+      title_scraped: r.capa1.title_scraped || null,
+      flags_semanticos: r.capa1.flags_semanticos || {},
+      palabras_agregadas: r.capa1.palabras_agregadas || [],
+      palabras_quitadas: r.capa1.palabras_quitadas || [],
+      scrape_status: r.capa1.scrape_status,
+      inconsistencias_internas: r.capa2 || [],
+      severidad_max: r.severidad_max,
+      matching_check: r.capa3?.check || null,
+      matching_detalle: r.capa3?.detalle || null,
+    }));
+
+    const chunkSize = 100;
+    for (let i = 0; i < itemsForInsert.length; i += chunkSize) {
+      const chunk = itemsForInsert.slice(i, i + chunkSize);
+      const { error: e2 } = await supabase.from('audit_descripciones_items').insert(chunk);
+      if (e2) throw e2;
+    }
+    console.log(`✓ Persistido en Supabase: run_id=${runId}, items=${itemsForInsert.length}`);
+    return runId;
+  } catch (err) {
+    console.warn(`⚠ No se pudo persistir a Supabase: ${err.message}`);
+    console.warn(`  (¿migración 242 aplicada? — el script siguió con el reporte local)`);
+    return null;
+  }
+}
+
+// ============================================================
+// SUMMARY
+// ============================================================
+
+function renderSummary(combined, stats, runId, modo) {
+  const lines = [];
+  lines.push(`# Audit mensual — ${new Date().toISOString().slice(0, 10)}`);
+  lines.push('');
+  lines.push(`**Macrozona:** ${ZONA_FILTER.label}`);
+  if (runId) lines.push(`**DB run_id:** \`${runId}\``);
+  if (modo) lines.push(`**Modo:** cached (${modo})`);
+  lines.push('');
+  lines.push('## Stats globales');
+  lines.push('');
+  lines.push('| Métrica | Cantidad |');
+  lines.push('|---|---:|');
+  lines.push(`| Total props | ${stats.total} |`);
+  lines.push(`| Idénticas | ${stats.identicas} |`);
+  lines.push(`| Cambio menor | ${stats.cambio_menor} |`);
+  lines.push(`| Cambio relevante | ${stats.cambio_relevante} |`);
+  lines.push(`| Reescritas | ${stats.reescritas} |`);
+  lines.push(`| **Listings muertos** | ${stats.listings_muertos} |`);
+  lines.push(`| Con flag semántico | ${stats.con_flag_semantico} |`);
+  lines.push(`| **Con inconsistencia interna** | ${stats.con_inconsistencia_interna} |`);
+  lines.push(`| **Con mismatch matching** | ${stats.con_mismatch_matching} |`);
+  lines.push(`| **💲 Cambio de precio en portal** | ${stats.con_precio_drift_portal} |`);
+  lines.push(`| 🔴 Severidad alta | ${stats.severidad_alta} |`);
+  lines.push(`| 🟡 Severidad media | ${stats.severidad_media} |`);
+  lines.push(`| Scrape fallidos | ${stats.scrape_failed} |`);
+  lines.push('');
+
+  const altas = combined.filter((r) => r.severidad_max === 'alta');
+  if (altas.length > 0) {
+    lines.push(`## 🔴 Severidad alta (${altas.length})`);
+    lines.push('');
+    lines.push('| ID | Fuente | Bucket | C2 issues | C3 check |');
+    lines.push('|---:|---|---|---|---|');
+    for (const r of altas) {
+      const c2 = r.capa2.map((i) => i.tipo).join(', ');
+      const c3 = r.capa3 ? r.capa3.check : '-';
+      lines.push(`| ${r.id} | ${r.fuente} | ${r.capa1.bucket} | ${c2 || '-'} | ${c3} |`);
+    }
+    lines.push('');
+  }
+
+  const conDrift = combined
+    .filter((r) => r.capa1.precio_drift)
+    .sort((a, b) => Math.abs(b.capa1.precio_drift.diff_pct) - Math.abs(a.capa1.precio_drift.diff_pct));
+  if (conDrift.length > 0) {
+    lines.push(`## 💲 Cambio de precio en portal (${conDrift.length})`);
+    lines.push('');
+    lines.push('| ID | Fuente | Guardado | Portal hoy | Δ% | Dirección |');
+    lines.push('|---:|---|---:|---:|---:|---|');
+    for (const r of conDrift) {
+      const d = r.capa1.precio_drift;
+      lines.push(`| ${r.id} | ${r.fuente} | ${d.viejo.toLocaleString()} | ${d.nuevo.toLocaleString()} | ${d.diff_pct > 0 ? '+' : ''}${d.diff_pct}% | ${d.direccion === 'rebaja' ? '🔻 rebaja' : '🔺 suba'} |`);
+    }
+    lines.push('');
+  }
+
+  const muertos = combined.filter((r) => r.capa1.bucket === 'reescrita' && r.capa1.len_scraped === 0);
+  if (muertos.length > 0) {
+    lines.push(`## ⚰️ Listings muertos (${muertos.length})`);
+    lines.push('');
+    lines.push('| ID | Fuente | URL |');
+    lines.push('|---:|---|---|');
+    for (const r of muertos) lines.push(`| ${r.id} | ${r.fuente} | ${r.url} |`);
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+function parseArgs(argv) {
+  const out = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a.startsWith('--')) {
+      const key = a.slice(2);
+      const next = argv[i + 1];
+      if (next && !next.startsWith('--')) {
+        out[key] = next;
+        i++;
+      } else {
+        out[key] = true;
+      }
+    }
+  }
+  return out;
+}
+
+main().catch((err) => {
+  console.error('✖ Error fatal:', err);
+  process.exit(1);
+});

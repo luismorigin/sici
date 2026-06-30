@@ -165,11 +165,35 @@ Impacto en feed: subestimación total de ~$Y miles
 `<run_dir>/summary.md` y `<run_dir>/combined.json`
 ```
 
+### 4.5 SQL de corrección — SIEMPRE refrescar también la descripción ⭐
+
+Cuando un cambio de precio/TC sea **confirmado** (leíste el aviso y es real: rebaja/suba o TC mal), el SQL de corrección debe **también refrescar la descripción cruda** con la del portal. Si solo actualizás `precio_usd`/`tc` y dejás la descripción vieja, el detector vuelve a marcar esa prop como "cambio de precio" en **cada corrida** (compara la cruda vieja vs el portal) — ruido recurrente. Refrescar la descripción cierra el caso.
+
+La descripción nueva está en `combined.json` → `capa1.descripcion_scraped` de esa prop. Patrón (usar dollar-quoting `$desc$` para no romper con acentos/viñetas; escribir el texto en **ambos** campos, `contenido` + `enrichment`, que el feed y la cruda queden sync):
+
+```sql
+UPDATE propiedades_v2
+SET precio_usd = <nuevo>,                         -- si cambió el precio
+    tipo_cambio_detectado = '<tc>',               -- si cambió el TC
+    datos_json = jsonb_set(datos_json, '{contenido,descripcion}', to_jsonb($desc$<descripcion_scraped>$desc$::text)),
+    datos_json_enrichment = jsonb_set(datos_json_enrichment, '{descripcion}', to_jsonb($desc$<descripcion_scraped>$desc$::text)),
+    campos_bloqueados = COALESCE(campos_bloqueados,'{}'::jsonb) || jsonb_build_object(
+      'precio_usd', jsonb_build_object('por','audit_mensual_<fecha>','fecha','<fecha>','bloqueado',true,'valor_original',<viejo>)),
+    fecha_actualizacion = NOW()
+WHERE id = <id>;
+```
+
+**Solo para cambios confirmados por lectura** — NO refrescar a ciegas:
+- **Fantasma Remax** (mismo número repetido en props de distinta área/dorms, ej. 67.678): ignorar, no es cambio real.
+- **Reformulación de TC** (mismo valor expresado "al oficial" vs "billete/paralelo"): no es rebaja; corregir TC si aplica pero evaluar si vale refrescar.
+- Si la prop ya está dada de baja / fuera del feed: no tocar.
+
 ### 5. Pregunta al usuario qué accionar
 
 Después del reporte ejecutivo, preguntá concretamente:
 
 - ¿Aplicar los SQL críticos ahora? (TC mismatch + listings muertos suelen ser seguros)
+- **¿Genero el SQL de los cambios de precio confirmados, con el refresco de descripción incluido (§4.5), para que no reaparezcan?**
 - ¿Querés side-by-side de los cambios de precio reales para decidir?
 - ¿Hay algún caso específico que querés que investigue más?
 
