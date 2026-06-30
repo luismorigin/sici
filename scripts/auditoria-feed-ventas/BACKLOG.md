@@ -4,6 +4,26 @@ Pendientes detectados en la sesión del 2026-05-08. Ordenados por valor / urgenc
 
 ---
 
+## ⭐ EN CURSO — Migrar el audit de ventas a fetcher directo ($0, sin Firecrawl) (29-jun-2026)
+
+**Qué intento:** el audit mensual de ventas usa Firecrawl (paga, ~$1.75 EQ / ~$3.90 EQ+ZN, 1 request por prop en la Capa 1). El flujo híbrido de Zona Norte ya recupera descripciones **gratis** con `fetch()` directo (`scripts/sonda-suelo/lib/`): C21 vía `?json=true`, Remax vía atributo `data-page`. La meta es reemplazar Firecrawl por ese fetcher → **audit mensual a $0**.
+
+**Skill de prueba creada:** `/probar-fetcher-ventas` (`fetch-test.mjs` + `.command.md`). Read-only, $0, **aislada** del audit mensual (que sigue intacto con Firecrawl). Toma una muestra del feed, trae la descripción con el fetcher directo y la compara contra la cruda de BD (éxito + similitud). Reusa `sonda-suelo/lib/{fetcher,portales}.mjs` + `auditoria-feed-ventas/lib/db.mjs`.
+
+**Validado (smoke):** 4/4 props, 100% éxito, $0 (C21 sim 100%, Remax 98.3%).
+
+**Pendiente:**
+1. Correr `/probar-fetcher-ventas --n 50` (sobre todo `--fuente remax`, el más dudoso por ser SPA) para confirmar con muestra grande.
+2. Si da ✅: migrar `audit-feed-ventas-mensual.mjs` Capa 1 — reemplazar `lib/firecrawl.mjs` por el fetcher directo y adaptar `lib/extractor.mjs` (hoy parsea HTML de Firecrawl) para leer la descripción directa del JSON.
+
+**Riesgo:** Firecrawl absorbe el anti-bot; el fetcher directo depende de que `?json=true`/`data-page` sigan abiertos (hoy lo están, el híbrido los usa a diario). Mitigado con el circuit breaker de `fetcher.mjs`.
+
+### Otras mejoras de esta sesión (29-jun) ya aplicadas
+- **`--macrozona`** (`equipetrol` default | `zona-norte` | `todas`): alcance seleccionable, filtrado en las 3 capas. Cierra el bug de contaminación ZN (ticket #15) que mezclaba EQ+ZN sin querer.
+- **Detector de cambio de precio en portal** (Capa 1): compara el precio del texto viejo vs el del portal, piso 1% graduado por tamaño. Caza rebajas/subas que el check de Capa 2 no veía (compara contra cruda vieja). Caveat: fantasma Remax + reformulación de TC ≠ rebaja → lectura humana.
+
+---
+
 ## ⭐ PLAN — Upgrade auditoría de matching: del regex-juez al LLM-juez (hallazgos 17-jun-2026)
 
 **Contexto:** auditando la cola de matching de Zona Norte con un agente que **LEE los anuncios**, se encontraron **~58 falsos positivos del motor** (score 90-95) que el score/GPS/token NO detectaban. Ej: "CONDOMINIO ONE" (pm 359) atrae cualquier "Condominio X"; "Macororó 15" vs "19" (cluster numerado). Detalle: memoria `project_matching_zn_aprobacion_16jun2026`.

@@ -135,7 +135,7 @@ function checkOtroEdificioMencionado(desc, edificioBd) {
   return null;
 }
 
-function extraerPreciosCercanosKeyword(desc) {
+export function extraerPreciosCercanosKeyword(desc) {
   const matches = new Set();
   for (const re of PATRONES_PRECIO_PRINCIPAL) {
     re.lastIndex = 0;

@@ -10,7 +10,7 @@ import { scrapeBatch } from './lib/firecrawl.mjs';
 import { extraerDescripcion, extraerTitle } from './lib/extractor.mjs';
 import { compararDescripciones } from './lib/similarity.mjs';
 import { generarReporte } from './lib/reporter.mjs';
-import { runChecks as runInternalChecks } from './lib/internal-checks.mjs';
+import { runChecks as runInternalChecks, extraerPreciosCercanosKeyword } from './lib/internal-checks.mjs';
 import { checkMatching } from './lib/matching-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -27,6 +27,39 @@ const USE_CACHED = args['use-cached'];
 const CONCURRENCY = args.concurrency ? parseInt(args.concurrency, 10) : 5;
 const SKIP_INSERT = !!args['skip-insert'];
 
+// Las 6 zonas canónicas de Equipetrol. Aislar de Zona Norte (que también vive en
+// v_mercado_venta / propiedades_v2 desde que ZN entró a prod). Principio P1:
+// filtrar en CONSUMIDORES, nunca en las vistas. Ver ticket #15 del backlog ZN.
+const EQ_ZONAS = [
+  'Equipetrol Centro',
+  'Equipetrol Norte',
+  'Sirari',
+  'Villa Brigida',
+  'Equipetrol Oeste',
+  'Eq. 3er Anillo',
+];
+
+// --macrozona: alcance del audit (default equipetrol).
+//   equipetrol  -> solo las 6 zonas canónicas de EQ (modo 'in')
+//   zona-norte  -> todo lo que NO es Equipetrol (modo 'notin'); ZN vive en las
+//                  mismas tablas, así no hay que hardcodear sus 14 microzonas
+//   todas       -> sin filtro (EQ + ZN)
+const MACROZONA = (args.macrozona || 'equipetrol').toLowerCase();
+const ZONA_FILTER = (() => {
+  if (MACROZONA === 'equipetrol') return { modo: 'in', zonas: EQ_ZONAS, label: 'Equipetrol' };
+  if (['zona-norte', 'zonanorte', 'zn'].includes(MACROZONA)) return { modo: 'notin', zonas: EQ_ZONAS, label: 'Zona Norte' };
+  if (MACROZONA === 'todas') return { modo: 'none', zonas: [], label: 'todas (EQ + ZN)' };
+  console.error(`✖ --macrozona desconocida: "${MACROZONA}". Usá: equipetrol | zona-norte | todas`);
+  process.exit(1);
+})();
+
+// Aplica el filtro de macrozona a cualquier query builder de supabase (capas 2 y 3).
+function aplicarZona(q) {
+  if (ZONA_FILTER.modo === 'in') return q.in('zona', ZONA_FILTER.zonas);
+  if (ZONA_FILTER.modo === 'notin') return q.not('zona', 'in', `(${ZONA_FILTER.zonas.map((z) => `"${z}"`).join(',')})`);
+  return q;
+}
+
 async function main() {
   const tStart = Date.now();
   const runDir = resolve(
@@ -37,6 +70,7 @@ async function main() {
   await mkdir(runDir, { recursive: true });
 
   console.log('▶ Audit mensual — orquestador');
+  console.log(`  Macrozona: ${ZONA_FILTER.label} (--macrozona ${MACROZONA})`);
   console.log(`  Modo: ${USE_CACHED ? 'CACHED (--use-cached ' + USE_CACHED + ')' : 'NORMAL (Firecrawl)'}`);
   console.log(`  Run dir: ${runDir}`);
 
@@ -109,9 +143,34 @@ async function main() {
 // CAPA 1
 // ============================================================
 
+// Diff de PRECIOS dentro del drift: compara el precio escrito en la desc
+// guardada (vieja) vs la del portal hoy. Caza rebajas/subas reales que el
+// check de Capa 2 no ve (Capa 2 compara contra la cruda vieja, no el portal).
+// Mismo principio que el diff de texto, aplicado al monto.
+function calcularPrecioDrift(descBd, descScraped) {
+  const pv = extraerPreciosCercanosKeyword(descBd || '');
+  const pn = extraerPreciosCercanosKeyword(descScraped || '');
+  if (pv.length === 0 || pn.length === 0) return null;
+  const viejo = pv[0]; // precio principal (mayor) de cada texto, igual que Capa 2
+  const nuevo = pn[0];
+  if (!viejo || !nuevo) return null;
+  const diff = (nuevo - viejo) / viejo;
+  const abs = Math.abs(diff);
+  // Piso de 1% solo para descartar artefactos de redondeo/parseo. Cualquier
+  // cambio real >=1% se reporta, graduado por tamaño (no se esconde nada real).
+  if (abs < 0.01) return null;
+  return {
+    viejo,
+    nuevo,
+    diff_pct: Math.round(diff * 1000) / 10,
+    direccion: nuevo > viejo ? 'suba' : 'rebaja',
+    severidad: abs >= 0.1 ? 'alta' : abs >= 0.03 ? 'media' : 'baja',
+  };
+}
+
 async function runCapa1Fresh(supabase) {
-  const props = await getPropsViejasFromFeed(supabase, 1000, 0, [], []);
-  console.log(`  ${props.length} props desde v_mercado_venta`);
+  const props = await getPropsViejasFromFeed(supabase, 1000, 0, [], [], ZONA_FILTER);
+  console.log(`  ${props.length} props desde v_mercado_venta (${ZONA_FILTER.label})`);
 
   let lastPct = -1;
   const scraped = await scrapeBatch(props, {
@@ -140,6 +199,7 @@ async function runCapa1Fresh(supabase) {
         error: s.error,
         ...emptyCmp(),
         len_bd: descBd.length,  // preservar — la cruda BD existe aunque el fetch falló
+        precio_drift: null,
       };
     }
     const descScraped = extraerDescripcion(s.html, s.fuente);
@@ -154,6 +214,7 @@ async function runCapa1Fresh(supabase) {
       title_scraped: titleScraped,
       scrape_status: 'ok',
       ...cmp,
+      precio_drift: calcularPrecioDrift(s.descripcion_bd || '', descScraped),
     };
   });
 }
@@ -178,6 +239,11 @@ async function loadCapa1FromCached(runDirName) {
       if (titlesById.has(item.id)) item.title_scraped = titlesById.get(item.id);
     }
   }
+  for (const item of items) {
+    if (item.precio_drift === undefined) {
+      item.precio_drift = calcularPrecioDrift(item.descripcion_bd || '', item.descripcion_scraped || '');
+    }
+  }
   return items;
 }
 
@@ -199,11 +265,13 @@ function emptyCmp() {
 // ============================================================
 
 async function runCapa2(supabase) {
-  const { data, error } = await supabase
-    .from('propiedades_v2')
-    .select('id, precio_usd, tipo_cambio_detectado, nombre_edificio, datos_json, datos_json_enrichment')
-    .eq('status', 'completado')
-    .eq('tipo_operacion', 'venta');
+  const { data, error } = await aplicarZona(
+    supabase
+      .from('propiedades_v2')
+      .select('id, precio_usd, tipo_cambio_detectado, nombre_edificio, datos_json, datos_json_enrichment')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
+  );
   if (error) throw error;
 
   const issuesByProp = new Map();
@@ -225,11 +293,13 @@ async function runCapa2(supabase) {
 // ============================================================
 
 async function runCapa3(supabase, capa1Items) {
-  const { data: props, error } = await supabase
-    .from('propiedades_v2')
-    .select('id, fuente, url, nombre_edificio, id_proyecto_master, status, datos_json')
-    .eq('status', 'completado')
-    .eq('tipo_operacion', 'venta');
+  const { data: props, error } = await aplicarZona(
+    supabase
+      .from('propiedades_v2')
+      .select('id, fuente, url, nombre_edificio, id_proyecto_master, status, datos_json')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
+  );
   if (error) throw error;
 
   const proyectoIds = [...new Set(props.map((p) => p.id_proyecto_master).filter(Boolean))];
@@ -289,7 +359,8 @@ function combinarResultados(capa1, capa2, capa3) {
 
     const sevC2 = c2.length > 0 ? maxSeveridad(c2.map((i) => i.severidad)) : null;
     const sevC3 = c3 ? c3.severidad : null;
-    const sevMax = maxSeveridad([sevC2, sevC3]);
+    const sevDrift = c1.precio_drift ? c1.precio_drift.severidad : null;
+    const sevMax = maxSeveridad([sevC2, sevC3, sevDrift]);
 
     return {
       id: c1.id,
@@ -307,6 +378,7 @@ function combinarResultados(capa1, capa2, capa3) {
         flags_semanticos: c1.flags_semanticos,
         palabras_agregadas: c1.palabras_agregadas,
         palabras_quitadas: c1.palabras_quitadas,
+        precio_drift: c1.precio_drift || null,
       },
       capa2: c2,
       capa3: c3,
@@ -343,6 +415,7 @@ function computeStats(combined) {
     con_flag_semantico: 0,
     con_inconsistencia_interna: 0,
     con_mismatch_matching: 0,
+    con_precio_drift_portal: 0,
     severidad_alta: 0,
     severidad_media: 0,
     severidad_baja: 0,
@@ -363,6 +436,7 @@ function computeStats(combined) {
     }
     if (r.capa2.length > 0) stats.con_inconsistencia_interna++;
     if (r.capa3 && r.capa3.check === 'mismatch_real') stats.con_mismatch_matching++;
+    if (r.capa1.precio_drift) stats.con_precio_drift_portal++;
     if (r.severidad_max === 'alta') stats.severidad_alta++;
     else if (r.severidad_max === 'media') stats.severidad_media++;
     else if (r.severidad_max === 'baja') stats.severidad_baja++;
@@ -437,6 +511,7 @@ function renderSummary(combined, stats, runId, modo) {
   const lines = [];
   lines.push(`# Audit mensual — ${new Date().toISOString().slice(0, 10)}`);
   lines.push('');
+  lines.push(`**Macrozona:** ${ZONA_FILTER.label}`);
   if (runId) lines.push(`**DB run_id:** \`${runId}\``);
   if (modo) lines.push(`**Modo:** cached (${modo})`);
   lines.push('');
@@ -453,6 +528,7 @@ function renderSummary(combined, stats, runId, modo) {
   lines.push(`| Con flag semántico | ${stats.con_flag_semantico} |`);
   lines.push(`| **Con inconsistencia interna** | ${stats.con_inconsistencia_interna} |`);
   lines.push(`| **Con mismatch matching** | ${stats.con_mismatch_matching} |`);
+  lines.push(`| **💲 Cambio de precio en portal** | ${stats.con_precio_drift_portal} |`);
   lines.push(`| 🔴 Severidad alta | ${stats.severidad_alta} |`);
   lines.push(`| 🟡 Severidad media | ${stats.severidad_media} |`);
   lines.push(`| Scrape fallidos | ${stats.scrape_failed} |`);
@@ -468,6 +544,21 @@ function renderSummary(combined, stats, runId, modo) {
       const c2 = r.capa2.map((i) => i.tipo).join(', ');
       const c3 = r.capa3 ? r.capa3.check : '-';
       lines.push(`| ${r.id} | ${r.fuente} | ${r.capa1.bucket} | ${c2 || '-'} | ${c3} |`);
+    }
+    lines.push('');
+  }
+
+  const conDrift = combined
+    .filter((r) => r.capa1.precio_drift)
+    .sort((a, b) => Math.abs(b.capa1.precio_drift.diff_pct) - Math.abs(a.capa1.precio_drift.diff_pct));
+  if (conDrift.length > 0) {
+    lines.push(`## 💲 Cambio de precio en portal (${conDrift.length})`);
+    lines.push('');
+    lines.push('| ID | Fuente | Guardado | Portal hoy | Δ% | Dirección |');
+    lines.push('|---:|---|---:|---:|---:|---|');
+    for (const r of conDrift) {
+      const d = r.capa1.precio_drift;
+      lines.push(`| ${r.id} | ${r.fuente} | ${d.viejo.toLocaleString()} | ${d.nuevo.toLocaleString()} | ${d.diff_pct > 0 ? '+' : ''}${d.diff_pct}% | ${d.direccion === 'rebaja' ? '🔻 rebaja' : '🔺 suba'} |`);
     }
     lines.push('');
   }
