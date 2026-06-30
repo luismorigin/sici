@@ -1,59 +1,114 @@
 {
   "_meta": {
-    "generado": "2026-06-26",
-    "fuente_input": "moat-input.json (7 nuevas del dry-run 2026-06-26)",
+    "generado": "2026-06-30",
+    "fuente_input": "moat-input.json (12 nuevas del dry-run 2026-06-30)",
     "prompt": "scripts/llm-enrichment/prompt-casas-vivienda-v4.md",
     "moat_por": "agente-lector (Claude Opus, sin API)",
-    "resumen": { "total": 7, "aceptadas": 4, "rechazadas": 3 },
-    "rechazos": { "anticretico": [6], "alquiler": [3], "departamento": [5] },
-    "nota_gate": "El discovery estructurado (operacion_venta) NO filtra anticretico/alquiler/depto en C21/Remax; el MOAT es el gate real. n=6 ambiguo (titulo anticretico vs cuerpo de venta) → rechazado por precaucion, revisar a mano. n=7 aceptada por gate pero el loader la retiene (metadata sin area construida)."
+    "resumen": { "total": 12, "aceptadas": 9, "rechazadas": 3 },
+    "rechazos": { "terreno": [1], "departamento": [9], "anticretico": [11] },
+    "nota_gate": "n=1 es un LOTE puro (cuerpo 'TERRENO A LA VENTA', m2_const=null, 'ideal para construir casas gemelas/proyectos') — rechazado para no meter una 'casa' sin construccion al feed; revisar si interesa al pipeline de terrenos. n=9 (Moliere) y n=11 (anticretico El Vallecito) reaparecen del 26-jun: fueron rechazadas, nunca cargadas, vuelven como 'nuevas' — se mantiene el rechazo por consistencia. n=12 (La Salle, a precio de terreno) reaparece del 26-jun: aceptada por gate pero el loader probablemente la retiene de nuevo (metadata m2_const=null; la construccion 290.5 esta solo en la desc)."
   },
   "resultados": [
+    { "n": 1, "slug": "113992_casa-en-venta-a-precio-de-terreno-bariio-cordecruz-av-alemana", "fuente": "century21", "gate": { "acepta": false, "razon": "terreno/lote, no casa (cuerpo: 'TERRENO A LA VENTA', sin construccion descrita, m2_const=null, 'Ideal para construccion de casas gemelas/proyectos/departamentos')" } },
     {
-      "n": 1, "slug": "113895_casa-a-estrenar-z-norte-de-3-dormitorios", "fuente": "century21",
+      "n": 2, "slug": "114317_casa-en-venta-zona-cambodromo", "fuente": "century21",
+      "gate": { "acepta": true, "razon": null },
+      "precio_billete_usd": 222517, "precio_en_texto": true, "precio_en_bob": false,
+      "tipo_cambio_detectado": "oficial", "tc_confianza": "alta",
+      "es_condominio_cerrado": false, "nombre_condominio_mencionado": null,
+      "estado": "usada", "niveles": 2, "amoblado": false,
+      "amenidades": ["jardin", "churrasquera", "garage"], "amenidades_condominio": [],
+      "caracteristicas_extra": ["construccion 193 m2", "3 dormitorios (1 suite)", "aire acondicionado en todos los ambientes", "cocina americana", "2 ingresos independientes", "patio de lavanderia independiente", "porton electrico", "zona comercial/corporativa"],
+      "cerca_de": ["Cambodromo", "Av. 2 de Agosto", "6to anillo", "7mo anillo"]
+    },
+    {
+      "n": 3, "slug": "114495_casa-en-venta-zona-norte", "fuente": "century21",
+      "gate": { "acepta": true, "razon": null },
+      "precio_billete_usd": 125000, "precio_en_texto": true, "precio_en_bob": false,
+      "tipo_cambio_detectado": "no_especificado", "tc_confianza": "baja",
+      "es_condominio_cerrado": false, "nombre_condominio_mencionado": null,
+      "estado": "usada", "niveles": 1, "amoblado": false,
+      "amenidades": ["churrasquera", "garage", "jardin"], "amenidades_condominio": [],
+      "caracteristicas_extra": ["3 dormitorios (1 suite con walking closet)", "roperos empotrados", "cocina separada con salida a galeria", "lavanderia", "documentos al dia", "opcion amoblada por 135.000$", "precios negociables"],
+      "cerca_de": ["Berchatti Norte", "Univalle", "7mo anillo"]
+    },
+    {
+      "n": 4, "slug": "114034_venta-de-casa-zona-norte-prolongacion-beni", "fuente": "century21",
+      "gate": { "acepta": true, "razon": null },
+      "precio_billete_usd": 105000, "precio_en_texto": true, "precio_en_bob": false,
+      "tipo_cambio_detectado": "oficial", "tc_confianza": "alta",
+      "es_condominio_cerrado": false, "nombre_condominio_mencionado": null,
+      "estado": "usada", "niveles": null, "amoblado": false,
+      "amenidades": ["garage", "jardin", "dependencia_servicio"], "amenidades_condominio": [],
+      "caracteristicas_extra": ["3 dormitorios (1 suite)", "departamento independiente (1 dorm, bano, cocina, living)", "garaje para 5 vehiculos", "lavanderia techada", "cocina y living comedor amplio", "casa en esquina"],
+      "cerca_de": ["Prolongacion Beni", "9no anillo", "Urb. San Jorge"]
+    },
+    {
+      "n": 5, "slug": "113773_confortable-casa-en-esquina-zona-norte-entrando-por-mainter", "fuente": "century21",
+      "gate": { "acepta": true, "razon": null },
+      "precio_billete_usd": 170000, "precio_en_texto": true, "precio_en_bob": false,
+      "tipo_cambio_detectado": "no_especificado", "tc_confianza": "baja",
+      "es_condominio_cerrado": false, "nombre_condominio_mencionado": null,
+      "estado": "usada", "niveles": 2, "amoblado": false,
+      "amenidades": ["churrasquera", "garage", "jardin", "dependencia_servicio"], "amenidades_condominio": [],
+      "caracteristicas_extra": ["3 dormitorios (1 suite con vestidor)", "escritorio", "bano de visita", "amplio balcon", "parqueo para 3 vehiculos", "casa en esquina", "tc flexible"],
+      "cerca_de": ["Mainter", "zona norte"]
+    },
+    {
+      "n": 6, "slug": "venta-casa-santa-cruz-de-la-sierra-banzer-5to-a-7mo-anillo-1200434331-37", "fuente": "remax",
+      "gate": { "acepta": true, "razon": null },
+      "precio_billete_usd": 275000, "precio_en_texto": true, "precio_en_bob": false,
+      "tipo_cambio_detectado": "paralelo", "tc_confianza": "alta",
+      "es_condominio_cerrado": false, "nombre_condominio_mencionado": null,
+      "estado": "usada", "niveles": null, "amoblado": false,
+      "amenidades": ["piscina", "churrasquera", "jardin", "dependencia_servicio"], "amenidades_condominio": [],
+      "caracteristicas_extra": ["4 dormitorios (1 suite)", "living comedor espacioso", "cocina independiente", "amplia terraza", "galeria con patio", "ubicacion premium en esquina sobre 7mo anillo"],
+      "cerca_de": ["Banzer", "Radial 27", "7mo anillo", "Univalle"]
+    },
+    {
+      "n": 7, "slug": "venta-casa-santa-cruz-de-la-sierra-norte-120040084-23", "fuente": "remax",
+      "gate": { "acepta": true, "razon": null },
+      "precio_billete_usd": 120000, "precio_en_texto": true, "precio_en_bob": false,
+      "tipo_cambio_detectado": "no_especificado", "tc_confianza": "baja",
+      "es_condominio_cerrado": false, "nombre_condominio_mencionado": null,
+      "estado": "usada", "niveles": 2, "amoblado": false,
+      "amenidades": ["churrasquera", "garage", "dependencia_servicio"], "amenidades_condominio": [],
+      "caracteristicas_extra": ["3 dormitorios (1 suite con bano privado)", "cuarto de estudio", "bano de visitas", "cocina amoblada", "amplia sala de estar", "balcon", "garaje para 3 vehiculos"],
+      "cerca_de": ["zona norte"]
+    },
+    {
+      "n": 8, "slug": "venta-casa-santa-cruz-de-la-sierra-noroeste-125001328-21", "fuente": "remax",
       "gate": { "acepta": true, "razon": null },
       "precio_billete_usd": null, "precio_en_texto": false, "precio_en_bob": false,
       "tipo_cambio_detectado": "no_especificado", "tc_confianza": "baja",
       "es_condominio_cerrado": false, "nombre_condominio_mencionado": null,
-      "estado": "nueva", "niveles": 2, "amoblado": false,
-      "amenidades": ["garage"], "amenidades_condominio": [],
-      "caracteristicas_extra": ["a estrenar", "estudio", "cocina americana", "bano de visitas", "amplio patio", "suite con vestidor"],
-      "cerca_de": ["Urb. Norte de La Molina", "km 8 Norte"]
+      "estado": "usada", "niveles": 1, "amoblado": false,
+      "amenidades": ["jardin"], "amenidades_condominio": [],
+      "caracteristicas_extra": ["amplio jardin con arboles", "amplios ventanales con gran iluminacion", "estructura preparada para futuro segundo nivel", "dormitorio principal amplio", "excelente estado de conservacion", "terreno 417 m2 (texto)"],
+      "cerca_de": ["zona norte"]
     },
+    { "n": 9, "slug": "venta-departamento-santa-cruz-de-la-sierra-norte-120040109-24", "fuente": "remax", "gate": { "acepta": false, "razon": "departamento duplex (Condominio Moliere), no casa — reaparece del 26-jun, se mantiene rechazo" } },
     {
-      "n": 2, "slug": "113700_casa-en-venta-av-alemana-7mo-y-8vo-anillo", "fuente": "century21",
-      "gate": { "acepta": true, "razon": null },
-      "precio_billete_usd": 195000, "precio_en_texto": true, "precio_en_bob": false,
-      "tipo_cambio_detectado": "no_especificado", "tc_confianza": "baja",
-      "es_condominio_cerrado": false, "nombre_condominio_mencionado": null,
-      "estado": "usada", "niveles": 2, "amoblado": false,
-      "amenidades": ["garage"], "amenidades_condominio": [],
-      "caracteristicas_extra": ["6 dormitorios", "2 areas de sala y comedor", "cocina amplia", "ideal familias/oficinas/inversion"],
-      "cerca_de": ["Av. Alemana", "7mo anillo", "8vo anillo"]
-    },
-    { "n": 3, "slug": "venta-casa-santa-cruz-de-la-sierra-banzer-3er-al-5to-anillo-120064023-139", "fuente": "remax", "gate": { "acepta": false, "razon": "alquiler (Bs 2.700/mes; slug dice venta pero el cuerpo es alquiler)" } },
-    {
-      "n": 4, "slug": "venta-casa-santa-cruz-de-la-sierra-norte-1200646367-1", "fuente": "remax",
-      "gate": { "acepta": true, "razon": null },
-      "precio_billete_usd": 150862, "precio_en_texto": true, "precio_en_bob": true,
-      "tipo_cambio_detectado": "no_especificado", "tc_confianza": "media",
-      "es_condominio_cerrado": true, "nombre_condominio_mencionado": "Campo Verde",
-      "estado": "usada", "niveles": 1, "amoblado": true,
-      "amenidades": ["churrasquera", "dependencia_servicio"], "amenidades_condominio": ["canchas", "parque infantil"],
-      "caracteristicas_extra": ["amoblada", "master suite", "suite junior", "galeria", "balcon", "sala de estar", "recibe permuta vehiculo/inmueble"],
-      "cerca_de": []
-    },
-    { "n": 5, "slug": "venta-departamento-santa-cruz-de-la-sierra-norte-120040109-24", "fuente": "remax", "gate": { "acepta": false, "razon": "departamento duplex (Condominio Moliere), no casa" } },
-    { "n": 6, "slug": "venta-casa-santa-cruz-de-la-sierra-norte-120098003-41", "fuente": "remax", "gate": { "acepta": false, "razon": "titulo 'CASA EN ANTICRETICO – EL VALLECITO'; cuerpo ambiguo (135.000 USD + 'libre de gravamen' + slug venta). Rechazada por el GATE por precaucion — revisar a mano si es venta real" } },
-    {
-      "n": 7, "slug": "venta-casa-120034044-220", "fuente": "remax",
+      "n": 10, "slug": "venta-casa-santa-cruz-de-la-sierra-noreste-120100008-4", "fuente": "remax",
       "gate": { "acepta": true, "razon": null },
       "precio_billete_usd": null, "precio_en_texto": false, "precio_en_bob": false,
       "tipo_cambio_detectado": "no_especificado", "tc_confianza": "baja",
       "es_condominio_cerrado": false, "nombre_condominio_mencionado": null,
-      "estado": "usada", "niveles": 2, "amoblado": false,
-      "amenidades": ["piscina", "dependencia_servicio", "garage"], "amenidades_condominio": [],
-      "caracteristicas_extra": ["a precio de terreno", "escritorio", "deposito", "4 habitaciones (2 en suite)", "terreno 15x30 = 450 m2", "construccion 290,5 m2", "ideal remodelacion o edificio"],
+      "estado": null, "niveles": null, "amoblado": false,
+      "amenidades": ["jardin", "garage"], "amenidades_condominio": [],
+      "caracteristicas_extra": ["2 dormitorios", "2 banos", "cocina americana", "living comedor", "patio trasero con jardin", "parqueo para 2 vehiculos"],
+      "cerca_de": ["El Vallecito", "Av. Beni", "9no anillo", "10mo anillo"]
+    },
+    { "n": 11, "slug": "venta-casa-santa-cruz-de-la-sierra-norte-120098003-41", "fuente": "remax", "gate": { "acepta": false, "razon": "titulo 'CASA EN ANTICRETICO – EL VALLECITO NORTE'; cuerpo ambiguo (135.000 USD + 'entrega inmediata' + 'libre de gravamen'). Rechazada por el GATE por precaucion (consistente con 26-jun) — revisar a mano si es venta real" } },
+    {
+      "n": 12, "slug": "venta-casa-120034044-220", "fuente": "remax",
+      "gate": { "acepta": true, "razon": null },
+      "precio_billete_usd": null, "precio_en_texto": false, "precio_en_bob": false,
+      "tipo_cambio_detectado": "no_especificado", "tc_confianza": "baja",
+      "es_condominio_cerrado": false, "nombre_condominio_mencionado": null,
+      "estado": "para_demolicion", "niveles": 2, "amoblado": false,
+      "amenidades": ["piscina", "dependencia_servicio", "garage", "jardin"], "amenidades_condominio": [],
+      "caracteristicas_extra": ["a precio de terreno", "escritorio", "deposito", "4 habitaciones (2 en suite)", "terreno 15x30 = 450 m2", "construccion 290,5 m2", "ideal remodelacion o construccion de edificio"],
       "cerca_de": ["Av. Ovidio Barbery", "2do anillo", "Colegio La Salle", "Equipetrol"]
     }
   ]
