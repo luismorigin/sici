@@ -154,6 +154,14 @@ function checkOtroEdificioMencionado(desc, edificioBd) {
   return null;
 }
 
+// Precio normalizado a BOB de un texto (Bs directo + USD×TC oficial), para el
+// diff de precio en portal de la Capa 1. Devuelve el array de montos en BOB.
+export function extraerPreciosBobDeTexto(desc) {
+  const bs = extraerPreciosBs(desc || '');
+  const usd = extraerPreciosUsd(desc || '').map((u) => Math.round(u * TC_OFICIAL));
+  return [...bs, ...usd];
+}
+
 function extraerPreciosBs(desc) {
   const matches = new Set();
   for (const re of PATRONES_PRECIO_BS) {

@@ -74,6 +74,13 @@ La Capa 1 compara el **precio escrito en la desc guardada (vieja)** vs el **prec
 - **Reformulación de TC ≠ rebaja**: a veces el precio "cambia" solo porque el aviso pasó de expresar el monto "al oficial" a "billete/paralelo" (mismo valor económico). Leé el aviso.
 - **El precio sale del TEXTO de la desc**, no del precio de cabecera estructurado. Confirmá leyendo antes de aplicar, sobre todo en Remax. Regla de la skill: el script detecta, el humano/agente juzga.
 
+#### 🔁 Duplicados — apart-hoteles / re-publicaciones (NUEVO 30-jun)
+
+La Fase 4 detecta props que el **detector de duplicados del pipeline NO caza** (cada aviso tiene `codigo_propiedad` único): apart-hoteles que publican la misma unidad-tipo N veces, y avisos re-publicados. Lógica: agrupa por **nombre+precio+área** y dentro de cada grupo compara **descripciones** (sim ≥90% = duplicado real; descripciones distintas = unidades legítimas del mismo edificio → NO flaggea). Sale en la sección "🔁 Posibles duplicados" del summary + `duplicados.json`, con el SQL listo.
+
+- **Confirmá por lectura** antes de aplicar (sobre todo clusters de 2). El SQL marca `duplicado_de = <sobreviviente>` (mecanismo canónico; la vista filtra `duplicado_de IS NULL` → salen del feed; reversible con `duplicado_de = NULL`).
+- Caso canónico (30-jun): MAI Suites Apart Hotel = 7 avisos idénticos en Sirari; el broker publica cada unidad por separado.
+
 #### Patrones críticos (siempre reportar)
 
 - **TC paralelo NO mapeado**: prop con `tipo_cambio_detectado='no_especificado'` o NULL Y la diferencia de precio entre BD y desc es ~22-43% (ratio ~1.43 = paralelo/oficial). Calcular el impacto real en feed.

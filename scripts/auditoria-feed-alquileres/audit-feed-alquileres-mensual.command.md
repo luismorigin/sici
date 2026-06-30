@@ -10,14 +10,21 @@ Auditoría completa del feed cruzando 3 capas:
 2. **Capa 2 — Inconsistencias internas**: detecta desincronizaciones entre `precio_mensual_bob`, `area_total_m2` (v1.4), `nombre_edificio` y la descripción cruda.
 3. **Capa 3 — Audit matching**: verifica que `nombre_edificio` BD aparece en slug/title/desc del listing, usando `proyectos_master.alias_conocidos`.
 
+> **Alcance seleccionable con `--macrozona` (default `equipetrol`).** EQ y Zona Norte conviven en `v_mercado_alquiler`/`propiedades_v2` desde que ZN entró a prod; el filtro evita mezclarlos en el análisis (ticket #15 del backlog ZN). Aplica en las **3 capas**:
+> - `--macrozona equipetrol` (default) → solo las 6 zonas canónicas (`Equipetrol Centro/Norte/Oeste`, `Sirari`, `Villa Brigida`, `Eq. 3er Anillo`).
+> - `--macrozona zona-norte` → todo lo que **NO** es Equipetrol (por descarte, sin hardcodear microzonas).
+> - `--macrozona todas` → sin filtro (EQ + ZN).
+
 **Diferencias vs `/audit-feed-ventas-mensual`:**
 - **Costo $0** (curl directo, sin Firecrawl). Los 3 portales sirven HTML estático suficiente para alquiler.
 - **Sin TC paralelo** (alquiler usa precio_mensual_bob como fuente de verdad).
 - **Capa 2 (v1.4)**: precio cruda↔BD + **área cruda↔BD** (NUEVO) + otro edificio mencionado, todos con verificación por lectura del agente (capa anti-FP sobre el regex).
+- **Detector de cambio de precio en portal (Capa 1, NUEVO 30-jun)**: compara el precio de la cruda **vieja** vs el del portal **hoy** (en BOB, USD×6.96), piso 1% graduado. Caza rebajas/subas que la Capa 2 no ve (la Capa 2 compara `precio_mensual_bob` contra la cruda vieja). En alquiler toma el **monto máximo** de cada texto (el resto suelen ser expensas/depósito). Caveat: leer el aviso antes de accionar (puede haber varios montos).
 
 ## Argumentos
 
-- (sin argumentos) — corrida normal con curl, costo $0
+- (sin argumentos) — Equipetrol, corrida normal con curl, costo $0
+- `--macrozona <equipetrol|zona-norte|todas>` — alcance (default equipetrol)
 - `--use-cached <run-dir>` — re-procesa un reporte previo (instantáneo, para test)
 - `--skip-insert` — no escribe a Supabase (útil si la migración 244 no está aplicada)
 
@@ -57,6 +64,13 @@ Leer los 3.
 - **Sin cruda en BD** (campo `len_bd=0`): props enriquecidas pre-9-may sin backfill aplicado. Si hay muchas, sugerir correr `npm run backfill`. NO accionar individualmente.
 - **HTML entities** (`&nbsp;`, `&amp;` en `palabras_quitadas`): cosmético del render del portal, no es drift real.
 - **Cambios de mes/fecha de disponibilidad** ("disponible 22 marzo" → "disponible 5 mayo"): es ruido editorial sin señal comercial.
+
+#### 🔁 Duplicados — apart-hoteles / re-publicaciones (NUEVO 30-jun)
+
+La Fase 4 detecta props que el **detector de duplicados del pipeline NO caza** (cada aviso tiene `codigo_propiedad` único): apart-hoteles que publican la misma unidad-tipo N veces, y avisos re-publicados. Lógica: agrupa por **nombre+precio+área** y dentro compara **descripciones** (sim ≥90% = duplicado; descripciones distintas = unidades legítimas del mismo edificio → NO flaggea). Sale en "🔁 Posibles duplicados" del summary + `duplicados.json`, con el SQL listo.
+
+- **Confirmá por lectura** antes de aplicar (sobre todo clusters de 2). El SQL marca `duplicado_de = <sobreviviente>` (mecanismo canónico; la vista filtra `duplicado_de IS NULL` → salen del feed; reversible).
+- Caso canónico (30-jun): MAI Suites Apart Hotel = 7 avisos idénticos en Sirari (#3332-3338) + par Sky Elite (#1890/1891). Lo cazó el ojo humano; ahora lo caza la Fase 4.
 
 #### Patrones críticos (siempre reportar)
 
@@ -104,6 +118,21 @@ Medir el **% de MISMATCH**. (En la muestra del 17-jun el matching de alquiler de
 #### CAVEAT IMPORTANTE — primer audit con baseline reciente
 
 Si el backfill se corrió hace <30 días, el primer audit comparará "scraped HOY" contra "cruda backfilleada hace pocos días". Vas a ver muchos `identicas` artificiales — es el baseline asentándose. **Audit #2 ya mide drift real.**
+
+#### 3.5 SQL de corrección — refrescar también la cruda ⭐ (NUEVO 30-jun)
+
+Cuando un cambio de precio/área sea **confirmado por lectura**, el SQL debe **también refrescar la descripción cruda** (`datos_json_enrichment.descripcion`) con la del portal. Si solo actualizás `precio_mensual_bob`/`area_total_m2` y dejás la cruda vieja, el detector vuelve a marcar esa prop como drift en **cada corrida** (compara la cruda vieja vs el portal). Refrescar cierra el caso. El texto nuevo está en `combined.json` → `capa1.descripcion_scraped`.
+
+```sql
+UPDATE propiedades_v2
+SET precio_mensual_bob = <nuevo>,                 -- si cambió el precio
+    area_total_m2 = <nueva>,                      -- si cambió el área
+    datos_json_enrichment = jsonb_set(datos_json_enrichment, '{descripcion}', to_jsonb($desc$<descripcion_scraped>$desc$::text)),
+    fecha_actualizacion = NOW()
+WHERE id = <id>;
+```
+
+Solo para cambios **confirmados** — no refrescar a ciegas (montos múltiples / USD-paralelo ambiguo → 🟡, no tocar). En alquiler la cruda vive solo en `datos_json_enrichment.descripcion` (no hay `datos_json.contenido.descripcion` como en venta).
 
 ### 4. Reporte ejecutivo final al usuario
 
