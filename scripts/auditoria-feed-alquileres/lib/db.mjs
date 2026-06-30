@@ -17,12 +17,17 @@ export function getSupabaseClient() {
 // - precio_mensual_bob (BOB, fuente de verdad para display)
 // - precio_mensual (USD = precio_mensual_bob / 6.96, derivado, para comparativas)
 // - dias_en_mercado, zona, fuente, url, id
-export async function getPropsViejasFromFeed(supabase, limit, offset = 0, excludeIds = [], onlyIds = []) {
+export async function getPropsViejasFromFeed(supabase, limit, offset = 0, excludeIds = [], onlyIds = [], zonaFilter = null) {
   let q = supabase
     .from('v_mercado_alquiler')
     .select('id, fuente, url, dias_en_mercado, zona, precio_mensual_bob, precio_mensual')
     .order('dias_en_mercado', { ascending: false })
     .order('id', { ascending: true });
+  if (zonaFilter && zonaFilter.modo === 'in' && zonaFilter.zonas?.length) {
+    q = q.in('zona', zonaFilter.zonas);
+  } else if (zonaFilter && zonaFilter.modo === 'notin' && zonaFilter.zonas?.length) {
+    q = q.not('zona', 'in', `(${zonaFilter.zonas.map((z) => `"${z}"`).join(',')})`);
+  }
   if (onlyIds.length > 0) {
     q = q.in('id', onlyIds);
   } else if (excludeIds.length > 0) {

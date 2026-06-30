@@ -1,20 +1,17 @@
-// Orquestador audit mensual feed /alquileres.
-// 3 capas: drift fetcher (curl) + inconsistencias internas + audit matching.
-// Persiste a Supabase (audit_descripciones_runs/items con tipo_operacion='alquiler').
-
 import { config as loadEnv } from 'dotenv';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { spawn } from 'node:child_process';
 
 import { getSupabaseClient, getPropsViejasFromFeed } from './lib/db.mjs';
-import { fetchBatch } from './lib/fetcher.mjs';
-import { extraerDescripcion, extraerTitle } from './lib/extractor.mjs';
 import { compararDescripciones } from './lib/similarity.mjs';
-import { runChecks as runInternalChecks, extraerPreciosBobDeTexto } from './lib/internal-checks.mjs';
+import { runChecks as runInternalChecks, extraerPreciosCercanosKeyword } from './lib/internal-checks.mjs';
 import { checkMatching } from './lib/matching-checks.mjs';
-import { detectarDuplicados } from './lib/dup-checks.mjs';
+// Capa 1 con fetcher directo ($0) en vez de Firecrawl — reusa el del híbrido ZN.
+import { c21Detalle, remaxDetalle } from '../sonda-suelo/lib/portales.mjs';
+import { pace, circuit } from '../sonda-suelo/lib/fetcher.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ENV_CANDIDATES = [
@@ -27,11 +24,12 @@ if (ENV_PATH) loadEnv({ path: ENV_PATH });
 
 const args = parseArgs(process.argv.slice(2));
 const USE_CACHED = args['use-cached'];
-const CONCURRENCY = args.concurrency ? parseInt(args.concurrency, 10) : 6;
+const CONCURRENCY = args.concurrency ? parseInt(args.concurrency, 10) : 5;
 const SKIP_INSERT = !!args['skip-insert'];
+const LIMIT = args.limit ? parseInt(args.limit, 10) : 1000; // tope de props (para probar: --limit 5)
 
 // Las 6 zonas canónicas de Equipetrol. Aislar de Zona Norte (que también vive en
-// v_mercado_alquiler / propiedades_v2 desde que ZN entró a prod). Principio P1:
+// v_mercado_venta / propiedades_v2 desde que ZN entró a prod). Principio P1:
 // filtrar en CONSUMIDORES, nunca en las vistas. Ver ticket #15 del backlog ZN.
 const EQ_ZONAS = [
   'Equipetrol Centro',
@@ -44,7 +42,8 @@ const EQ_ZONAS = [
 
 // --macrozona: alcance del audit (default equipetrol).
 //   equipetrol  -> solo las 6 zonas canónicas de EQ (modo 'in')
-//   zona-norte  -> todo lo que NO es Equipetrol (modo 'notin')
+//   zona-norte  -> todo lo que NO es Equipetrol (modo 'notin'); ZN vive en las
+//                  mismas tablas, así no hay que hardcodear sus 14 microzonas
 //   todas       -> sin filtro (EQ + ZN)
 const MACROZONA = (args.macrozona || 'equipetrol').toLowerCase();
 const ZONA_FILTER = (() => {
@@ -62,29 +61,6 @@ function aplicarZona(q) {
   return q;
 }
 
-// Diff de PRECIO en portal (Capa 1): compara el precio escrito en la cruda guardada
-// (vieja) vs el del portal hoy, en BOB. Caza rebajas/subas que la Capa 2 no ve
-// (Capa 2 compara precio_mensual_bob vs la cruda vieja, no el portal). Piso 1%.
-function calcularPrecioDrift(descBd, descScraped) {
-  const pv = extraerPreciosBobDeTexto(descBd);
-  const pn = extraerPreciosBobDeTexto(descScraped);
-  if (!pv.length || !pn.length) return null;
-  // En alquiler el precio principal suele ser el mayor monto plausible (el resto
-  // son expensas/depósito, menores). Tomar el máximo de cada texto.
-  const viejo = Math.max(...pv);
-  const nuevo = Math.max(...pn);
-  if (!viejo || !nuevo) return null;
-  const diff = (nuevo - viejo) / viejo;
-  const abs = Math.abs(diff);
-  if (abs < 0.01) return null;
-  return {
-    viejo, nuevo,
-    diff_pct: Math.round(diff * 1000) / 10,
-    direccion: nuevo > viejo ? 'suba' : 'rebaja',
-    severidad: abs >= 0.1 ? 'alta' : abs >= 0.03 ? 'media' : 'baja',
-  };
-}
-
 async function main() {
   const tStart = Date.now();
   const runDir = resolve(
@@ -94,15 +70,15 @@ async function main() {
   );
   await mkdir(runDir, { recursive: true });
 
-  console.log('▶ Audit mensual ALQUILER — orquestador');
+  console.log('▶ Audit mensual — orquestador');
   console.log(`  Macrozona: ${ZONA_FILTER.label} (--macrozona ${MACROZONA})`);
-  console.log(`  Modo: ${USE_CACHED ? 'CACHED (--use-cached ' + USE_CACHED + ')' : 'NORMAL (curl directo)'}`);
+  console.log(`  Modo: ${USE_CACHED ? 'CACHED (--use-cached ' + USE_CACHED + ')' : 'FETCHER DIRECTO ($0, sin Firecrawl)'}`);
   console.log(`  Run dir: ${runDir}`);
 
   const supabase = getSupabaseClient();
 
-  // === FASE 1: Drift fetcher (capa 1) ===
-  console.log('\n▶ Capa 1: Drift fetcher (curl)');
+  // === FASE 1: Drift via fetcher directo (capa 1) ===
+  console.log('\n▶ Capa 1: Drift (fetcher directo $0)');
   const capa1Items = USE_CACHED
     ? await loadCapa1FromCached(USE_CACHED)
     : await runCapa1Fresh(supabase);
@@ -120,28 +96,21 @@ async function main() {
   const capa3Items = await runCapa3(supabase, capa1Items);
   console.log(`  ${capa3Items.size} props con issues de matching`);
 
-  // === FASE 4: Detector de duplicados (apart-hoteles / re-publicaciones) ===
-  console.log('\n▶ Duplicados (nombre+precio+área + desc similar)');
-  const clustersDup = await runDuplicados(supabase, capa1Items);
-  console.log(`  ${clustersDup.length} clusters de posibles duplicados`);
-
   // === Combinar resultados ===
   const combined = combinarResultados(capa1Items, capa2Items, capa3Items);
 
   // === Stats ===
   const stats = computeStats(combined);
-  stats.clusters_duplicados = clustersDup.length;
-  stats.props_duplicadas = clustersDup.reduce((s, c) => s + c.duplicados.length, 0);
   console.log('\n=== Stats globales ===');
   Object.entries(stats).forEach(([k, v]) => console.log(`  ${k}: ${v}`));
 
-  const costoFirecrawl = 0; // curl directo, sin Firecrawl
+  const costoFirecrawl = 0; // fetcher directo — sin gasto Firecrawl
 
-  // === Persistir a Supabase ===
+  // === Persistir a Supabase (si la migración 242 está aplicada) ===
   let runId = null;
   if (!SKIP_INSERT) {
     runId = await persistRunAndItems(supabase, {
-      modo: USE_CACHED ? 'cached' : 'normal',
+      modo: USE_CACHED ? 'cached' : 'fetch',
       cached_run_dir: USE_CACHED || null,
       total_props: combined.length,
       scrape_ok: scrapeOk,
@@ -152,15 +121,14 @@ async function main() {
     });
   }
 
-  // === Reportes locales ===
+  // === Generar reportes locales ===
   await writeFile(join(runDir, 'combined.json'), JSON.stringify(combined, null, 2), 'utf8');
   await writeFile(
     join(runDir, 'meta.json'),
-    JSON.stringify({ runId, stats, costoFirecrawl, modo: USE_CACHED ? 'cached' : 'normal', cachedFrom: USE_CACHED || null, durationMs: Date.now() - tStart }, null, 2),
+    JSON.stringify({ runId, stats, costoFirecrawl, modo: USE_CACHED ? 'cached' : 'fetch', cachedFrom: USE_CACHED || null, durationMs: Date.now() - tStart }, null, 2),
     'utf8'
   );
-  await writeFile(join(runDir, 'summary.md'), renderSummary(combined, stats, runId, USE_CACHED, clustersDup), 'utf8');
-  await writeFile(join(runDir, 'duplicados.json'), JSON.stringify(clustersDup, null, 2), 'utf8');
+  await writeFile(join(runDir, 'summary.md'), renderSummary(combined, stats, runId, USE_CACHED), 'utf8');
 
   console.log(`\n✔ Reportes en ${runDir}`);
   console.log(`  - combined.json: detalle completo de ${combined.length} props`);
@@ -172,54 +140,87 @@ async function main() {
 // CAPA 1
 // ============================================================
 
+// Diff de PRECIOS dentro del drift: compara el precio escrito en la desc
+// guardada (vieja) vs la del portal hoy. Caza rebajas/subas reales que el
+// check de Capa 2 no ve (Capa 2 compara contra la cruda vieja, no el portal).
+// Mismo principio que el diff de texto, aplicado al monto.
+function calcularPrecioDrift(descBd, descScraped) {
+  const pv = extraerPreciosCercanosKeyword(descBd || '');
+  const pn = extraerPreciosCercanosKeyword(descScraped || '');
+  if (pv.length === 0 || pn.length === 0) return null;
+  const viejo = pv[0]; // precio principal (mayor) de cada texto, igual que Capa 2
+  const nuevo = pn[0];
+  if (!viejo || !nuevo) return null;
+  const diff = (nuevo - viejo) / viejo;
+  const abs = Math.abs(diff);
+  // Piso de 1% solo para descartar artefactos de redondeo/parseo. Cualquier
+  // cambio real >=1% se reporta, graduado por tamaño (no se esconde nada real).
+  if (abs < 0.01) return null;
+  return {
+    viejo,
+    nuevo,
+    diff_pct: Math.round(diff * 1000) / 10,
+    direccion: nuevo > viejo ? 'suba' : 'rebaja',
+    severidad: abs >= 0.1 ? 'alta' : abs >= 0.03 ? 'media' : 'baja',
+  };
+}
+
+const _esC21 = (f) => /c21|century/i.test(f || '');
+const _esRemax = (f) => /remax/i.test(f || '');
+
 async function runCapa1Fresh(supabase) {
-  const props = await getPropsViejasFromFeed(supabase, 1000, 0, [], [], ZONA_FILTER);
-  console.log(`  ${props.length} props desde v_mercado_alquiler (${ZONA_FILTER.label})`);
+  const props = await getPropsViejasFromFeed(supabase, LIMIT, 0, [], [], ZONA_FILTER);
+  console.log(`  ${props.length} props desde v_mercado_venta (${ZONA_FILTER.label})`);
 
-  let lastPct = -1;
-  const fetched = await fetchBatch(props, {
-    concurrency: CONCURRENCY,
-    onProgress: (done, total) => {
-      const pct = Math.floor((done / total) * 100);
-      if (pct !== lastPct && pct % 10 === 0) {
-        console.log(`  fetching ${done}/${total} (${pct}%)`);
-        lastPct = pct;
-      }
-    },
-  });
-
-  return fetched.map((s) => {
-    if (!s.ok) {
-      const descBd = s.descripcion_bd || '';
-      return {
-        id: s.id,
-        fuente: s.fuente,
-        url: s.url,
-        descripcion_bd: descBd,
-        descripcion_scraped: '',
-        title_scraped: '',
-        scrape_status: 'failed',
-        error: s.error,
-        ...emptyCmp(),
-        len_bd: descBd.length,  // preservar — la cruda BD existe aunque el fetch falló
-        precio_drift: null,
-      };
+  // Fetcher directo ($0): C21 ?json=true / Remax data-page. Secuencial con pace()
+  // + circuit breaker (si la IP se bloquea, corta temprano en vez de profundizar).
+  const out = [];
+  let done = 0, lastPct = -1;
+  for (const p of props) {
+    if (circuit.tripped) {
+      console.warn(`  🛑 Circuit breaker (${circuit.fails} fallos seguidos) — IP probablemente bloqueada. Corte en ${done}/${props.length}; reintentá en horas.`);
+      break;
     }
-    const descScraped = extraerDescripcion(s.html, s.fuente);
-    const titleScraped = extraerTitle(s.html, s.fuente);
-    const cmp = compararDescripciones(s.descripcion_bd || '', descScraped);
-    return {
-      id: s.id,
-      fuente: s.fuente,
-      url: s.url,
-      descripcion_bd: s.descripcion_bd || '',
-      descripcion_scraped: descScraped,
-      title_scraped: titleScraped,
-      scrape_status: 'ok',
-      ...cmp,
-      precio_drift: calcularPrecioDrift(s.descripcion_bd || '', descScraped),
-    };
-  });
+    const descBd = p.descripcion_bd || '';
+    let det = null;
+    try {
+      if (_esC21(p.fuente)) det = await c21Detalle(p.url);
+      else if (_esRemax(p.fuente)) det = await remaxDetalle(p.url);
+    } catch { det = null; }
+    const descScraped = (det?.descripcion || '').trim();
+
+    if (!descScraped) {
+      out.push({
+        id: p.id, fuente: p.fuente, url: p.url,
+        descripcion_bd: descBd, descripcion_scraped: '', title_scraped: '',
+        scrape_status: 'failed',
+        error: det === null ? 'fetch falló' : 'descripción vacía',
+        ...emptyCmp(),
+        len_bd: descBd.length,
+        precio_drift: null,
+      });
+    } else {
+      const cmp = compararDescripciones(descBd, descScraped);
+      out.push({
+        id: p.id, fuente: p.fuente, url: p.url,
+        descripcion_bd: descBd,
+        descripcion_scraped: descScraped,
+        // El fetcher no da el <title> del HTML como Firecrawl. La Capa 3 (matching)
+        // busca el nombre del edificio en title_scraped → le pasamos la descripción
+        // completa, que es mejor señal que el title.
+        title_scraped: descScraped,
+        scrape_status: 'ok',
+        ...cmp,
+        precio_drift: calcularPrecioDrift(descBd, descScraped),
+      });
+    }
+
+    done++;
+    const pct = Math.floor((done / props.length) * 100);
+    if (pct !== lastPct && pct % 10 === 0) { console.log(`  fetch ${done}/${props.length} (${pct}%)`); lastPct = pct; }
+    await pace(800); // amable + jitter anti-bloqueo
+  }
+  return out;
 }
 
 async function loadCapa1FromCached(runDirName) {
@@ -268,33 +269,25 @@ function emptyCmp() {
 // ============================================================
 
 async function runCapa2(supabase) {
-  const { data: vista, error: eV } = await aplicarZona(
-    supabase.from('v_mercado_alquiler').select('id, precio_mensual_bob, area_total_m2, zona')
+  const { data, error } = await aplicarZona(
+    supabase
+      .from('propiedades_v2')
+      .select('id, precio_usd, tipo_cambio_detectado, nombre_edificio, datos_json, datos_json_enrichment')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
   );
-  if (eV) throw eV;
-  const precioById = new Map(vista.map((v) => [v.id, parseFloat(v.precio_mensual_bob) || 0]));
-  const areaById = new Map(vista.map((v) => [v.id, parseFloat(v.area_total_m2) || 0]));
-  const ids = vista.map((v) => v.id);
-  if (ids.length === 0) return new Map();
+  if (error) throw error;
 
   const issuesByProp = new Map();
-  const chunkSize = 100;
-  for (let i = 0; i < ids.length; i += chunkSize) {
-    const chunk = ids.slice(i, i + chunkSize);
-    const { data, error } = await supabase
-      .from('propiedades_v2')
-      .select('id, nombre_edificio, datos_json_enrichment')
-      .in('id', chunk);
-    if (error) throw error;
-    for (const p of data) {
-      const issues = runInternalChecks({
-        precio_mensual_bob: precioById.get(p.id) || 0,
-        area_total_m2: areaById.get(p.id) || 0,
-        nombre_edificio: p.nombre_edificio,
-        descripcion_cruda: p.datos_json_enrichment?.descripcion || '',
-      });
-      if (issues.length > 0) issuesByProp.set(p.id, issues);
-    }
+  for (const p of data) {
+    const issues = runInternalChecks({
+      precio_usd: parseFloat(p.precio_usd) || 0,
+      tipo_cambio_detectado: p.tipo_cambio_detectado,
+      nombre_edificio: p.nombre_edificio,
+      contenido_desc: p.datos_json?.contenido?.descripcion || '',
+      enrichment_desc: p.datos_json_enrichment?.descripcion || '',
+    });
+    if (issues.length > 0) issuesByProp.set(p.id, issues);
   }
   return issuesByProp;
 }
@@ -304,24 +297,14 @@ async function runCapa2(supabase) {
 // ============================================================
 
 async function runCapa3(supabase, capa1Items) {
-  const { data: vista, error: eV } = await aplicarZona(
-    supabase.from('v_mercado_alquiler').select('id, zona')
-  );
-  if (eV) throw eV;
-  const ids = vista.map((v) => v.id);
-  if (ids.length === 0) return new Map();
-
-  const props = [];
-  const chunkSize = 100;
-  for (let i = 0; i < ids.length; i += chunkSize) {
-    const chunk = ids.slice(i, i + chunkSize);
-    const { data, error } = await supabase
+  const { data: props, error } = await aplicarZona(
+    supabase
       .from('propiedades_v2')
-      .select('id, fuente, url, nombre_edificio, id_proyecto_master, datos_json_enrichment')
-      .in('id', chunk);
-    if (error) throw error;
-    props.push(...data);
-  }
+      .select('id, fuente, url, nombre_edificio, id_proyecto_master, status, datos_json')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
+  );
+  if (error) throw error;
 
   const proyectoIds = [...new Set(props.map((p) => p.id_proyecto_master).filter(Boolean))];
   const proyectosById = new Map();
@@ -348,7 +331,7 @@ async function runCapa3(supabase, capa1Items) {
       url: p.url,
       nombre_edificio: p.nombre_edificio,
       aliases,
-      descripcion_cruda: p.datos_json_enrichment?.descripcion || '',
+      contenido_desc: p.datos_json?.contenido?.descripcion || '',
     };
     const scraped = { title_scraped: titlesByPropId.get(p.id) || '' };
     const result = checkMatching(enriched, scraped);
@@ -367,31 +350,6 @@ function collectAliases(prop, pm) {
     }
   }
   return [...set];
-}
-
-// ============================================================
-// FASE 4: DUPLICADOS
-// ============================================================
-
-async function runDuplicados(supabase, capa1Items) {
-  const { data, error } = await aplicarZona(
-    supabase.from('v_mercado_alquiler').select('id, nombre_edificio, precio_mensual_bob, area_total_m2, zona')
-  );
-  if (error) throw error;
-
-  const descById = new Map();
-  for (const c of capa1Items) {
-    descById.set(c.id, (c.descripcion_scraped || c.descripcion_bd || ''));
-  }
-
-  const props = (data || []).map((r) => ({
-    id: r.id,
-    nombre_edificio: r.nombre_edificio,
-    precio: parseFloat(r.precio_mensual_bob) || 0,
-    area: parseFloat(r.area_total_m2) || 0,
-    descripcion: descById.get(r.id) || '',
-  }));
-  return detectarDuplicados(props);
 }
 
 // ============================================================
@@ -458,7 +416,6 @@ function computeStats(combined) {
     cambio_relevante: 0,
     reescritas: 0,
     listings_muertos: 0,
-    sin_cruda_bd: 0,
     con_flag_semantico: 0,
     con_inconsistencia_interna: 0,
     con_mismatch_matching: 0,
@@ -470,7 +427,6 @@ function computeStats(combined) {
   };
   for (const r of combined) {
     if (r.capa1.scrape_status !== 'ok') stats.scrape_failed++;
-    if (r.capa1.len_bd === 0) stats.sin_cruda_bd++;
     const b = r.capa1.bucket;
     if (b === 'identicas') stats.identicas++;
     else if (b === 'cambio_menor') stats.cambio_menor++;
@@ -501,7 +457,7 @@ async function persistRunAndItems(supabase, payload) {
     const { data: runRow, error: e1 } = await supabase
       .from('audit_descripciones_runs')
       .insert({
-        tipo_operacion: 'alquiler',
+        tipo_operacion: 'venta',
         modo: payload.modo,
         cached_run_dir: payload.cached_run_dir,
         total_props: payload.total_props,
@@ -517,7 +473,7 @@ async function persistRunAndItems(supabase, payload) {
     const runId = runRow.id;
     const itemsForInsert = payload.items.map((r) => ({
       run_id: runId,
-      tipo_operacion: 'alquiler',
+      tipo_operacion: 'venta',
       prop_id: r.id,
       fuente: r.fuente,
       url: r.url,
@@ -546,7 +502,7 @@ async function persistRunAndItems(supabase, payload) {
     return runId;
   } catch (err) {
     console.warn(`⚠ No se pudo persistir a Supabase: ${err.message}`);
-    console.warn(`  (¿migración 244 aplicada? — el script siguió con el reporte local)`);
+    console.warn(`  (¿migración 242 aplicada? — el script siguió con el reporte local)`);
     return null;
   }
 }
@@ -555,9 +511,9 @@ async function persistRunAndItems(supabase, payload) {
 // SUMMARY
 // ============================================================
 
-function renderSummary(combined, stats, runId, modo, clustersDup = []) {
+function renderSummary(combined, stats, runId, modo) {
   const lines = [];
-  lines.push(`# Audit mensual alquiler — ${new Date().toISOString().slice(0, 10)}`);
+  lines.push(`# Audit mensual — ${new Date().toISOString().slice(0, 10)}`);
   lines.push('');
   lines.push(`**Macrozona:** ${ZONA_FILTER.label}`);
   if (runId) lines.push(`**DB run_id:** \`${runId}\``);
@@ -573,12 +529,10 @@ function renderSummary(combined, stats, runId, modo, clustersDup = []) {
   lines.push(`| Cambio relevante | ${stats.cambio_relevante} |`);
   lines.push(`| Reescritas | ${stats.reescritas} |`);
   lines.push(`| **Listings muertos** | ${stats.listings_muertos} |`);
-  lines.push(`| Sin cruda en BD | ${stats.sin_cruda_bd} |`);
   lines.push(`| Con flag semántico | ${stats.con_flag_semantico} |`);
   lines.push(`| **Con inconsistencia interna** | ${stats.con_inconsistencia_interna} |`);
   lines.push(`| **Con mismatch matching** | ${stats.con_mismatch_matching} |`);
   lines.push(`| **💲 Cambio de precio en portal** | ${stats.con_precio_drift_portal} |`);
-  lines.push(`| **🔁 Clusters duplicados** | ${stats.clusters_duplicados ?? 0} (${stats.props_duplicadas ?? 0} props) |`);
   lines.push(`| 🔴 Severidad alta | ${stats.severidad_alta} |`);
   lines.push(`| 🟡 Severidad media | ${stats.severidad_media} |`);
   lines.push(`| Scrape fallidos | ${stats.scrape_failed} |`);
@@ -604,24 +558,11 @@ function renderSummary(combined, stats, runId, modo, clustersDup = []) {
   if (conDrift.length > 0) {
     lines.push(`## 💲 Cambio de precio en portal (${conDrift.length})`);
     lines.push('');
-    lines.push('| ID | Fuente | Bs guardado | Bs portal hoy | Δ% | Dirección |');
+    lines.push('| ID | Fuente | Guardado | Portal hoy | Δ% | Dirección |');
     lines.push('|---:|---|---:|---:|---:|---|');
     for (const r of conDrift) {
       const d = r.capa1.precio_drift;
       lines.push(`| ${r.id} | ${r.fuente} | ${d.viejo.toLocaleString()} | ${d.nuevo.toLocaleString()} | ${d.diff_pct > 0 ? '+' : ''}${d.diff_pct}% | ${d.direccion === 'rebaja' ? '🔻 rebaja' : '🔺 suba'} |`);
-    }
-    lines.push('');
-  }
-
-  if (clustersDup.length > 0) {
-    lines.push(`## 🔁 Posibles duplicados (${clustersDup.length} clusters)`);
-    lines.push('');
-    lines.push('Mismo nombre+precio+área con descripción ≥90% similar (apart-hoteles / re-publicaciones que el pipeline no caza). Sobrevive 1, el resto → `duplicado_de`. **Confirmar por lectura** antes de aplicar.');
-    lines.push('');
-    lines.push('| Edificio | Bs | Sobrevive | Duplicados | SQL |');
-    lines.push('|---|---:|---:|---|---|');
-    for (const c of clustersDup) {
-      lines.push(`| ${c.nombre_edificio} | ${Math.round(c.precio).toLocaleString()} | ${c.sobreviviente} | ${c.duplicados.join(', ')} | \`UPDATE propiedades_v2 SET duplicado_de=${c.sobreviviente}, fecha_actualizacion=NOW() WHERE id IN (${c.duplicados.join(',')});\` |`);
     }
     lines.push('');
   }

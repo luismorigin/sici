@@ -101,6 +101,23 @@ export async function remaxListadoSC(tipo, { rateMs = 1200, maxPages = 60, log =
   return out;
 }
 
+// Remax expone 2 campos de texto: description_website (principal) y
+// marketing_description (copy secundario, a veces duplicado o con data vieja —
+// ej. precio desactualizado). Evitar concatenar a ciegas (duplica/mezcla):
+//   - si uno contiene al otro → el más largo
+//   - si son distintos → priorizar description_website (el actualizado)
+function elegirDescRemax(website, marketing) {
+  const w = (website || '').trim();
+  const m = (marketing || '').trim();
+  if (!w) return m;
+  if (!m) return w;
+  const norm = (s) => s.toLowerCase().replace(/\s+/g, '');
+  const nw = norm(w), nm = norm(m);
+  if (nw.includes(nm)) return w;
+  if (nm.includes(nw)) return m;
+  return w; // distintos: el principal manda (marketing suele estar desactualizado)
+}
+
 export async function remaxDetalle(url) {
   const html = await fetchRetry(url, { json: false });
   if (!html) return null;
@@ -114,7 +131,7 @@ export async function remaxDetalle(url) {
     const li = l.listing_information || {};
     const fotos = Array.isArray(l.multimedias) ? l.multimedias.length : null;
     return {
-      descripcion: [l.description_website, l.marketing_description].filter(Boolean).join('\n'),
+      descripcion: elegirDescRemax(l.description_website, l.marketing_description),
       metrosFrente: null, metrosFondo: null, tipoTerreno: null,
       m2T: num(li.land_m2), m2C: num(li.construction_area_m),
       dorms: num(li.number_bedrooms), banos: num(li.number_bathrooms), garage: num(li.number_parking),

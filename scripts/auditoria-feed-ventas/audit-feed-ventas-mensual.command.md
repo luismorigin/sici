@@ -1,18 +1,24 @@
 ---
-description: Audit mensual del feed /ventas — drift Firecrawl + inconsistencias internas + matching audit. Genera reporte ejecutivo con análisis humano.
+description: Audit mensual del feed /ventas (solo Equipetrol) — drift Firecrawl + inconsistencias internas + matching audit. Genera reporte ejecutivo con análisis humano.
 ---
 
 # Audit mensual — feed /ventas
 
+> **Alcance seleccionable con `--macrozona` (default `equipetrol`).** EQ y Zona Norte conviven en `v_mercado_venta`/`propiedades_v2` desde que ZN entró a prod; el filtro evita mezclarlos y gastar Firecrawl de más (ticket #15 del backlog ZN). Se aplica en las **3 capas**:
+> - `--macrozona equipetrol` (default) → solo las 6 zonas canónicas (`Equipetrol Centro/Norte/Oeste`, `Sirari`, `Villa Brigida`, `Eq. 3er Anillo`).
+> - `--macrozona zona-norte` → todo lo que **NO** es Equipetrol (ZN se define por descarte, así no hay que hardcodear sus 14 microzonas).
+> - `--macrozona todas` → sin filtro (EQ + ZN juntos).
+
 Auditoría completa del feed cruzando 3 capas:
 
-1. **Capa 1 — Drift Firecrawl**: re-scrapea las props vivas y compara descripción guardada vs portal actual
+1. **Capa 1 — Drift Firecrawl**: re-scrapea las props vivas y compara descripción guardada vs portal actual. **Incluye diff de PRECIOS** (ver abajo): además del texto, extrae el precio escrito en la desc vieja vs la del portal hoy y reporta los cambios reales.
 2. **Capa 2 — Inconsistencias internas**: detecta desincronizaciones entre `precio_usd`, `tipo_cambio_detectado`, `nombre_edificio` y la descripción
 3. **Capa 3 — Audit matching**: verifica que `nombre_edificio` BD aparece en slug/title/desc del listing, usando `proyectos_master.alias_conocidos`
 
 ## Argumentos
 
-- (sin argumentos) — corrida normal con Firecrawl, costo ~$1.75
+- (sin argumentos) — corrida normal con Firecrawl sobre **Equipetrol**, costo ~$1.75 (≈364 props)
+- `--macrozona <equipetrol|zona-norte|todas>` — alcance del audit (default `equipetrol`). **Ojo costo Firecrawl**: `zona-norte` ≈ $2.10 (≈421 props), `todas` ≈ $3.90 (≈785 props). **NUNCA correr `zona-norte`/`todas` sin OK explícito del usuario** por el gasto.
 - `--use-cached <run-dir>` — re-procesa un reporte de Firecrawl previo (gratis, para test)
 - `--skip-insert` — no escribe a Supabase (útil si la migración 242 no está aplicada)
 
@@ -52,6 +58,28 @@ Leer los 3 archivos.
 - **Lofty Island contadores** (#43, 46, 49, 52, 511 y similares): broker rota descripción con números/fechas de unidades disponibles. Si el bucket es "cambio_menor" Y los `palabras_agregadas/quitadas` son números o nombres de meses → es ruido típico, agruparlo en una línea: "5 props Lofty Island con drift de contadores rotativos"
 - **HTML entities** (`&nbsp;`, `&amp;` en `palabras_quitadas`): cambio cosmético del render del portal, no es drift real
 - **Sky Plaza Italia** y proyectos donde `nombre_edificio` BD repite en muchas props pero la descripción es de UN edificio específico (ej: #874 era Eurodesign Soho asignado mal a Sky Plaza Italia): notar como "matching potencialmente errado" pero no alarmar
+
+#### Cambio de precio en portal — diff de precios en Capa 1 (NUEVO, 29-jun) ⭐
+
+La Capa 1 compara el **precio escrito en la desc guardada (vieja)** vs el **precio del portal hoy** (texto scrapeado), y reporta los cambios en la sección "💲 Cambio de precio en portal" del summary, ordenados por magnitud.
+
+**Por qué existe:** el check de precio de la Capa 2 compara `precio_usd` contra la desc **cruda vieja** de BD → si el portal cambió el precio pero la cruda no se re-capturó, no lo ve. La Capa 1 sí trae el portal en vivo, así que el diff de precios caza rebajas/subas reales que la Capa 2 se pierde — incluso en props con texto casi idéntico (bucket `identicas`, donde lo único que cambió es el número).
+
+**Umbral y graduación:** piso de **1%** (solo para descartar artefactos de redondeo/parseo); ≥10% = alta, 3–10% = media, 1–3% = baja. Nada real ≥1% se esconde.
+
+**Complementa, no duplica, al pipeline:** `registrar_discovery` ya detecta cambios en el precio de **cabecera** (campo estructurado del portal) y actualiza/manda a revisión. El diff de precios del audit cubre el hueco restante: cuando el corredor cambia el precio **solo en el texto** de la descripción y la cabecera queda igual (el discovery no lo ve).
+
+**Caveats al leer la sección:**
+- **Fantasma Remax**: el extractor de Remax a veces saca un número del texto que NO es el precio (ej. el "67.678" repetido en props de distinta área/dorms). Descartá los que repiten el mismo número en props distintas.
+- **Reformulación de TC ≠ rebaja**: a veces el precio "cambia" solo porque el aviso pasó de expresar el monto "al oficial" a "billete/paralelo" (mismo valor económico). Leé el aviso.
+- **El precio sale del TEXTO de la desc**, no del precio de cabecera estructurado. Confirmá leyendo antes de aplicar, sobre todo en Remax. Regla de la skill: el script detecta, el humano/agente juzga.
+
+#### 🔁 Duplicados — apart-hoteles / re-publicaciones (NUEVO 30-jun)
+
+La Fase 4 detecta props que el **detector de duplicados del pipeline NO caza** (cada aviso tiene `codigo_propiedad` único): apart-hoteles que publican la misma unidad-tipo N veces, y avisos re-publicados. Lógica: agrupa por **nombre+precio+área** y dentro de cada grupo compara **descripciones** (sim ≥90% = duplicado real; descripciones distintas = unidades legítimas del mismo edificio → NO flaggea). Sale en la sección "🔁 Posibles duplicados" del summary + `duplicados.json`, con el SQL listo.
+
+- **Confirmá por lectura** antes de aplicar (sobre todo clusters de 2). El SQL marca `duplicado_de = <sobreviviente>` (mecanismo canónico; la vista filtra `duplicado_de IS NULL` → salen del feed; reversible con `duplicado_de = NULL`).
+- Caso canónico (30-jun): MAI Suites Apart Hotel = 7 avisos idénticos en Sirari; el broker publica cada unidad por separado.
 
 #### Patrones críticos (siempre reportar)
 
@@ -144,11 +172,35 @@ Impacto en feed: subestimación total de ~$Y miles
 `<run_dir>/summary.md` y `<run_dir>/combined.json`
 ```
 
+### 4.5 SQL de corrección — SIEMPRE refrescar también la descripción ⭐
+
+Cuando un cambio de precio/TC sea **confirmado** (leíste el aviso y es real: rebaja/suba o TC mal), el SQL de corrección debe **también refrescar la descripción cruda** con la del portal. Si solo actualizás `precio_usd`/`tc` y dejás la descripción vieja, el detector vuelve a marcar esa prop como "cambio de precio" en **cada corrida** (compara la cruda vieja vs el portal) — ruido recurrente. Refrescar la descripción cierra el caso.
+
+La descripción nueva está en `combined.json` → `capa1.descripcion_scraped` de esa prop. Patrón (usar dollar-quoting `$desc$` para no romper con acentos/viñetas; escribir el texto en **ambos** campos, `contenido` + `enrichment`, que el feed y la cruda queden sync):
+
+```sql
+UPDATE propiedades_v2
+SET precio_usd = <nuevo>,                         -- si cambió el precio
+    tipo_cambio_detectado = '<tc>',               -- si cambió el TC
+    datos_json = jsonb_set(datos_json, '{contenido,descripcion}', to_jsonb($desc$<descripcion_scraped>$desc$::text)),
+    datos_json_enrichment = jsonb_set(datos_json_enrichment, '{descripcion}', to_jsonb($desc$<descripcion_scraped>$desc$::text)),
+    campos_bloqueados = COALESCE(campos_bloqueados,'{}'::jsonb) || jsonb_build_object(
+      'precio_usd', jsonb_build_object('por','audit_mensual_<fecha>','fecha','<fecha>','bloqueado',true,'valor_original',<viejo>)),
+    fecha_actualizacion = NOW()
+WHERE id = <id>;
+```
+
+**Solo para cambios confirmados por lectura** — NO refrescar a ciegas:
+- **Fantasma Remax** (mismo número repetido en props de distinta área/dorms, ej. 67.678): ignorar, no es cambio real.
+- **Reformulación de TC** (mismo valor expresado "al oficial" vs "billete/paralelo"): no es rebaja; corregir TC si aplica pero evaluar si vale refrescar.
+- Si la prop ya está dada de baja / fuera del feed: no tocar.
+
 ### 5. Pregunta al usuario qué accionar
 
 Después del reporte ejecutivo, preguntá concretamente:
 
 - ¿Aplicar los SQL críticos ahora? (TC mismatch + listings muertos suelen ser seguros)
+- **¿Genero el SQL de los cambios de precio confirmados, con el refresco de descripción incluido (§4.5), para que no reaparezcan?**
 - ¿Querés side-by-side de los cambios de precio reales para decidir?
 - ¿Hay algún caso específico que querés que investigue más?
 

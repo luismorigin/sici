@@ -707,3 +707,22 @@ Feed público de casas ZN sobre `v_mercado_casas` (**SSG + filtrado client-side,
 
 **Pendiente:** merge a main + deploy + **cron de captura** (routine Claude Code, cablear `extraerCampos()`) + asset `og:image` (`skyline-zona-norte.jpg`).
 **Deuda detectada:** `VentaMap` reconstruye el mapa y resetea el zoom al seleccionar un pin (afecta a todos los feeds) → anotada en `docs/backlog/DEUDA_TECNICA.md`.
+
+---
+
+## 26 Jun 2026 (noche) — Tile casa × alquiler ZN: C21 reconectó + clasificador de uso (residencial/mixto/comercial)
+
+**Contexto:** retomado el ticket "sondeo casa × alquiler × ZN" que el 26-jun (tarde) quedó frenado por `UND_ERR_CONNECT_TIMEOUT` de C21. **Una prueba de 1 request confirmó que C21 ya conecta** (HTTP 200, 64 KB, <2s): el bloqueo era transitorio a nivel de IP de casa y se levantó solo en horas. Todo lo de esta sesión fue **read-only, sin tocar la BD** (output a JSON gitignored).
+
+**Extracción de detalle de alquiler validada (no solo conteo):** prototipo `scripts/casas-zn/muestra-alquiler-zn.mjs` — discovery C21 `operacion_renta` con corte temprano (junta N+pool y para, ~9 requests para muestra de 3) + detalle completo reusando la lógica de `cron-casas-zn.mjs` (desc, WhatsApp del captador, fotos, área, dorms, código, fecha). **Bugs a resolver en el MOAT antes de cualquier upsert:** (1) C21 devuelve el alquiler convertido BOB→USD con etiqueta USD errada ("5.500 bs" → "USD 790.23"); (2) WhatsApp a veces enmascarado (`...9999`).
+
+**Hallazgo de producto — cómo separar comercial de residencial:** ~1 de cada 3 casas-alquiler en ZN son **locales comerciales** (sobre avenida, "ideal para empresa/oficina/clínica"). **El filtro por keywords NO sirve** — casi toda casa grande en avenida se promociona "también para negocio", la palabra "comercial/oficina" está hasta en residenciales. La señal que SÍ separa = **dormitorios mencionados en el TEXTO** (el campo estructurado `recamaras` viene NULL en casas C21). Comercial puro = 0 dorms en texto + lista de usos empresariales; residencial = enumera dorms/suites/cocina/lavandería.
+
+**Clasificador `scripts/casas-zn/clasificar-uso.mjs` (reusable por el futuro cron):**
+- Capa 1 (regex): `residencial | mixto | comercial`, conteo de dorms del texto **sin inflar con suites** ("5 dormitorios (3 suites)" = 5, no 8), flag `posible_depto` (título que arranca en "departamento" — C21 cuela deptos en `tipo_casa`). Clasifica lo claro, marca `a_agente` los ambiguos.
+- Capa 2 (agente-lector / juez LLM): resuelve los ambiguos leyendo la descripción completa — nunca el regex decide los dudosos (mismo patrón que `/audit-cola-matching`).
+- Validado sobre muestra de 10: 🟢5 / 🟡2 / 🔴3, 7/10 en firme por capa 1; el lector resolvió los 3 dudosos (1 depto colado → excluido del feed de casas; 2 mixtos confirmados casas reales con 5 dorms + chimenea/piscina vendidas también para oficina).
+
+**Decisión de producto (Lucho):** NO excluir el comercial → **clasificar `uso_inmueble` y exponerlo como FILTRO** en el feed (default residencial+mixto on, comercial off pero visible). No se pierde inventario, no hay falso negativo caro, sirve al que busca local; el `mixto` es categoría legítima. Hace el sistema tolerante a errores → capa 1 basta para el MVP, el lector refina.
+
+**Estado:** clasificador cerrado (productor del campo). **Falta de verdad** el PIPELINE y el FEED de alquiler de casas (ninguno existe), el campo `uso_inmueble` en `propiedades_v2` (migración pendiente) y el volumen total (BI `id_fami` de casa sin resolver). Detalle en el ticket del BACKLOG y memoria `project_feed_alquiler_casas_zn_uso`.
