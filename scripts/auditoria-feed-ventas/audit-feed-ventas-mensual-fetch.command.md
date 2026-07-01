@@ -20,6 +20,8 @@ Todo lo demás es idéntico: Capa 2 (inconsistencias internas), Capa 3 (matching
 | Modo en BD | `normal` | `fetch` (para distinguir en el histórico `audit_descripciones_runs`) |
 | Anti-bot | lo absorbe Firecrawl | circuit breaker propio (corta si la IP se bloquea) |
 
+> **⚠️ La persistencia al histórico requiere la mig 267** (`modo='fetch'` no era un valor válido del constraint hasta entonces — la mig 242 solo permitía `normal`/`cached`/`partial`). Si el INSERT falla con `audit_descripciones_runs_modo_check`, aplicar la mig 267; el reporte local se genera igual. Para re-guardar una corrida ya fetcheada sin re-scrapear: `reguardar-corrida-zn.mjs <run-dir> --apply`.
+
 ## Argumentos
 
 - (sin args) — Equipetrol completo, $0

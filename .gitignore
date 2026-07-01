@@ -52,5 +52,9 @@ scripts/personal-doble-via/
 # Output generado de PoCs (no versionar)
 scripts/poc-zona-norte/resultados*.json
 
+# Temporales de proceso del audit de cola (se regeneran en cada corrida)
+scripts/auditoria-cola-matching/cola-*.json
+scripts/auditoria-cola-matching/lote-juez-*.json
+
 # Fotos originales en alta de clientes (archivo local, no versionar — pesan ~80MB)
 docs/clientes/condado/fotos-edificios/
