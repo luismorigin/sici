@@ -375,7 +375,7 @@ function Carousel({ images, aspectClass, onOpenLightbox, className = '', autopla
           <button
             key={i}
             onClick={() => setIndex(i)}
-            className={`h-1.5 rounded-full transition-all bg-condado-marfil ${i === index ? 'w-6 opacity-100' : 'w-1.5 opacity-50 hover:opacity-75'}`}
+            className={`relative h-1.5 rounded-full transition-all bg-condado-marfil after:absolute after:content-[''] after:left-1/2 after:top-1/2 after:h-6 after:w-6 after:-translate-x-1/2 after:-translate-y-1/2 ${i === index ? 'w-6 opacity-100' : 'w-1.5 opacity-50 hover:opacity-75'}`}
             aria-label={`Foto ${i + 1}`}
           />
         ))}
@@ -789,7 +789,7 @@ export default function CondadoVIv2() {
                 <button
                   key={i}
                   onClick={() => scrollToTypology(i)}
-                  className={`h-1.5 rounded-full transition-all bg-condado-carbon ${i === typologyIndex ? 'w-6 opacity-100' : 'w-1.5 opacity-30'}`}
+                  className={`relative h-1.5 rounded-full transition-all bg-condado-carbon after:absolute after:content-[''] after:left-1/2 after:top-1/2 after:h-6 after:w-6 after:-translate-x-1/2 after:-translate-y-1/2 ${i === typologyIndex ? 'w-6 opacity-100' : 'w-1.5 opacity-30'}`}
                   aria-label={`Ver tipología ${i + 1}`}
                 />
               ))}
