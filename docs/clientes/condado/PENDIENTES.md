@@ -39,12 +39,24 @@ URL actual: **https://simonbo.com/condado-vi-v2** (noindex)
 - Foto de **Condado Park V**: sumada al timeline (2 Jun)
 - Material de mesones (piedra sinterizada): validado con la arquitecta
 
-**Pendiente nuestro (fase de cierre) — orden decidido 1 Jul 2026:**
-1. **Optimización Lighthouse PRIMERO** (comprimir hero, lazy-load lightbox, touch targets) — ver `LANDING_V2.md` sección Lighthouse. Es código, independiente del dominio → se hace antes.
-2. **Comprar el dominio propio** (ej. `condadovi.com`) — **responsabilidad NUESTRA, está dentro de lo acordado** (no lo compra el cliente). Después de optimizar.
-3. **Apuntar el dominio** a Vercel y migrar la landing fuera de la ruta `simonbo.com/condado-vi-v2`.
-4. **Sacar `noindex,nofollow`** al publicar en el dominio propio.
-5. **Cobrar saldo Bs 1,750 (USD 250) al publicar** — sigue pendiente.
+### 👉 DÓNDE RETOMAR (estado al 1 Jul 2026)
+
+**✅ YA HECHO:**
+- **Optimización** de la landing (imágenes −47% + touch targets a11y) → mergeada a `main`, en prod. PSI real: **96 mobile / 92 desktop**.
+- **Versión estática standalone CONSTRUIDA** para la entrega (independiente de simon-mvp/Vercel). Ubicación: `C:\Users\LUCHO\Desktop\Censo inmobiliario\condado-landing\` (repo git propio, commit `4094a11`). Genera la carpeta **`out/`** con `npm run build`. Imágenes WebP, `noindex` removido, SEO afinado (título/desc capturan "Condado VI" y "Condado 6").
+- Dominio elegido: **`condadovi.com`** (verificado LIBRE, 1 Jul).
+
+**⏳ PRÓXIMOS PASOS (retomar acá — todo en 1 sesión con Claude):**
+1. **Crear cuenta Cloudflare con TU correo** (evita el bloqueo de Gmail nuevo). `dash.cloudflare.com`.
+2. **Comprar `condadovi.com`** en Cloudflare Registrar (~$10/año, al costo, **rechazar todo add-on**). A cubrir por nosotros el año 1 (dominio incluido en los $500).
+3. **Subir la carpeta `out/`** a **Cloudflare Pages** (Upload assets / drag-drop). Sin build en Cloudflare → nada que romper.
+4. **Conectar el dominio** `condadovi.com` al proyecto de Pages.
+5. **Agregar Open Graph** (`og:image` con URL absoluta del dominio) en `src/pages/index.tsx` → rebuild → re-subir (para el preview al compartir por WhatsApp).
+6. **Avisar a Google** (Search Console, gratis) que el sitio existe → indexación rápida.
+7. **Handoff:** cambiar el **correo de la cuenta Cloudflare al del cliente** (1 click de confirmación de él) → queda dueño, cortamos dependencia.
+8. **Cobrar saldo Bs 1,750 (USD 250).**
+
+**Decisiones tomadas (para no re-discutir):** landing FIJA (promo hasta vender, no editable por agencia no técnica) → estático es lo correcto (más seguro, cero mantenimiento). Dominio a nombre del cliente (renovación suya). Cuenta creada con tu correo y transferida al cliente al final (evita crear Gmail nuevo). Detalle técnico completo: memoria `project_landing_condado_vi` + `condado-landing/README.md`.
 
 ## Pausados
 
