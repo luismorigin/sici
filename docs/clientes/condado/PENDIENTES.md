@@ -45,16 +45,25 @@ URL actual: **https://simonbo.com/condado-vi-v2** (noindex)
 - **Optimización** de la landing (imágenes −47% + touch targets a11y) → mergeada a `main`, en prod. PSI real: **96 mobile / 92 desktop**.
 - **Versión estática standalone CONSTRUIDA** para la entrega (independiente de simon-mvp/Vercel). Ubicación: `C:\Users\LUCHO\Desktop\Censo inmobiliario\condado-landing\` (repo git propio, commit `4094a11`). Genera la carpeta **`out/`** con `npm run build`. Imágenes WebP, `noindex` removido, SEO afinado (título/desc capturan "Condado VI" y "Condado 6").
 - Dominio elegido: **`condadovi.com`** (verificado LIBRE, 1 Jul).
+- **Open Graph LISTO** (paso 5 adelantado, commit `a7775a9`): `og-image.jpg` 1200×630 (196KB, JPG para que WhatsApp lo renderice — WebP no sirve en OG) + meta tags OG/Twitter apuntando a `https://condadovi.com/`. Ya está en `out/`. Al subir queda funcionando el preview de WhatsApp de una.
 
-**⏳ PRÓXIMOS PASOS (retomar acá — todo en 1 sesión con Claude):**
-1. **Crear cuenta Cloudflare con TU correo** (evita el bloqueo de Gmail nuevo). `dash.cloudflare.com`.
-2. **Comprar `condadovi.com`** en Cloudflare Registrar (~$10/año, al costo, **rechazar todo add-on**). A cubrir por nosotros el año 1 (dominio incluido en los $500).
-3. **Subir la carpeta `out/`** a **Cloudflare Pages** (Upload assets / drag-drop). Sin build en Cloudflare → nada que romper.
-4. **Conectar el dominio** `condadovi.com` al proyecto de Pages.
-5. **Agregar Open Graph** (`og:image` con URL absoluta del dominio) en `src/pages/index.tsx` → rebuild → re-subir (para el preview al compartir por WhatsApp).
-6. **Avisar a Google** (Search Console, gratis) que el sitio existe → indexación rápida.
-7. **Handoff:** cambiar el **correo de la cuenta Cloudflare al del cliente** (1 click de confirmación de él) → queda dueño, cortamos dependencia.
-8. **Cobrar saldo Bs 1,750 (USD 250).**
+**✅ HECHO (1 Jul 2026 — sesión de publicación):**
+1. ✅ **Cuenta creada** — pero con correo DEDICADO **`condadovi@proton.me`** (NO el Gmail del founder). Mejor: la cuenta entera es transferible al cliente. Credenciales + manual PDF en `condado-landing/entrega/` (gitignored, fuera de git): `CREDENCIALES_CONDADO_VI.md` (referencia interna) + `Manual_Entrega_Condado_VI.pdf` (con contraseñas, es el que se entrega al cliente).
+2. ✅ **`condadovi.com` COMPRADO** en Cloudflare Registrar ($10.46/año). ⚠️ Pendiente **apagar auto-renovación** para que la tarjeta del founder no se cobre en 2027 (el cliente la reactiva con la suya post-handoff).
+3. ✅ **Sitio subido a Cloudflare Workers/Pages** (proyecto `condadovi`, Direct Upload del ZIP). **BUG resuelto:** el ZIP de `Compress-Archive` (PowerShell 5.1) usa backslashes → Cloudflare no anida las carpetas → solo servía `index.html`. FIX: regenerar ZIP con `System.IO.Compression.ZipArchive` forzando `/` (script en la sesión). El sitio quedó live tras re-deploy.
+4. ✅ **Dominio conectado** — `condadovi.com` Active, SSL emitido. **Verificado 200 en index/imágenes/CSS/og-image.**
+5. ✅ **Open Graph** (commit `a7775a9`).
+
+**✅ HECHO (1 Jul, cierre):**
+6. ✅ **Google Search Console** — dominio verificado (verificación automática por DNS de Cloudflare).
+7. ✅ **Entrega formal ENVIADA** (1 Jul) — correo al equipo Proinco (`laam.altamirano@gmail.com` + `nadinealtamiranomedina@gmail.com`, asunto "Entrega final — Landing web Condado VI") con el `Manual_Entrega_Condado_VI.pdf` adjunto (accesos Proton+Cloudflare a nombre del cliente) + mensaje de WhatsApp avisando del correo, el link `condadovi.com` y el saldo. La cuenta `condadovi@proton.me` se entrega al cliente (cambia contraseñas al recibir).
+
+**⏳ ÚNICO PENDIENTE:**
+8. **Cobrar saldo Bs 1,750 (USD 250)** — ya solicitado por WhatsApp, esperando el pago del cliente.
+
+**✅ HECHO 1 Jul (extra de la sesión):**
+- **Auto-renovación del dominio APAGADA** (la tarjeta del founder no se cobra en 2027).
+- **`www.condadovi.com` RESUELTO** → CNAME `www`→`condadovi.com` (proxied) + Redirect Rule "Redirect from WWW to root" (301, preserve query string). Verificado: `www` → 301 → `https://condadovi.com/` (200). Zone ID `4bd88656ebbec5a330e6033e4e3ad10a`.
 
 **Decisiones tomadas (para no re-discutir):** landing FIJA (promo hasta vender, no editable por agencia no técnica) → estático es lo correcto (más seguro, cero mantenimiento). Dominio a nombre del cliente (renovación suya). Cuenta creada con tu correo y transferida al cliente al final (evita crear Gmail nuevo). Detalle técnico completo: memoria `project_landing_condado_vi` + `condado-landing/README.md`.
 
