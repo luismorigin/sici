@@ -130,6 +130,20 @@ Requiere:
 
 Costo: $0 hasta 100k/mes. Si se supera, $5/mes por 100k adicional.
 
+### 🟣 AVIF global (pendiente, detectado 1-jul-2026)
+
+`next.config.js` NO define `images.formats` → Next 14 sirve solo **WebP** por defecto, no AVIF (AVIF pesa ~20-30% menos). Activarlo es una línea:
+
+```js
+images: { formats: ['image/avif', 'image/webp'], remotePatterns: [...] }
+```
+
+Es seguro (fallback automático a WebP por browser). **Alcance:** es config GLOBAL, pero como los feeds (`ventas`/`alquileres`) ya sirven imágenes por **URL directa del CDN** (Capa 1, no pasan por el optimizador de Vercel), AVIF solo beneficiaría las páginas que usan `<Image>` de Next: **landings (Condado VI, etc.), hero, mapas**. Beneficio real acotado a esas páginas.
+
+**Por qué NO se hizo junto con la optimización de Condado (1-jul):** es un cambio que toca todo el sitio → merece su propia prueba (verificar las páginas `next/image` + confirmar que no dispara más transformaciones Vercel de las esperadas). La optimización de Condado (imágenes −47% + touch targets) se mantuvo scopeada a la landing. Ver memoria `project_landing_condado_vi`.
+
+**Pendiente:** decidir si vale la pena el cambio global. Impacto marginal (pocas páginas `next/image`, bajo volumen).
+
 ## Métricas a vigilar post-cambio
 
 - **LCP mobile** (Real User Monitoring Vercel) — baseline hoy, comparar 7 días post-deploy
