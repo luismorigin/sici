@@ -1,14 +1,19 @@
 # Landing Condado VI — versión v2
 
-> Última actualización: 2 Jun 2026
+> Última actualización: 1 Jul 2026
 
 ## Estado actual
 
-**Deployada como staging.** URL para review del cliente:
+**✅ CONTENIDO APROBADO por el cliente (1 Jul 2026).** Todas las observaciones y fotos solicitadas están aplicadas. Landing en producción:
 **https://simonbo.com/condado-vi-v2**
 
-- `noindex,nofollow` → no aparece en buscadores
+- `noindex,nofollow` → todavía no aparece en buscadores (se saca al migrar a dominio propio)
 - Original `/condado-vi` intacta en la URL canónica (sin cambios)
+- Última revisión de contenido: commit `cf55821` (19 Jun)
+- **Fase de cierre (pendiente):** optimización Lighthouse PRIMERO → **comprar dominio propio** (ej. `condadovi.com`, **responsabilidad nuestra, dentro de lo acordado**) → migrar la landing fuera de simonbo.com → sacar `noindex` → cobrar saldo USD 250. Ver `PENDIENTES.md`.
+
+### Historial de revisión de contenido
+
 - Mensaje WhatsApp enviado a Adolfo el 19 May pidiendo revisión de textos y fotos en compu + celular
 - **24 May:** sumadas fotos reales de los edificios entregados (Condado I–IV) como thumbnails clickeables dentro de la línea de tiempo "5 edificios... Todos entregados". Reenviado a Adolfo para revisión.
   - **Deploy:** commit `1afcbaa` pusheado a `main` el 24 May → desplegado en Vercel. Las fotos ya están visibles en la URL de staging.
@@ -105,23 +110,24 @@ El cliente entregó set con fotos generadas por IA. Manejo adoptado:
 
 Cuando Adolfo apruebe contenido → 1 sesión de optimización (1-2 hs) y apuntar a 95+/95+/95+/95+ antes de hacerla la versión canónica.
 
-## Pendiente del cliente
+## Pendiente del cliente — ✅ TODO RESUELTO (1 Jul 2026)
 
-- [~] Adolfo revisó (reenvío 24 May con fotos de edificios). **Respondió pidiendo ~1 día (esperado ~26 May)** para enviar: (a) una foto de balcón que quieren agregar, (b) observaciones. → esperando devolución
-- [ ] Confirmar si todo el material entregado es de un mismo depto modelo o de varios (impacta narrativa visual del carrusel salón)
+- [x] Observaciones de textos/fotos de Adolfo — aplicadas
 - [x] **Foto de Condado Park V** — recibida y sumada al timeline el 2 Jun
 - [x] **Foto de balcón a agregar** — cubierta por los renders que envió la arquitecta (incluye el balcón nocturno en la sección "Así se vería tu espacio amoblado", 2 Jun)
 - [x] **Material de mesones** — validado con la arquitecta: es piedra sinterizada
-- [ ] **Revisión de renders IA en reunión 3 Jun** — Bea y Adolfo revisan la nueva sección "Así se vería tu espacio amoblado" y traen observaciones puntuales
+- [x] **Renders IA** — revisados y aprobados
+- [x] **Contenido completo aprobado por el cliente** (1 Jul 2026)
 
-## Próximos pasos
+## Próximos pasos (fase de cierre) — orden decidido 1 Jul 2026
 
-1. Recibir feedback de Adolfo
-2. Aplicar cambios solicitados (copy, fotos, orden)
-3. Pasada de optimización Lighthouse (comprimir hero, lazy-load lightbox, touch targets)
-4. Decidir: ¿reemplazar `/condado-vi` original con esta versión o mantener como rutas separadas con redirect?
-5. Sacar `noindex,nofollow` cuando vaya a definitivo
-6. Cobrar saldo Bs 1,750 (USD 250) al publicar — ver `PENDIENTES.md`
+El contenido está congelado y aprobado. Restan solo pasos de publicación definitiva, en este orden:
+
+1. **Optimización Lighthouse PRIMERO** (comprimir hero, lazy-load lightbox, touch targets) — es código, independiente del dominio
+2. **Comprar dominio propio** (ej. `condadovi.com`) — **responsabilidad nuestra, dentro de lo acordado**
+3. **Apuntar** el dominio a Vercel y migrar la landing fuera de `simonbo.com/condado-vi-v2`
+4. Sacar `noindex,nofollow` al publicar en el dominio propio
+5. **Cobrar saldo Bs 1,750 (USD 250) al publicar** — ver `PENDIENTES.md`
 
 ## Comercial
 

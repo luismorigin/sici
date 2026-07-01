@@ -1,6 +1,6 @@
 # Pendientes — Condado / Proinco
 
-> Última actualización: 25 May 2026
+> Última actualización: 1 Jul 2026
 
 ## Estado del acuerdo original
 
@@ -25,28 +25,26 @@
 
 **Envío:** Martes/miércoles AM. Follow-up 48h si no responde.
 
-### 2. Landing web Condado VI — v2 deployada para revisión
+### 2. Landing web Condado VI — v2 CONTENIDO APROBADO por el cliente
 
-**Estado:** v2 lista en staging, mensaje WSP enviado a Adolfo el 19 May. El 24 May se sumaron fotos reales de los edificios entregados (Condado I–IV) dentro del timeline y se reenvió para revisión. **Adolfo respondió pidiendo ~1 día (esperado ~26 May)** para mandar una foto de balcón que quieren agregar + observaciones. Esperando devolución.
+**Estado (1 Jul 2026):** ✅ **Cliente aprobó todo el contenido.** Todas las observaciones y fotos solicitadas están aplicadas en la landing (última revisión de contenido: commit `cf55821`, 19 Jun). La landing está en producción en `simonbo.com/condado-vi-v2` (`noindex`). Ya no hay pendientes de contenido — pasa a fase de **cierre** (dominio propio + optimización + cobro).
 
-> **Deploy:** fotos de edificios pusheadas a `main` el 24 May (commit `1afcbaa`) → desplegado en Vercel, visibles en staging.
-
-URL review: **https://simonbo.com/condado-vi-v2** (noindex)
+URL actual: **https://simonbo.com/condado-vi-v2** (noindex)
 
 **Detalles completos:** ver `LANDING_V2.md`
 
-**Pendiente del cliente:**
-- Adolfo manda observaciones de textos/fotos (pidió ~1 día — esperado ~26 May)
-- Foto de **balcón** que quieren agregar (Adolfo la va a sacar y enviar)
-- Foto de **Condado Park V** para completar el timeline
-- Confirmar si el material entregado corresponde a un mismo depto modelo o varios
+**✅ Pendiente del cliente — RESUELTO:**
+- Observaciones de textos/fotos: aplicadas
+- Foto de **balcón**: cubierta por los renders IA de la sección "Así se vería tu espacio amoblado"
+- Foto de **Condado Park V**: sumada al timeline (2 Jun)
+- Material de mesones (piedra sinterizada): validado con la arquitecta
 
-**Pendiente nuestro (después del feedback):**
-- Aplicar cambios solicitados (queda 1 ronda de revisión incluida en las 2 pactadas)
-- Pasada de optimización Lighthouse (comprimir hero, lazy-load, touch targets) — ver `LANDING_V2.md` sección Lighthouse
-- Decidir si reemplazar `/condado-vi` canónica o mantener separadas con redirect
-- Sacar `noindex` al publicar definitivo
-- Cobrar saldo Bs 1,750 (USD 250) al publicar
+**Pendiente nuestro (fase de cierre) — orden decidido 1 Jul 2026:**
+1. **Optimización Lighthouse PRIMERO** (comprimir hero, lazy-load lightbox, touch targets) — ver `LANDING_V2.md` sección Lighthouse. Es código, independiente del dominio → se hace antes.
+2. **Comprar el dominio propio** (ej. `condadovi.com`) — **responsabilidad NUESTRA, está dentro de lo acordado** (no lo compra el cliente). Después de optimizar.
+3. **Apuntar el dominio** a Vercel y migrar la landing fuera de la ruta `simonbo.com/condado-vi-v2`.
+4. **Sacar `noindex,nofollow`** al publicar en el dominio propio.
+5. **Cobrar saldo Bs 1,750 (USD 250) al publicar** — sigue pendiente.
 
 ## Pausados
 
