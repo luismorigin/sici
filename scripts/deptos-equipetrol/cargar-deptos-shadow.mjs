@@ -80,8 +80,9 @@ async function traerLote() {
   const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('id');
   const cargados = new Set([...(yaEn || []).map((r) => r.id), ...leerRechazados()]);
   const frescos = data.filter((d) => !cargados.has(d.id));
-  const pick = []; for (const f of ['century21', 'remax']) pick.push(...frescos.filter((d) => d.fuente === f).slice(0, N));
-  return pick;
+  // N = TOTAL agnóstico a la fuente (NO N-por-portal): si un portal tiene mucho más inventario
+  // que el otro (C21 278 vs Remax 124), el cap simétrico dejaba la fuente grande atrás. Así drena parejo.
+  return frescos.slice(0, N);
 }
 
 // ===========================================================================
@@ -89,7 +90,7 @@ async function traerLote() {
 // ===========================================================================
 async function prep() {
   const lote = await traerLote();
-  console.log(`\n🔎 PREP — material de lectura para ${lote.length} deptos${idsArg ? ' (--ids)' : ` (${N}/portal)`}. NO escribe a la BD.\n`);
+  console.log(`\n🔎 PREP — material de lectura para ${lote.length} deptos${idsArg ? ' (--ids)' : ` (hasta ${N} frescos, agnóstico a fuente)`}. NO escribe a la BD.\n`);
   const entradas = [];
   for (const p of lote) {
     if (circuit.tripped) { console.log('🛑 circuit breaker.'); break; }

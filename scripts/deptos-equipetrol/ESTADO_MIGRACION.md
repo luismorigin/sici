@@ -5,7 +5,7 @@
 > Contrato técnico: `CONTRATO_FEED.md` · Reglas del lector: `READER_SPEC.md`.
 
 ## Estado al 3-jul-2026 (cierre de sesión)
-- **220 deptos en shadow, 95,9% match** (~mitad del inventario ~400 venta Eq). Sin-match = 9 SIN_NOMBRE legítimos.
+- **INVENTARIO COMPLETO: 384 deptos en shadow, 94,5% match** (universo prod = 402; los 18 que faltan = basura rechazada [multiproyecto/baulera/parqueo/anticrético] + ~8 remanente). 10 sin-match = stragglers de catálogo (aliases pendientes); 11 SIN_NOMBRE legítimos. Bug de selección arreglado: prep ahora agnóstico a fuente (era N/portal → dejaba C21 atrás).
 - **Pipeline reader-integrado completo**: `cargar-deptos-shadow.mjs` (`--prep`→lector→`--apply`) + `lib/matcher.mjs` (name-first) + `READER_SPEC.md` + `lib/reader-api.mjs` (costura API stub).
 - **Front shadow**: `/api/ventas-shadow.ts` (dev-only) + `?shadow=1` en `ventas.tsx` → `http://localhost:3000/ventas?shadow=1`.
 - **Migraciones**: 268 (entorno shadow) + 269 (vistas/RPC feed shadow) + **270 (FIX `buscar_proyecto_fuzzy`: LIMIT truncaba por id no por score — bug de matching de PROD también)**.
