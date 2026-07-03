@@ -28,6 +28,9 @@ Thumbs.db
 # LLM enrichment test output
 scripts/llm-enrichment/output/
 
+# Deptos Equipetrol (híbrido) — artefactos de corridas
+scripts/deptos-equipetrol/output/
+
 # Logs
 *.log
 

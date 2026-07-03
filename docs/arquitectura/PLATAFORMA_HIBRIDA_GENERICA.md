@@ -194,6 +194,17 @@ edificios** (nombre + GPS exacto), que es la parte más compleja del n8n actual.
 trabajo técnico pesado de la migración de deptos. (Ojo con el bug histórico del loop K1: el matching
 de edificios NO debe pisar `nombre_edificio`.)
 
+> **⚠️ CORRECCIÓN (2-jul-2026, tras investigar el matching real):** esta sección SOBRESTIMÓ la
+> dificultad. El matching de edificios **NO es JS pesado a reescribir — es 100% SQL reusable.**
+> n8n solo ejecuta `SELECT * FROM matching_completo_automatizado();` (`modulo_2/matching_nocturno.json`);
+> todo el fuzzy (nombre/URL/trigram/GPS) + scoring + auto-aprobación ≥85 vive en `sql/functions/matching/`.
+> El híbrido **reusa el motor tal cual** (un `.mjs` corre el mismo query). Única trampa: NO usar
+> `aplicar_matches_aprobados()` (bug loop K1) — aplicar con UPDATE directo estilo mig 259, sin pisar
+> `nombre_edificio`. Además, con el LECTOR en la ingesta el match se **confirma al leer el anuncio**
+> (nombre-primario, GPS solo desempata → robusto a GPS mal puesto por el broker). El trabajo neto de
+> deptos resultó MUCHO menor: el extractor ya está construido, el matching se reusa. Ver
+> `scripts/deptos-equipetrol/ESTADO_MIGRACION.md` y memoria `project_deptos_equipetrol_al_hibrido`.
+
 ---
 
 ## 10. Estrategia de migración (strangler) y orden de construcción
