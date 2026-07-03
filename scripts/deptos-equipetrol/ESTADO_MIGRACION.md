@@ -5,7 +5,14 @@
 > Contrato técnico: `CONTRATO_FEED.md` · Reglas del lector: `READER_SPEC.md`.
 
 ## Estado al 3-jul-2026 (cierre de sesión)
-- **INVENTARIO COMPLETO: 384 deptos en shadow, 94,5% match** (universo prod = 402; los 18 que faltan = basura rechazada [multiproyecto/baulera/parqueo/anticrético] + ~8 remanente). 10 sin-match = stragglers de catálogo (aliases pendientes); 11 SIN_NOMBRE legítimos. Bug de selección arreglado: prep ahora agnóstico a fuente (era N/portal → dejaba C21 atrás).
+- **INVENTARIO COMPLETO: 384 deptos en shadow, 96,9% match** (universo prod = 402; los 18 que faltan = basura rechazada [multiproyecto/baulera/parqueo/anticrético] + ~8 remanente). Sin-match: 1 ambiguo (595 "Bloque La Salle", revisar) + 11 SIN_NOMBRE legítimos. Catálogo limpiado (aliases + dedup + fix fuzzy mig 270 + bug de selección source-agnostic).
+
+### Próximos pasos (en orden)
+1. **Comparación integral shadow-vs-prod** — con el inventario completo: conteos, medianas $/m², diffs fila-a-fila (precio/TC/dorms/match). Es **el dato que justifica el corte de n8n**. Herramientas listas: `buscar_unidades_simple` (real) vs `buscar_unidades_simple_shadow`.
+2. **Enganches del cutover**: fecha LEAST en el camino de escritura real; C21 `fecha_alta` desde el discovery (`c21Listado`); `--shadow` en `actualizar-tc-binance.mjs`; script snapshot absorción.
+3. **Paquete "TC nuevo"** (default paralelo + normalización base-paralelo) — JUNTO a prod, al unificarse el TC oficial. Ver READER_SPEC.md.
+4. **Cutover**: el híbrido escribe `propiedades_v2` real / se apaga n8n para deptos venta — tras validar la comparación, con OK del founder.
+5. Detalles menores: 595 "Bloque La Salle" (leer el aviso), alquiler (otra operación, después).
 - **Pipeline reader-integrado completo**: `cargar-deptos-shadow.mjs` (`--prep`→lector→`--apply`) + `lib/matcher.mjs` (name-first) + `READER_SPEC.md` + `lib/reader-api.mjs` (costura API stub).
 - **Front shadow**: `/api/ventas-shadow.ts` (dev-only) + `?shadow=1` en `ventas.tsx` → `http://localhost:3000/ventas?shadow=1`.
 - **Migraciones**: 268 (entorno shadow) + 269 (vistas/RPC feed shadow) + **270 (FIX `buscar_proyecto_fuzzy`: LIMIT truncaba por id no por score — bug de matching de PROD también)**.
