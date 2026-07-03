@@ -28,7 +28,7 @@
 | `id_proyecto_master` | **MATCHING SQL + LECTOR confirma** | `matching_completo_automatizado()` propone; aplicar estilo mig 259 (UPDATE directo, NO pisar `nombre_edificio`, NO usar `aplicar_matches_aprobados` = bug K1). **El LECTOR confirma al ingerir** (nombre-primario: lee el nombre real del anuncio; GPS SOLO desempata, nunca criterio único — robusto a GPS mal puesto por el broker). Feedback: alias nuevos → `alias_conocidos`; edificio no catalogado → PM_NUEVO. Ver "Matching" abajo. |
 | `latitud`,`longitud` | DISCOVERY | trigger asigna zona/microzona |
 | `microzona` | trigger (desde GPS) | |
-| `fecha_publicacion` | extractor | C21 `fechaAlta` / Remax `date_of_listing` |
+| `fecha_publicacion` | Remax=extractor `date_of_listing`; C21=DISCOVERY `fecha_alta` (NO está en el detalle) | Fecha REAL del anuncio (días-en-mercado). **Protegida con LEAST** en el cargador: la más antigua gana, nunca se pisa adelante (anti re-scrape + anti-bump). NUNCA usar `fecha_discovery`/`fecha_scraping` (se pisan con NOW). |
 | `score_calidad_dato`, `es_multiproyecto`, `url`, `fuente` | pipeline / LECTOR | |
 
 ## B) `datos_json` (columna consolidada) — lo que arma el híbrido

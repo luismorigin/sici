@@ -1,8 +1,16 @@
 # Migración deptos Equipetrol al híbrido — ESTADO y mapa de estrangulamiento
 
-> Actualizado: 2026-07-02. Contexto: Bloque 3 del plan strangler (ver
+> Actualizado: 2026-07-03. Contexto: Bloque 3 del plan strangler (ver
 > `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md`). Memoria: `project_deptos_equipetrol_al_hibrido`.
-> Contrato técnico: `CONTRATO_FEED.md` (qué escribir para que el feed lo lea).
+> Contrato técnico: `CONTRATO_FEED.md` · Reglas del lector: `READER_SPEC.md`.
+
+## Estado al 3-jul-2026 (cierre de sesión)
+- **220 deptos en shadow, 95,9% match** (~mitad del inventario ~400 venta Eq). Sin-match = 9 SIN_NOMBRE legítimos.
+- **Pipeline reader-integrado completo**: `cargar-deptos-shadow.mjs` (`--prep`→lector→`--apply`) + `lib/matcher.mjs` (name-first) + `READER_SPEC.md` + `lib/reader-api.mjs` (costura API stub).
+- **Front shadow**: `/api/ventas-shadow.ts` (dev-only) + `?shadow=1` en `ventas.tsx` → `http://localhost:3000/ventas?shadow=1`.
+- **Migraciones**: 268 (entorno shadow) + 269 (vistas/RPC feed shadow) + **270 (FIX `buscar_proyecto_fuzzy`: LIMIT truncaba por id no por score — bug de matching de PROD también)**.
+- **Test de bloqueo**: 100 fetch en vivo = 0 bloqueos, 100% calidad. El fetching escala; el constraint es la lectura (MOAT/tokens).
+- **TC conservador = prod** (el paquete "TC nuevo" default-paralelo + normalización base-paralelo va DESPUÉS, junto a prod, al unificarse el TC).
 
 ## Decisiones (founder)
 
@@ -26,6 +34,10 @@ Clon aislado para la corrida completa sin tocar prod (verificado post-apply):
 | `lib/detalle-deptos.mjs` | Extractor depto C21+Remax (contacto/fotos/desc/precio + piso/expensas/parqueo/amenidades estructuradas + `parseAreaTexto` fallback BO) | ✅ |
 | `lib/tc.mjs` | Clasificación TC contra Binance vivo (`cargarTC`, `clasificarTCporRatio`); texto manda, señal de respaldo | ✅ |
 | `carril-paralelo.mjs` | Corre híbrido vs n8n sobre N deptos, arma contrato, compara, escribe a `output/` — CERO escritura a BD | ✅ |
+| `cargar-deptos-shadow.mjs` | **Reader-integrado, 1 pasada** (v2): `--prep` fetchea material ($0, NO escribe) → el LECTOR llena `veredicto` (READER_SPEC.md) → `--apply` escribe la fila CORRECTA de una + resuelve match name-first. Mata el baseline+patch. | ✅ v2 |
+| `lib/matcher.mjs` | **Matcher NAME-FIRST**: `matchearPorNombre(nombre,zona,gps)` → `buscar_proyecto_fuzzy` + corrobora zona; GPS solo desempata (nunca maneja). AUTO si score≥0.95+zona; ambiguo/sin-nombre → lector. | ✅ |
+| `READER_SPEC.md` | Spec único del veredicto (precio/TC/dorms/nombre_canónico/gate) — lo cumple el lector-agente hoy y el API mañana | ✅ |
+| `lib/reader-api.mjs` | Costura del lector por API (OpenRouter) — STUB marcado; `cargarSpec()` = READER_SPEC.md como system-prompt | 🔌 stub |
 | `actualizar-tc-binance.mjs` | Reemplaza el flujo n8n Binance (dry-run default) | ✅ validado dry-run (9.94 vs n8n 9.97) |
 | `sonda-sombra-deptos.mjs` / `moat-material.mjs` | Herramientas de validación previas | ✅ |
 | `CONTRATO_FEED.md` | Spec: columnas + `datos_json` que lee `buscar_unidades_simple` | ✅ |
@@ -68,11 +80,87 @@ Clon aislado para la corrida completa sin tocar prod (verificado post-apply):
 - **Dorms=0 = monoambiente** (correcto, el frontend lo muestra "Monoambiente").
 - **Área = discovery** (fallback texto si falta).
 
-## Pendientes / futuro
+## Primer lote en shadow (2026-07-03) ✅
 
-- **`cargar-deptos-shadow.mjs`** — escribe la versión del híbrido en `propiedades_v2_shadow` (id real de prod, setea zona/microzona, respeta CHECK/NOT NULL heredados). Arrancar con lote chico.
+`cargar-deptos-shadow.mjs` escribió **8 deptos** (4 C21 + 4 Remax, más recientes de Eq) a
+`propiedades_v2_shadow`. Verificado en BD: filas válidas (CHECK/NOT NULL OK), zona/microzona
+seteadas, `precio_normalizado_shadow()` corre, contacto/fotos/amenidades pobladas.
+
+**Reparto AUTOMÁTICO vs LECTOR (baseline escrito ≠ valor final):**
+- **Precio**: el pick estructurado corrige lo corrupto de n8n en el origen (3542 HH Once: n8n
+  $7.557 → híbrido $52.600; el texto dice "$us 52.600"). Divergencias >15% van al worklist.
+- **TC = SIEMPRE `no_especificado` en el baseline** (normaliza directo → NUNCA infla). paralelo/
+  oficial son SIEMPRE del lector desde el texto. Corregido un bug propio: usar
+  `clasificarTCporRatio` sobre el `exchange_rate_amount` de Remax (tasa GLOBAL 9.78) marcaba
+  falso-paralelo en TODO anuncio Remax → es el bug que infló 368 deptos. Ahora el ratio es solo
+  PISTA en el worklist (contraejemplo 3521: portal dice 9.8→paralelo, pero el texto dice "Oficial
+  a Bs 7" → gana oficial). Consecuencia: un no_especificado escrito de más subvalúa (seguro), nunca infla.
+- **Dorms**: `recamaras` de C21 devuelve **0 en deptos multi-dormitorio** (3540 74m² y 3539 117m²
+  con dorms=0; n8n tenía 1 y 2). El worklist marca `dorms=0 sospechoso` cuando área>45m² o n8n>0.
+  Hallazgo: la extracción de dorms del híbrido en C21 es más débil que n8n → carga de lector.
+- **Matching**: `id_proyecto_master`/`nombre_edificio` copiados de prod (paso separado, CONTRATO_FEED).
+
+### Reader pass del 1er lote ✅ (2026-07-03)
+Leí las 8 descripciones ($0) y apliqué veredictos a shadow (con razón por corrección). Nota: este
+1er lote usó 2 scripts transitorios (`leer-lote`/`aplicar-lectura`, ya BORRADOS) — su flujo quedó
+integrado en `cargar-deptos-shadow.mjs` v2 (`--prep`→lector→`--apply`). Resultado vs n8n:
+- **Híbrido+lector CORRIGE a n8n (3 errores reales + 1 de representación):**
+  - 3542 HH Once: n8n $7.557 corrupto → **$52.600** ($/m² $217→$1.510).
+  - 3541 Nano: n8n $71.839 marcado paralelo → normalizaba **$102.907** (doble-inflado); real $52.000 billete → $74.489 (sobrevaluaba ~38%).
+  - 3521 Stone III: n8n $55.000 + **sin match**; texto "$78.571 oficial a Bs 7" → **$78.571** ($1.950/m²) + **match pm 76** recuperado.
+  - 3540 Sky Moon: mismo valor de feed (~$229k) pero mejor representación (billete $160k+paralelo vs congelado) + dorms 0→1.
+- **Híbrido IGUALA a n8n donde n8n acierta (sin regresiones):** 3539, 3465, 3463, 2871 (el lector confirmó, no cambió a ciegas).
+- **Lección:** el baseline automático solo habría estado MAL en 5/8 (precio via `pickPrecioC21` + dorms `recamaras=0`). La etapa de LECTURA es donde está el valor, no opcional.
+
+### Feed shadow (render) — mig 269 APLICADA + LOOP CERRADO end-to-end ✅ (2026-07-03)
+`sql/migrations/269_shadow_feed_render.sql` (aplicada por el founder) clona `v_mercado_venta` →
+`v_mercado_venta_shadow` y `buscar_unidades_simple` → `buscar_unidades_simple_shadow`, apuntando a
+`propiedades_v2_shadow` + `precio_normalizado_shadow()`. **Comparación feed-shadow vs feed-real de
+los 8 (misma RPC/contrato que `/ventas`):**
+- 3542 HH Once: real $217/m² + 🚩tc_sospechoso → shadow **$1.510/m² sin badge** (corrige precio Y limpia el badge que n8n se auto-marcaba).
+- 3541 Nano: real $3.083/m² (sobrevaluado, doble-inflado) → shadow **$2.232/m²** (valor real).
+- 3521 Stone III: **NO aparece en real** (pm null) → **aparece en shadow $1.950/m² Stone 3** (match pm 76 recuperado; INNER JOIN lo deja entrar).
+- 3540 Sky Moon: mismo valor de feed (~$229k) mejor representación. 3539/3463/2871: **idénticos** (n8n acierta). 3465: no aparece en ninguno (sin nombre → falta matching).
+- **Cadena real por SQL (no proxy):** `propiedades_v2_shadow`→`precio_normalizado_shadow`→`v_mercado_venta_shadow`(medianas TC)→`buscar_unidades_simple_shadow`→misma salida que el frontend. `tc_sospechoso` funciona en shadow. **Cero regresiones.**
+
+### Cargador reader-integrado ✅ (2026-07-03) — matching desde el ORIGEN
+Refactor a 1 pasada (`--prep` → lector → `--apply`), sin baseline ni patch. **Matching name-first
+resuelto por el script** (`matcher.mjs`), no a mano: el lector entrega el nombre CANÓNICO (lee
+slug C21 / descripción Remax; "Stone III"→"Stone 3"), el script llama `buscar_proyecto_fuzzy` +
+corrobora zona → AUTO si score≥0.95+zona. **GPS secundario** (los anunciantes lo ponen mal; sin
+nombre → SIN_NOMBRE, nunca fuerza). El catálogo aprende vía `alias_sugerido` (registrado, NO escrito
+a prod en fase shadow). Probado end-to-end (3 deptos): 3521→auto pm 76 (Stone 3, nombre+zona),
+3540→auto pm 15 (Sky Moon), 3465 sin nombre→sin match (no aparece en feed, correcto). Rinde por
+`buscar_unidades_simple_shadow`. **API-ready**: `lib/reader-api.mjs` stub, mismo READER_SPEC.md como
+system-prompt (decisión founder: manual $0 ahora, API autónomo ~centavos/mes después).
+
+### Lote de 50 ✅ (2026-07-03) — reader-integrado a escala, 2 políticas afinadas
+`--prep 25` (50 deptos) → **5 subagentes-lectores** en paralelo (10 c/u, patrón `/audit-cola-matching`)
+→ `--apply`. **48 escritos, 2 rechazados** (3492 anticrético + 2731 multiproyecto, correctos).
+Matcher auto-resolvió ~40 por nombre; 8 pendientes (3 PM_NUEVO Pora/Piazza Once/Smart You Plaza, 3 typo/fuzzy, 2 ambiguos). **Feed shadow 38 vs real 42** (casi a la par): gana shadow 3 (Bamboo/Klug/Stone3, matches recuperados); el gap = 1 exclusión correcta (anticrético que n8n publica mal) + backlog de matching (typos + PM_NUEVO que el alias/audit cierra). **Cero regresiones.**
+
+**2 refinamientos que salieron del lote (ya en código/spec):**
+1. **Matcher zona-guard** (`matcher.mjs`): nombre ÚNICO exacto → auto-matchea AUNQUE la zona difiera (el nombre manda, GPS secundario/mal puesto). Recuperó 4 (Bamboo/Montebelluna/Sky Eclipse/Speranto). La zona solo desempata cuando hay VARIOS con el mismo nombre.
+2. **Fallback de precio estructurado** (`READER_SPEC.md` Regla 5b): precio del TEXTO primero (con su TC); si el texto no trae precio pero hay precio estructurado por-unidad coherente ($/m²) → aceptar `no_especificado` (no infla; badge = red). Retener SOLO si no hay precio en ninguna fuente. Recuperó 9 (5 Sky Level preventa + 4 Speranto/Eurodesign).
+
+### fecha_publicacion / días-en-mercado ✅ (2026-07-03)
+Días-en-mercado NO se guarda (deriva en vivo = HOY − `fecha_publicacion`). Lo que importa es
+proteger `fecha_publicacion` (la fecha REAL del anuncio), que en n8n se "pisaba" (el pipeline
+re-toca la fila → `fecha_discovery`=NOW cada noche). Fix del híbrido:
+- **Extractor** (`detalle-deptos.mjs`): Remax `date_of_listing` (verificado, coincide con prod);
+  C21 NO la trae en el detalle (`?json=true` solo tiene `fechaModificacion`/`fechaFirmaCPS`) → viene
+  de la DISCOVERY (`fecha_alta`); hoy fallback a prod (=discovery de n8n). **Al cutover: el discovery
+  del híbrido (`c21Listado`) debe cargar `fecha_alta`.**
+- **Protección LEAST** (`--apply`): `fecha_publicacion = LEAST(existente, nueva)` → la más antigua
+  gana, nunca se pisa hacia adelante (anti re-scrape Y anti-bump del broker → DOM más honesto que
+  el portal). Verificado: fecha corrompida a futuro vuelve a la real. El híbrido la CANDA.
+
+## Pendientes / futuro
+- **Más lotes** hasta dar confianza → decidir corte de n8n.
+- **Cutover C21 fecha**: `c21Listado` (discovery) debe cargar `fecha_alta` (hoy el detalle no la trae).
+- **Alias al cutover**: aplicar los `alias_sugerido` a `proyectos_master` cuando el híbrido escriba prod (hoy solo se registran).
+- **PM_NUEVO**: crear los pm de edificios nuevos detectados (Pora, Piazza Once, Smart You Plaza, Eurodesign Tower) — vía el flujo existente.
 - **`actualizar-tc-binance.mjs --shadow`** — flag para escribir `config_global_shadow` (el `--apply` ahí es seguro).
-- **Migración 269** — vistas/RPC shadow (`v_mercado_venta_shadow` + `buscar_unidades_simple_shadow`) para renderizar el feed shadow y compararlo con el real.
 - Cutover Binance real (flipear `--apply` a prod + apagar workflow n8n) — tras validar en shadow.
 - Script snapshot absorción.
 - Más lotes de carril paralelo → decidir corte de deptos.

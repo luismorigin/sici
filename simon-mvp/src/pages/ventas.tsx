@@ -133,7 +133,10 @@ async function fetchFromAPI(
   filtros: FiltrosVentaSimple,
   spotlightId?: number
 ): Promise<{ data: UnidadVenta[]; total: number; spotlight?: UnidadVenta | null }> {
-  const res = await fetch('/api/ventas', {
+  // Dark-launch: ?shadow=1 apunta al feed del entorno SHADOW (solo dev). Por defecto = prod.
+  const endpoint = (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1')
+    ? '/api/ventas-shadow' : '/api/ventas'
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ filtros, spotlightId }),

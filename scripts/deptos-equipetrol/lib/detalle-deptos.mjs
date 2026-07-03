@@ -45,6 +45,23 @@ export const telNorm = (t) => {
   return d.length >= 7 ? `+591${d}` : null;
 };
 const waDe = (tel) => (tel ? `https://wa.me/${tel.replace('+', '')}` : null);
+
+// Normaliza la fecha de publicación del anuncio a 'YYYY-MM-DD' (columna date).
+// Fuente: Remax `listing.date_of_listing` (SÍ está en el detalle). C21 NO la trae en el
+// detalle (`?json=true` solo `fechaModificacion`/`fechaFirmaCPS`) → viene de la DISCOVERY
+// (`fecha_alta`). Es la fecha REAL del anuncio (días-en-mercado); NUNCA la de scraping.
+// La protege el cargador con LEAST (la más antigua gana, nunca se pisa adelante).
+export const normFecha = (v) => {
+  if (v == null || v === '') return null;
+  if (typeof v === 'number' || /^\d+$/.test(String(v))) {
+    let n = Number(v); if (n < 1e12) n *= 1000;           // epoch en segundos → ms
+    const d = new Date(n); return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;      // ISO
+  m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);  if (m) return `${m[3]}-${m[2]}-${m[1]}`;        // dd/mm/yyyy (BO)
+  const d = new Date(s); return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+};
 const decodeEnt = (s) => s.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#039;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 
 // ---------------------------------------------------------------------------
@@ -85,6 +102,8 @@ export async function fetchC21Depto(url) {
     agente_nombre: nombre, agente_telefono: tel, url_whatsapp: waDe(tel),
     oficina_nombre: e.nombreOfna || e.oficina?.nombre || null,
     contacto_visible: e.mostrarTelCelularEnInternet !== false,
+    // fecha REAL del anuncio (días-en-mercado); NO la de scraping
+    fecha_publicacion: normFecha(e.fechaAlta ?? e.fecha_alta ?? e.fechaPublicacion ?? e.created_at),
     // multimedia + texto
     fotos_urls: fotosUrls, cantidad_fotos: fotosUrls.length,
     descripcion: e.descripcion || j.descripcionMeta || '',
@@ -134,6 +153,8 @@ export async function fetchRemaxDepto(url) {
     agente_telefono: tel, url_whatsapp: waDe(tel),
     oficina_nombre: a.office?.name || null,
     contacto_visible: true,
+    // fecha REAL del anuncio (días-en-mercado); NO la de scraping
+    fecha_publicacion: normFecha(l.date_of_listing ?? li.date_of_listing ?? l.published_at ?? l.created_at),
     fotos_urls: fotosUrls, cantidad_fotos: fotosUrls.length,
     descripcion: (l.description_website || l.marketing_description || '').trim(),
     area_const_m2: num(li.construction_area_m) || num(li.land_m2), // suele venir null en detalle -> discovery lo cubre
