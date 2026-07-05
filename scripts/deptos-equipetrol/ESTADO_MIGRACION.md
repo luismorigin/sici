@@ -27,6 +27,54 @@ downside**, a escala de delta real (~8/día).
   `feedback_sql_jsonb_nunca_literal_largo`.
 - **Inventario shadow tras el lote**: 392 deptos, 379 con match (**96,7%**).
 
+## Comparación integral shadow-vs-prod (2026-07-05) — condiciona el cutover
+
+392 deptos venta Eq (paridad total prod=shadow). Diffs fila-a-fila: precio >2% en 47 (>15% en 23),
+TC en 137, dorms en 10, pm en 18. **El híbrido está direccionalmente mejor (mata Firecrawl, corrige
+bug TC estructural, mejor matching) pero NO listo para corte ciego** — reveló 2 frenos:
+
+- **🚨 Freno 1 — el cargador PISA CANDADOS legítimos.** Los 105 `paralelo→no_especificado` NO son
+  corrección: tienen `tipo_cambio_detectado` candado en formato-objeto (`campo_esta_bloqueado()`=true
+  en 105/105; 104 por `audit_tc_element` 15-jun, 1 por `criterio_mercado_equipetrol`). El cargador
+  shadow NO hereda `campos_bloqueados` de prod → viola Regla 1 (Manual>Auto) → subvalúa 104 deptos.
+  El "feed −12%" (mediana $/m² real $2.219→shadow $1.962) es eso, no des-inflar un bug.
+- **⚠️ Freno 2 — el híbrido tiene sus propios errores de lectura.** Corrige corruptos de n8n (3542
+  $7.557→$52.600) PERO 182/184 quedaron a ~$1.019/m² (mitad de prod) = sub-lectura a auditar.
+- **Matching (18 difieren): neto positivo** — recupera 3 (Stone3/Baruc IV/Bamboo), mejora
+  especificidad ~7 (Uptown/Sky Luxury/Luxe Tower vs pm genérico), pierde 5 por no leer nombre
+  (595/Portobello×2/Murure/Equipetrol Day = backlog).
+
+### Candados — decisión de diseño (founder, confirmada con datos)
+- **La capacidad de candar YA EXISTE y no se toca**: panel `/admin/propiedades/[id]`
+  (`LockPanel`/`toggleBloqueo`), formato-objeto correcto, **auto-canda el TC al editarlo a mano**
+  (`usePropertyEditor.ts:848`). Eso explica el 86% de TC candado (338/392) — no fue un audit masivo,
+  es el auto-candado por edición manual. En cutover el híbrido escribe la misma `propiedades_v2` →
+  el admin de candados sigue idéntico.
+- **Tesis founder (probada)**: el 85% de candados existía porque n8n metía datos malos y el auditor
+  corregía+candaba en reversa; el híbrido lee bien de origen → menos candados. **De 338 TC candados,
+  el híbrido leyendo SOLO coincide en 207 (61%)** = parche-sobre-n8n innecesario; **105 (31%) =
+  conocimiento puro** (paralelo sin señal en el anuncio, SIEMPRE hará falta); 26 (8%) a revisar.
+- **Diseño del fix** (founder cuestionó bien acoplar el híbrido a "jalar de propiedades_v2"): el
+  comportamiento correcto = respetar los candados de la FILA QUE ACTUALIZA en su tabla destino (en
+  prod = `propiedades_v2`, ya los tiene; en shadow, tabla nueva con 0 candados → SEMBRARLOS una vez
+  copiando de prod). Mismo código en shadow y cutover, sin muleta. El candado es por-campo y
+  reversible (no rompe el pipeline).
+
+### Dedup de catálogo aplicado (2026-07-05, prod)
+Duplicados PREEXISTENTES de n8n que el híbrido destapó (al leer el nombre específico). Consolidados
+con candado `id_proyecto_master` + alias movidos + pm viejo `activo=false`: **Element (303→74),
+Le Blanc (20→112), Atlantis (484→411)** + **revertido el duplicado propio Pora (depto shadow 522→85,
+alias 'Pora'/'PÖRA' a pm85, DELETE pm522)**. Método: nombre-base igual (sin prefijos) + GPS <10m.
+OJO series numeradas (Stone 2-7, Macororó 5-19, Portofino/Baruc/Brickell/Barak) = edificios REALES,
+NO tocar. A verificar (nombre idéntico GPS lejano = un GPS mal): Klug 44/61, Baruc Norte 409/500,
+Domus Luxury 73/356 (prob. distintos).
+
+### Pendientes tras esta sesión (bloquean cutover, en orden)
+1. **Fix candados del cargador** (lo más grande): sembrar `campos_bloqueados` prod→shadow (344/392
+   filas con candado en prod, 0 en shadow) + `--apply` preserva y respeta candados.
+2. Auditar precios sub-leídos del híbrido (182/184).
+3. Decisión de producto del default TC (ligada al #1).
+
 ## Estado al 3-jul-2026 (cierre de sesión)
 - **INVENTARIO COMPLETO: 384 deptos en shadow, 96,9% match** (universo prod = 402; los 18 que faltan = basura rechazada [multiproyecto/baulera/parqueo/anticrético] + ~8 remanente). Sin-match: 1 ambiguo (595 "Bloque La Salle", revisar) + 11 SIN_NOMBRE legítimos. Catálogo limpiado (aliases + dedup + fix fuzzy mig 270 + bug de selección source-agnostic).
 
