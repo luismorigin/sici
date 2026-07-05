@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -433,10 +433,12 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }
 
 // ===== Desktop VentaCard =====
-function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
+// memo + handlers estables (referencian la prop, no closures del padre): al
+// favoritar/filtrar solo re-renderizan las cards cuyos datos cambiaron.
+const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
   property: UnidadVenta; isFavorite: boolean; isFirst?: boolean
-  onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
-  brokerMode?: boolean; onAddToShortlist?: () => void; publicShareMode?: boolean
+  onToggleFavorite: (id: number) => void; onShare: (p: UnidadVenta) => void; onPhotoTap: (p: UnidadVenta, idx: number) => void; onDetails: (p: UnidadVenta) => void
+  brokerMode?: boolean; onAddToShortlist?: (p: UnidadVenta) => void; publicShareMode?: boolean
   // contacto_directo (B2C, migración 256): en publicShare del bot, el CTA va al
   // captador (rama feed) en vez del broker dueño. Default false = B2B intacto.
   contactoDirecto?: boolean
@@ -452,7 +454,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
   // Reporte de datos broker (migración 240). onReport abre modal; isReported
   // marca visualmente (estado local de sesión, no persistido). Solo activos
   // cuando brokerMode && !publicShareMode.
-  onReport?: () => void
+  onReport?: (p: UnidadVenta) => void
   isReported?: boolean
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -520,7 +522,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
     <div className={`vc ${isDestacada ? 'vc-destacada' : ''}`} ref={cardRef}>
       {isDestacada && <div className="vc-destacada-chip">⭐ Recomendada por tu broker</div>}
       <div className="vc-photo" style={!useCarousel && hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')`, cursor: 'pointer' } : undefined}
-        onClick={!useCarousel ? () => { if (hasPhotos) onPhotoTap(photoIdx) } : undefined}>
+        onClick={!useCarousel ? () => { if (hasPhotos) onPhotoTap(p, photoIdx) } : undefined}>
         {useCarousel && (
           <div className="vc-photo-scroll" ref={scrollRef}>
             {hasPhotos ? photos.map((url, i) => {
@@ -528,7 +530,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
               return (
                 <div key={i} className="vc-slide"
                   style={shouldLoad ? { backgroundImage: `url('${url}')` } : undefined}
-                  onClick={() => onPhotoTap(i)} />
+                  onClick={() => onPhotoTap(p, i)} />
               )
             }) : (
               <div className="vc-slide vc-slide-empty"><div className="vc-nofoto">Sin fotos</div></div>
@@ -570,14 +572,14 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
             <div className="vc-comentario-quote">&ldquo;</div>
             <div className="vc-comentario-text">{brokerComment}</div>
             {brokerComment.length > 50 && (
-              <button type="button" className="vc-comentario-more" onClick={onDetails}>
+              <button type="button" className="vc-comentario-more" onClick={() => onDetails(p)}>
                 Leer comentario completo →
               </button>
             )}
           </div>
         )}
         <div className="vc-actions">
-          <button className={`vc-act-btn vc-act-fav ${brokerMode ? 'vc-act-star' : ''} ${isFavorite ? 'active' : ''}`} aria-label={brokerMode ? (isFavorite ? 'Quitar de shortlist' : 'Agregar a shortlist') : 'Favorito'} onClick={onToggleFavorite}>
+          <button className={`vc-act-btn vc-act-fav ${brokerMode ? 'vc-act-star' : ''} ${isFavorite ? 'active' : ''}`} aria-label={brokerMode ? (isFavorite ? 'Quitar de shortlist' : 'Agregar a shortlist') : 'Favorito'} onClick={() => onToggleFavorite(p.id)}>
             {brokerMode ? (
               <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
@@ -589,7 +591,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
             )}
           </button>
           {!brokerMode && (
-            <button className="vc-act-btn" aria-label="Compartir" onClick={onShare}>
+            <button className="vc-act-btn" aria-label="Compartir" onClick={() => onShare(p)}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
               </svg> Compartir
@@ -600,7 +602,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
               className={`vc-act-btn vc-act-report ${isReported ? 'reported' : ''}`}
               aria-label={isReported ? 'Reportada' : 'Reportar dato incorrecto'}
               title={isReported ? 'Ya reportada — SICI revisando' : 'Reportar dato incorrecto'}
-              onClick={onReport}
+              onClick={() => onReport(p)}
             >
               {isReported ? (
                 <>
@@ -621,7 +623,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
               )}
             </button>
           )}
-          <button className="vc-act-btn vc-act-detail" aria-label="Ver detalles" onClick={onDetails}>
+          <button className="vc-act-btn vc-act-detail" aria-label="Ver detalles" onClick={() => onDetails(p)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
@@ -650,13 +652,14 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
       </div>
     </div>
   )
-}
+})
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
-function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
+// memo + handlers estables — mismo patrón que VentaCard desktop.
+const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
   property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
-  onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
-  brokerMode?: boolean; onAddToShortlist?: () => void; publicShareMode?: boolean
+  onToggleFavorite: (id: number) => void; onShare: (p: UnidadVenta) => void; onPhotoTap: (p: UnidadVenta, idx: number) => void; onDetails: (p: UnidadVenta) => void
+  brokerMode?: boolean; onAddToShortlist?: (p: UnidadVenta) => void; publicShareMode?: boolean
   // contacto_directo (B2C, migración 256): ver VentaCard. Default false = B2B intacto.
   contactoDirecto?: boolean
   brokerInfo?: { nombre: string; inmobiliaria?: string | null } | null
@@ -664,7 +667,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
   priceSnapshot?: { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null } | null
   brokerComment?: string | null
   isDestacada?: boolean
-  onReport?: () => void
+  onReport?: (p: UnidadVenta) => void
   isReported?: boolean
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -716,7 +719,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
             const shouldLoad = i < maxLoaded
             return (
             <div key={i} className="mc-slide" style={shouldLoad && url ? { backgroundImage: `url('${url}')`, cursor: 'pointer' } : { cursor: 'pointer' }}
-              onClick={() => onPhotoTap(i)}>
+              onClick={() => onPhotoTap(p, i)}>
             </div>
             )
           }) : (
@@ -771,14 +774,14 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
             <div className="mc-comentario-quote">&ldquo;</div>
             <div className="mc-comentario-text">{brokerComment}</div>
             {brokerComment.length > 50 && (
-              <button type="button" className="mc-comentario-more" onClick={onDetails}>
+              <button type="button" className="mc-comentario-more" onClick={() => onDetails(p)}>
                 Leer comentario completo →
               </button>
             )}
           </div>
         )}
         <div className="mc-actions">
-          <button className={`mc-btn mc-fav ${brokerMode ? 'mc-star' : ''} ${isFavorite ? 'active' : ''}`} aria-label={brokerMode ? (isFavorite ? 'Quitar de shortlist' : 'Agregar a shortlist') : 'Favorito'} onClick={onToggleFavorite}>
+          <button className={`mc-btn mc-fav ${brokerMode ? 'mc-star' : ''} ${isFavorite ? 'active' : ''}`} aria-label={brokerMode ? (isFavorite ? 'Quitar de shortlist' : 'Agregar a shortlist') : 'Favorito'} onClick={() => onToggleFavorite(p.id)}>
             {brokerMode ? (
               <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
@@ -790,7 +793,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
             )}
           </button>
           {!brokerMode && (
-            <button className="mc-btn mc-share" aria-label="Compartir" onClick={onShare}>
+            <button className="mc-btn mc-share" aria-label="Compartir" onClick={() => onShare(p)}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
               </svg>
@@ -800,7 +803,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
             <button
               className={`mc-btn mc-report ${isReported ? 'reported' : ''}`}
               aria-label={isReported ? 'Reportada' : 'Reportar dato incorrecto'}
-              onClick={onReport}
+              onClick={() => onReport(p)}
             >
               {isReported ? (
                 <>
@@ -821,7 +824,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
               )}
             </button>
           )}
-          <button className="mc-btn mc-info" onClick={onDetails}>
+          <button className="mc-btn mc-info" onClick={() => onDetails(p)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
@@ -849,7 +852,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
       </div>
     </div>
   )
-}
+})
 
 // ===== Mobile Filter Card (full-screen, snaps in feed) =====
 function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames }: {
@@ -1999,6 +2002,19 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       }
     }
   }
+  // Handlers estables para las cards memoizadas (patrón useLatest): la identidad
+  // de estas funciones nunca cambia entre renders (así React.memo de las cards
+  // sigue siendo válido), pero siempre ejecutan la versión más reciente de la
+  // lógica vía ref — sin closures viejos sobre favorites/properties.
+  const latestHandlersRef = useRef({ toggleFavorite, shareProperty, openSheet, addToShortlist, openReportModal })
+  latestHandlersRef.current = { toggleFavorite, shareProperty, openSheet, addToShortlist, openReportModal }
+  const onCardToggleFavorite = useCallback((id: number) => latestHandlersRef.current.toggleFavorite(id), [])
+  const onCardShare = useCallback((p: UnidadVenta) => latestHandlersRef.current.shareProperty(p), [])
+  const onCardOpenSheet = useCallback((p: UnidadVenta) => latestHandlersRef.current.openSheet(p), [])
+  const onCardPhotoTap = useCallback((p: UnidadVenta, _idx: number) => latestHandlersRef.current.openSheet(p), [])
+  const onCardAddToShortlist = useCallback((p: UnidadVenta) => latestHandlersRef.current.addToShortlist(p), [])
+  const onCardReport = useCallback((p: UnidadVenta) => latestHandlersRef.current.openReportModal(p), [])
+
   // Lista que se muestra: aplica filtro de fuentes (broker) + área m² (broker) + "solo seleccionadas".
   // Cuando brokerMode = false, no se aplica nada (paridad con feed público).
   const displayedProperties = useMemo(() => {
@@ -2217,8 +2233,20 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     } finally { if (gen === fetchGenRef.current) setLoading(false) }
   }, [filters])
 
-  // Only fetch on mount if no SSG data (fallback) or if spotlight needs fetching
-  useEffect(() => { if (publicShareMode) return; if (initialProperties.length === 0 || spotlightId) fetchProperties() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Fetch on mount:
+  // - sin SSG data o con spotlight → fetch inmediato (fallback original)
+  // - con SSG data (payload reducido a ~24 props sin descripción) → fetch del
+  //   listado completo diferido a idle: el HTML inicial pesa poco y el resto
+  //   llega apenas el navegador respira. Guard fetchGenRef === 0: si el user
+  //   ya filtró (disparó su propio fetch), el diferido no lo pisa.
+  useEffect(() => {
+    if (publicShareMode) return
+    if (initialProperties.length === 0 || spotlightId) { fetchProperties(); return }
+    const idle = typeof window.requestIdleCallback === 'function'
+      ? (cb: () => void) => window.requestIdleCallback(cb, { timeout: 3000 })
+      : (cb: () => void) => window.setTimeout(cb, 1500)
+    idle(() => { if (fetchGenRef.current === 0) fetchProperties() })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function applyFilters(newFilters: FiltrosVentaSimple) {
     setFilters(newFilters); setIsFiltered(true)
@@ -2640,12 +2668,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   <button className="ds-spotlight-close" aria-label="Cerrar destacado" onClick={() => setSpotlightId(null)}>&times;</button>
                 </div>
                 <VentaCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
-                  onToggleFavorite={() => toggleFavorite(spotlightProperty.id)} onShare={() => shareProperty(spotlightProperty)}
-                  onPhotoTap={() => openSheet(spotlightProperty)} onDetails={() => openSheet(spotlightProperty)}
-                  brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(spotlightProperty)} publicShareMode={publicShareMode} contactoDirecto={contactoDirecto} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[spotlightProperty.id] : null}
+                  onToggleFavorite={onCardToggleFavorite} onShare={onCardShare}
+                  onPhotoTap={onCardPhotoTap} onDetails={onCardOpenSheet}
+                  brokerMode={brokerMode} onAddToShortlist={onCardAddToShortlist} publicShareMode={publicShareMode} contactoDirecto={contactoDirecto} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[spotlightProperty.id] : null}
                   brokerComment={itemCommentsMap ? itemCommentsMap[spotlightProperty.id] : null}
                   isDestacada={itemsDestacadaMap ? itemsDestacadaMap[spotlightProperty.id] === true : false}
-                  onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(spotlightProperty) : undefined}
+                  onReport={brokerMode && !publicShareMode && brokerSlug ? onCardReport : undefined}
                   isReported={reportedIds.has(spotlightProperty.id)} />
                 <div className="ds-spotlight-sep">
                   <span className="ds-spotlight-line" /><span className="ds-spotlight-text">Explorar más departamentos</span><span className="ds-spotlight-line" />
@@ -2656,12 +2684,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
               <div className="ventas-grid">
                 {(spotlightProperty ? displayedProperties.filter(p => p.id !== spotlightId) : displayedProperties).map((p, idx) => (
                   <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)} isFirst={idx === 0}
-                    onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
-                    onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
-                    brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} contactoDirecto={contactoDirecto} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
+                    onToggleFavorite={onCardToggleFavorite} onShare={onCardShare}
+                    onPhotoTap={onCardPhotoTap} onDetails={onCardOpenSheet}
+                    brokerMode={brokerMode} onAddToShortlist={onCardAddToShortlist} publicShareMode={publicShareMode} contactoDirecto={contactoDirecto} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
                     brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
                     isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false}
-                    onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(p) : undefined}
+                    onReport={brokerMode && !publicShareMode && brokerSlug ? onCardReport : undefined}
                     isReported={reportedIds.has(p.id)} />
                 ))}
               </div>
@@ -2759,12 +2787,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
               const p = item.data
               return <MobileVentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
                 isSpotlight={item.isSpotlight} isFirst={idx === 0}
-                onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
-                onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
-                brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} contactoDirecto={contactoDirecto} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
+                onToggleFavorite={onCardToggleFavorite} onShare={onCardShare}
+                onPhotoTap={onCardPhotoTap} onDetails={onCardOpenSheet}
+                brokerMode={brokerMode} onAddToShortlist={onCardAddToShortlist} publicShareMode={publicShareMode} contactoDirecto={contactoDirecto} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
                 brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
                 isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false}
-                onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(p) : undefined}
+                onReport={brokerMode && !publicShareMode && brokerSlug ? onCardReport : undefined}
                 isReported={reportedIds.has(p.id)} />
             })}
           </div>
@@ -3439,9 +3467,11 @@ function VentasHead({ seo, brokerSlug = null, publicShareHash = null }: {
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content="https://simonbo.com/skyline-equipetrol.jpg" />
 
+      {/* Escape de "<": JSON.stringify NO escapa "</script>" — si un dato de
+          BD lo contuviera, rompería el parser HTML (XSS). < es JSON válido. */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaGraph) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaGraph).replace(/</g, '\\u003c') }}
       />
     </Head>
   )
@@ -3456,8 +3486,11 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
   let initialProperties: UnidadVenta[] = []
   try {
     if (!supabase) throw new Error('Supabase not configured')
+    // Payload SSG mínimo: solo el primer viewport. El listado completo lo trae
+    // el cliente con el fetch diferido a idle (ver useEffect de mount). Con 500
+    // props completas el __NEXT_DATA__ pesaba ~800KB y hundía LCP/TTI mobile.
     const { data: rows } = await supabase.rpc('buscar_unidades_simple', {
-      p_filtros: { limite: 500, solo_con_fotos: true, orden: 'recientes', zonas_permitidas: ZONAS_EQUIPETROL_DB }
+      p_filtros: { limite: 24, solo_con_fotos: true, orden: 'recientes', zonas_permitidas: ZONAS_EQUIPETROL_DB }
     })
     if (rows) {
       initialProperties = rows.map((p: any) => ({
@@ -3485,7 +3518,9 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
         amenities_confirmados: p.amenities_confirmados || [],
         amenities_por_verificar: p.amenities_por_verificar || [],
         equipamiento_detectado: p.equipamiento_detectado || [],
-        descripcion: p.descripcion || null,
+        // descripcion NO viaja en el payload SSG (~1KB/prop): llega con el
+        // fetch completo diferido antes de que el user abra un detalle.
+        descripcion: null,
         latitud: p.latitud ? parseFloat(String(p.latitud)) : null,
         longitud: p.longitud ? parseFloat(String(p.longitud)) : null,
         estacionamientos: p.estacionamientos ?? null,

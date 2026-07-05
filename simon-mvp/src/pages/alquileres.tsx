@@ -404,6 +404,15 @@ export default function AlquileresPage({
   const activeCardIdxRef = useRef(0)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sheetProperty, setSheetProperty] = useState<UnidadAlquiler | null>(null)
+  // Al cerrar el sheet, limpiar la property tras la animación (~350ms): el
+  // BottomSheet hace `if (!property) return null`, así que esto desmonta su
+  // árbol completo (galería, similares, mapa) en vez de dejarlo vivo oculto
+  // re-renderizándose con cada cambio de estado del feed.
+  useEffect(() => {
+    if (sheetOpen || !sheetProperty) return
+    const t = setTimeout(() => setSheetProperty(null), 400)
+    return () => clearTimeout(t)
+  }, [sheetOpen, sheetProperty])
   const [gateCompleted, setGateCompleted] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
@@ -823,7 +832,10 @@ export default function AlquileresPage({
     trackEvent('open_compare', { property_ids: Array.from(favorites).join(','), count: favorites.size })
   }
 
-  const displayedProperties = useMemo(() => {
+  // Filtros base (fuentes/área/precio) — SIN favorites en deps: favoritar una
+  // card no recalcula este memo, así displayedProperties conserva la MISMA
+  // referencia en feed público y las cards memoizadas no se re-renderizan.
+  const filteredProperties = useMemo(() => {
     let list: UnidadAlquiler[] = properties
     if (brokerMode && fuentesPermitidas.size < FUENTES_BROKER.length) {
       list = list.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
@@ -838,29 +850,16 @@ export default function AlquileresPage({
     if (precioMinFiltroActivo) {
       list = list.filter(p => (p.precio_mensual_bob || 0) >= precioMinAlq)
     }
-    if (brokerMode && onlySelectedFilter) {
-      list = list.filter(p => favorites.has(p.id))
-    }
     return list
-  }, [brokerMode, onlySelectedFilter, properties, favorites, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax, precioMinFiltroActivo, precioMinAlq])
-  const visibleNotMarked = useMemo(() => {
-    if (!brokerMode) return []
-    let list: UnidadAlquiler[] = properties
-    if (fuentesPermitidas.size < FUENTES_BROKER.length) {
-      list = list.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
-    }
-    if (areaFiltroActivo) {
-      list = list.filter(p => {
-        const a = p.area_m2
-        if (!a || a <= 0) return false
-        return a >= areaMin && a <= areaMax
-      })
-    }
-    if (precioMinFiltroActivo) {
-      list = list.filter(p => (p.precio_mensual_bob || 0) >= precioMinAlq)
-    }
-    return list.filter(p => !favorites.has(p.id))
-  }, [brokerMode, properties, favorites, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax, precioMinFiltroActivo, precioMinAlq])
+  }, [brokerMode, properties, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax, precioMinFiltroActivo, precioMinAlq])
+  const displayedProperties = useMemo(() => (
+    brokerMode && onlySelectedFilter
+      ? filteredProperties.filter(p => favorites.has(p.id))
+      : filteredProperties
+  ), [filteredProperties, brokerMode, onlySelectedFilter, favorites])
+  const visibleNotMarked = useMemo(() => (
+    brokerMode ? filteredProperties.filter(p => !favorites.has(p.id)) : []
+  ), [brokerMode, filteredProperties, favorites])
   function markAllVisible() {
     if (visibleNotMarked.length === 0) return
     trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug, tipo_operacion: 'alquiler' })
@@ -3231,6 +3230,7 @@ function BottomSheet({
   const touchStartY = useRef(0)
   const touchDeltaY = useRef(0)
   const isDragging = useRef(false)
+  const dragRafId = useRef<number | null>(null)
 
   function handleTouchStart(e: React.TouchEvent) {
     const el = sheetRef.current
@@ -3248,13 +3248,22 @@ function BottomSheet({
     const delta = e.touches[0].clientY - touchStartY.current
     if (delta < 0) { touchDeltaY.current = 0; sheetRef.current.style.transform = ''; return }
     touchDeltaY.current = delta
-    sheetRef.current.style.transform = `translateY(${delta * 0.6}px)`
-    sheetRef.current.style.transition = 'none'
+    // Batch por frame: touchmove dispara mucho más seguido que el repaint —
+    // escribir style en cada evento causa jank durante el drag.
+    if (dragRafId.current === null) {
+      dragRafId.current = requestAnimationFrame(() => {
+        dragRafId.current = null
+        if (!isDragging.current || !sheetRef.current) return
+        sheetRef.current.style.transform = `translateY(${touchDeltaY.current * 0.6}px)`
+        sheetRef.current.style.transition = 'none'
+      })
+    }
   }
 
   function handleTouchEnd() {
     if (!isDragging.current || !sheetRef.current) return
     isDragging.current = false
+    if (dragRafId.current !== null) { cancelAnimationFrame(dragRafId.current); dragRafId.current = null }
     sheetRef.current.style.transition = ''
     if (touchDeltaY.current > 120) {
       sheetRef.current.style.transform = ''
@@ -3824,7 +3833,7 @@ function AlquileresHead({ seo, brokerSlug = null, publicShareHash = null }: {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaGraph) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaGraph).replace(/</g, '\\u003c') }}
       />
     </Head>
   )

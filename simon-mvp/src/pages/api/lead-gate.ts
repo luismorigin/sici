@@ -5,7 +5,10 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// service_role primero (server-side only): permite cerrar el INSERT anon de
+// leads_gate en Supabase sin romper esta ruta. Fallback anon = compat mientras
+// la policy siga abierta (ver docs/canonical/SEGURIDAD_SUPABASE.md).
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -21,11 +24,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Origen inválido' })
     }
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseKey) {
       return res.status(500).json({ error: 'Supabase no configurado' })
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const supabase = createClient(supabaseUrl, supabaseKey)
     const { error } = await supabase.from('leads_gate').insert({
       nombre: String(nombre).slice(0, 200),
       telefono: String(telefono).slice(0, 50),
