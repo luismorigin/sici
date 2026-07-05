@@ -1,8 +1,31 @@
 # Migración deptos Equipetrol al híbrido — ESTADO y mapa de estrangulamiento
 
-> Actualizado: 2026-07-03. Contexto: Bloque 3 del plan strangler (ver
+> Actualizado: 2026-07-05. Contexto: Bloque 3 del plan strangler (ver
 > `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md`). Memoria: `project_deptos_equipetrol_al_hibrido`.
 > Contrato técnico: `CONTRATO_FEED.md` · Reglas del lector: `READER_SPEC.md`.
+
+## 1ª corrida E2E post-handoff (2026-07-05)
+
+Prueba en vivo "que corre": `--prep 50` detectó **8 diferenciales** (delta correcto — el cargador
+excluye los 384 ya en shadow) → lectura del MOAT → `--apply` a shadow (8 escritos) → comparación
+shadow-vs-prod por SQL. **Confirma el patrón: iguala donde n8n acierta, corrige donde falla, cero
+downside**, a escala de delta real (~8/día).
+
+- **Binance**: corre (dry-run 9.97 = valor guardado; mercado plano). `--shadow` **sigue sin construir**
+  → no se puede refrescar el TC shadow aislado (pendiente #1 de satélites).
+- **Balance de los 8**: 4 idénticos (172 Onix Art, 1005 Sky Eclipse, 1103 Los Claveles, 1411 Speranto)
+  + 2 correcciones reales + 1 SIN_NOMBRE legítimo (1103, el aviso solo da la calle "Los Claveles").
+- **🐛 Corrección 1 (matching, aplicada a PROD)**: "Domus Onix" ≠ "Onix Art By Elite" (pm45). 3 deptos
+  preventa (3550/3551/3552, Sirari) que n8n metió en pm45 con `metodo_match='nombre_exacto'` pero a
+  **~275m** del Onix Art real (token "Onix" fuzzy). GPS verificado por el founder → **creado pm523
+  "Domus Onix"** (Sirari, `gps_verificado_visual`) → el matcher name-first los auto-asigna solo →
+  **prod corregido** (`UPDATE ... 45→523 + candado formato-objeto`, `metodo_match='correccion_domus_onix_5jul'`).
+- **🐛 Corrección 2 (TC, solo shadow)**: 893 Nano Smart — n8n marcó `paralelo` por el `exchange_rate`
+  9.83 GLOBAL de Remax (bug de los 368) → lector → `no_especificado` → feed **$3.162→$2.207/m²** (−30%).
+- **⚠️ Lección reforzada** (reincidió 3×): SQL con jsonb (candados) → **`jsonb_build_object()`**, nunca
+  literal `'{...}'::jsonb` largo (se parte al copiar → CR/`0x0d` → `ERROR 22P02`). Ver memoria
+  `feedback_sql_jsonb_nunca_literal_largo`.
+- **Inventario shadow tras el lote**: 392 deptos, 379 con match (**96,7%**).
 
 ## Estado al 3-jul-2026 (cierre de sesión)
 - **INVENTARIO COMPLETO: 384 deptos en shadow, 96,9% match** (universo prod = 402; los 18 que faltan = basura rechazada [multiproyecto/baulera/parqueo/anticrético] + ~8 remanente). Sin-match: 1 ambiguo (595 "Bloque La Salle", revisar) + 11 SIN_NOMBRE legítimos. Catálogo limpiado (aliases + dedup + fix fuzzy mig 270 + bug de selección source-agnostic).
