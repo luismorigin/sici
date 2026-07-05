@@ -6,6 +6,8 @@ Lecciones aprendidas optimizando Core Web Vitals. Referencia para futuros cambio
 
 > ⚠️ **Nota 24 abr 2026:** Los 3 learnings siguientes (preload `/_next/image`, `useRealImg` primera foto, `sizes` en next/image de feeds) fueron **revertidos en prod** por agotamiento del límite Vercel Image Optimization (5k/mes Hobby). Ver `docs/backlog/IMAGE_OPTIMIZATION_VERCEL.md` y commits `c8a0f17` + `c14f764`. Los feeds (`/ventas`, `/alquileres`) ahora usan URL directa del CDN con `<link rel="preconnect">` en `_document.tsx` como mitigación. **No re-introducir `/_next/image` en feeds sin revisar el estado del límite Vercel.**
 
+> **Actualización 5 jul 2026 (commit `8f945b9`):** la vía de optimización de feeds pasó por el lado del JS, no de las imágenes: `getStaticProps` de `/ventas` baja 24 props sin descripción (antes 500 completas, `__NEXT_DATA__` ~800KB→63KB) con fetch completo diferido a `requestIdleCallback`; `VentaCard`/`MobileVentaCard` con `React.memo` + handlers estables vía ref (patrón useLatest — la identidad del handler no cambia, ejecuta la lógica fresca); en `/alquileres` el `useMemo` de filtros quedó sin `favorites` en deps (favoritar conserva la referencia del array) y el BottomSheet desmonta su árbol al cerrar. Complementario a la estrategia de URL directa — no toca el optimizador de Vercel.
+
 ### Preload debe coincidir con la URL final (3 abr 2026)
 
 **Problema:** `<link rel="preload" href="https://cdn.21online.lat/foto.jpg">` preloadeaba la imagen raw, pero Next.js Image pedía `/_next/image?url=...&w=640&q=75`. Doble descarga.

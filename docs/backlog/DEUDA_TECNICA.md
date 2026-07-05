@@ -178,7 +178,7 @@ El LLM ya está cableado para usarlo: `Build Prompt v4.0` (flujo_enrichment_llm_
 | # | Ítem | Dónde | Severidad | Cuándo resolver |
 |---|---|---|---|---|
 | 1 | `plan_pagos_cuotas: unknown \| null` en `RawUnidadSimpleRow` y `UnidadVenta` — debería ser `Record<string, unknown>[] \| null` | `types/db-responses.ts`, `lib/supabase.ts` | Baja | Cuando se use en UI |
-| 2 | `LIMIT 500` en `buscar_unidades_simple()` — si el catálogo supera 500 props activas, corta sin aviso | `sql/functions/query_layer/buscar_unidades_simple.sql` | Media | Cuando ventas pase ~400 props |
+| 2 | `LIMIT 500` en `buscar_unidades_simple()` — si el catálogo supera 500 props activas, corta sin aviso. Nota 5-jul-2026 (`8f945b9`): el SSG de `/ventas` ahora baja solo 24, pero el fetch completo del cliente (`/api/ventas`) sigue pidiendo hasta 500 → la deuda sigue viva | `sql/functions/query_layer/buscar_unidades_simple.sql` | Media | Cuando ventas pase ~400 props |
 | 3 | Spotlight en `api/ventas.ts` hace query completa (`limite: 500`) para buscar un solo ID — ineficiente | `pages/api/ventas.ts` | Baja | Bloque 5 (compartir/spotlight) |
 | 4 | `CardPlaceholder` ya tiene foto, precio, specs y badges funcionales — en Bloque 3 iterar sobre esta base, no reescribir desde cero | `pages/ventas.tsx` | Info | Bloque 3 |
 | 5 | `fotos_count` badge se renderiza fuera de la imagen + `object-fit` no adapta bien fotos de distintos portales (collages, watermarks, aspect ratios verticales) | `pages/ventas.tsx` | Media | Bloque 3 |
