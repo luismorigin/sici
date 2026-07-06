@@ -20,6 +20,7 @@ import { firstName } from '@/lib/format-utils'
 import { buildAtribucionWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
+import { FOUNDER_WHATSAPP } from '@/lib/demo-config'
 
 // --- SEO types ---
 interface VentasSEO {
@@ -1016,19 +1017,8 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
         <span className="fo-count">{displayCount} deptos</span>
       </div>
       <div className="fo-body">
-        <div className="bnv-group">
-          <input type="text" className="bnv-input" value={busqueda} autoComplete="off"
-            placeholder="Escribí lo que buscás — ej: 2 dorm en Sirari hasta 150 mil"
-            onChange={e => handleBusqueda(e.target.value)} />
-          {busquedaChips.length > 0 && (
-            <div className="bnv-chips">
-              <span className="bnv-chips-label">Entendí:</span>
-              {busquedaChips.map(c => <span key={c} className="bnv-chip">{c}</span>)}
-            </div>
-          )}
-          {avisoMonedaBs && <div className="bnv-aviso">Los precios de venta van en $us — ajustá el presupuesto abajo.</div>}
-          {avisoAlquiler && <a className="bnv-cross" href="/alquileres">Parece que buscás alquilar → Ver alquileres</a>}
-        </div>
+        {/* El buscador natural ahora vive en el header del feed; el overlay
+            queda para refinar a mano. */}
         <FilterControls minPrice={minPrice} maxPrice={maxPrice} selectedDorms={selectedDorms} selectedZonas={selectedZonas}
           entrega={entrega} orden={orden} proyecto={proyecto} proyectoNames={proyectoNames} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
           onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} onProyecto={v => setProyecto(v)}
@@ -1870,6 +1860,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
   const [proyectoNames, setProyectoNames] = useState<string[]>(() => [...new Set(initialProps.map(p => p.proyecto).filter(Boolean))].sort())
   const [filterOverlayOpen, setFilterOverlayOpen] = useState(false)
+  // Rediseño mobile: header con buscador nativo + drawers (menú/perfil)
+  const [natQuery, setNatQuery] = useState('')
+  const [natChips, setNatChips] = useState<string[]>([])
+  const [natAviso, setNatAviso] = useState<'alquiler' | 'moneda' | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   // Filter nudge pill (show once per session after 6+ cards without interaction)
   const [nudgeVisible, setNudgeVisible] = useState(false)
   const nudgeDismissedRef = useRef(false)
@@ -2240,6 +2236,40 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       window.prompt('Copiá el link:', url)
     }
   }
+  // Buscador nativo del header (lib/busqueda-natural). Chips en vivo mientras se
+  // escribe; al enviar (Enter/submit) aplica los filtros al feed. Venta = USD:
+  // si el monto viene en Bs se ignora y se avisa (no adivina el TC).
+  function handleNaturalSearch(texto: string, submit: boolean) {
+    setNatQuery(texto)
+    const sig = parsearBusqueda(texto)
+    setNatChips(sig.chips)
+    const montoBob = sig.moneda === 'bob' && (sig.precioMax !== null || sig.precioMin !== null)
+    setNatAviso(sig.operacion === 'alquiler' ? 'alquiler' : (montoBob ? 'moneda' : null))
+    if (!submit) return
+    const monedaOk = sig.moneda !== 'bob'
+    const f: FiltrosVentaSimple = { orden: filters.orden || 'recientes', solo_con_fotos: true }
+    if (sig.dormitorios.length > 0) {
+      const arr = [...new Set(sig.dormitorios)].sort((a, b) => a - b)
+      f.dormitorios_lista = arr.includes(3) ? [...arr.filter(d => d !== 3), 3, 4, 5] : arr
+    }
+    if (monedaOk && sig.precioMax !== null) f.precio_max = Math.max(MIN_PRICE + PRICE_STEP, Math.min(sig.precioMax, MAX_PRICE))
+    if (monedaOk && sig.precioMin !== null) f.precio_min = Math.max(MIN_PRICE, Math.min(sig.precioMin, MAX_PRICE - PRICE_STEP))
+    const dbs = sig.zonas.map(slug => ZONAS_CANONICAS.find(z => z.slug === slug)?.db).filter(Boolean) as string[]
+    if (dbs.length > 0) f.zonas_permitidas = dbs
+    if (sig.entrega) f.estado_entrega = sig.entrega
+    applyFilters(f)
+  }
+  function openPreventaFromMenu() {
+    setMenuOpen(false)
+    applyFilters({ ...filters, estado_entrega: 'solo_preventa', orden: filters.orden || 'recientes', solo_con_fotos: true })
+    showToast('Propiedades marcadas como preventa en las fuentes disponibles')
+  }
+  function openComparadorFromMenu() {
+    setMenuOpen(false)
+    if (favorites.size >= 2) openCompare()
+    else showToast(favorites.size === 1 ? 'Guardá al menos 2 propiedades con el corazón para comparar' : 'Guardá propiedades con el corazón para comparar')
+  }
+
   function addToShortlist(p: UnidadVenta) {
     // S2: el botón ⭐/Agregar a shortlist alterna favorite. La "selección actual" del
     // broker para mandar al cliente = el set de favoritos. Al confirmar el envío,
@@ -2781,6 +2811,21 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 <span className="ventas-count-num">{properties.length}</span>
                 <span className="ventas-count-text">{isFiltered ? `de ${unfilteredCount} departamentos` : 'departamentos en Equipetrol'}</span>
               </div>
+              {/* Buscador natural también en desktop (antes solo estaba en mobile) */}
+              {!brokerMode && (
+                <div className="dsk-search">
+                  <form className="dsk-search-box" onSubmit={(e) => { e.preventDefault(); handleNaturalSearch(natQuery, true); (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.blur() }}>
+                    <svg className="dsk-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input className="dsk-search-input" type="search" enterKeyHint="search" value={natQuery}
+                      placeholder={'Buscá "2 dorm en Sirari hasta 150 mil"'}
+                      onChange={(e) => handleNaturalSearch(e.target.value, false)} />
+                    {natQuery && <button type="button" className="dsk-search-clear" aria-label="Limpiar" onClick={() => { setNatQuery(''); setNatChips([]); setNatAviso(null) }}>&times;</button>}
+                  </form>
+                  {natChips.length > 0 && <div className="dsk-search-chips">{natChips.map(c => <span key={c} className="mfh-chip">{c}</span>)}</div>}
+                  {natAviso === 'moneda' && <div className="dsk-search-aviso">Los precios de venta van en $us — el monto en Bs no se aplicó.</div>}
+                  {natAviso === 'alquiler' && <a className="dsk-search-aviso dsk-search-link" href="/alquileres">Parece que buscás alquilar → Ver alquileres</a>}
+                </div>
+              )}
               <DesktopFilters currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
                 brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax}
                 onAreaMin={setAreaMin}
@@ -2870,17 +2915,44 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         </div>
       ) : (
         /* ===== MOBILE TIKTOK FEED ===== */
-        <main>
-          {/* Top bar — search pill (Airbnb/TikTok style) */}
-          <div className="mt-top-bar">
-            <button className="mt-search-pill" onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay_venta') }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,opacity:0.8}}>
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              <span className="mt-search-text">{searchPillText}</span>
-              {isFiltered && <div className="mt-search-dot" />}
-            </button>
-          </div>
+        <main style={{ ['--mfh-h' as any]: 'calc(104px + env(safe-area-inset-top))' }}>
+          {/* Header sticky — redesign mobile (logo · perfil · hamburguesa · buscador nativo) */}
+          <header className="mfh">
+            <div className="mfh-top">
+              <a href="/landing-v2" className="mfh-brand" aria-label="Simon inicio">
+                <span className="mfh-logo" aria-hidden="true" />
+                <span className="mfh-brand-text">Simon</span>
+              </a>
+              <div className="mfh-icons">
+                <button className="mfh-icon" aria-label="Tu cuenta" onClick={() => setProfileOpen(true)}>
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                </button>
+                <button className="mfh-icon" aria-label="Menú" onClick={() => setMenuOpen(true)}>
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+            <div className="mfh-search-row">
+              <form className="mfh-search" onSubmit={(e) => { e.preventDefault(); handleNaturalSearch(natQuery, true); (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.blur() }}>
+                <svg className="mfh-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input className="mfh-search-input" type="search" enterKeyHint="search" value={natQuery}
+                  placeholder={'Buscá "1 dorm en Sirari hasta 150 mil"'}
+                  onChange={(e) => handleNaturalSearch(e.target.value, false)} />
+                {natQuery && <button type="button" className="mfh-search-clear" aria-label="Limpiar búsqueda" onClick={() => { setNatQuery(''); setNatChips([]); setNatAviso(null) }}>&times;</button>}
+              </form>
+              <button className="mfh-filter-btn" aria-label="Filtros" onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay_venta') }}>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/><circle cx="9" cy="6" r="2" fill="#141414"/><circle cx="15" cy="12" r="2" fill="#141414"/><circle cx="12" cy="18" r="2" fill="#141414"/></svg>
+                {activeFilterCount > 0 && <span className="mfh-filter-badge">{activeFilterCount}</span>}
+              </button>
+            </div>
+            {(natChips.length > 0 || natAviso) && (
+              <div className="mfh-under">
+                {natChips.length > 0 && <div className="mfh-chips"><span className="mfh-chips-label">Entendí:</span>{natChips.map(c => <span key={c} className="mfh-chip">{c}</span>)}</div>}
+                {natAviso === 'moneda' && <div className="mfh-aviso">Los precios de venta van en $us — el monto en Bs no se aplicó.</div>}
+                {natAviso === 'alquiler' && <a className="mfh-aviso mfh-aviso-link" href="/alquileres">Parece que buscás alquilar → Ver alquileres</a>}
+              </div>
+            )}
+          </header>
 
           {/* Card counter */}
           {properties.length > 0 && (
@@ -2945,6 +3017,41 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 isReported={reportedIds.has(p.id)} />
             })}
           </div>
+
+          {/* Drawer menú hamburguesa — intenciones inmobiliarias primero */}
+          {menuOpen && (
+            <div className="mfd-scrim" onClick={() => setMenuOpen(false)}>
+              <nav className="mfd" onClick={e => e.stopPropagation()} aria-label="Menú principal">
+                <div className="mfd-head"><span className="mfd-title">Menú</span><button className="mfd-close" aria-label="Cerrar menú" onClick={() => setMenuOpen(false)}>&times;</button></div>
+                <button className="mfd-item" onClick={openPreventaFromMenu}>Preventa</button>
+                <span className="mfd-item mfd-item-active">Ventas</span>
+                <a className="mfd-item" href="/alquileres">Alquileres</a>
+                <div className="mfd-sec">Simulá y calculá</div>
+                <button className="mfd-item mfd-sub" onClick={openComparadorFromMenu}>Comparador de propiedades</button>
+                <span className="mfd-item mfd-sub mfd-soon">Calculadora de renta <span className="mfd-badge-soon">Próximamente</span></span>
+                <span className="mfd-item mfd-sub mfd-soon">Crédito hipotecario <span className="mfd-badge-soon">Próximamente</span></span>
+                <div className="mfd-divider" />
+                <a className="mfd-item" href="/mercado/equipetrol">Mercado</a>
+                <button className="mfd-item" onClick={() => { setMenuOpen(false); setProfileOpen(true) }}>Mis favoritos{favorites.size > 0 ? ` · ${favorites.size}` : ''}</button>
+                <a className="mfd-item mfd-item-wa" href={`https://wa.me/${FOUNDER_WHATSAPP.replace(/\D/g, '')}?text=${encodeURIComponent('Hola Simon, quiero ayuda para encontrar una propiedad')}`} target="_blank" rel="noopener noreferrer">Hablar por WhatsApp</a>
+              </nav>
+            </div>
+          )}
+
+          {/* Drawer perfil — sin login: favoritos guardados en el dispositivo */}
+          {profileOpen && (
+            <div className="mfd-scrim" onClick={() => setProfileOpen(false)}>
+              <div className="mfp" onClick={e => e.stopPropagation()}>
+                <div className="mfd-head"><span className="mfd-title">Tu cuenta</span><button className="mfd-close" aria-label="Cerrar" onClick={() => setProfileOpen(false)}>&times;</button></div>
+                <div className="mfp-body">
+                  <div className="mfp-ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+                  <p className="mfp-msg">Guardá favoritos y comparativos en este dispositivo.</p>
+                  <p className="mfp-sub">{favorites.size === 0 ? 'Todavía no guardaste ninguna propiedad' : `${favorites.size} ${favorites.size === 1 ? 'favorito guardado' : 'favoritos guardados'}`}</p>
+                  {favorites.size >= 2 && <button className="mfp-cta" onClick={() => { setProfileOpen(false); openCompare() }}>Comparar {favorites.size} favoritos</button>}
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       )}
 
@@ -2981,6 +3088,17 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-sidebar-count { padding:8px 20px 20px }
         .ventas-count-num { font-family:'Figtree',sans-serif; font-size:48px; font-weight:500; color:#EDE8DC; display:block; line-height:1; font-variant-numeric:tabular-nums }
         .ventas-count-text { font-size:13px; color:#9A8E7A }
+        .dsk-search { padding:4px 20px 16px; border-bottom:1px solid rgba(237,232,220,0.06); margin-bottom:8px }
+        .dsk-search-box { display:flex; align-items:center; gap:8px; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.16); border-radius:10px; padding:0 12px; height:40px }
+        .dsk-search-box:focus-within { border-color:#7BB389 }
+        .dsk-search-ico { color:#9A8E7A; flex:0 0 auto }
+        .dsk-search-input { flex:1; min-width:0; background:none; border:none; outline:none; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:13px; -webkit-appearance:none; appearance:none }
+        .dsk-search-input::placeholder { color:#7A7060 }
+        .dsk-search-input::-webkit-search-cancel-button { -webkit-appearance:none; appearance:none }
+        .dsk-search-clear { background:none; border:none; color:#9A8E7A; font-size:20px; line-height:1; cursor:pointer; padding:0 2px }
+        .dsk-search-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px }
+        .dsk-search-aviso { display:block; font-size:12px; color:#B8AD9E; margin-top:8px; font-family:'DM Sans',sans-serif; text-decoration:none }
+        .dsk-search-link { color:#7BB389; font-weight:500 }
         .ventas-main { margin-left:320px; flex:1; padding:24px; min-height:100vh; background:#1a1a1a }
         .ventas-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:24px; align-items:start }
         .ventas-map-container { height:calc(100vh - 80px); border-radius:14px; overflow:hidden; border:1px solid rgba(237,232,220,0.08); position:relative }
@@ -3020,6 +3138,57 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mt-search-pill { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.15); padding:8px 16px; border-radius:100px; border:none; cursor:pointer; position:relative; max-width:80vw }
         .mt-search-text { font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; color:rgba(255,255,255,0.7); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:0.2px }
         .mt-search-dot { position:absolute; top:5px; right:5px; width:6px; height:6px; background:#3A6A48; border-radius:50% }
+
+        /* ===== Header rediseño mobile (mfh-*) ===== */
+        .mfh { position:fixed; top:0; left:0; right:0; z-index:60; background:#141414; border-bottom:1px solid rgba(237,232,220,0.08); padding-top:env(safe-area-inset-top) }
+        .mfh-top { display:flex; align-items:center; justify-content:space-between; padding:8px 14px 4px }
+        .mfh-brand { display:flex; align-items:center; gap:8px; text-decoration:none }
+        .mfh-logo { width:22px; height:22px; border-radius:50%; background:#EDE8DC; position:relative; flex:0 0 auto }
+        .mfh-logo::after { content:''; position:absolute; top:4px; left:4px; width:8px; height:8px; border-radius:50%; background:#3A6A48 }
+        .mfh-brand-text { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; letter-spacing:0.2px }
+        .mfh-icons { display:flex; align-items:center; gap:2px }
+        .mfh-icon { width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:none; border:none; color:#EDE8DC; cursor:pointer; border-radius:50%; -webkit-tap-highlight-color:transparent }
+        .mfh-icon:active { background:rgba(237,232,220,0.1) }
+        .mfh-search-row { display:flex; align-items:center; gap:8px; padding:2px 14px 12px }
+        .mfh-search { flex:1; display:flex; align-items:center; gap:8px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.14); border-radius:100px; padding:0 14px; height:42px; min-width:0 }
+        .mfh-search:focus-within { border-color:#7BB389 }
+        .mfh-search-ico { color:#9A8E7A; flex:0 0 auto }
+        .mfh-search-input { flex:1; min-width:0; background:none; border:none; outline:none; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:14px; -webkit-appearance:none; appearance:none }
+        .mfh-search-input::placeholder { color:#7A7060 }
+        .mfh-search-input::-webkit-search-cancel-button { -webkit-appearance:none; appearance:none }
+        .mfh-search-clear { background:none; border:none; color:#9A8E7A; font-size:22px; line-height:1; cursor:pointer; padding:0 2px; flex:0 0 auto }
+        .mfh-filter-btn { position:relative; flex:0 0 auto; width:42px; height:42px; border-radius:12px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.14); color:#EDE8DC; display:flex; align-items:center; justify-content:center; cursor:pointer }
+        .mfh-filter-badge { position:absolute; top:-5px; right:-5px; min-width:17px; height:17px; padding:0 4px; border-radius:100px; background:#3A6A48; color:#EDE8DC; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; font-family:'DM Sans',sans-serif }
+        .mfh-under { padding:0 14px 10px; display:flex; flex-direction:column; gap:6px }
+        .mfh-chips { display:flex; flex-wrap:wrap; align-items:center; gap:6px }
+        .mfh-chips-label { font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif }
+        .mfh-chip { font-size:12px; font-weight:500; color:#7BB389; background:rgba(58,106,72,0.18); border:1px solid rgba(123,179,137,0.3); padding:3px 10px; border-radius:100px; font-family:'DM Sans',sans-serif }
+        .mfh-aviso { font-size:12px; color:#B8AD9E; font-family:'DM Sans',sans-serif; text-decoration:none }
+        .mfh-aviso-link { color:#7BB389; font-weight:500 }
+
+        /* ===== Drawers menú/perfil (mfd-*, mfp-*) ===== */
+        .mfd-scrim { position:fixed; inset:0; z-index:120; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); animation:mfdFade 0.2s ease-out }
+        @keyframes mfdFade { from { opacity:0 } to { opacity:1 } }
+        .mfd { position:absolute; top:0; right:0; bottom:0; width:min(84vw, 340px); background:#1a1a1a; border-left:1px solid rgba(237,232,220,0.08); display:flex; flex-direction:column; padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom); animation:mfdSlide 0.25s ease-out; overflow-y:auto }
+        @keyframes mfdSlide { from { transform:translateX(100%) } to { transform:translateX(0) } }
+        .mfd-head { display:flex; align-items:center; justify-content:space-between; padding:16px 20px 10px }
+        .mfd-title { font-family:'Figtree',sans-serif; font-size:18px; font-weight:500; color:#EDE8DC }
+        .mfd-close { background:none; border:none; color:#B8AD9E; font-size:26px; line-height:1; cursor:pointer; padding:0 4px }
+        .mfd-item { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; text-align:left; padding:13px 20px; background:none; border:none; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:16px; cursor:pointer; text-decoration:none; -webkit-tap-highlight-color:transparent }
+        .mfd-item:active { background:rgba(237,232,220,0.06) }
+        .mfd-item-active { color:#7BB389; font-weight:600; cursor:default }
+        .mfd-item-wa { color:#7BB389 }
+        .mfd-sec { padding:14px 20px 4px; font-size:11px; letter-spacing:0.8px; text-transform:uppercase; color:#7A7060; font-family:'DM Sans',sans-serif; font-weight:600 }
+        .mfd-sub { padding-left:20px; font-size:15px; color:#D8D0BC }
+        .mfd-soon { color:#7A7060; cursor:default }
+        .mfd-badge-soon { font-size:10px; font-weight:600; color:#9A8E7A; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.12); padding:2px 7px; border-radius:100px; letter-spacing:0.2px }
+        .mfd-divider { height:1px; background:rgba(237,232,220,0.08); margin:8px 20px }
+        .mfp { position:absolute; top:0; right:0; bottom:0; width:min(84vw, 340px); background:#1a1a1a; border-left:1px solid rgba(237,232,220,0.08); display:flex; flex-direction:column; padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom); animation:mfdSlide 0.25s ease-out }
+        .mfp-body { padding:20px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px }
+        .mfp-ico { width:64px; height:64px; border-radius:50%; background:rgba(237,232,220,0.06); color:#B8AD9E; display:flex; align-items:center; justify-content:center; margin-bottom:6px }
+        .mfp-msg { font-family:'DM Sans',sans-serif; font-size:15px; color:#EDE8DC; line-height:1.5; margin:0 }
+        .mfp-sub { font-family:'DM Sans',sans-serif; font-size:13px; color:#9A8E7A; margin:0 }
+        .mfp-cta { margin-top:12px; background:#3A6A48; color:#EDE8DC; border:none; border-radius:100px; padding:12px 22px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer }
 
         /* ===== FILTER OVERLAY (full-screen takeover) ===== */
         .fo-overlay { position:fixed; inset:0; z-index:200; background:#141414; display:flex; flex-direction:column; animation:foSlideUp 0.3s ease-out }
@@ -3137,12 +3306,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mt-map-body { flex:1; position:relative; overflow:hidden }
         .mt-map-body .venta-map { position:absolute; inset:0 }
 
-        .mt-feed { height:100vh; height:100dvh; overflow-y:scroll; scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
+        .mt-feed { height:calc(100dvh - var(--mfh-h, 0px)); margin-top:var(--mfh-h, 0px); overflow-y:scroll; scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
         .mt-feed::-webkit-scrollbar { display:none }
 
         /* ===== MOBILE CARD (50% foto / 50% contenido) ===== */
-        .mc { height:100vh; height:100dvh; scroll-snap-align:start; scroll-snap-stop:always; position:relative; overflow:hidden; display:flex; flex-direction:column; background:#141414 }
-        .mc-placeholder { height:100vh; height:100dvh; scroll-snap-align:start; background:#141414 }
+        .mc { height:calc(100dvh - var(--mfh-h, 0px)); scroll-snap-align:start; scroll-snap-stop:always; position:relative; overflow:hidden; display:flex; flex-direction:column; background:#141414 }
+        .mc-placeholder { height:calc(100dvh - var(--mfh-h, 0px)); scroll-snap-align:start; background:#141414 }
 
         /* Photo zone (60%) */
         .mc-photo-zone { flex:0 0 60%; position:relative; overflow:hidden }
