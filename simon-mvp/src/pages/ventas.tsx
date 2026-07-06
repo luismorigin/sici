@@ -2454,6 +2454,16 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           <button className="vt-compare-banner-clear" aria-label="Limpiar selección" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Selección limpiada') }}>&times;</button>
         </div>
       )}
+      {/* Estado 0 favoritos: mensaje educativo muy discreto (MD: "mensaje muy
+          discreto si se decide educar"). Enseña el gesto sin bandeja sólida. */}
+      {!brokerMode && favorites.size === 0 && properties.length > 0 && (
+        <div className="vt-compare-banner-wrap vt-compare-edu-wrap">
+          <div className="vt-compare-edu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{width:14,height:14,flexShrink:0}}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            Guardá con el corazón para comparar
+          </div>
+        </div>
+      )}
       {/* Estado 1 favorito: bandeja discreta, todavía sin acción de comparar */}
       {!brokerMode && favorites.size === 1 && (
         <div className="vt-compare-banner-wrap vt-compare-hint-wrap">
@@ -2931,7 +2941,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           )}
 
           {/* TikTok feed */}
-          <div className={`mt-feed ${!brokerMode && favorites.size >= 1 ? 'mt-feed-compare' : ''}`} ref={feedRef}>
+          <div className={`mt-feed ${!brokerMode ? 'mt-feed-compare' : ''}`} ref={feedRef}>
             {loadError && <div className="mc" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7A7060' }}>
               <div style={{ textAlign: 'center' }}><p>No se pudo cargar.</p><button onClick={() => fetchProperties()} style={{ padding: '8px 20px', background: '#141414', color: '#EDE8DC', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>Reintentar</button></div>
             </div>}
@@ -3236,6 +3246,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* Estado 1 favorito — bandeja discreta sin acción de comparar */
         .vt-compare-hint { display:flex; align-items:center; gap:8px; padding:11px 18px; background:rgba(20,20,20,0.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#C8C0B0; border:1px solid rgba(237,232,220,0.1); border-radius:100px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; letter-spacing:0.2px; box-shadow:0 6px 20px rgba(0,0,0,0.25); white-space:nowrap }
         .vt-compare-hint-wrap .vt-compare-banner-clear { width:44px; min-height:44px; font-size:18px }
+        /* Estado 0 favoritos — educativo muy discreto (sin acción, sin cerrar) */
+        .vt-compare-edu { display:flex; align-items:center; gap:7px; padding:9px 16px; background:rgba(20,20,20,0.72); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:rgba(237,232,220,0.6); border:1px solid rgba(237,232,220,0.08); border-radius:100px; font-family:'DM Sans',sans-serif; font-size:12.5px; font-weight:500; letter-spacing:0.2px; white-space:nowrap }
         .vt-nudge-pill { position:fixed; bottom:max(90px, calc(env(safe-area-inset-bottom) + 80px)); left:50%; transform:translateX(-50%); z-index:100; display:flex; align-items:center; gap:8px; background:#3A6A48; color:#EDE8DC; padding:12px 16px 12px 18px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,0.18); animation:vtNudgeIn 0.3s ease-out }
         .vt-nudge-x { background:none; border:none; color:rgba(237,232,220,0.6); font-size:18px; line-height:1; cursor:pointer; padding:0 0 0 4px }
         @keyframes vtNudgeIn { from{opacity:0;transform:translateX(-50%) translateY(12px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
@@ -3307,8 +3319,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-cta-row { display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-top:auto; padding-top:10px; border-top:1px solid rgba(237,232,220,0.1); min-height:40px }
         .mc-map-pill { display:inline-flex; align-items:center; gap:6px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.16); color:#EDE8DC; border-radius:100px; padding:8px 14px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; flex:0 0 auto; -webkit-tap-highlight-color:transparent }
         .mc-map-pill:active { transform:scale(0.97) }
-        /* Reservar espacio para la bandeja de comparar (no debe tapar la card) */
-        .mt-feed-compare .mc-cta-row { margin-bottom:calc(64px + env(safe-area-inset-bottom)) }
+        /* Reservar espacio para la bandeja de comparar (no debe tapar la card).
+           Va en el contenido para que funcione aunque la prop no tenga "Ver mapa". */
+        .mt-feed-compare .mc-content { padding-bottom:calc(84px + env(safe-area-inset-bottom)) }
         .mc-name { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1.1; margin-bottom:2px; padding-top:8px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap }
         .mc-reciente { font-size:11px; font-weight:600; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:rgba(58,106,72,0.15); padding:2px 8px; border-radius:4px }
         .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; margin-bottom:12px; font-family:'DM Sans',sans-serif }
