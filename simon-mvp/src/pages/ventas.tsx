@@ -1155,6 +1155,31 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
       .slice(0, 4)
   }, [p?.id, p?.zona, p?.dormitorios, p?.precio_usd, properties])
 
+  // --- Contexto de mercado: $/m² de la zona para esta tipología ---
+  // Formato fiduciario prudente: SIN veredicto ("X% sobre mediana") — solo
+  // mediana, rango típico (p25-p75) y la posición visual de este depto en una
+  // barra. El precio depende de acabados/desarrollador (caveat en el render).
+  // Guardrail duro: menos de 5 comparables → el bloque no se muestra.
+  const marketData = useMemo(() => {
+    if (!p || !p.precio_m2 || p.precio_m2 <= 0 || !properties || properties.length === 0) return null
+    const comparables = properties.filter(
+      q => q.zona === p.zona && q.dormitorios === p.dormitorios && q.id !== p.id && q.precio_m2 > 0
+    )
+    if (comparables.length < 5) return null
+    const values = comparables.map(q => q.precio_m2).sort((a, b) => a - b)
+    const pctl = (sorted: number[], pct: number) => {
+      const idx = (sorted.length - 1) * pct
+      const lo = Math.floor(idx), hi = Math.ceil(idx)
+      return lo === hi ? sorted[lo] : Math.round(sorted[lo] * (hi - idx) + sorted[hi] * (idx - lo))
+    }
+    return {
+      mediana: pctl(values, 0.5),
+      rangoLow: pctl(values, 0.25),
+      rangoHigh: pctl(values, 0.75),
+      count: comparables.length,
+    }
+  }, [p?.id, p?.zona, p?.dormitorios, p?.precio_m2, properties])
+
   const brokerQuestions = useMemo(() => {
     if (!p) return []
     const isPreventa = p.estado_construccion === 'preventa'
@@ -1355,6 +1380,42 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
               <div className="bs-agent">
                 <span className="bs-agent-name">{p.agente_nombre}</span>
                 {p.agente_oficina && <span className="bs-agent-office"> · {p.agente_oficina}</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Contexto de mercado — solo feed público/broker: en publicShare
+              `properties` es la shortlist, no el mercado (cálculo inválido). */}
+          {!publicShareMode && marketData && (
+            <div className="bs-section">
+              <div className="bs-sl"><span className="bs-sl-dot" />Contexto de mercado · {displayZona(p.zona)}</div>
+              <div className="bs-mktv">
+                <div className="bs-mktv-this">
+                  <span className="bs-mktv-label">Este depto</span>
+                  <span className="bs-mktv-value">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>
+                </div>
+                <div className="bs-mktv-zona">
+                  Zona ({p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}): mediana <b>$us {marketData.mediana.toLocaleString('en-US')}/m²</b>
+                  <span className="bs-mktv-rango">Rango típico $us {marketData.rangoLow.toLocaleString('en-US')} — {marketData.rangoHigh.toLocaleString('en-US')}/m²</span>
+                </div>
+                {(() => {
+                  const lo = Math.min(marketData.rangoLow, p.precio_m2) * 0.94
+                  const hi = Math.max(marketData.rangoHigh, p.precio_m2) * 1.06
+                  const pos = (v: number) => Math.min(98, Math.max(2, ((v - lo) / (hi - lo)) * 100))
+                  return (
+                    <div className="bs-mktv-bar-wrap">
+                      <div className="bs-mktv-bar">
+                        <div className="bs-mktv-band" style={{ left: `${pos(marketData.rangoLow)}%`, width: `${pos(marketData.rangoHigh) - pos(marketData.rangoLow)}%` }} />
+                        <div className="bs-mktv-marker" style={{ left: `${pos(p.precio_m2)}%` }} />
+                      </div>
+                      <div className="bs-mktv-scale">
+                        <span style={{ left: `${pos(marketData.rangoLow)}%` }}>{marketData.rangoLow.toLocaleString('en-US')}</span>
+                        <span style={{ left: `${pos(marketData.rangoHigh)}%` }}>{marketData.rangoHigh.toLocaleString('en-US')}</span>
+                      </div>
+                    </div>
+                  )
+                })()}
+                <div className="bs-mktv-caveat">Basado en {marketData.count} deptos comparables activos. El precio por m² varía según acabados, amenidades y desarrollador.</div>
               </div>
             </div>
           )}
@@ -3268,6 +3329,22 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta .bs-sim-name { color:#EDE8DC }
         .bs-venta .bs-sim-price { color:#EDE8DC }
         .bs-venta .bs-sim-specs { color:#9A8E7A }
+
+        /* Contexto de mercado (sheet venta) */
+        .bs-mktv { background:rgba(237,232,220,0.04); border:1px solid rgba(237,232,220,0.08); border-radius:14px; padding:16px }
+        .bs-mktv-this { display:flex; align-items:baseline; gap:10px; margin-bottom:4px }
+        .bs-mktv-label { font-size:13px; color:#B8AD9E }
+        .bs-mktv-value { font-family:'Figtree',sans-serif; font-size:22px; font-weight:500; color:#EDE8DC }
+        .bs-mktv-zona { font-size:13px; color:#B8AD9E; margin-bottom:14px; line-height:1.5 }
+        .bs-mktv-zona b { color:#EDE8DC; font-weight:600 }
+        .bs-mktv-rango { display:block; margin-top:2px }
+        .bs-mktv-bar-wrap { margin-bottom:12px }
+        .bs-mktv-bar { position:relative; height:8px; background:#2a2a2a; border-radius:4px }
+        .bs-mktv-band { position:absolute; top:0; bottom:0; background:#3A6A48; opacity:0.55; border-radius:4px }
+        .bs-mktv-marker { position:absolute; top:-4px; width:3px; height:16px; background:#EDE8DC; border-radius:2px; transform:translateX(-50%) }
+        .bs-mktv-scale { position:relative; height:16px; margin-top:4px }
+        .bs-mktv-scale span { position:absolute; transform:translateX(-50%); font-size:11px; color:#7A7060; white-space:nowrap }
+        .bs-mktv-caveat { font-size:12px; color:#9A8E7A; line-height:1.5; border-top:1px solid rgba(237,232,220,0.08); padding-top:10px }
 
         /* ===== Comentario broker + Destacada (migración 239) ===== */
         /* Card destacada en venta — fondo arena invierte tema oscuro, salta del fondo negro */

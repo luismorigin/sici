@@ -3312,7 +3312,9 @@ function BottomSheet({
     const comparables = properties.filter(
       q => q.zona === property.zona && q.dormitorios === property.dormitorios && q.id !== property.id
     )
-    if (comparables.length < 2) return null
+    // Guardrail fiduciario: con menos de 5 comparables la "mediana" es
+    // anécdota, no mercado — mejor no mostrar el bloque.
+    if (comparables.length < 5) return null
     const prices = comparables.map(q => q.precio_mensual_bob).sort((a, b) => a - b)
     const pctl = (sorted: number[], pct: number) => {
       const idx = (sorted.length - 1) * pct
@@ -3321,7 +3323,9 @@ function BottomSheet({
     }
     const mediana = pctl(prices, 0.5)
     const diffPct = Math.round(((property.precio_mensual_bob - mediana) / mediana) * 100)
-    return { mediana, min: prices[0], max: prices[prices.length - 1], count: comparables.length, diffPct }
+    // Rango típico p25-p75 (no min/max): un solo outlier — p.ej. un 1 dorm a
+    // Bs 29.000 — hacía que el rango no dijera nada del mercado real.
+    return { mediana, min: pctl(prices, 0.25), max: pctl(prices, 0.75), count: comparables.length, diffPct }
   }, [property?.id, property?.zona, property?.dormitorios, property?.precio_mensual_bob, properties])
 
   function toggleQuestion(idx: number) {
@@ -3491,10 +3495,10 @@ function BottomSheet({
               </span>
             </div>
             <div className="bs-mkt-row">
-              <span className="bs-mkt-label">Rango</span>
+              <span className="bs-mkt-label">Rango típico</span>
               <span className="bs-mkt-value">{formatPrice(marketData.min)} — {formatPrice(marketData.max)}</span>
             </div>
-            <div className="bs-mkt-count">{marketData.count} propiedades similares disponibles</div>
+            <div className="bs-mkt-count">Basado en {marketData.count} deptos comparables activos. El precio varía según acabados, amenidades y seriedad del edificio.</div>
           </div>
         </div>
       )}
