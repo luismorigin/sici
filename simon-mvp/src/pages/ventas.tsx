@@ -20,7 +20,8 @@ import { firstName } from '@/lib/format-utils'
 import { buildAtribucionWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
-import { FOUNDER_WHATSAPP } from '@/lib/demo-config'
+// WhatsApp oficial de Simon (negocio) — NO el personal del fundador.
+const SIMON_WHATSAPP = '59177066308'
 
 // --- SEO types ---
 interface VentasSEO {
@@ -2997,7 +2998,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 <div className="mfd-divider" />
                 <a className="mfd-item" href="/mercado/equipetrol">Mercado</a>
                 <button className="mfd-item" onClick={() => { setMenuOpen(false); setProfileOpen(true) }}>Mis favoritos{favorites.size > 0 ? ` · ${favorites.size}` : ''}</button>
-                <a className="mfd-item mfd-item-wa" href={`https://wa.me/${FOUNDER_WHATSAPP.replace(/\D/g, '')}?text=${encodeURIComponent('Hola Simon, quiero ayuda para encontrar una propiedad')}`} target="_blank" rel="noopener noreferrer">Hablar por WhatsApp</a>
+                <a className="mfd-item mfd-item-wa" href={`https://wa.me/${SIMON_WHATSAPP}?text=${encodeURIComponent('Hola Simon, quiero ayuda para encontrar una propiedad')}`} target="_blank" rel="noopener noreferrer">Hablar por WhatsApp</a>
               </nav>
             </div>
           )}
