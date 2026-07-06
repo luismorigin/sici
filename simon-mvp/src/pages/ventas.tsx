@@ -19,6 +19,7 @@ import DataReportsBanner from '@/components/broker/DataReportsBanner'
 import { firstName } from '@/lib/format-utils'
 import { buildAtribucionWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
+import { parsearBusqueda } from '@/lib/busqueda-natural'
 
 // --- SEO types ---
 interface VentasSEO {
@@ -959,6 +960,38 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   function toggleZona(db: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(db)) n.delete(db); else n.add(db); return n }) }
   function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n }) }
 
+  // --- Búsqueda en lenguaje natural (lib/busqueda-natural, $0 sin IA) ---
+  // Pre-llena los controles del overlay: la interpretación queda VISIBLE en
+  // los propios filtros y el usuario corrige tocando. El preview count ya
+  // reacciona solo a los cambios de estado.
+  const [busqueda, setBusqueda] = useState('')
+  const [busquedaChips, setBusquedaChips] = useState<string[]>([])
+  const [avisoAlquiler, setAvisoAlquiler] = useState(false)
+  const [avisoMonedaBs, setAvisoMonedaBs] = useState(false)
+  function handleBusqueda(texto: string) {
+    setBusqueda(texto)
+    // El guard isFirstRender existe para no fetchear al abrir el overlay, pero
+    // se tragaría el primer batch de cambios de la búsqueda → lo consumimos acá
+    // para que el contador del botón reaccione desde el primer parseo.
+    isFirstRender.current = false
+    const sig = parsearBusqueda(texto)
+    setBusquedaChips(sig.chips)
+    setAvisoAlquiler(sig.operacion === 'alquiler')
+    // Precio: en ventas los montos son USD; si el user escribió "bs", avisar
+    // en vez de adivinar el tipo de cambio.
+    const monedaOk = sig.moneda !== 'bob'
+    setAvisoMonedaBs(!monedaOk && (sig.precioMax !== null || sig.precioMin !== null))
+    // Mientras se usa la barra, la barra MANDA: cada parseo parte de filtros
+    // limpios (sin acumular señales de textos anteriores). Los chips muestran
+    // exactamente lo aplicado; lo no detectado vuelve a default.
+    setSelectedDorms(new Set(sig.dormitorios))
+    setMaxPrice(monedaOk && sig.precioMax !== null ? Math.max(MIN_PRICE + PRICE_STEP, Math.min(sig.precioMax, MAX_PRICE)) : MAX_PRICE)
+    setMinPrice(monedaOk && sig.precioMin !== null ? Math.max(MIN_PRICE, Math.min(sig.precioMin, MAX_PRICE - PRICE_STEP)) : MIN_PRICE)
+    const dbs = sig.zonas.map(slug => ZONAS_CANONICAS.find(z => z.slug === slug)?.db).filter(Boolean) as string[]
+    setSelectedZonas(new Set(dbs))
+    setEntrega(sig.entrega ?? '')
+  }
+
   function handleApply() {
     onApply(currentFilters)
     onClose()
@@ -983,6 +1016,19 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
         <span className="fo-count">{displayCount} deptos</span>
       </div>
       <div className="fo-body">
+        <div className="bnv-group">
+          <input type="text" className="bnv-input" value={busqueda} autoComplete="off"
+            placeholder="Escribí lo que buscás — ej: 2 dorm en Sirari hasta 150 mil"
+            onChange={e => handleBusqueda(e.target.value)} />
+          {busquedaChips.length > 0 && (
+            <div className="bnv-chips">
+              <span className="bnv-chips-label">Entendí:</span>
+              {busquedaChips.map(c => <span key={c} className="bnv-chip">{c}</span>)}
+            </div>
+          )}
+          {avisoMonedaBs && <div className="bnv-aviso">Los precios de venta van en $us — ajustá el presupuesto abajo.</div>}
+          {avisoAlquiler && <a className="bnv-cross" href="/alquileres">Parece que buscás alquilar → Ver alquileres</a>}
+        </div>
         <FilterControls minPrice={minPrice} maxPrice={maxPrice} selectedDorms={selectedDorms} selectedZonas={selectedZonas}
           entrega={entrega} orden={orden} proyecto={proyecto} proyectoNames={proyectoNames} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
           onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} onProyecto={v => setProyecto(v)}
@@ -2983,6 +3029,16 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .fo-title { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC }
         .fo-count { font-size:14px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-variant-numeric:tabular-nums }
         .fo-body { flex:1; overflow-y:auto; padding:20px }
+        /* Búsqueda en lenguaje natural (bnv-*) */
+        .bnv-group { margin-bottom:22px }
+        .bnv-input { width:100%; padding:13px 16px; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.18); border-radius:12px; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:15px; outline:none; box-sizing:border-box }
+        .bnv-input::placeholder { color:#7A7060 }
+        .bnv-input:focus { border-color:#7BB389 }
+        .bnv-chips { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:10px }
+        .bnv-chips-label { font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif }
+        .bnv-chip { font-size:12px; font-weight:500; color:#7BB389; background:rgba(58,106,72,0.18); border:1px solid rgba(123,179,137,0.3); padding:3px 10px; border-radius:100px; font-family:'DM Sans',sans-serif }
+        .bnv-aviso { font-size:12px; color:#B8AD9E; margin-top:8px; font-family:'DM Sans',sans-serif }
+        .bnv-cross { display:inline-block; font-size:13px; color:#7BB389; margin-top:8px; text-decoration:none; font-weight:500; font-family:'DM Sans',sans-serif }
         .fo-footer { padding:16px 20px; padding-bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); border-top:1px solid rgba(237,232,220,0.08); display:flex; gap:10px }
         .fo-reset { flex:0 0 auto; padding:14px 20px; background:transparent; border:1px solid rgba(237,232,220,0.12); border-radius:10px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer }
         .fo-apply { flex:1; padding:14px; background:#EDE8DC; border:none; border-radius:10px; color:#141414; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; cursor:pointer }

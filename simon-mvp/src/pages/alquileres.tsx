@@ -12,6 +12,7 @@ import { fetchMercadoAlquilerData, type MercadoAlquilerData } from '@/lib/mercad
 import { useWhatsAppCapture, triggerWhatsAppCapture, setDemoModeForCapture, setBrokerModeForCapture, setContactoDirectoForCapture } from '@/hooks/useWhatsAppCapture'
 import { buildAlquilerWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
+import { parsearBusqueda } from '@/lib/busqueda-natural'
 import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerShortlists'
 import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
 import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
@@ -2382,6 +2383,38 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n }) }
   function toggleZona(id: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n }) }
 
+  // --- Búsqueda en lenguaje natural (lib/busqueda-natural, $0 sin IA) ---
+  // Pre-llena los controles del overlay: la interpretación queda VISIBLE en
+  // los propios filtros y el usuario corrige tocando. El preview count ya
+  // reacciona solo a los cambios de estado.
+  const [busqueda, setBusqueda] = useState('')
+  const [busquedaChips, setBusquedaChips] = useState<string[]>([])
+  const [avisoVenta, setAvisoVenta] = useState(false)
+  const [avisoMonedaUsd, setAvisoMonedaUsd] = useState(false)
+  function handleBusqueda(texto: string) {
+    setBusqueda(texto)
+    // El guard isFirstRender existe para no fetchear al abrir el overlay, pero
+    // se tragaría el primer batch de cambios de la búsqueda → lo consumimos acá
+    // para que el contador del botón reaccione desde el primer parseo.
+    isFirstRender.current = false
+    const sig = parsearBusqueda(texto)
+    setBusquedaChips(sig.chips)
+    setAvisoVenta(sig.operacion === 'venta')
+    // Precio: en alquileres los montos son Bs/mes; si el user escribió "$",
+    // avisar en vez de adivinar el tipo de cambio.
+    const monedaOk = sig.moneda !== 'usd'
+    setAvisoMonedaUsd(!monedaOk && (sig.precioMax !== null || sig.precioMin !== null))
+    // Mientras se usa la barra, la barra MANDA: cada parseo parte de filtros
+    // limpios (sin acumular señales de textos anteriores). Los chips muestran
+    // exactamente lo aplicado; lo no detectado vuelve a default.
+    setSelectedDorms(new Set(sig.dormitorios))
+    setMaxPrice(monedaOk && sig.precioMax !== null ? Math.min(sig.precioMax, MAX_SLIDER_PRICE) : MAX_SLIDER_PRICE)
+    setSelectedZonas(new Set(sig.zonas.filter(slug => ZONAS_ALQUILER_UI.some(z => z.id === slug))))
+    setAmoblado(sig.amoblado === true)
+    setMascotas(sig.mascotas === true)
+    setConParqueo(sig.parqueo === true)
+  }
+
   function handleApply() { onApply(buildFilters()) }
   function handleReset() {
     setMaxPrice(MAX_SLIDER_PRICE); setSelectedDorms(new Set()); setSelectedZonas(new Set())
@@ -2401,6 +2434,20 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
         <span className="afo-count">{displayCount} deptos</span>
       </div>
       <div className="afo-body">
+        {/* Búsqueda en lenguaje natural */}
+        <div className="bna-group">
+          <input type="text" className="bna-input" value={busqueda} autoComplete="off"
+            placeholder="Escribí lo que buscás — ej: 2 dorm amoblado hasta 4.200 bs"
+            onChange={e => handleBusqueda(e.target.value)} />
+          {busquedaChips.length > 0 && (
+            <div className="bna-chips">
+              <span className="bna-chips-label">Entendí:</span>
+              {busquedaChips.map(c => <span key={c} className="bna-chip">{c}</span>)}
+            </div>
+          )}
+          {avisoMonedaUsd && <div className="bna-aviso">Los alquileres van en Bs — ajustá el presupuesto abajo.</div>}
+          {avisoVenta && <a className="bna-cross" href="/ventas">Parece que buscás comprar → Ver departamentos en venta</a>}
+        </div>
         {/* Edificio search */}
         <div className="afo-group"><div className="afo-label"><span className="afo-dot" />EDIFICIO</div>
           <input type="text" className="afo-search" placeholder="Buscar edificio..." value={proyecto}
