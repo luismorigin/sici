@@ -2949,7 +2949,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             return (
               <div className="mt-bottombar">
                 <button className="mt-bb-map" disabled={!conGps} onClick={() => conGps && openCardMap(ac)}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 17, height: 17 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 17, height: 17 }}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
                   Ver mapa
                 </button>
                 <div className="mt-bb-right">
