@@ -3319,7 +3319,7 @@ function BottomSheet({
       return lo === hi ? sorted[lo] : Math.round(sorted[lo] * (hi - idx) + sorted[hi] * (idx - lo))
     }
     const mismaTipologia = (q: UnidadAlquiler) => q.dormitorios === property.dormitorios && q.id !== property.id && q.precio_mensual_bob > 0
-    const build = (pool: UnidadAlquiler[], ampliado: boolean) => {
+    const build = (pool: UnidadAlquiler[], ampliado: boolean, mixto: boolean, segmento: string | null) => {
       if (pool.length < 5) return null
       const prices = pool.map(q => q.precio_mensual_bob).sort((a, b) => a - b)
       return {
@@ -3328,11 +3328,25 @@ function BottomSheet({
         rangoHigh: pctl(prices, 0.75),
         count: pool.length,
         ampliado,
+        mixto,
+        segmento,
       }
     }
-    return build(properties.filter(q => q.zona === property.zona && mismaTipologia(q)), false)
-      ?? build(properties.filter(mismaTipologia), true)
-  }, [property?.id, property?.zona, property?.dormitorios, property?.precio_mensual_bob, properties])
+    // Segmentación por amoblado (un amoblado cotiza 15-30% más que uno sin
+    // amoblar — mezclarlos sesga la mediana): peras con peras cuando el dato
+    // existe; si no alcanza o la prop no tiene el dato, canasta mixta
+    // DECLARADA en el caveat. 'si' y 'semi' comparten bucket.
+    const enZona = (q: UnidadAlquiler) => q.zona === property.zona
+    const bucket = (v: string | null | undefined) => v === 'si' || v === 'semi' ? 'amoblado' : v === 'no' ? 'sin amoblar' : null
+    const seg = bucket(property.amoblado)
+    const mismoSeg = (q: UnidadAlquiler) => bucket(q.amoblado) === seg
+    return (seg
+      ? (build(properties.filter(q => enZona(q) && mismaTipologia(q) && mismoSeg(q)), false, false, seg)
+        ?? build(properties.filter(q => mismaTipologia(q) && mismoSeg(q)), true, false, seg))
+      : null)
+      ?? build(properties.filter(q => enZona(q) && mismaTipologia(q)), false, true, null)
+      ?? build(properties.filter(mismaTipologia), true, true, null)
+  }, [property?.id, property?.zona, property?.dormitorios, property?.precio_mensual_bob, property?.amoblado, properties])
 
   function toggleQuestion(idx: number) {
     setSelectedQs(prev => {
@@ -3496,7 +3510,7 @@ function BottomSheet({
               <span className="bs-mkta-value">{formatPrice(p.precio_mensual_bob)}/mes</span>
             </div>
             <div className="bs-mkta-zona">
-              Zona ({dormLabel(p.dormitorios)}): mediana <b>{formatPrice(marketData.mediana)}/mes</b>
+              Zona ({dormLabel(p.dormitorios)}{marketData.segmento ? ` · ${marketData.segmento}` : ''}): mediana <b>{formatPrice(marketData.mediana)}/mes</b>
               <span className="bs-mkta-rango">Rango típico {formatPrice(marketData.rangoLow)} — {formatPrice(marketData.rangoHigh)}/mes</span>
             </div>
             {(() => {
@@ -3516,7 +3530,7 @@ function BottomSheet({
                 </div>
               )
             })()}
-            <div className="bs-mkta-caveat">{marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}Basado en {marketData.count} deptos comparables activos. El precio varía según acabados, amenidades y seriedad del edificio.</div>
+            <div className="bs-mkta-caveat">{marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye amoblados y sin amoblar. ' : ''}Basado en {marketData.count} deptos comparables activos. El precio varía según acabados, amenidades y seriedad del edificio.</div>
           </div>
         </div>
       )}

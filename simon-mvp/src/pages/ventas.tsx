@@ -1169,7 +1169,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
       return lo === hi ? sorted[lo] : Math.round(sorted[lo] * (hi - idx) + sorted[hi] * (idx - lo))
     }
     const mismaTipologia = (q: UnidadVenta) => q.dormitorios === p.dormitorios && q.id !== p.id && q.precio_m2 > 0
-    const build = (pool: UnidadVenta[], ampliado: boolean) => {
+    const build = (pool: UnidadVenta[], ampliado: boolean, mixto: boolean, segmento: string | null) => {
       if (pool.length < 5) return null
       const values = pool.map(q => q.precio_m2).sort((a, b) => a - b)
       return {
@@ -1178,11 +1178,25 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
         rangoHigh: pctl(values, 0.75),
         count: pool.length,
         ampliado,
+        mixto,
+        segmento,
       }
     }
-    return build(properties.filter(q => q.zona === p.zona && mismaTipologia(q)), false)
-      ?? build(properties.filter(mismaTipologia), true)
-  }, [p?.id, p?.zona, p?.dormitorios, p?.precio_m2, properties])
+    // Segmentación por estado (preventa vs entrega inmediata cotizan distinto):
+    // peras con peras cuando el dato existe; si no alcanza o la prop no tiene
+    // el dato, canasta mixta DECLARADA en el caveat.
+    const enZona = (q: UnidadVenta) => q.zona === p.zona
+    const seg = p.estado_construccion === 'preventa' || p.estado_construccion === 'entrega_inmediata'
+      ? p.estado_construccion : null
+    const mismoSeg = (q: UnidadVenta) => q.estado_construccion === seg
+    const segLabel = seg === 'preventa' ? 'preventa' : 'entrega inmediata'
+    return (seg
+      ? (build(properties.filter(q => enZona(q) && mismaTipologia(q) && mismoSeg(q)), false, false, segLabel)
+        ?? build(properties.filter(q => mismaTipologia(q) && mismoSeg(q)), true, false, segLabel))
+      : null)
+      ?? build(properties.filter(q => enZona(q) && mismaTipologia(q)), false, true, null)
+      ?? build(properties.filter(mismaTipologia), true, true, null)
+  }, [p?.id, p?.zona, p?.dormitorios, p?.precio_m2, p?.estado_construccion, properties])
 
   const brokerQuestions = useMemo(() => {
     if (!p) return []
@@ -1399,7 +1413,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                   <span className="bs-mktv-value">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>
                 </div>
                 <div className="bs-mktv-zona">
-                  Zona ({p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}): mediana <b>$us {marketData.mediana.toLocaleString('en-US')}/m²</b>
+                  Zona ({p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}{marketData.segmento ? ` · ${marketData.segmento}` : ''}): mediana <b>$us {marketData.mediana.toLocaleString('en-US')}/m²</b>
                   <span className="bs-mktv-rango">Rango típico $us {marketData.rangoLow.toLocaleString('en-US')} — {marketData.rangoHigh.toLocaleString('en-US')}/m²</span>
                 </div>
                 {(() => {
@@ -1419,7 +1433,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                     </div>
                   )
                 })()}
-                <div className="bs-mktv-caveat">{marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}Basado en {marketData.count} deptos comparables activos. El precio por m² varía según acabados, amenidades y desarrollador.</div>
+                <div className="bs-mktv-caveat">{marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye preventa y entrega inmediata. ' : ''}Basado en {marketData.count} deptos comparables activos. El precio por m² varía según acabados, amenidades y desarrollador.</div>
               </div>
             </div>
           )}
