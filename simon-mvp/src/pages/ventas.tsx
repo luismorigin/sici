@@ -2290,6 +2290,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     if (brokerDemoMode) return // demo no persiste
     if (brokerMode) return // broker usa BD via "Mis shortlists"
     if (favorites.size > 0) localStorage.setItem('ventas_favorites_v1', JSON.stringify([...favorites]))
+    else localStorage.removeItem('ventas_favorites_v1') // al limpiar, no rehidratar viejos
   }, [favorites, publicShareMode, brokerDemoMode, brokerMode])
 
   // Scroll tracking (mobile TikTok)
@@ -2959,16 +2960,22 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                     </span>
                   )}
                   {favorites.size === 1 && (
-                    <span className="mt-bb-hint mt-bb-hint-active">
-                      <svg viewBox="0 0 24 24" fill="#3A6A48" stroke="none" style={{ width: 14, height: 14, flexShrink: 0 }}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                      1 favorito · guardá otro
-                    </span>
+                    <>
+                      <span className="mt-bb-hint mt-bb-hint-active">
+                        <svg viewBox="0 0 24 24" fill="#3A6A48" stroke="none" style={{ width: 14, height: 14, flexShrink: 0 }}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                        1 favorito · guardá otro
+                      </span>
+                      <button className="mt-bb-clear" aria-label="Quitar favorito" onClick={() => setFavorites(new Set())}>&times;</button>
+                    </>
                   )}
                   {favorites.size >= 2 && (
-                    <button className="mt-bb-cmp" onClick={openCompare}>
-                      Comparar {favorites.size}
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ width: 15, height: 15 }}><path d="M9 18l6-6-6-6"/></svg>
-                    </button>
+                    <>
+                      <button className="mt-bb-cmp" onClick={openCompare}>
+                        Comparar {favorites.size}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ width: 15, height: 15 }}><path d="M9 18l6-6-6-6"/></svg>
+                      </button>
+                      <button className="mt-bb-clear" aria-label="Limpiar favoritos" onClick={() => { setFavorites(new Set()); showToast('Favoritos limpiados') }}>&times;</button>
+                    </>
                   )}
                 </div>
               </div>
@@ -3334,7 +3341,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mt-bb-map { display:inline-flex; align-items:center; gap:8px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.16); color:#EDE8DC; border-radius:100px; padding:10px 18px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer; -webkit-tap-highlight-color:transparent }
         .mt-bb-map:disabled { opacity:0.4; cursor:default }
         .mt-bb-map:not(:disabled):active { transform:scale(0.97) }
-        .mt-bb-right { display:flex; align-items:center; min-width:0 }
+        .mt-bb-right { display:flex; align-items:center; gap:8px; min-width:0 }
+        .mt-bb-clear { flex:0 0 auto; width:40px; height:40px; border-radius:50%; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.16); color:rgba(237,232,220,0.7); font-size:20px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent }
+        .mt-bb-clear:active { transform:scale(0.94) }
         .mt-bb-hint { display:inline-flex; align-items:center; gap:7px; color:rgba(237,232,220,0.55); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; white-space:nowrap }
         .mt-bb-hint-active { color:#C8C0B0 }
         .mt-bb-cmp { display:inline-flex; align-items:center; gap:7px; background:#3A6A48; color:#EDE8DC; border:none; border-radius:100px; padding:11px 20px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer; -webkit-tap-highlight-color:transparent }
