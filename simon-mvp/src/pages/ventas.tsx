@@ -768,8 +768,11 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
       {/* Content zone (45%) — tocar abre el detalle (bottom sheet) */}
       <div className="mc-content" role="button" tabIndex={0} onClick={() => onDetails(p)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDetails(p) } }}>
-        <div className="mc-name">{p.proyecto}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="mc-reciente">Publicación reciente</span>}</div>
-        <div className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></div>
+        <div className="mc-name">{p.proyecto}</div>
+        <div className="mc-meta-row">
+          {p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="mc-reciente">Publicación reciente</span>}
+          <span className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></span>
+        </div>
         <div className="mc-price-block">
           <div className="mc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="mc-tc">(T.C. oficial)</span></div>
           {(() => { const b = priceChangeBadge(priceSnapshot, p.precio_usd); return b ? <div className={`mc-price-change mc-price-change-${b.kind}`}>{b.label}</div> : null })()}
@@ -788,16 +791,6 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
-        {/* Ver mapa — única acción en la card; el resto (WhatsApp, compartir,
-            detalle) vive en el bottom sheet, que se abre al tocar la card. */}
-        {p.latitud && p.longitud && onMap && (
-          <div className="mc-cta-row">
-            <button className="mc-map-pill" onClick={(e) => { e.stopPropagation(); onMap(p) }} aria-label="Ver en el mapa">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 15, height: 15 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              Ver mapa
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )
@@ -2454,27 +2447,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           <button className="vt-compare-banner-clear" aria-label="Limpiar selección" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Selección limpiada') }}>&times;</button>
         </div>
       )}
-      {/* Estado 0 favoritos: mensaje educativo muy discreto (MD: "mensaje muy
-          discreto si se decide educar"). Enseña el gesto sin bandeja sólida. */}
-      {!brokerMode && favorites.size === 0 && properties.length > 0 && (
-        <div className="vt-compare-banner-wrap vt-compare-edu-wrap">
-          <div className="vt-compare-edu">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{width:14,height:14,flexShrink:0}}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            Guardá con el corazón para comparar
-          </div>
-        </div>
-      )}
-      {/* Estado 1 favorito: bandeja discreta, todavía sin acción de comparar */}
-      {!brokerMode && favorites.size === 1 && (
-        <div className="vt-compare-banner-wrap vt-compare-hint-wrap">
-          <div className="vt-compare-hint">
-            <svg viewBox="0 0 24 24" fill="#3A6A48" stroke="none" style={{width:14,height:14,flexShrink:0}}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            1 favorito · guardá otro para comparar
-          </div>
-          <button className="vt-compare-banner-clear" aria-label="Quitar favorito" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()) }}>&times;</button>
-        </div>
-      )}
-      {!brokerMode && favorites.size >= 2 && (
+      {/* Desktop: banner flotante de comparar (2+). En mobile lo maneja la
+          barra fija inferior (mt-bottombar). */}
+      {isDesktop && !brokerMode && favorites.size >= 2 && (
         <div className="vt-compare-banner-wrap">
           <button className="vt-compare-banner" onClick={openCompare}>
             <span className="vt-compare-banner-text">Comparar {favorites.size} favoritos</span>
@@ -2965,6 +2940,41 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             })}
           </div>
 
+          {/* Barra fija inferior — Ver mapa (card activa) + comparación.
+              Reemplaza los botones flotantes sobre la card. */}
+          {properties.length > 0 && (() => {
+            const ac = feedItems[activeCardIndex]?.data
+            const conGps = ac && ac.latitud && ac.longitud
+            return (
+              <div className="mt-bottombar">
+                <button className="mt-bb-map" disabled={!conGps} onClick={() => conGps && openCardMap(ac)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 17, height: 17 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  Ver mapa
+                </button>
+                <div className="mt-bb-right">
+                  {favorites.size === 0 && (
+                    <span className="mt-bb-hint">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 14, height: 14, flexShrink: 0 }}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                      Guardá para comparar
+                    </span>
+                  )}
+                  {favorites.size === 1 && (
+                    <span className="mt-bb-hint mt-bb-hint-active">
+                      <svg viewBox="0 0 24 24" fill="#3A6A48" stroke="none" style={{ width: 14, height: 14, flexShrink: 0 }}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                      1 favorito · guardá otro
+                    </span>
+                  )}
+                  {favorites.size >= 2 && (
+                    <button className="mt-bb-cmp" onClick={openCompare}>
+                      Comparar {favorites.size}
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ width: 15, height: 15 }}><path d="M9 18l6-6-6-6"/></svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Drawer menú hamburguesa — intenciones inmobiliarias primero */}
           {menuOpen && (
             <div className="mfd-scrim" onClick={() => setMenuOpen(false)}>
@@ -3159,7 +3169,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .fo-reset { flex:0 0 auto; padding:14px 20px; background:transparent; border:1px solid rgba(237,232,220,0.12); border-radius:10px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer }
         .fo-apply { flex:1; padding:14px; background:#EDE8DC; border:none; border-radius:10px; color:#141414; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; cursor:pointer }
         .fo-apply:active { transform:scale(0.97) }
-        .mt-counter { position:fixed; bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); right:16px; z-index:50; font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
+        .mt-counter { position:fixed; bottom:calc(62px + env(safe-area-inset-bottom)); right:16px; z-index:65; font-size:12px; color:rgba(237,232,220,0.5); font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums; background:rgba(20,20,20,0.5); padding:2px 8px; border-radius:100px; pointer-events:none }
         .mt-map-btn { position:fixed; bottom:max(140px, calc(env(safe-area-inset-bottom) + 130px)); right:20px; z-index:100; width:48px; height:48px; border-radius:50%; background:rgba(20,20,20,0.7); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.2) }
         /* Banner broker venta — NEGRO (paridad con marca: peso = decisión patrimonial).
            Alquiler usa banner arena (más ligero, decisión rápida). Inversión cromática
@@ -3319,12 +3329,22 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-cta-row { display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-top:auto; padding-top:10px; border-top:1px solid rgba(237,232,220,0.1); min-height:40px }
         .mc-map-pill { display:inline-flex; align-items:center; gap:6px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.16); color:#EDE8DC; border-radius:100px; padding:8px 14px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; flex:0 0 auto; -webkit-tap-highlight-color:transparent }
         .mc-map-pill:active { transform:scale(0.97) }
-        /* Reservar espacio para la bandeja de comparar (no debe tapar la card).
-           Va en el contenido para que funcione aunque la prop no tenga "Ver mapa". */
-        .mt-feed-compare .mc-content { padding-bottom:calc(84px + env(safe-area-inset-bottom)) }
-        .mc-name { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1.1; margin-bottom:2px; padding-top:8px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap }
+        /* Barra fija inferior: Ver mapa + comparación. La card reserva su alto. */
+        .mt-bottombar { position:fixed; bottom:0; left:0; right:0; z-index:70; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 16px; padding-bottom:max(10px, calc(env(safe-area-inset-bottom) + 6px)); background:#141414; border-top:1px solid rgba(237,232,220,0.1) }
+        .mt-bb-map { display:inline-flex; align-items:center; gap:8px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.16); color:#EDE8DC; border-radius:100px; padding:10px 18px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer; -webkit-tap-highlight-color:transparent }
+        .mt-bb-map:disabled { opacity:0.4; cursor:default }
+        .mt-bb-map:not(:disabled):active { transform:scale(0.97) }
+        .mt-bb-right { display:flex; align-items:center; min-width:0 }
+        .mt-bb-hint { display:inline-flex; align-items:center; gap:7px; color:rgba(237,232,220,0.55); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; white-space:nowrap }
+        .mt-bb-hint-active { color:#C8C0B0 }
+        .mt-bb-cmp { display:inline-flex; align-items:center; gap:7px; background:#3A6A48; color:#EDE8DC; border:none; border-radius:100px; padding:11px 20px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer; -webkit-tap-highlight-color:transparent }
+        .mt-bb-cmp:active { transform:scale(0.97) }
+        /* La card reserva el alto de la barra fija para no quedar tapada */
+        .mt-feed-compare .mc-content { padding-bottom:calc(72px + env(safe-area-inset-bottom)) }
+        .mc-name { font-family:'Figtree',sans-serif; font-size:23px; font-weight:500; color:#EDE8DC; line-height:1.12; padding-top:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+        .mc-meta-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:5px 0 12px }
         .mc-reciente { font-size:11px; font-weight:600; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:rgba(58,106,72,0.15); padding:2px 8px; border-radius:4px }
-        .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; margin-bottom:12px; font-family:'DM Sans',sans-serif }
+        .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; font-family:'DM Sans',sans-serif }
         .mc-price-block { border-left:3px solid #3A6A48; padding-left:14px; margin-bottom:8px }
         .mc-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
         .mc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
