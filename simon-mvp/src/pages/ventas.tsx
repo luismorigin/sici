@@ -658,8 +658,9 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
 // memo + handlers estables — mismo patrón que VentaCard desktop.
-const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, showSwipeHint = false, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
+const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, onMap, isSpotlight, isFirst, showSwipeHint = false, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
   property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
+  onMap?: (p: UnidadVenta) => void
   // Hint "Desliza para más fotos" — se pasa true en las primeras posiciones del
   // feed; la card lo muestra solo si además tiene más de 1 foto.
   showSwipeHint?: boolean
@@ -752,15 +753,21 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
             Desliza para mas fotos
           </div>
         )}
+        {/* Favorito DENTRO de la foto (rediseño tanda 2). El resto de acciones vive
+            en el bottom sheet: la card es para mirar y guardar. */}
+        <button className={`mc-heart ${isFavorite ? 'active' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos'} onClick={(e) => { e.stopPropagation(); onToggleFavorite(p.id) }}>
+          <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'rgba(20,20,20,0.35)'} stroke={isFavorite ? '#3A6A48' : '#EDE8DC'} strokeWidth="1.6" style={{ width: 22, height: 22 }}>
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+        </button>
       </div>
 
       {/* Spotlight badge */}
       {isSpotlight && <div className="mc-spotlight">Te compartieron este depto</div>}
-      {p.tc_sospechoso && (!publicShareMode || contactoDirecto) && <div className="mc-tc-badge">Confirmar tipo de cambio</div>}
-      {brokerMode && !publicShareMode && (() => { const fb = fuenteBadge(p.fuente); return fb ? <div className="mc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null })()}
 
-      {/* Content zone (45%) */}
-      <div className="mc-content">
+      {/* Content zone (45%) — tocar abre el detalle (bottom sheet) */}
+      <div className="mc-content" role="button" tabIndex={0} onClick={() => onDetails(p)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDetails(p) } }}>
         <div className="mc-name">{p.proyecto}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="mc-reciente">Publicación reciente</span>}</div>
         <div className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></div>
         <div className="mc-price-block">
@@ -781,91 +788,17 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
-        {/* Extracto de la descripción — da vida a la card (paridad con alquileres).
-            Se oculta si hay comentario del broker (publicShare) para no competir. */}
-        {p.descripcion && !(brokerComment && publicShareMode) && (
-          <div className="mc-desc">&ldquo;{p.descripcion.slice(0, 110)}{p.descripcion.length > 110 ? '...' : ''}&rdquo;</div>
-        )}
-        {brokerComment && publicShareMode && (
-          <div className="mc-comentario">
-            <div className="mc-comentario-quote">&ldquo;</div>
-            <div className="mc-comentario-text">{brokerComment}</div>
-            {brokerComment.length > 50 && (
-              <button type="button" className="mc-comentario-more" onClick={() => onDetails(p)}>
-                Leer comentario completo →
-              </button>
-            )}
-          </div>
-        )}
-        <div className="mc-actions">
-          <button className={`mc-btn mc-fav ${brokerMode ? 'mc-star' : ''} ${isFavorite ? 'active' : ''}`} aria-label={brokerMode ? (isFavorite ? 'Quitar de shortlist' : 'Agregar a shortlist') : 'Favorito'} onClick={() => onToggleFavorite(p.id)}>
-            {brokerMode ? (
-              <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-              </svg>
-            )}
-          </button>
-          {!brokerMode && (
-            <button className="mc-btn mc-share" aria-label="Compartir" onClick={() => onShare(p)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
-                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-              </svg>
+        {/* Fila inferior: pista de tap + Ver mapa (única acción en la card;
+            el resto —WhatsApp, compartir, detalle— vive en el bottom sheet). */}
+        <div className="mc-cta-row">
+          <span className="mc-tap-hint">Tocá para ver el detalle</span>
+          {p.latitud && p.longitud && onMap && (
+            <button className="mc-map-pill" onClick={(e) => { e.stopPropagation(); onMap(p) }} aria-label="Ver en el mapa">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 15, height: 15 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              Ver mapa
             </button>
-          )}
-          {brokerMode && !publicShareMode && onReport && (
-            <button
-              className={`mc-btn mc-report ${isReported ? 'reported' : ''}`}
-              aria-label={isReported ? 'Reportada' : 'Reportar dato incorrecto'}
-              onClick={() => onReport(p)}
-            >
-              {isReported ? (
-                <>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                  Reportada
-                </>
-              ) : (
-                <>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 14, height: 14 }}>
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
-                  Reportar
-                </>
-              )}
-            </button>
-          )}
-          <button className="mc-btn mc-info" onClick={() => onDetails(p)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
-              <polyline points="6 9 12 15 18 9"/>
-            </svg> Ver mas
-          </button>
-          {((publicShareMode && !contactoDirecto && publicShareBroker) || ((!publicShareMode || contactoDirecto) && p.agente_telefono)) && (
-            <a href={publicShareMode && !contactoDirecto && publicShareBroker
-              ? `https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerMessage(p, publicShareBroker.nombre))}`
-              : `https://wa.me/${p.agente_telefono!.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(buildAgentWaMessage(p, brokerInfo))}`}
-              target="_blank" rel="noopener noreferrer" className="mc-btn mc-wsp-inline"
-              onClick={(e) => {
-                e.preventDefault()
-                trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: contactoDirecto ? 'public_share_directo' : 'card_mobile' })
-                if (publicShareMode && !contactoDirecto && publicShareBroker) {
-                  openWhatsApp(publicShareBroker.telefono, buildClientToBrokerMessage(p, publicShareBroker.nombre))
-                } else if (p.agente_telefono) {
-                  openWhatsApp(p.agente_telefono, buildAgentWaMessage(p, brokerInfo))
-                }
-              }}>
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-              Whatsapp
-            </a>
           )}
         </div>
-        <a href="/landing-v2" className="mc-branding">simonbo.com</a>
       </div>
     </div>
   )
@@ -2149,14 +2082,16 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   // de estas funciones nunca cambia entre renders (así React.memo de las cards
   // sigue siendo válido), pero siempre ejecutan la versión más reciente de la
   // lógica vía ref — sin closures viejos sobre favorites/properties.
-  const latestHandlersRef = useRef({ toggleFavorite, shareProperty, openSheet, addToShortlist, openReportModal })
-  latestHandlersRef.current = { toggleFavorite, shareProperty, openSheet, addToShortlist, openReportModal }
+  const openCardMap = (p: UnidadVenta) => { setMapSelectedId(p.id); setMobileMapOpen(true); trackEvent('open_map_mobile_venta', { source: 'card' }) }
+  const latestHandlersRef = useRef({ toggleFavorite, shareProperty, openSheet, addToShortlist, openReportModal, openCardMap })
+  latestHandlersRef.current = { toggleFavorite, shareProperty, openSheet, addToShortlist, openReportModal, openCardMap }
   const onCardToggleFavorite = useCallback((id: number) => latestHandlersRef.current.toggleFavorite(id), [])
   const onCardShare = useCallback((p: UnidadVenta) => latestHandlersRef.current.shareProperty(p), [])
   const onCardOpenSheet = useCallback((p: UnidadVenta) => latestHandlersRef.current.openSheet(p), [])
   const onCardPhotoTap = useCallback((p: UnidadVenta, _idx: number) => latestHandlersRef.current.openSheet(p), [])
   const onCardAddToShortlist = useCallback((p: UnidadVenta) => latestHandlersRef.current.addToShortlist(p), [])
   const onCardReport = useCallback((p: UnidadVenta) => latestHandlersRef.current.openReportModal(p), [])
+  const onCardMap = useCallback((p: UnidadVenta) => latestHandlersRef.current.openCardMap(p), [])
 
   // Lista que se muestra: aplica filtro de fuentes (broker) + área m² (broker) + "solo seleccionadas".
   // Cuando brokerMode = false, no se aplica nada (paridad con feed público).
@@ -2959,13 +2894,6 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             <div className="mt-counter">{activeCardIndex + 1} / {feedItems.length}</div>
           )}
 
-          {/* Map floating button */}
-          <button className="mt-map-btn" aria-label="Ver mapa" onClick={() => { setMobileMapOpen(true); trackEvent('open_map_mobile_venta') }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="#EDE8DC" strokeWidth="1.5" style={{width:22,height:22}}>
-              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
-            </svg>
-          </button>
-
           {/* Filter nudge pill — appears once after 6+ cards without interaction */}
           {nudgeVisible && (
             <div className="vt-nudge-pill" onClick={tapNudge}>
@@ -2994,7 +2922,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           )}
 
           {/* TikTok feed */}
-          <div className="mt-feed" ref={feedRef}>
+          <div className={`mt-feed ${!brokerMode && favorites.size >= 2 ? 'mt-feed-compare' : ''}`} ref={feedRef}>
             {loadError && <div className="mc" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7A7060' }}>
               <div style={{ textAlign: 'center' }}><p>No se pudo cargar.</p><button onClick={() => fetchProperties()} style={{ padding: '8px 20px', background: '#141414', color: '#EDE8DC', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>Reintentar</button></div>
             </div>}
@@ -3009,7 +2937,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
               return <MobileVentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
                 isSpotlight={item.isSpotlight} isFirst={idx === 0} showSwipeHint={idx === swipeHintIdx}
                 onToggleFavorite={onCardToggleFavorite} onShare={onCardShare}
-                onPhotoTap={onCardPhotoTap} onDetails={onCardOpenSheet}
+                onPhotoTap={onCardPhotoTap} onDetails={onCardOpenSheet} onMap={onCardMap}
                 brokerMode={brokerMode} onAddToShortlist={onCardAddToShortlist} publicShareMode={publicShareMode} contactoDirecto={contactoDirecto} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
                 brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
                 isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false}
@@ -3358,7 +3286,18 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ds-spotlight-text { font-size:12px; color:#9A8E7A; font-family:'DM Sans',sans-serif; letter-spacing:0.5px; white-space:nowrap; text-transform:uppercase }
 
         /* Content zone (45%) */
-        .mc-content { flex:1; padding:0 24px 8px; padding-bottom:max(8px, calc(env(safe-area-inset-bottom) + 4px)); display:flex; flex-direction:column; overflow:hidden }
+        .mc-content { flex:1; padding:0 24px 8px; padding-bottom:max(8px, calc(env(safe-area-inset-bottom) + 4px)); display:flex; flex-direction:column; overflow:hidden; cursor:pointer; -webkit-tap-highlight-color:transparent }
+        /* Corazón dentro de la foto (rediseño tanda 2) */
+        .mc-heart { position:absolute; top:14px; right:14px; z-index:6; width:44px; height:44px; border-radius:50%; background:rgba(20,20,20,0.35); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent }
+        .mc-heart.active { background:rgba(58,106,72,0.22) }
+        .mc-heart:active { transform:scale(0.9) }
+        /* Fila inferior de la card: pista de tap + Ver mapa */
+        .mc-cta-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:auto; padding-top:10px; border-top:1px solid rgba(237,232,220,0.1); min-height:40px }
+        .mc-tap-hint { font-size:12px; color:rgba(237,232,220,0.4); font-family:'DM Sans',sans-serif; letter-spacing:0.2px }
+        .mc-map-pill { display:inline-flex; align-items:center; gap:6px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.16); color:#EDE8DC; border-radius:100px; padding:8px 14px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; flex:0 0 auto; -webkit-tap-highlight-color:transparent }
+        .mc-map-pill:active { transform:scale(0.97) }
+        /* Reservar espacio para la bandeja de comparar (no debe tapar la card) */
+        .mt-feed-compare .mc-cta-row { margin-bottom:calc(64px + env(safe-area-inset-bottom)) }
         .mc-name { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1.1; margin-bottom:2px; padding-top:8px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap }
         .mc-reciente { font-size:11px; font-weight:600; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:rgba(58,106,72,0.15); padding:2px 8px; border-radius:4px }
         .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; margin-bottom:12px; font-family:'DM Sans',sans-serif }
