@@ -788,17 +788,16 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
-        {/* Fila inferior: pista de tap + Ver mapa (única acción en la card;
-            el resto —WhatsApp, compartir, detalle— vive en el bottom sheet). */}
-        <div className="mc-cta-row">
-          <span className="mc-tap-hint">Tocá para ver el detalle</span>
-          {p.latitud && p.longitud && onMap && (
+        {/* Ver mapa — única acción en la card; el resto (WhatsApp, compartir,
+            detalle) vive en el bottom sheet, que se abre al tocar la card. */}
+        {p.latitud && p.longitud && onMap && (
+          <div className="mc-cta-row">
             <button className="mc-map-pill" onClick={(e) => { e.stopPropagation(); onMap(p) }} aria-label="Ver en el mapa">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 15, height: 15 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
               Ver mapa
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -2455,10 +2454,20 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           <button className="vt-compare-banner-clear" aria-label="Limpiar selección" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Selección limpiada') }}>&times;</button>
         </div>
       )}
+      {/* Estado 1 favorito: bandeja discreta, todavía sin acción de comparar */}
+      {!brokerMode && favorites.size === 1 && (
+        <div className="vt-compare-banner-wrap vt-compare-hint-wrap">
+          <div className="vt-compare-hint">
+            <svg viewBox="0 0 24 24" fill="#3A6A48" stroke="none" style={{width:14,height:14,flexShrink:0}}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            1 favorito · guardá otro para comparar
+          </div>
+          <button className="vt-compare-banner-clear" aria-label="Quitar favorito" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()) }}>&times;</button>
+        </div>
+      )}
       {!brokerMode && favorites.size >= 2 && (
         <div className="vt-compare-banner-wrap">
           <button className="vt-compare-banner" onClick={openCompare}>
-            <span className="vt-compare-banner-text">{favorites.size} favorito{favorites.size > 1 ? 's' : ''} · Comparar</span>
+            <span className="vt-compare-banner-text">Comparar {favorites.size} favoritos</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M9 18l6-6-6-6"/></svg>
           </button>
           <button className="vt-compare-banner-clear" aria-label="Limpiar favoritos" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Favoritos limpiados') }}>&times;</button>
@@ -2922,7 +2931,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           )}
 
           {/* TikTok feed */}
-          <div className={`mt-feed ${!brokerMode && favorites.size >= 2 ? 'mt-feed-compare' : ''}`} ref={feedRef}>
+          <div className={`mt-feed ${!brokerMode && favorites.size >= 1 ? 'mt-feed-compare' : ''}`} ref={feedRef}>
             {loadError && <div className="mc" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7A7060' }}>
               <div style={{ textAlign: 'center' }}><p>No se pudo cargar.</p><button onClick={() => fetchProperties()} style={{ padding: '8px 20px', background: '#141414', color: '#EDE8DC', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>Reintentar</button></div>
             </div>}
@@ -3224,6 +3233,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vt-compare-banner:active { transform:scale(0.97) }
         .vt-compare-banner-text { font-variant-numeric:tabular-nums }
         .vt-compare-banner-clear { width:48px; min-height:48px; background:#141414; border:1px solid rgba(237,232,220,0.1); border-radius:50%; color:rgba(237,232,220,0.6); font-size:20px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 20px rgba(0,0,0,0.25) }
+        /* Estado 1 favorito — bandeja discreta sin acción de comparar */
+        .vt-compare-hint { display:flex; align-items:center; gap:8px; padding:11px 18px; background:rgba(20,20,20,0.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#C8C0B0; border:1px solid rgba(237,232,220,0.1); border-radius:100px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; letter-spacing:0.2px; box-shadow:0 6px 20px rgba(0,0,0,0.25); white-space:nowrap }
+        .vt-compare-hint-wrap .vt-compare-banner-clear { width:44px; min-height:44px; font-size:18px }
         .vt-nudge-pill { position:fixed; bottom:max(90px, calc(env(safe-area-inset-bottom) + 80px)); left:50%; transform:translateX(-50%); z-index:100; display:flex; align-items:center; gap:8px; background:#3A6A48; color:#EDE8DC; padding:12px 16px 12px 18px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,0.18); animation:vtNudgeIn 0.3s ease-out }
         .vt-nudge-x { background:none; border:none; color:rgba(237,232,220,0.6); font-size:18px; line-height:1; cursor:pointer; padding:0 0 0 4px }
         @keyframes vtNudgeIn { from{opacity:0;transform:translateX(-50%) translateY(12px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
@@ -3292,8 +3304,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-heart.active { background:rgba(58,106,72,0.22) }
         .mc-heart:active { transform:scale(0.9) }
         /* Fila inferior de la card: pista de tap + Ver mapa */
-        .mc-cta-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:auto; padding-top:10px; border-top:1px solid rgba(237,232,220,0.1); min-height:40px }
-        .mc-tap-hint { font-size:12px; color:rgba(237,232,220,0.4); font-family:'DM Sans',sans-serif; letter-spacing:0.2px }
+        .mc-cta-row { display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-top:auto; padding-top:10px; border-top:1px solid rgba(237,232,220,0.1); min-height:40px }
         .mc-map-pill { display:inline-flex; align-items:center; gap:6px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.16); color:#EDE8DC; border-radius:100px; padding:8px 14px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; flex:0 0 auto; -webkit-tap-highlight-color:transparent }
         .mc-map-pill:active { transform:scale(0.97) }
         /* Reservar espacio para la bandeja de comparar (no debe tapar la card) */
