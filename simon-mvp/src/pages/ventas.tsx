@@ -521,7 +521,7 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
   return (
     <div className={`vc ${isDestacada ? 'vc-destacada' : ''}`} ref={cardRef}>
       {isDestacada && <div className="vc-destacada-chip">⭐ Recomendada por tu broker</div>}
-      <div className="vc-photo" style={!useCarousel && hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')`, cursor: 'pointer' } : undefined}
+      <div className={`vc-photo ${!hasPhotos ? 'vc-photo-nofoto' : ''}`} style={!useCarousel && hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')`, cursor: 'pointer' } : undefined}
         onClick={!useCarousel ? () => { if (hasPhotos) onPhotoTap(p, photoIdx) } : undefined}>
         {useCarousel && (
           <div className="vc-photo-scroll" ref={scrollRef}>
@@ -656,8 +656,11 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
 // memo + handlers estables — mismo patrón que VentaCard desktop.
-const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
+const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, showSwipeHint = false, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
   property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
+  // Hint "Desliza para más fotos" — se pasa true en las primeras posiciones del
+  // feed; la card lo muestra solo si además tiene más de 1 foto.
+  showSwipeHint?: boolean
   onToggleFavorite: (id: number) => void; onShare: (p: UnidadVenta) => void; onPhotoTap: (p: UnidadVenta, idx: number) => void; onDetails: (p: UnidadVenta) => void
   brokerMode?: boolean; onAddToShortlist?: (p: UnidadVenta) => void; publicShareMode?: boolean
   // contacto_directo (B2C, migración 256): ver VentaCard. Default false = B2B intacto.
@@ -740,6 +743,13 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
             ))}
           </div>
         )}
+        {/* Hint de swipe — primeras cards con galería, se desvanece solo (paridad con alquileres) */}
+        {showSwipeHint && photos.length > 1 && (
+          <div className="mc-swipe-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:20,height:20}}><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Desliza para mas fotos
+          </div>
+        )}
       </div>
 
       {/* Spotlight badge */}
@@ -769,6 +779,11 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
+        {/* Extracto de la descripción — da vida a la card (paridad con alquileres).
+            Se oculta si hay comentario del broker (publicShare) para no competir. */}
+        {p.descripcion && !(brokerComment && publicShareMode) && (
+          <div className="mc-desc">&ldquo;{p.descripcion.slice(0, 110)}{p.descripcion.length > 110 ? '...' : ''}&rdquo;</div>
+        )}
         {brokerComment && publicShareMode && (
           <div className="mc-comentario">
             <div className="mc-comentario-quote">&ldquo;</div>
@@ -1376,7 +1391,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
               <div className="bs-q-header">
                 <div className="bs-sl"><span className="bs-sl-dot" />Preguntas para el vendedor</div>
                 <span className="bs-q-hint">
-                  {selectedQs.size > 0 ? `${selectedQs.size}/${MAX_QS} — se incluyen en WhatsApp` : `Selecciona hasta ${MAX_QS}`}
+                  {selectedQs.size > 0 ? `${selectedQs.size}/${MAX_QS} — se incluyen en WhatsApp` : `Selecciona hasta ${MAX_QS} · van en tu WhatsApp`}
                 </span>
               </div>
               <div className="bs-q-list">
@@ -2298,6 +2313,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     })
     return items
   }, [properties, favorites, brokerMode, onlySelectedFilter, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax, spotlightProperty, spotlightId])
+  // Hint "Desliza para más fotos": una sola vez, en la primera card con galería.
+  const swipeHintIdx = useMemo(() => feedItems.findIndex(it => (it.data.fotos_urls?.length || 0) > 1), [feedItems])
 
   return (
     <>
@@ -2786,7 +2803,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
               }
               const p = item.data
               return <MobileVentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
-                isSpotlight={item.isSpotlight} isFirst={idx === 0}
+                isSpotlight={item.isSpotlight} isFirst={idx === 0} showSwipeHint={idx === swipeHintIdx}
                 onToggleFavorite={onCardToggleFavorite} onShare={onCardShare}
                 onPhotoTap={onCardPhotoTap} onDetails={onCardOpenSheet}
                 brokerMode={brokerMode} onAddToShortlist={onCardAddToShortlist} publicShareMode={publicShareMode} contactoDirecto={contactoDirecto} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
@@ -2991,7 +3008,16 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-photo-zone::before { content:''; position:absolute; top:0; left:0; right:0; height:70px; background:linear-gradient(rgba(0,0,0,0.35), transparent); pointer-events:none; z-index:3 }
         .mc-photo-scroll { display:flex; height:100%; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
         .mc-photo-scroll::-webkit-scrollbar { display:none }
-        .mc-slide { flex:0 0 100%; height:100%; background-size:cover; background-position:center; background-color:#D8D0BC; scroll-snap-align:start; position:relative; overflow:hidden }
+        .mc-slide { flex:0 0 100%; height:100%; background-size:cover; background-position:center; background-color:#D8D0BC; scroll-snap-align:start; position:relative; overflow:hidden; animation:vImgShimmer 1.5s ease-in-out infinite }
+        /* Shimmer mientras carga la foto (mismo patrón que alquileres.css):
+           el selector [style*=background-image] lo apaga apenas hay imagen. */
+        @keyframes vImgShimmer { 0%,100%{background-color:#D8D0BC} 50%{background-color:#EDE8DC} }
+        @keyframes vImgShimmerDark { 0%,100%{background-color:#2a2a2a} 50%{background-color:#3a3a3a} }
+        .mc-slide[style*="background-image"], .mc-slide-empty { animation:none }
+        .mc-swipe-hint { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:10; display:flex; align-items:center; gap:8px; background:rgba(20,20,20,0.65); padding:10px 20px; border-radius:100px; color:rgba(255,255,255,0.85); font-size:13px; font-family:'DM Sans',sans-serif; pointer-events:none; animation:mcHintFade 3s ease-in-out forwards }
+        @keyframes mcHintFade { 0%{opacity:0} 15%{opacity:1} 70%{opacity:1} 100%{opacity:0} }
+        .mc-desc { font-size:13px; font-weight:300; color:#B8AD9E; line-height:1.5; font-style:italic; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; margin-bottom:12px }
+        @media (prefers-reduced-motion: reduce) { .mc-slide, .vc-photo, .vc-slide { animation:none } .mc-swipe-hint { animation:none; opacity:0.7 } }
         .mc-slide-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; pointer-events:none }
         .mc-slide-empty { background:#D8D0BC }
         .mc-photo-fade { display:none }
@@ -3100,10 +3126,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
            Cuando useCarousel (publicShareMode), el background-image vive en .vc-slide hijos.
            background-size:cover + position:center necesarios SIEMPRE porque el wrapper también
            se usa con backgroundImage directo en el modo no-carrusel (feed venta, broker mode). */
-        .vc-photo { height:220px; background-size:cover; background-position:center; background-color:#2a2a2a; position:relative; overflow:hidden }
+        .vc-photo { height:220px; background-size:cover; background-position:center; background-color:#2a2a2a; position:relative; overflow:hidden; animation:vImgShimmerDark 1.5s ease-in-out infinite }
+        .vc-photo[style*="background-image"], .vc-photo-nofoto { animation:none }
         .vc-photo-scroll { display:flex; height:100%; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
         .vc-photo-scroll::-webkit-scrollbar { display:none }
-        .vc-slide { flex:0 0 100%; height:100%; background-size:cover; background-position:center; background-color:#2a2a2a; scroll-snap-align:start; scroll-snap-stop:always; cursor:pointer }
+        .vc-slide { flex:0 0 100%; height:100%; background-size:cover; background-position:center; background-color:#2a2a2a; scroll-snap-align:start; scroll-snap-stop:always; cursor:pointer; animation:vImgShimmerDark 1.5s ease-in-out infinite }
+        .vc-slide[style*="background-image"], .vc-slide-empty { animation:none }
         .vc-slide-empty { display:flex; align-items:center; justify-content:center; cursor:default }
         @keyframes vcShimmer { 0%,100%{background-color:#2a2a2a} 50%{background-color:#333} }
         .vc-photo:not([style*="background-image"]) { animation:vcShimmer 1.5s ease-in-out infinite }
@@ -3518,9 +3546,9 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
         amenities_confirmados: p.amenities_confirmados || [],
         amenities_por_verificar: p.amenities_por_verificar || [],
         equipamiento_detectado: p.equipamiento_detectado || [],
-        // descripcion NO viaja en el payload SSG (~1KB/prop): llega con el
-        // fetch completo diferido antes de que el user abra un detalle.
-        descripcion: null,
+        // Solo un EXTRACTO viaja en el payload SSG (la card muestra ~110 chars);
+        // el texto completo llega con el fetch diferido del cliente.
+        descripcion: p.descripcion ? String(p.descripcion).slice(0, 160) : null,
         latitud: p.latitud ? parseFloat(String(p.latitud)) : null,
         longitud: p.longitud ? parseFloat(String(p.longitud)) : null,
         estacionamientos: p.estacionamientos ?? null,

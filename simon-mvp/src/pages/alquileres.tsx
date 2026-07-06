@@ -188,7 +188,7 @@ const handleWhatsAppLead = triggerWhatsAppCapture
 function buildShareWhatsAppUrl(p: UnidadAlquiler) {
   const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
   const zone = displayZona(p.zona)
-  const specs = `${dormLabel(p.dormitorios)} · ${p.area_m2}m² · ${formatPrice(p.precio_mensual_bob)}/mes`
+  const specs = `${dormLabel(p.dormitorios)} · ${Math.round(p.area_m2)}m² · ${formatPrice(p.precio_mensual_bob)}/mes`
   const url = `https://simonbo.com/alquileres?id=${p.id}`
   const text = `Mira este depto en alquiler:\n\n${name} — ${zone}\n${specs}\n\n${url}`
   return `https://wa.me/?text=${encodeURIComponent(text)}`
@@ -2542,7 +2542,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
         </div>
         <div className="mfc-m-body">
           <div className="mfc-m-name">{spName}</div>
-          <div className="mfc-m-specs">{displayZona(sp.zona)} · {sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
+          <div className="mfc-m-specs">{displayZona(sp.zona)} · {Math.round(sp.area_m2)}m² · {dormLabel(sp.dormitorios)}</div>
           <div className="mfc-m-price">{formatPrice(sp.precio_mensual_bob)}<span>/mes</span></div>
           {spBadges.length > 0 && (
             <div className="mfc-m-badges">{spBadges.map((b, i) => <span key={i} className="mfc-m-badge">{b}</span>)}</div>
@@ -2588,7 +2588,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
       </div>
       <div className="map-float-body">
         <div className="map-float-name">{spName}</div>
-        <div className="map-float-zona">{displayZona(sp.zona)} · {sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
+        <div className="map-float-zona">{displayZona(sp.zona)} · {Math.round(sp.area_m2)}m² · {dormLabel(sp.dormitorios)}</div>
         <div className="map-float-price">{formatPrice(sp.precio_mensual_bob)}<span>/mes</span></div>
         {spBadges.length > 0 && (
           <div className="map-float-badges">{spBadges.map((b, i) => <span key={i} className="map-float-badge">{b}</span>)}</div>
@@ -2710,7 +2710,7 @@ const DesktopCard = memo(function DesktopCard({
         <div className="dc-price-block">
           <div className="dc-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
           <div className="dc-specs">
-            {p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · Piso ${p.piso}` : ''}
+            {[`${Math.round(p.area_m2)}m²`, dormLabel(p.dormitorios), p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null, p.piso ? `Piso ${p.piso}` : null].filter(Boolean).join(' · ')}
           </div>
         </div>
         <div className="dc-specs-2">
@@ -2912,7 +2912,7 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
         <div className="amc-zona">{displayZona(p.zona)} <span className="amc-id">#{p.id}</span></div>
         <div className="amc-price-block">
           <div className="amc-price">{formatPrice(p.precio_mensual_bob)}/mes</div>
-          <div className="amc-specs">{p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · Piso ${p.piso}` : ''}</div>
+          <div className="amc-specs">{[`${Math.round(p.area_m2)}m²`, dormLabel(p.dormitorios), p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null, p.piso ? `Piso ${p.piso}` : null].filter(Boolean).join(' · ')}</div>
         </div>
         <div className="amc-specs-2">
           {(p.amoblado === 'si' || p.amoblado === 'semi') && <span className="amc-highlight gold">{p.amoblado === 'si' ? 'Amoblado' : 'Semi-amoblado'}</span>}
@@ -3352,9 +3352,10 @@ function BottomSheet({
   }
 
   const features: Array<{ icon: string; label: string; value: string; highlight?: boolean }> = []
-  features.push({ icon: 'area', label: 'Area', value: `${p.area_m2}m²` })
+  features.push({ icon: 'area', label: 'Area', value: `${Math.round(p.area_m2)}m²` })
   features.push({ icon: 'bed', label: 'Tipo', value: dormLabel(p.dormitorios) })
-  features.push({ icon: 'bath', label: 'Banos', value: p.banos ? `${p.banos} bano${p.banos > 1 ? 's' : ''}` : '—' })
+  // Sin dato de baños → no mostrar el tile: un "—" comunica "dato roto"
+  if (p.banos) features.push({ icon: 'bath', label: 'Banos', value: `${p.banos} bano${p.banos > 1 ? 's' : ''}` })
   if (p.piso !== null) features.push({ icon: 'building', label: 'Piso', value: p.piso === 0 ? 'PB' : `Piso ${p.piso}` })
   if (p.estacionamientos !== null) features.push({ icon: 'car', label: 'Parqueo', value: p.estacionamientos > 0 ? `${p.estacionamientos} incl.` : 'No incl.' })
   if (p.baulera) features.push({ icon: 'box', label: 'Baulera', value: 'Incluida', highlight: true })
@@ -3406,7 +3407,7 @@ function BottomSheet({
           <div className="bs-hr-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
         </div>
         <div className="bs-hr-specs">
-          {dormLabel(p.dormitorios)} · {p.area_m2}m² · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · Piso ${p.piso}` : ''}
+          {[dormLabel(p.dormitorios), `${Math.round(p.area_m2)}m²`, p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null, p.piso ? `Piso ${p.piso}` : null].filter(Boolean).join(' · ')}
         </div>
         {publicShareMode && priceSnapshot && priceSnapshot.bobSnapshot != null && priceSnapshot.bobActual != null && priceSnapshot.bobSnapshot > 0 && Math.abs((priceSnapshot.bobActual - priceSnapshot.bobSnapshot) / priceSnapshot.bobSnapshot) >= 0.01 && (
           <div className={`bs-hr-price-change ${priceSnapshot.bobActual < priceSnapshot.bobSnapshot ? 'down' : 'up'}`}>
@@ -3515,7 +3516,7 @@ function BottomSheet({
                   <div className="bs-sim-info">
                     <div className="bs-sim-name">{spName}</div>
                     <div className="bs-sim-price">{formatPrice(sp.precio_mensual_bob)}/mes</div>
-                    <div className="bs-sim-specs">{sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
+                    <div className="bs-sim-specs">{Math.round(sp.area_m2)}m² · {dormLabel(sp.dormitorios)}</div>
                   </div>
                 </button>
               )
@@ -3529,7 +3530,7 @@ function BottomSheet({
           <div className="bs-q-header">
             <div className="bs-sl"><span className="bs-sl-dot" />Preguntas para el broker</div>
             <span className="bs-q-hint">
-              {selectedQs.size > 0 ? `${selectedQs.size}/${MAX_QS} — se incluyen en WhatsApp` : `Selecciona hasta ${MAX_QS}`}
+              {selectedQs.size > 0 ? `${selectedQs.size}/${MAX_QS} — se incluyen en WhatsApp` : `Selecciona hasta ${MAX_QS} · van en tu WhatsApp`}
             </span>
           </div>
           <div className="bs-q-list">
