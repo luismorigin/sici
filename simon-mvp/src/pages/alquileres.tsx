@@ -3306,26 +3306,32 @@ function BottomSheet({
       .slice(0, 4)
   }, [property?.id, property?.zona, property?.dormitorios, property?.precio_mensual_bob, properties])
 
-  // --- Market data for this property's zona + dorms ---
+  // --- Market data: Bs/mes para esta tipología ---
+  // Formato fiduciario (unificado con ventas): SIN veredicto "%-sobre-mediana"
+  // — mediana, rango típico (p25-p75, no min/max: un outlier rompía el rango)
+  // y barra visual con la posición de este depto. Cascada: zona (≥5) → todo
+  // Equipetrol DECLARADO como "zona ampliada" (≥5) → null (línea explicativa).
   const marketData = useMemo(() => {
-    if (!property || !properties || properties.length === 0) return null
-    const comparables = properties.filter(
-      q => q.zona === property.zona && q.dormitorios === property.dormitorios && q.id !== property.id
-    )
-    // Guardrail fiduciario: con menos de 5 comparables la "mediana" es
-    // anécdota, no mercado — mejor no mostrar el bloque.
-    if (comparables.length < 5) return null
-    const prices = comparables.map(q => q.precio_mensual_bob).sort((a, b) => a - b)
+    if (!property || !property.precio_mensual_bob || !properties || properties.length === 0) return null
     const pctl = (sorted: number[], pct: number) => {
       const idx = (sorted.length - 1) * pct
       const lo = Math.floor(idx), hi = Math.ceil(idx)
       return lo === hi ? sorted[lo] : Math.round(sorted[lo] * (hi - idx) + sorted[hi] * (idx - lo))
     }
-    const mediana = pctl(prices, 0.5)
-    const diffPct = Math.round(((property.precio_mensual_bob - mediana) / mediana) * 100)
-    // Rango típico p25-p75 (no min/max): un solo outlier — p.ej. un 1 dorm a
-    // Bs 29.000 — hacía que el rango no dijera nada del mercado real.
-    return { mediana, min: pctl(prices, 0.25), max: pctl(prices, 0.75), count: comparables.length, diffPct }
+    const mismaTipologia = (q: UnidadAlquiler) => q.dormitorios === property.dormitorios && q.id !== property.id && q.precio_mensual_bob > 0
+    const build = (pool: UnidadAlquiler[], ampliado: boolean) => {
+      if (pool.length < 5) return null
+      const prices = pool.map(q => q.precio_mensual_bob).sort((a, b) => a - b)
+      return {
+        mediana: pctl(prices, 0.5),
+        rangoLow: pctl(prices, 0.25),
+        rangoHigh: pctl(prices, 0.75),
+        count: pool.length,
+        ampliado,
+      }
+    }
+    return build(properties.filter(q => q.zona === property.zona && mismaTipologia(q)), false)
+      ?? build(properties.filter(mismaTipologia), true)
   }, [property?.id, property?.zona, property?.dormitorios, property?.precio_mensual_bob, properties])
 
   function toggleQuestion(idx: number) {
@@ -3479,27 +3485,45 @@ function BottomSheet({
           </a>
         </div>
       )}
-      {/* --- Mini Market Study --- */}
-      {marketData && (
+      {/* --- Mini Market Study — formato barra sin veredicto (unificado con
+          ventas). Oculto en publicShare: `properties` ahí es la shortlist. --- */}
+      {!publicShareBroker && marketData && (
         <div className="bs-section">
-          <div className="bs-sl"><span className="bs-sl-dot" />Mercado en {displayZona(p.zona)}</div>
+          <div className="bs-sl"><span className="bs-sl-dot" />Mercado en {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
           <div className="bs-mkt">
-            <div className="bs-mkt-row">
-              <span className="bs-mkt-label">Mediana {dormLabel(p.dormitorios)}</span>
-              <span className="bs-mkt-value">{formatPrice(marketData.mediana)}/mes</span>
+            <div className="bs-mkta-this">
+              <span className="bs-mkta-label">Este depto</span>
+              <span className="bs-mkta-value">{formatPrice(p.precio_mensual_bob)}/mes</span>
             </div>
-            <div className="bs-mkt-row">
-              <span className="bs-mkt-label">Este depto</span>
-              <span className={`bs-mkt-badge ${marketData.diffPct <= 0 ? 'below' : 'above'}`}>
-                {marketData.diffPct <= 0 ? `${Math.abs(marketData.diffPct)}% bajo mediana` : `${marketData.diffPct}% sobre mediana`}
-              </span>
+            <div className="bs-mkta-zona">
+              Zona ({dormLabel(p.dormitorios)}): mediana <b>{formatPrice(marketData.mediana)}/mes</b>
+              <span className="bs-mkta-rango">Rango típico {formatPrice(marketData.rangoLow)} — {formatPrice(marketData.rangoHigh)}/mes</span>
             </div>
-            <div className="bs-mkt-row">
-              <span className="bs-mkt-label">Rango típico</span>
-              <span className="bs-mkt-value">{formatPrice(marketData.min)} — {formatPrice(marketData.max)}</span>
-            </div>
-            <div className="bs-mkt-count">Basado en {marketData.count} deptos comparables activos. El precio varía según acabados, amenidades y seriedad del edificio.</div>
+            {(() => {
+              const lo = Math.min(marketData.rangoLow, p.precio_mensual_bob) * 0.94
+              const hi = Math.max(marketData.rangoHigh, p.precio_mensual_bob) * 1.06
+              const pos = (v: number) => Math.min(98, Math.max(2, ((v - lo) / (hi - lo)) * 100))
+              return (
+                <div className="bs-mkta-bar-wrap">
+                  <div className="bs-mkta-bar">
+                    <div className="bs-mkta-band" style={{ left: `${pos(marketData.rangoLow)}%`, width: `${pos(marketData.rangoHigh) - pos(marketData.rangoLow)}%` }} />
+                    <div className="bs-mkta-marker" style={{ left: `${pos(p.precio_mensual_bob)}%` }} />
+                  </div>
+                  <div className="bs-mkta-scale">
+                    <span style={{ left: `${pos(marketData.rangoLow)}%` }}>{formatPrice(marketData.rangoLow)}</span>
+                    <span style={{ left: `${pos(marketData.rangoHigh)}%` }}>{formatPrice(marketData.rangoHigh)}</span>
+                  </div>
+                </div>
+              )
+            })()}
+            <div className="bs-mkta-caveat">{marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}Basado en {marketData.count} deptos comparables activos. El precio varía según acabados, amenidades y seriedad del edificio.</div>
           </div>
+        </div>
+      )}
+      {/* Nivel 3 de la cascada: la ausencia se explica, no se disimula. */}
+      {!publicShareBroker && !marketData && p.precio_mensual_bob > 0 && (
+        <div className="bs-section">
+          <div className="bs-mkta-empty">Sin suficientes deptos comparables activos para mostrar contexto de mercado.</div>
         </div>
       )}
       {/* --- Similar Properties --- */}

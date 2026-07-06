@@ -1155,29 +1155,33 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
       .slice(0, 4)
   }, [p?.id, p?.zona, p?.dormitorios, p?.precio_usd, properties])
 
-  // --- Contexto de mercado: $/m² de la zona para esta tipología ---
+  // --- Contexto de mercado: $/m² para esta tipología ---
   // Formato fiduciario prudente: SIN veredicto ("X% sobre mediana") — solo
   // mediana, rango típico (p25-p75) y la posición visual de este depto en una
   // barra. El precio depende de acabados/desarrollador (caveat en el render).
-  // Guardrail duro: menos de 5 comparables → el bloque no se muestra.
+  // Cascada: zona (≥5 comparables) → todo Equipetrol DECLARADO como "zona
+  // ampliada" (≥5) → null (el render muestra una línea de "sin comparables").
   const marketData = useMemo(() => {
     if (!p || !p.precio_m2 || p.precio_m2 <= 0 || !properties || properties.length === 0) return null
-    const comparables = properties.filter(
-      q => q.zona === p.zona && q.dormitorios === p.dormitorios && q.id !== p.id && q.precio_m2 > 0
-    )
-    if (comparables.length < 5) return null
-    const values = comparables.map(q => q.precio_m2).sort((a, b) => a - b)
     const pctl = (sorted: number[], pct: number) => {
       const idx = (sorted.length - 1) * pct
       const lo = Math.floor(idx), hi = Math.ceil(idx)
       return lo === hi ? sorted[lo] : Math.round(sorted[lo] * (hi - idx) + sorted[hi] * (idx - lo))
     }
-    return {
-      mediana: pctl(values, 0.5),
-      rangoLow: pctl(values, 0.25),
-      rangoHigh: pctl(values, 0.75),
-      count: comparables.length,
+    const mismaTipologia = (q: UnidadVenta) => q.dormitorios === p.dormitorios && q.id !== p.id && q.precio_m2 > 0
+    const build = (pool: UnidadVenta[], ampliado: boolean) => {
+      if (pool.length < 5) return null
+      const values = pool.map(q => q.precio_m2).sort((a, b) => a - b)
+      return {
+        mediana: pctl(values, 0.5),
+        rangoLow: pctl(values, 0.25),
+        rangoHigh: pctl(values, 0.75),
+        count: pool.length,
+        ampliado,
+      }
     }
+    return build(properties.filter(q => q.zona === p.zona && mismaTipologia(q)), false)
+      ?? build(properties.filter(mismaTipologia), true)
   }, [p?.id, p?.zona, p?.dormitorios, p?.precio_m2, properties])
 
   const brokerQuestions = useMemo(() => {
@@ -1388,7 +1392,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
               `properties` es la shortlist, no el mercado (cálculo inválido). */}
           {!publicShareMode && marketData && (
             <div className="bs-section">
-              <div className="bs-sl"><span className="bs-sl-dot" />Contexto de mercado · {displayZona(p.zona)}</div>
+              <div className="bs-sl"><span className="bs-sl-dot" />Contexto de mercado · {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
               <div className="bs-mktv">
                 <div className="bs-mktv-this">
                   <span className="bs-mktv-label">Este depto</span>
@@ -1415,8 +1419,15 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                     </div>
                   )
                 })()}
-                <div className="bs-mktv-caveat">Basado en {marketData.count} deptos comparables activos. El precio por m² varía según acabados, amenidades y desarrollador.</div>
+                <div className="bs-mktv-caveat">{marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}Basado en {marketData.count} deptos comparables activos. El precio por m² varía según acabados, amenidades y desarrollador.</div>
               </div>
+            </div>
+          )}
+          {/* Nivel 3 de la cascada: ni ampliando hay 5 comparables — la ausencia
+              se explica (transparencia fiduciaria), no se disimula. */}
+          {!publicShareMode && !marketData && p.precio_m2 > 0 && (
+            <div className="bs-section">
+              <div className="bs-mktv-empty">Sin suficientes deptos comparables activos para mostrar contexto de mercado.</div>
             </div>
           )}
 
@@ -3345,6 +3356,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-mktv-scale { position:relative; height:16px; margin-top:4px }
         .bs-mktv-scale span { position:absolute; transform:translateX(-50%); font-size:11px; color:#7A7060; white-space:nowrap }
         .bs-mktv-caveat { font-size:12px; color:#9A8E7A; line-height:1.5; border-top:1px solid rgba(237,232,220,0.08); padding-top:10px }
+        .bs-mktv-empty { font-size:13px; color:#9A8E7A; font-style:italic }
 
         /* ===== Comentario broker + Destacada (migración 239) ===== */
         /* Card destacada en venta — fondo arena invierte tema oscuro, salta del fondo negro */

@@ -725,6 +725,21 @@
 .bs-mkt-badge.below{color:#3A6A48;background:rgba(58,106,72,0.1);}
 .bs-mkt-badge.above{color:#7A7060;background:rgba(122,112,96,0.1);}
 .bs-mkt-count{font-size:12px;color:#9A8E7A;font-family:'DM Sans',sans-serif;margin-top:2px;}
+/* Contexto de mercado v2 — barra sin veredicto (unificado con ventas, tema claro) */
+.bs-mkta-this{display:flex;align-items:baseline;gap:10px;}
+.bs-mkta-label{font-size:13px;color:#7A7060;font-family:'DM Sans',sans-serif;}
+.bs-mkta-value{font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;color:#141414;}
+.bs-mkta-zona{font-size:13px;color:#7A7060;line-height:1.5;font-family:'DM Sans',sans-serif;}
+.bs-mkta-zona b{color:#141414;font-weight:600;}
+.bs-mkta-rango{display:block;margin-top:2px;}
+.bs-mkta-bar-wrap{margin:4px 0 2px;}
+.bs-mkta-bar{position:relative;height:8px;background:#DDD5C4;border-radius:4px;}
+.bs-mkta-band{position:absolute;top:0;bottom:0;background:#3A6A48;opacity:0.45;border-radius:4px;}
+.bs-mkta-marker{position:absolute;top:-4px;width:3px;height:16px;background:#141414;border-radius:2px;transform:translateX(-50%);}
+.bs-mkta-scale{position:relative;height:16px;margin-top:4px;}
+.bs-mkta-scale span{position:absolute;transform:translateX(-50%);font-size:11px;color:#9A8E7A;white-space:nowrap;font-family:'DM Sans',sans-serif;}
+.bs-mkta-caveat{font-size:12px;color:#7A7060;line-height:1.5;border-top:1px solid rgba(20,20,20,0.08);padding-top:10px;font-family:'DM Sans',sans-serif;}
+.bs-mkta-empty{font-size:13px;color:#9A8E7A;font-style:italic;font-family:'DM Sans',sans-serif;}
 
 /* Bottom Sheet — Similar Properties (bs-sim-*) */
 .bs-sim-scroll{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none;}
