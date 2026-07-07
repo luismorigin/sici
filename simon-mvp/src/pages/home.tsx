@@ -6,7 +6,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GetStaticProps } from 'next'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
 import { fetchSuperficiesData, type SuperficiesMarketData } from '@/lib/superficies-data'
@@ -52,6 +52,37 @@ const NORTE = (
   </svg>
 )
 
+const fmtNum = (n: number) => n.toLocaleString('es-BO')
+
+// Contador animado: cuenta desde 0 hasta el valor de la BD al entrar en viewport
+function Count({ value, prefix = '' }: { value: number; prefix?: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return
+        obs.unobserve(el)
+        const dur = 1200
+        let start: number | null = null
+        const step = (ts: number) => {
+          if (start === null) start = ts
+          const p = Math.min(1, (ts - start) / dur)
+          const eased = 1 - Math.pow(1 - p, 3)
+          el.textContent = prefix + fmtNum(Math.round(value * eased))
+          if (p < 1) requestAnimationFrame(step)
+        }
+        requestAnimationFrame(step)
+      })
+    }, { threshold: 0.6 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [value, prefix])
+  return <span ref={ref}>{prefix + fmtNum(value)}</span>
+}
+
 export default function HomePrincipal({ market }: { market: SuperficiesMarketData }) {
   const router = useRouter()
   const [q, setQ] = useState('')
@@ -65,10 +96,30 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
     router.push(construirDestino(q))
   }
 
-  const fmt = (n: number) => n.toLocaleString('es-BO')
+  const fmt = fmtNum
+  const tcFmt = market.tcParalelo.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+  // Scroll-reveal: secciones entran con fade + subida al aparecer en viewport
+  const rootRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const els = root.querySelectorAll('.reveal, .stagger')
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      els.forEach(el => el.classList.add('in'))
+      return
+    }
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target) }
+      })
+    }, { threshold: 0.14, rootMargin: '0px 0px -8% 0px' })
+    els.forEach(el => obs.observe(el))
+    return () => obs.disconnect()
+  }, [])
 
   return (
-    <div className="sh">
+    <div className="sh" ref={rootRef}>
       <Head>
         <title>Simon — Menos avisos confusos. Más propiedades comparables.</title>
         <meta
@@ -121,12 +172,23 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
       <header className="hero">
         <div className="wrap hero-grid">
           <div className="hero-copy">
-            <span className="eyebrow">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" />
-              </svg>
-              Equipetrol, Santa Cruz
-            </span>
+            <div className="eyebrow-row">
+              <span className="eyebrow">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" />
+                </svg>
+                Equipetrol, Santa Cruz
+              </span>
+              {/* TC del día — el paralelo que usa el sistema para normalizar precios */}
+              <span className="tc-pill" title="Tipo de cambio paralelo que Simon usa hoy">
+                <span className="tcdot" aria-hidden="true" />
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" /><path d="M12 7v10M9.5 9.4c0-1 1.1-1.7 2.5-1.7s2.5.7 2.5 1.7-1.1 1.5-2.5 1.9c-1.4.4-2.5.9-2.5 1.9s1.1 1.7 2.5 1.7 2.5-.7 2.5-1.7" />
+                </svg>
+                TC hoy <strong>Bs {tcFmt}</strong>
+                <span className="tc-upd">· actualizado hoy</span>
+              </span>
+            </div>
             <h1>
               Menos avisos confusos.
               <br />
@@ -248,7 +310,7 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
       </header>
 
       {/* ─── BLOQUES DE VALOR ────────────────────────────── */}
-      <section className="valor wrap">
+      <section className="valor wrap stagger">
         <div className="vcard">
           <div className="vico">
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.5" y2="16.5" /></svg>
@@ -274,11 +336,11 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
 
       {/* ─── SIMULA Y CALCULA ────────────────────────────── */}
       <section id="simula" className="simula wrap">
-        <div className="sim-head">
+        <div className="sim-head reveal">
           <h2>Simula y calcula</h2>
           <p>Herramientas para decidir con números, no con intuición.</p>
         </div>
-        <div className="sim-grid">
+        <div className="sim-grid stagger">
           <Link href="/alquileres" className="sim-card activa">
             <h3>Comparador de propiedades</h3>
             <p>Guardá 2 o más favoritos en el feed y compará precios, m² y zonas lado a lado.</p>
@@ -299,13 +361,13 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
 
       {/* ─── BANDA DE MERCADO (datos dinámicos, ISR) ─────── */}
       <section className="banda">
-        <div className="wrap banda-in">
+        <div className="wrap banda-in reveal">
           <div className="stat">
             <div className="stat-ico">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8" /><path d="M14 7h7v7" /></svg>
             </div>
             <div>
-              <div className="stat-num">{fmt(market.ventasActivas)}</div>
+              <div className="stat-num"><Count value={market.ventasActivas} /></div>
               <div className="stat-label">ventas activas<span> en Equipetrol</span></div>
             </div>
           </div>
@@ -314,7 +376,7 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="1.5" /><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2" /></svg>
             </div>
             <div>
-              <div className="stat-num">{fmt(market.alquileresActivos)}</div>
+              <div className="stat-num"><Count value={market.alquileresActivos} /></div>
               <div className="stat-label">alquileres<span> disponibles hoy</span></div>
             </div>
           </div>
@@ -323,7 +385,7 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
             </div>
             <div>
-              <div className="stat-num">Bs {fmt(market.medianaAlquilerBob)}<small>/mes</small></div>
+              <div className="stat-num"><Count value={market.medianaAlquilerBob} prefix="Bs " /><small>/mes</small></div>
               <div className="stat-label">mediana {market.medianaAlquilerZona}<span> · alquiler</span></div>
             </div>
           </div>
@@ -334,7 +396,7 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
       </section>
 
       {/* ─── CTA FINAL ───────────────────────────────────── */}
-      <section className="cierre wrap">
+      <section className="cierre wrap reveal">
         <h2>Empezá buscando o hablá con Simon por WhatsApp.</h2>
         <div className="cierre-cta">
           <Link href="/alquileres" className="btn btn-primario">Buscar propiedades</Link>
@@ -367,6 +429,7 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
           --dark3: #9a8e7a;
           --salvia: #3a6a48;
           --salvia-vivo: #4e9b66;
+          --smooth: cubic-bezier(0.16, 1, 0.3, 1);
           --display: var(--font-figtree), 'Figtree', sans-serif;
           --body: var(--font-dm-sans), 'DM Sans', sans-serif;
           background: var(--bg);
@@ -394,11 +457,34 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
         .hamb { display: none; width: 42px; height: 42px; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--linea); border-radius: 9px; color: var(--arena); cursor: pointer; }
 
         /* HERO */
-        .hero { padding: 64px 0 40px; }
-        .hero-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 48px; align-items: start; }
-        .eyebrow { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--linea); background: var(--panel); color: var(--dark2); font-size: 13.5px; padding: 7px 15px; border-radius: 100px; margin-bottom: 26px; }
+        .hero { position: relative; padding: 64px 0 40px; overflow: hidden; }
+        /* aura verde que respira detrás del hero — profundidad sin ruido */
+        .hero::before { content: ''; position: absolute; top: -180px; right: -120px; width: 640px; height: 640px; border-radius: 50%; background: radial-gradient(circle, rgba(58, 106, 72, 0.22), transparent 62%); filter: blur(10px); animation: aura 9s ease-in-out infinite; pointer-events: none; }
+        @keyframes aura { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.12); } }
+        .hero-grid { position: relative; display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 48px; align-items: start; }
+        /* entrada escalonada del hero al cargar */
+        @keyframes riseIn { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+        .hero-copy > * { animation: riseIn 0.75s var(--smooth, cubic-bezier(0.16, 1, 0.3, 1)) both; }
+        .hero-copy > *:nth-child(2) { animation-delay: 0.08s; }
+        .hero-copy > *:nth-child(3) { animation-delay: 0.16s; }
+        .hero-copy > *:nth-child(4) { animation-delay: 0.26s; }
+        .hero-copy > *:nth-child(5) { animation-delay: 0.34s; }
+        .hero-copy > *:nth-child(6) { animation-delay: 0.42s; }
+        .eyebrow-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 26px; }
+        .eyebrow { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--linea); background: var(--panel); color: var(--dark2); font-size: 13.5px; padding: 7px 15px; border-radius: 100px; }
+        /* TC del día — dot vivo + valor tabular */
+        .tc-pill { display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(78, 155, 102, 0.35); background: rgba(58, 106, 72, 0.16); color: var(--dark2); font-size: 13.5px; padding: 7px 15px; border-radius: 100px; }
+        .tc-pill svg { color: var(--salvia-vivo); }
+        .tc-pill strong { color: var(--arena); font-weight: 500; font-variant-numeric: tabular-nums; }
+        .tc-upd { color: var(--dark3); font-size: 12.5px; }
+        .tcdot { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--salvia-vivo); flex-shrink: 0; }
+        .tcdot::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid var(--salvia-vivo); animation: ping 2.5s var(--smooth, ease-out) infinite; }
+        @keyframes ping { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2.3); opacity: 0; } }
         h1 { font-size: clamp(34px, 4.6vw, 60px); letter-spacing: -1.5px; line-height: 1.06; margin-bottom: 20px; }
-        h1 .soft { color: var(--arena); }
+        /* sheen sutil que barre la segunda línea cada unos segundos
+           (capa 1 = brillo que se desplaza; capa 2 = arena base siempre visible) */
+        h1 .soft { color: var(--arena); background: linear-gradient(110deg, rgba(255, 253, 244, 0) 42%, #fffdf4 50%, rgba(255, 253, 244, 0) 58%) no-repeat, linear-gradient(var(--arena), var(--arena)); background-size: 280% 100%, 100% 100%; background-position: 120% 0, 0 0; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: sheen 7s ease-in-out 1.4s infinite; }
+        @keyframes sheen { 0% { background-position: 120% 0, 0 0; } 22% { background-position: -80% 0, 0 0; } 100% { background-position: -80% 0, 0 0; } }
         .lead { font-size: clamp(16px, 1.6vw, 19px); max-width: 46ch; margin-bottom: 30px; color: var(--dark2); }
 
         /* Buscador */
@@ -420,8 +506,11 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
         .quick :global(.chip svg) { color: var(--salvia-vivo); }
 
         /* PHONE MOCKUP */
-        .phone-col { display: flex; justify-content: center; }
-        .phone { width: 100%; max-width: 340px; background: #101210; border: 1px solid rgba(237, 232, 220, 0.14); border-radius: 26px; padding: 16px 14px 12px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
+        .phone-col { position: relative; display: flex; justify-content: center; animation: riseIn 0.9s var(--smooth, cubic-bezier(0.16, 1, 0.3, 1)) 0.3s both; }
+        /* glow salvia detrás del teléfono */
+        .phone-col::before { content: ''; position: absolute; top: 8%; left: 50%; transform: translateX(-50%); width: 78%; height: 84%; border-radius: 50%; background: radial-gradient(ellipse, rgba(58, 106, 72, 0.35), transparent 68%); filter: blur(28px); animation: aura 7s ease-in-out 0.5s infinite; pointer-events: none; }
+        .phone { position: relative; width: 100%; max-width: 340px; background: #101210; border: 1px solid rgba(237, 232, 220, 0.14); border-radius: 26px; padding: 16px 14px 12px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); animation: floaty 7s ease-in-out 1.4s infinite; }
+        @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         .ph-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 10px; }
         .ph-brand { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 500; font-size: 16px; color: var(--arena); }
         .ph-ico { display: flex; gap: 12px; color: var(--arena); }
@@ -501,6 +590,14 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
         .foot-links :global(a:hover) { color: var(--arena); }
         .foot-cr { color: var(--dark3); font-size: 12.5px; }
 
+        /* SCROLL-REVEAL (el JS agrega .in al entrar en viewport) */
+        .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.7s var(--smooth), transform 0.7s var(--smooth); }
+        .reveal.in { opacity: 1; transform: none; }
+        .stagger > * { opacity: 0; transform: translateY(22px); transition: opacity 0.65s var(--smooth), transform 0.65s var(--smooth); }
+        .stagger.in > * { opacity: 1; transform: none; }
+        .stagger.in > *:nth-child(2) { transition-delay: 0.1s; }
+        .stagger.in > *:nth-child(3) { transition-delay: 0.2s; }
+
         /* RESPONSIVE */
         @media (max-width: 980px) {
           .hero-grid { grid-template-columns: 1fr; gap: 44px; }
@@ -526,6 +623,9 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
         @media (prefers-reduced-motion: reduce) {
           .vcard, .sh :global(.btn), .banda-in :global(.arr) { transition: none !important; }
           .sim-grid :global(.sim-card.activa) { transition: none !important; }
+          .hero::before, .hero-copy > *, .phone-col, .phone-col::before, .phone, h1 .soft, .tcdot::after { animation: none !important; }
+          h1 .soft { -webkit-text-fill-color: var(--arena); }
+          .reveal, .stagger > * { opacity: 1 !important; transform: none !important; transition: none !important; }
         }
       `}</style>
     </div>

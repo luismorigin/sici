@@ -16,6 +16,8 @@ export interface SuperficiesMarketData {
   medianaAlquilerZona: string
   /** USD/m² venta en Eq. Centro (para /whatsapp — "el dato contado") */
   precioM2Centro: number
+  /** TC paralelo del día (config_global.tipo_cambio_paralelo) — el que usa el sistema */
+  tcParalelo: number
 }
 
 // Snapshot real (jul 2026) — solo si Supabase falla en build
@@ -25,6 +27,7 @@ const FALLBACK: SuperficiesMarketData = {
   medianaAlquilerBob: 3750,
   medianaAlquilerZona: 'Eq. Centro',
   precioM2Centro: 2244,
+  tcParalelo: 9.72,
 }
 
 /** Redondeo para copy aproximado: 373 → "370+" (múltiplo de 10 inferior) */
@@ -48,10 +51,13 @@ export async function fetchSuperficiesData(): Promise<SuperficiesMarketData> {
       .in('zona', ZONAS_EQUIPETROL_DB)
 
     // Alquileres + medianas por zona (v_mercado_alquiler ya filtra calidad y ≤150d)
-    const [zonasAlquiler, microzonas] = await Promise.all([
+    // + TC paralelo del día (mismo patrón que landing-data)
+    const [zonasAlquiler, microzonas, tcRes] = await Promise.all([
       obtenerZonasAlquiler(),
       obtenerMicrozonas(),
+      supabase.from('config_global').select('valor').eq('clave', 'tipo_cambio_paralelo').single(),
     ])
+    const tcParalelo = parseFloat(tcRes.data?.valor) || FALLBACK.tcParalelo
 
     const alquileresActivos = zonasAlquiler.reduce((acc, z) => acc + z.total, 0)
     const centro = zonasAlquiler.find(z => z.zona === 'Equipetrol Centro')
@@ -67,6 +73,7 @@ export async function fetchSuperficiesData(): Promise<SuperficiesMarketData> {
         ? (zonaTop.zona === 'Equipetrol Centro' ? 'Eq. Centro' : zonaTop.zona)
         : FALLBACK.medianaAlquilerZona,
       precioM2Centro: m2Centro ?? FALLBACK.precioM2Centro,
+      tcParalelo,
     }
   } catch (error) {
     console.error('[superficies-data] Error fetching data:', error)
