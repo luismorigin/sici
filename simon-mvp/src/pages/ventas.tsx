@@ -3336,7 +3336,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ds-spotlight-text { font-size:12px; color:#9A8E7A; font-family:'DM Sans',sans-serif; letter-spacing:0.5px; white-space:nowrap; text-transform:uppercase }
 
         /* Content zone (45%) */
-        .mc-content { flex:1; padding:0 24px 8px; padding-bottom:max(8px, calc(env(safe-area-inset-bottom) + 4px)); display:flex; flex-direction:column; overflow:hidden; cursor:pointer; -webkit-tap-highlight-color:transparent }
+        .mc-content { flex:1; padding:14px 24px 8px; padding-bottom:max(8px, calc(env(safe-area-inset-bottom) + 4px)); display:flex; flex-direction:column; overflow:hidden; cursor:pointer; -webkit-tap-highlight-color:transparent }
         /* Corazón dentro de la foto (rediseño tanda 2) */
         .mc-heart { position:absolute; top:14px; right:14px; z-index:6; width:44px; height:44px; border-radius:50%; background:rgba(20,20,20,0.35); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent }
         .mc-heart.active { background:rgba(58,106,72,0.22) }
@@ -3359,7 +3359,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mt-bb-cmp:active { transform:scale(0.97) }
         /* La card reserva el alto de la barra fija para no quedar tapada */
         .mt-feed-compare .mc-content { padding-bottom:calc(72px + env(safe-area-inset-bottom)) }
-        .mc-name { font-family:'Figtree',sans-serif; font-size:23px; font-weight:500; color:#EDE8DC; line-height:1.25; padding-top:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+        .mc-name { font-family:'Figtree',sans-serif; font-size:22px; font-weight:500; color:#EDE8DC; line-height:1.3; margin:0; padding:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
         .mc-meta-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:5px 0 12px }
         .mc-reciente { font-size:11px; font-weight:600; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:rgba(58,106,72,0.15); padding:2px 8px; border-radius:4px }
         .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; font-family:'DM Sans',sans-serif }
