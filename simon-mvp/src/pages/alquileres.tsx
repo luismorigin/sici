@@ -67,6 +67,9 @@ const MAX_SLIDER_PRICE = 18000
 
 const MAX_FAVORITES = 3
 
+// WhatsApp de Simón (asistente). Usado en el menú hamburguesa del header mobile.
+const SIMON_WHATSAPP = '59177066308'
+
 // Filtro de fuentes (modo broker). Permite al broker mostrar solo el inventario
 // de las franquicias con las que opera. Aplica solo en /broker/[slug]/alquileres.
 const FUENTES_BROKER = ['century21', 'remax', 'bien_inmuebles'] as const
@@ -423,6 +426,12 @@ export default function AlquileresPage({
   const [chipsExpanded, setChipsExpanded] = useState(false)
   const [compareOpen, setCompareOpen] = useState(false)
   const [filterOverlayOpen, setFilterOverlayOpen] = useState(false)
+  // Header rediseño mobile: buscador natural + drawers menú/perfil.
+  const [natQuery, setNatQuery] = useState('')
+  const [natChips, setNatChips] = useState<string[]>([])
+  const [natAviso, setNatAviso] = useState<'venta' | 'moneda' | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   // Modal "Reportar dato incorrecto" — solo broker mode (migración 240).
   const [reportProperty, setReportProperty] = useState<UnidadAlquiler | null>(null)
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set())
@@ -477,7 +486,8 @@ export default function AlquileresPage({
     if (publicShareMode) return
     if (brokerDemoMode) return
     if (brokerMode) return
-    if (favorites.size === 0) return
+    // Al limpiar (size 0) borrar la clave para no rehidratar favoritos viejos.
+    if (favorites.size === 0) { try { localStorage.removeItem('alq_favorites') } catch {}; return }
     try { localStorage.setItem('alq_favorites', JSON.stringify(Array.from(favorites))) } catch {}
   }, [favorites, publicShareMode, brokerDemoMode, brokerMode])
 
@@ -685,6 +695,35 @@ export default function AlquileresPage({
       setToastVisible(false)
       toastTimeoutRef.current = null
     }, durationMs)
+  }
+
+  // Búsqueda en lenguaje natural desde el header mobile ($0, sin IA).
+  // Adaptada a alquiler: moneda = Bs (si escribe USD → aviso, no aplica monto),
+  // zonas por slug (ZONAS_ALQUILER_UI usa ids slug), sin preventa/entrega.
+  function handleNaturalSearch(texto: string, submit: boolean) {
+    setNatQuery(texto)
+    const sig = parsearBusqueda(texto)
+    setNatChips(sig.chips)
+    const montoUsd = sig.moneda === 'usd' && (sig.precioMax !== null || sig.precioMin !== null)
+    setNatAviso(sig.operacion === 'venta' ? 'venta' : (montoUsd ? 'moneda' : null))
+    if (!submit) return
+    const monedaOk = sig.moneda !== 'usd'
+    const f: FiltrosAlquiler = { orden: filters.orden || 'recientes', limite: 200, solo_con_fotos: true }
+    if (sig.dormitorios.length > 0) f.dormitorios_lista = [...new Set(sig.dormitorios)].sort((a, b) => a - b)
+    if (monedaOk && sig.precioMax !== null) f.precio_mensual_max = Math.min(sig.precioMax, MAX_SLIDER_PRICE)
+    const zonas = sig.zonas.filter(slug => ZONAS_ALQUILER_UI.some(z => z.id === slug))
+    if (zonas.length > 0) f.zonas_permitidas = zonas
+    if (sig.amoblado === true) f.amoblado = true
+    if (sig.mascotas === true) f.acepta_mascotas = true
+    if (sig.parqueo === true) f.con_parqueo = true
+    applyFilters(f)
+  }
+
+  // Abre el mapa mobile centrado en la card activa (barra fija inferior).
+  function openCardMap(p: UnidadAlquiler) {
+    setMapSelectedId(p.id)
+    setMobileMapOpen(true)
+    trackEvent('open_map_mobile', { source: 'card' })
   }
 
   async function applyFilters(newFilters: FiltrosAlquiler) {
@@ -1535,27 +1574,44 @@ export default function AlquileresPage({
       ) : (
         /* ==================== MOBILE LAYOUT (TikTok feed) ==================== */
         <>
-          {/* Top bar — search pill (Airbnb/TikTok style).
-              Oculto en publicShareMode (cliente ve el header del broker) y en brokerMode
-              (el chip ⚙ Filtros del banner del broker reemplaza al pill). */}
-          {!publicShareMode && !brokerMode && (
-            <div className="alq-top-bar">
-              <button className={`alq-search-pill${pillPulse ? ' pulse' : ''}`} onClick={() => { setPillPulse(false); setFilterOverlayOpen(true); trackEvent('open_filter_overlay') }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
-                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                <span className="alq-search-text">{searchPillText}</span>
-                {isFiltered && <div className="alq-search-dot" />}
+          {/* Header sticky — redesign mobile (logo · perfil · hamburguesa · buscador nativo).
+              Reemplaza el search pill flotante. Paridad con ventas.tsx. */}
+          <header className="mfh">
+            <div className="mfh-top">
+              <a href="/landing-v2" className="mfh-brand" aria-label="Simon inicio">
+                <span className="mfh-logo" aria-hidden="true" />
+                <span className="mfh-brand-text">Simon</span>
+              </a>
+              <div className="mfh-icons">
+                <button className="mfh-icon" aria-label="Tu cuenta" onClick={() => setProfileOpen(true)}>
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                </button>
+                <button className="mfh-icon" aria-label="Menú" onClick={() => setMenuOpen(true)}>
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+            <div className="mfh-search-row">
+              <form className="mfh-search" onSubmit={(e) => { e.preventDefault(); handleNaturalSearch(natQuery, true); (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.blur() }}>
+                <svg className="mfh-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input className="mfh-search-input" type="search" enterKeyHint="search" value={natQuery}
+                  placeholder={'Buscá "2 dorm amoblado hasta 4.200 bs"'}
+                  onChange={(e) => handleNaturalSearch(e.target.value, false)} />
+                {natQuery && <button type="button" className="mfh-search-clear" aria-label="Limpiar búsqueda" onClick={() => { setNatQuery(''); setNatChips([]); setNatAviso(null) }}>&times;</button>}
+              </form>
+              <button className="mfh-filter-btn" aria-label="Filtros" onClick={() => { setPillPulse(false); setFilterOverlayOpen(true); trackEvent('open_filter_overlay') }}>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/><circle cx="9" cy="6" r="2" fill="#141414"/><circle cx="15" cy="12" r="2" fill="#141414"/><circle cx="12" cy="18" r="2" fill="#141414"/></svg>
+                {activeFilterCount > 0 && <span className="mfh-filter-badge">{activeFilterCount}</span>}
               </button>
             </div>
-          )}
-
-          {/* Context badge — overlaid on first card photo */}
-          {activeCardIndex === 0 && !loading && properties.length > 0 && (
-            <div className="alq-context-badge">
-              {properties.length} deptos en alquiler · Equipetrol
-            </div>
-          )}
+            {(natChips.length > 0 || natAviso) && (
+              <div className="mfh-under">
+                {natChips.length > 0 && <div className="mfh-chips"><span className="mfh-chips-label">Entendí:</span>{natChips.map(c => <span key={c} className="mfh-chip">{c}</span>)}</div>}
+                {natAviso === 'moneda' && <div className="mfh-aviso">Los alquileres van en Bs — el monto en $us no se aplicó.</div>}
+                {natAviso === 'venta' && <a className="mfh-aviso mfh-aviso-link" href="/ventas">Parece que buscás comprar → Ver departamentos en venta</a>}
+              </div>
+            )}
+          </header>
 
 
           {/* UTM contextual banner — mobile */}
@@ -1571,14 +1627,7 @@ export default function AlquileresPage({
             </div>
           )}
 
-          {/* Floating map button — oculto en brokerMode (toggle Grid|Map en el banner) */}
-          {!brokerMode && (
-            <button className="alq-map-floating" aria-label="Ver mapa" onClick={() => { setMobileMapOpen(true); trackEvent('open_map_mobile') }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#141414" strokeWidth="1.5" style={{width:22,height:22}}>
-                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
-              </svg>
-            </button>
-          )}
+          {/* Ver mapa vive ahora en la barra fija inferior (mt-bottombar). */}
 
           {/* Bot nudge pill — appears once after 5s of inactivity */}
           {nudgeVisible && (
@@ -1623,7 +1672,7 @@ export default function AlquileresPage({
                 const WINDOW = 3
                 const isNearby = Math.abs(idx - activeCardIndex) <= WINDOW
                 if (!isNearby) {
-                  return <div key={item.data.id} style={{ height: idx === 0 ? '88dvh' : '100dvh', scrollSnapAlign: 'start', background: '#EDE8DC' }} />
+                  return <div key={item.data.id} className="amc-placeholder" style={{ scrollSnapAlign: 'start', background: '#EDE8DC' }} />
                 }
                 return (
                   <MobilePropertyCard
@@ -1654,6 +1703,82 @@ export default function AlquileresPage({
               })
             )}
           </div>
+
+          {/* Barra fija inferior — Ver mapa (card activa) + comparación.
+              Reemplaza el botón flotante de mapa y unifica el affordance de comparar. */}
+          {properties.length > 0 && (() => {
+            const ac = feedItems[activeCardIndex]?.data
+            const conGps = ac && ac.latitud && ac.longitud
+            return (
+              <div className="mt-bottombar">
+                <button className="mt-bb-map" disabled={!conGps} onClick={() => conGps && openCardMap(ac)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 17, height: 17 }}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                  Ver mapa
+                </button>
+                <div className="mt-bb-right">
+                  {favorites.size === 0 && (
+                    <span className="mt-bb-hint">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 14, height: 14, flexShrink: 0 }}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                      Guardá para comparar
+                    </span>
+                  )}
+                  {favorites.size === 1 && (
+                    <>
+                      <span className="mt-bb-hint mt-bb-hint-active">
+                        <svg viewBox="0 0 24 24" fill="#3A6A48" stroke="none" style={{ width: 14, height: 14, flexShrink: 0 }}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                        1 favorito · guardá otro
+                      </span>
+                      <button className="mt-bb-clear" aria-label="Quitar favorito" onClick={() => setFavorites(new Set())}>&times;</button>
+                    </>
+                  )}
+                  {favorites.size >= 2 && (
+                    <>
+                      <button className="mt-bb-cmp" onClick={openCompare}>
+                        Comparar {favorites.size}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ width: 15, height: 15 }}><path d="M9 18l6-6-6-6"/></svg>
+                      </button>
+                      <button className="mt-bb-clear" aria-label="Limpiar favoritos" onClick={() => { setFavorites(new Set()); showToast('Favoritos limpiados') }}>&times;</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Drawer menú hamburguesa — intenciones inmobiliarias primero */}
+          {menuOpen && (
+            <div className="mfd-scrim" onClick={() => setMenuOpen(false)}>
+              <nav className="mfd" onClick={e => e.stopPropagation()} aria-label="Menú principal">
+                <div className="mfd-head"><span className="mfd-title">Menú</span><button className="mfd-close" aria-label="Cerrar menú" onClick={() => setMenuOpen(false)}>&times;</button></div>
+                <a className="mfd-item" href="/ventas?preventa=1">Preventa</a>
+                <a className="mfd-item" href="/ventas">Ventas</a>
+                <span className="mfd-item mfd-item-active">Alquileres</span>
+                <div className="mfd-sec">Simulá y calculá</div>
+                <button className="mfd-item mfd-sub" onClick={() => { setMenuOpen(false); if (favorites.size >= 2) openCompare(); else showToast(favorites.size === 1 ? 'Guardá al menos 2 alquileres con el corazón para comparar' : 'Guardá alquileres con el corazón para comparar') }}>Comparador de propiedades</button>
+                <span className="mfd-item mfd-sub mfd-soon">Calculadora de renta <span className="mfd-badge-soon">Próximamente</span></span>
+                <span className="mfd-item mfd-sub mfd-soon">Crédito hipotecario <span className="mfd-badge-soon">Próximamente</span></span>
+                <div className="mfd-divider" />
+                <a className="mfd-item" href="/mercado/equipetrol">Mercado</a>
+                <button className="mfd-item" onClick={() => { setMenuOpen(false); setProfileOpen(true) }}>Mis favoritos{favorites.size > 0 ? ` · ${favorites.size}` : ''}</button>
+                <a className="mfd-item mfd-item-wa" href={`https://wa.me/${SIMON_WHATSAPP}?text=${encodeURIComponent('Hola Simon, quiero ayuda para encontrar una propiedad')}`} target="_blank" rel="noopener noreferrer">Hablar por WhatsApp</a>
+              </nav>
+            </div>
+          )}
+
+          {/* Drawer perfil — sin login: favoritos guardados en el dispositivo */}
+          {profileOpen && (
+            <div className="mfd-scrim" onClick={() => setProfileOpen(false)}>
+              <div className="mfp" onClick={e => e.stopPropagation()}>
+                <div className="mfd-head"><span className="mfd-title">Tu cuenta</span><button className="mfd-close" aria-label="Cerrar" onClick={() => setProfileOpen(false)}>&times;</button></div>
+                <div className="mfp-body">
+                  <div className="mfp-ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+                  <p className="mfp-msg">Guardá favoritos y comparativos en este dispositivo.</p>
+                  <p className="mfp-sub">{favorites.size === 0 ? 'Todavía no guardaste ninguna propiedad' : `${favorites.size} ${favorites.size === 1 ? 'favorito guardado' : 'favoritos guardados'}`}</p>
+                  {favorites.size >= 2 && <button className="mfp-cta" onClick={() => { setProfileOpen(false); openCompare() }}>Comparar {favorites.size} favoritos</button>}
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -1902,13 +2027,11 @@ export default function AlquileresPage({
         </button>
       )}
 
-      {/* Banner inferior Comparar — píldora flotante en mobile Y desktop, fuera del
-          condicional layout para que aparezca en publicShareMode (cliente final ve la
-          shortlist en grid). Paridad con ventas.tsx: ventas siempre usó esta píldora
-          como único affordance de comparar (desktop + mobile). Antes alquiler la ocultaba
-          en desktop (`!isDesktop`) y mostraba un botón duplicado en el toggle bar — eso
-          se unificó acá para que venta y alquiler se vean igual en todas las superficies. */}
-      {!brokerMode && favorites.size >= 1 && (
+      {/* Banner inferior Comparar — SOLO desktop / publicShare (grid).
+          En el feed mobile público el affordance de comparar vive en la barra fija
+          inferior (mt-bottombar) del rediseño; esta píldora quedaría duplicada.
+          Se muestra en desktop y en publicShareMode (cliente ve la shortlist en grid). */}
+      {!brokerMode && (isDesktop || publicShareMode) && favorites.size >= 1 && (
         <div className="alq-compare-banner-wrap">
           <button className="alq-compare-banner" onClick={() => favorites.size >= 2 ? openCompare() : showToast('Elegí al menos 2 para comparar')} style={{ flex: 1 }}>
             <span className="alq-compare-banner-text">{favorites.size} favorito{favorites.size > 1 ? 's' : ''}{favorites.size >= 2 ? ' · Comparar' : ''}</span>
@@ -2383,37 +2506,9 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n }) }
   function toggleZona(id: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n }) }
 
-  // --- Búsqueda en lenguaje natural (lib/busqueda-natural, $0 sin IA) ---
-  // Pre-llena los controles del overlay: la interpretación queda VISIBLE en
-  // los propios filtros y el usuario corrige tocando. El preview count ya
-  // reacciona solo a los cambios de estado.
-  const [busqueda, setBusqueda] = useState('')
-  const [busquedaChips, setBusquedaChips] = useState<string[]>([])
-  const [avisoVenta, setAvisoVenta] = useState(false)
-  const [avisoMonedaUsd, setAvisoMonedaUsd] = useState(false)
-  function handleBusqueda(texto: string) {
-    setBusqueda(texto)
-    // El guard isFirstRender existe para no fetchear al abrir el overlay, pero
-    // se tragaría el primer batch de cambios de la búsqueda → lo consumimos acá
-    // para que el contador del botón reaccione desde el primer parseo.
-    isFirstRender.current = false
-    const sig = parsearBusqueda(texto)
-    setBusquedaChips(sig.chips)
-    setAvisoVenta(sig.operacion === 'venta')
-    // Precio: en alquileres los montos son Bs/mes; si el user escribió "$",
-    // avisar en vez de adivinar el tipo de cambio.
-    const monedaOk = sig.moneda !== 'usd'
-    setAvisoMonedaUsd(!monedaOk && (sig.precioMax !== null || sig.precioMin !== null))
-    // Mientras se usa la barra, la barra MANDA: cada parseo parte de filtros
-    // limpios (sin acumular señales de textos anteriores). Los chips muestran
-    // exactamente lo aplicado; lo no detectado vuelve a default.
-    setSelectedDorms(new Set(sig.dormitorios))
-    setMaxPrice(monedaOk && sig.precioMax !== null ? Math.min(sig.precioMax, MAX_SLIDER_PRICE) : MAX_SLIDER_PRICE)
-    setSelectedZonas(new Set(sig.zonas.filter(slug => ZONAS_ALQUILER_UI.some(z => z.id === slug))))
-    setAmoblado(sig.amoblado === true)
-    setMascotas(sig.mascotas === true)
-    setConParqueo(sig.parqueo === true)
-  }
+  // La búsqueda en lenguaje natural vive ahora en el header mobile
+  // (handleNaturalSearch a nivel página, aplica filtros directo al feed).
+  // El overlay quedó como editor de filtros puro.
 
   function handleApply() { onApply(buildFilters()) }
   function handleReset() {
@@ -2434,20 +2529,6 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
         <span className="afo-count">{displayCount} deptos</span>
       </div>
       <div className="afo-body">
-        {/* Búsqueda en lenguaje natural */}
-        <div className="bna-group">
-          <input type="text" className="bna-input" value={busqueda} autoComplete="off"
-            placeholder="Escribí lo que buscás — ej: 2 dorm amoblado hasta 4.200 bs"
-            onChange={e => handleBusqueda(e.target.value)} />
-          {busquedaChips.length > 0 && (
-            <div className="bna-chips">
-              <span className="bna-chips-label">Entendí:</span>
-              {busquedaChips.map(c => <span key={c} className="bna-chip">{c}</span>)}
-            </div>
-          )}
-          {avisoMonedaUsd && <div className="bna-aviso">Los alquileres van en Bs — ajustá el presupuesto abajo.</div>}
-          {avisoVenta && <a className="bna-cross" href="/ventas">Parece que buscás comprar → Ver departamentos en venta</a>}
-        </div>
         {/* Edificio search */}
         <div className="afo-group"><div className="afo-label"><span className="afo-dot" />EDIFICIO</div>
           <input type="text" className="afo-search" placeholder="Buscar edificio..." value={proyecto}
@@ -2906,7 +2987,6 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
   isReported?: boolean
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
-  const [shakeBtn, setShakeBtn] = useState(false)
 
   function handleFavorite() {
     // Cap MAX_FAVORITES lo maneja el padre toggleFavorite (con toast).
@@ -2916,30 +2996,9 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
     onToggleFavorite()
   }
 
-  // Badge de cambio de precio (snapshot vs actual): solo en publicShareMode y si la
-  // diferencia supera 1% entre bobSnapshot y bobActual. Regla 10/12: BOB es fuente de
-  // verdad en alquiler.
-  const priceChangeBadge = (() => {
-    if (!publicShareMode || !priceSnapshot) return null
-    const { bobSnapshot, bobActual } = priceSnapshot
-    if (bobSnapshot == null || bobActual == null) return null
-    if (bobSnapshot <= 0) return null
-    const delta = (bobActual - bobSnapshot) / bobSnapshot
-    if (Math.abs(delta) < 0.01) return null
-    const direction = delta < 0 ? 'down' : 'up'
-    return { direction, from: bobSnapshot, to: bobActual }
-  })()
-
-  const badges: Array<{ text: string; color: string }> = []
-  if (p.dias_en_mercado !== null && p.dias_en_mercado <= 7) badges.push({ text: 'Nuevo', color: 'green' })
-  if (p.amoblado === 'si') badges.push({ text: 'Amoblado', color: 'gold' })
-  if (p.amoblado === 'semi') badges.push({ text: 'Semi-amoblado', color: 'gold' })
-  if (p.acepta_mascotas) badges.push({ text: petFilterActive ? 'Acepta mascotas' : 'Mascotas', color: 'purple' })
-  else if (p.acepta_mascotas === null && petFilterActive) badges.push({ text: '🐾 Mascotas: consultar', color: 'warn' })
-  if (p.monto_expensas_bob && p.monto_expensas_bob > 0) badges.push({ text: 'Expensas incl.', color: 'gold' })
-  if (p.estacionamientos && p.estacionamientos > 0) badges.push({ text: `${p.estacionamientos} parqueo`, color: '' })
-  if (p.baulera) badges.push({ text: 'Baulera', color: '' })
-  if (p.deposito_meses) badges.push({ text: `Deposito ${p.deposito_meses}m`, color: '' })
+  // priceChangeBadge / amc-comentario / amc-actions / amc-razon salieron de la card
+  // en el rediseño tanda 2: la card es para mirar y guardar; el detalle vive en el
+  // bottom sheet (onOpenInfo). El corazón está dentro de la foto (amc-heart).
 
   const displayName = nombreAlquiler(p)
 
@@ -2947,6 +3006,23 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
     <div className={`alq-card${isFirst ? ' alq-card-first' : ''}${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}${isDestacada ? ' alq-card-destacada' : ''}`} ref={cardRef}>
       {isDestacada && <div className="amc-destacada-chip">⭐ Recomendada por tu broker</div>}
       <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} showHint={showHint} onPhotoTap={onPhotoTap} propertyId={p.id} />
+      {/* Favorito DENTRO de la foto (rediseño tanda 2). El resto de acciones
+          vive en el bottom sheet: la card es para mirar y guardar. */}
+      <button
+        className={`amc-heart ${isFavorite ? 'active' : ''} ${brokerMode ? 'amc-heart-broker' : ''}`}
+        aria-label={brokerMode ? (isFavorite ? 'Quitar de seleccion' : 'Agregar a seleccion') : (isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos')}
+        onClick={(e) => { e.stopPropagation(); handleFavorite() }}
+      >
+        {brokerMode ? (
+          <svg viewBox="0 0 24 24" fill={isFavorite ? '#F2B441' : 'rgba(20,20,20,0.35)'} stroke={isFavorite ? '#F2B441' : '#EDE8DC'} strokeWidth="1.6" style={{ width: 22, height: 22 }}>
+            <polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/>
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'rgba(20,20,20,0.35)'} stroke={isFavorite ? '#3A6A48' : '#EDE8DC'} strokeWidth="1.6" style={{ width: 22, height: 22 }}>
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+        )}
+      </button>
       {isSpotlight && (
         <div className="amc-spotlight-badge">Te compartieron este depto</div>
       )}
@@ -2954,9 +3030,14 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
         const fb = fuenteBadge(p.fuente)
         return fb ? <div className="amc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null
       })()}
-      <div className="amc-content">
-        <div className="amc-name">{displayName}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="amc-reciente">Publicación reciente</span>}</div>
-        <div className="amc-zona">{displayZona(p.zona)} <span className="amc-id">#{p.id}</span></div>
+      {/* Zona de contenido tappable → abre el detalle (bottom sheet) */}
+      <div className="amc-content" role="button" tabIndex={0} onClick={onOpenInfo}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenInfo() } }}>
+        <div className="amc-name">{displayName}</div>
+        <div className="amc-meta-row">
+          {p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="amc-reciente">Publicación reciente</span>}
+          <span className="amc-zona">{displayZona(p.zona)} <span className="amc-id">#{p.id}</span></span>
+        </div>
         <div className="amc-price-block">
           <div className="amc-price">{formatPrice(p.precio_mensual_bob)}/mes</div>
           <div className="amc-specs">{[`${Math.round(p.area_m2)}m²`, dormLabel(p.dormitorios), p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null, p.piso ? `Piso ${p.piso}` : null].filter(Boolean).join(' · ')}</div>
@@ -2970,110 +3051,8 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
             p.monto_expensas_bob && p.monto_expensas_bob > 0 ? `Expensas Bs ${p.monto_expensas_bob}` : null,
           ].filter(Boolean).map((t, i) => <span key={i}>{i > 0 || p.amoblado || p.acepta_mascotas ? '  ·  ' : ''}{t}</span>)}
         </div>
-        {p.descripcion && (
-          <div className="amc-razon">&ldquo;{p.descripcion.slice(0, 120)}{p.descripcion.length > 120 ? '...' : ''}&rdquo;</div>
-        )}
-        {priceChangeBadge && (
-          <div className={`amc-price-change amc-price-change-${priceChangeBadge.direction}`}>
-            {priceChangeBadge.direction === 'down'
-              ? `↓ Bajo de ${formatPrice(priceChangeBadge.from)} a ${formatPrice(priceChangeBadge.to)}/mes`
-              : `↑ Antes ${formatPrice(priceChangeBadge.from)} · ahora ${formatPrice(priceChangeBadge.to)}/mes`}
-          </div>
-        )}
-        {brokerComment && publicShareMode && (
-          <div className="amc-comentario">
-            <div className="amc-comentario-quote">&ldquo;</div>
-            <div className="amc-comentario-text">{brokerComment}</div>
-            {brokerComment.length > 50 && (
-              <button type="button" className="amc-comentario-more" onClick={onOpenInfo}>
-                Leer comentario completo →
-              </button>
-            )}
-          </div>
-        )}
-        <div className="amc-actions">
-          <button
-            className={`amc-btn amc-fav ${isFavorite ? 'active' : ''} ${shakeBtn ? 'shake' : ''} ${brokerMode ? 'amc-fav-broker' : ''}`}
-            aria-label={brokerMode ? (isFavorite ? 'Quitar de seleccion' : 'Agregar a seleccion') : (isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos')}
-            onClick={handleFavorite}
-            title={brokerMode ? (isFavorite ? 'Quitar de la shortlist' : 'Agregar a la shortlist') : undefined}
-          >
-            {brokerMode ? (
-              <svg viewBox="0 0 24 24" fill={isFavorite ? '#F2B441' : 'none'} stroke={isFavorite ? '#F2B441' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
-                <polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/>
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-              </svg>
-            )}
-          </button>
-          {onShare && !publicShareMode && !brokerMode && (
-            <button className="amc-btn amc-share" aria-label="Compartir por WhatsApp" onClick={onShare}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
-                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-              </svg> Compartir
-            </button>
-          )}
-          {brokerMode && !publicShareMode && onReport && (
-            <button
-              className={`amc-btn amc-report ${isReported ? 'reported' : ''}`}
-              aria-label={isReported ? 'Reportada' : 'Reportar dato incorrecto'}
-              onClick={onReport}
-            >
-              {isReported ? (
-                <>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                  Reportada
-                </>
-              ) : (
-                <>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 14, height: 14 }}>
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
-                  Reportar
-                </>
-              )}
-            </button>
-          )}
-          <button className="amc-btn amc-info" onClick={onOpenInfo}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
-              <polyline points="6 9 12 15 18 9"/>
-            </svg> Ver mas
-          </button>
-          {publicShareMode && !contactoDirecto && publicShareBroker ? (
-            <a
-              href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => {
-                e.preventDefault()
-                trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_card_mobile_public' })
-                openWhatsApp(publicShareBroker.telefono, buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))
-              }}
-              className="amc-wsp-inline-mobile"
-            >
-              <svg viewBox="0 0 24 24" fill="#1EA952" style={{width:14,height:14}}>
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-              Whatsapp
-            </a>
-          ) : p.agente_whatsapp ? (
-            <a href="#" onClick={(e) => handleWhatsAppLead(e, p, buildAlquilerWaMessage(p, { atribucion: !brokerMode }), brokerMode ? 'card_mobile_broker' : 'card_mobile')} className="amc-wsp-inline-mobile">
-              <svg viewBox="0 0 24 24" fill="#1EA952" style={{width:14,height:14}}>
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-              Whatsapp
-            </a>
-          ) : null}
-        </div>
-        {!publicShareMode && <a href="/landing-v2" className="amc-brand">simonbo.com</a>}
       </div>
-      {isFirst && <div className="amc-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" style={{width:18,height:18}}><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>}
+      {isFirst && <div className="amc-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="#141414" strokeWidth="1.5" style={{width:18,height:18}}><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>}
 
     </div>
   )

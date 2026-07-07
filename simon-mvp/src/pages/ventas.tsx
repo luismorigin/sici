@@ -1922,6 +1922,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     }
   }, [router.query.id])
 
+  // ?preventa=1 — entrada "Preventa" del menú (desde el propio feed o desde /alquileres)
+  useEffect(() => {
+    if (publicShareMode || brokerMode) return
+    if (router.query.preventa === '1') {
+      applyFilters({ ...filters, estado_entrega: 'solo_preventa', orden: filters.orden || 'recientes', solo_con_fotos: true })
+    }
+  }, [router.query.preventa]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Spotlight: fetch if not in properties
   useEffect(() => {
     if (!spotlightId) { setFetchedSpotlight(null); return }
