@@ -1014,3 +1014,83 @@
 .mt-bb-hint-active { color: #C8C0B0; }
 .mt-bb-cmp { display: inline-flex; align-items: center; gap: 7px; background: #3A6A48; color: #EDE8DC; border: none; border-radius: 100px; padding: 11px 20px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .mt-bb-cmp:active { transform: scale(0.97); }
+
+/* ===== LAYOUT SPLIT DESKTOP (nav + lista densa + panel derecho) — rediseño desktop feeds ===== */
+/* La nav superior (FeedDesktopNav, 56px fija) desplaza sidebar y main hacia abajo */
+.desktop-layout-split .desktop-sidebar { height: calc(100vh - 56px); margin-top: 56px; }
+.desktop-layout-split .desktop-main { height: calc(100vh - 56px); margin-top: 56px; }
+/* Pills sugeridas bajo el buscador (módulo guiado sin búsqueda activa) */
+.dsk-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.dsk-pill { background: #FAFAF8; border: 1px solid #D8D0BC; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; padding: 5px 12px; border-radius: 100px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+.dsk-pill:hover { color: #141414; border-color: #3A6A48; }
+/* Columnas: lista densa izquierda + panel derecho */
+.ad-cols { display: grid; grid-template-columns: minmax(360px, 470px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.ad-list { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ad-spotlight { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+/* Card de lista densa (tema claro alquileres) */
+.alc { display: flex; background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; overflow: hidden; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; min-height: 132px; }
+.alc:hover { border-color: #9A8E7A; box-shadow: 0 4px 14px rgba(58,53,48,0.08); }
+.alc-active { border-color: #3A6A48; box-shadow: 0 0 0 1px #3A6A48; }
+.alc-photo { width: 148px; min-width: 148px; background-size: cover; background-position: center; background-color: #E2DCCB; position: relative; }
+.alc-nofoto { display: flex; align-items: center; justify-content: center; height: 100%; color: #9A8E7A; font-size: 12px; font-family: 'DM Sans', sans-serif; }
+.alc-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: rgba(20,20,20,0.65); border: none; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 3; color: #EDE8DC; }
+.alc:hover .alc-nav { display: flex; }
+.alc-nav svg { width: 14px; height: 14px; }
+.alc-nav-prev { left: 6px; }
+.alc-nav-next { right: 6px; }
+.alc-count { position: absolute; bottom: 6px; left: 6px; background: rgba(20,20,20,0.75); color: rgba(255,255,255,0.85); font-size: 10px; padding: 2px 7px; border-radius: 100px; font-family: 'DM Sans', sans-serif; }
+.alc-body { flex: 1; min-width: 0; padding: 12px 14px; display: flex; flex-direction: column; font-family: 'DM Sans', sans-serif; }
+.alc-toprow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.alc-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.alc-chips em { font-style: normal; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: #3A6A48; background: rgba(58,106,72,0.1); border: 1px solid rgba(58,106,72,0.25); padding: 2px 9px; border-radius: 100px; white-space: nowrap; }
+.alc-chips .alc-chip-muted { color: #7A7060; background: rgba(20,20,20,0.04); border-color: #D8D0BC; }
+.alc-fav { width: 32px; height: 32px; min-width: 32px; border-radius: 50%; background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #9A8E7A; }
+.alc-fav:hover { color: #141414; }
+.alc-name { font-family: 'Figtree', sans-serif; font-size: 17px; font-weight: 500; color: #141414; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alc-zona { font-size: 11.5px; color: #7A7060; letter-spacing: 0.3px; margin: 2px 0 6px; }
+.alc-id { color: #B8AD9E; }
+.alc-specs { font-size: 13px; color: #3A3530; font-weight: 300; }
+.alc-bottomrow { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 8px; }
+.alc-exp { font-size: 11.5px; color: #7A7060; font-variant-numeric: tabular-nums; }
+.alc-price { font-size: 17px; font-weight: 600; color: #141414; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.alc-mes { font-size: 11px; font-weight: 400; color: #7A7060; }
+/* Panel derecho: sticky dentro del scroll de .desktop-main */
+.ad-panel { position: sticky; top: 0; height: calc(100vh - 56px - 64px); display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.ad-map { flex: 1; min-height: 260px; border-radius: 14px; overflow: hidden; border: 1px solid #D8D0BC; position: relative; background: #FAFAF8; }
+.ad-map > div { position: absolute; inset: 0; }
+.ad-map-full { position: absolute; top: 12px; right: 12px; z-index: 1100; display: inline-flex; align-items: center; gap: 6px; background: #141414; color: #EDE8DC; border: none; padding: 8px 14px; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+.ad-map-full:hover { background: #3A3530; }
+/* Resumen de mercado (tema claro) */
+.ad-mkt { flex: 0 0 auto; background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; padding: 18px 20px; font-family: 'DM Sans', sans-serif; }
+.ad-mkt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.ad-mkt-title { font-family: 'Figtree', sans-serif; font-size: 19px; font-weight: 500; color: #141414; }
+.ad-mkt-sub { font-size: 12px; color: #7A7060; margin-top: 2px; }
+.ad-mkt-link { font-size: 12px; color: #3A6A48; text-decoration: none; font-weight: 500; white-space: nowrap; }
+.ad-mkt-link:hover { text-decoration: underline; }
+.ad-mkt-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 12px; }
+.ad-mkt-stat { display: flex; flex-direction: column; gap: 3px; border-left: 2px solid rgba(58,106,72,0.5); padding-left: 12px; }
+.ad-mkt-num { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ad-mkt-label { font-size: 11.5px; color: #7A7060; line-height: 1.35; }
+.ad-mkt-caveat { font-size: 11.5px; color: #9A8E7A; line-height: 1.45; border-top: 1px solid rgba(216,208,188,0.6); padding-top: 10px; }
+/* Side sheet embebido (variant del bottom sheet .bs) */
+.bs.bs-side-alq { position: sticky; top: 0; inset: auto; transform: none; height: calc(100vh - 56px - 64px); width: 100%; max-width: none; border-radius: 14px; border: 1px solid #D8D0BC; z-index: 1; }
+.bs.bs-side-alq.open { transform: none; }
+.bs-side-alq .bs-sticky-top { background: #141414; }
+.bs-tabs-alq { position: sticky; top: 56px; z-index: 9; display: flex; gap: 2px; background: #141414; border-bottom: 1px solid rgba(237,232,220,0.12); padding: 0 16px; }
+.bs-tab-alq { flex: 1; background: none; border: none; border-bottom: 2px solid transparent; color: #9A8E7A; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 11px 4px; cursor: pointer; transition: color 0.15s; }
+.bs-tab-alq:hover { color: #EDE8DC; }
+.bs-tab-alq.active { color: #7BB389; border-bottom-color: #7BB389; font-weight: 600; }
+/* Tab Costos (secciones arena) */
+.bs-costos-rows { display: flex; flex-direction: column; }
+.bs-costos-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 1px solid rgba(216,208,188,0.7); font-family: 'DM Sans', sans-serif; }
+.bs-costos-row span { font-size: 13px; color: #7A7060; }
+.bs-costos-row b { font-size: 13.5px; color: #141414; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+.bs-costos-total b { font-weight: 700; color: #3A6A48; }
+.bs-costos-sub { font-size: 11.5px; color: #7A7060; font-weight: 400; }
+.bs-costos-caveat { font-size: 11.5px; color: #9A8E7A; margin-top: 12px; line-height: 1.45; }
+/* Bandeja comparar en split: anclada a la columna de lista, con thumbnails */
+.alq-tray-split { left: calc(320px + 32px); transform: none; animation: alqBannerInSplit 0.3s ease-out; }
+@keyframes alqBannerInSplit { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.alq-tray-thumbs { display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; }
+.alq-tray-thumb { position: relative; width: 30px; height: 30px; border-radius: 8px; background-size: cover; background-position: center; background-color: #3A3530; border: 1px solid rgba(237,232,220,0.25); display: inline-flex; align-items: flex-end; justify-content: flex-start; }
+.alq-tray-thumb em { font-style: normal; font-size: 8px; font-weight: 700; color: #EDE8DC; background: rgba(20,20,20,0.8); border-radius: 4px 0 0 0; padding: 1px 4px; line-height: 1; }

@@ -19,7 +19,13 @@ interface CompareSheetProps {
   // días publicado, tc_sospechoso y CTAs WA al captador por propiedad, y suprime
   // el CTA único al broker dueño. Default false = B2B intacto.
   contactoDirecto?: boolean
+  // Barra de acciones desktop: "Abrir favoritos" abre el panel de favoritos
+  // de la página (drawer de perfil). Solo se muestra si viene el handler.
+  onOpenFavorites?: () => void
 }
+
+// WhatsApp oficial de Simon (negocio) — mismo número que los feeds.
+const SIMON_WHATSAPP = '59177066308'
 
 function fmt(n: number) { return n.toLocaleString('en-US') }
 
@@ -33,8 +39,9 @@ function estadoLabel(estado: string | null | undefined): string {
   return 'Entrega inmediata'
 }
 
-export default function CompareSheet({ open, properties, onClose, publicShareBroker = null, contactoDirecto = false }: CompareSheetProps) {
+export default function CompareSheet({ open, properties, onClose, publicShareBroker = null, contactoDirecto = false, onOpenFavorites }: CompareSheetProps) {
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
+  const [copied, setCopied] = useState(false)
   const MAX_QS = 3
   const publicShareMode = publicShareBroker !== null
 
@@ -482,6 +489,44 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
         </div>
         )}
 
+        {/* Nota fiduciaria — mismo tono que el resto del producto */}
+        <div className="csv-nota">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 15, height: 15, flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>Los datos faltantes se muestran como no especificados. Simon no elige por vos; muestra contexto comparable.</span>
+        </div>
+
+        {/* Acciones — barra desktop (compartir · abrir favoritos · WhatsApp) */}
+        {!publicShareMode && (
+          <div className="csv-actions">
+            <button type="button" className="csv-action-btn" onClick={() => {
+              const lines = props.map((p, i) => `${String.fromCharCode(65 + i)}) ${p.proyecto} — ${p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}, ${Math.round(p.area_m2)}m², $us ${fmt(Math.round(p.precio_usd))}`).join('\n')
+              const text = `Comparativo Simon (venta):\n${lines}\n\nhttps://simonbo.com/ventas`
+              trackEvent('share_compare_venta', { count: props.length })
+              if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+                navigator.share({ title: 'Comparativo Simon', text }).catch(() => {})
+              } else if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) }).catch(() => {})
+              }
+            }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 15, height: 15 }}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              {copied ? 'Copiado ✓' : 'Compartir comparativo'}
+            </button>
+            {onOpenFavorites && (
+              <button type="button" className="csv-action-btn" onClick={() => { onClose(); onOpenFavorites() }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 15, height: 15 }}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                Abrir favoritos
+              </button>
+            )}
+            <a className="csv-action-btn csv-action-wa"
+              href={`https://wa.me/${SIMON_WHATSAPP}?text=${encodeURIComponent(`Hola Simon, estoy comparando estas opciones de venta y quiero orientación:\n${props.map((p, i) => `${String.fromCharCode(65 + i)}) ${p.proyecto} ($us ${fmt(Math.round(p.precio_usd))})`).join('\n')}`)}`}
+              target="_blank" rel="noopener noreferrer"
+              onClick={() => trackEvent('click_whatsapp_venta', { source: 'compare_actions', count: props.length })}>
+              <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 15, height: 15 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+              Consultar por WhatsApp
+            </a>
+          </div>
+        )}
+
         <div className="csv-footer">
           <div className="csv-footer-text">Generado por Simon — Inteligencia Inmobiliaria</div>
         </div>
@@ -648,6 +693,24 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
         }
         .csv-cta-link { background: rgba(58,53,48,0.04); border-color: #D8D0BC; color: #3A3530; }
 
+        /* Nota fiduciaria + acciones */
+        .csv-nota {
+          display: flex; gap: 8px; align-items: flex-start;
+          margin: 20px 20px 0; padding: 12px 14px; border-radius: 12px;
+          background: #FAFAF8; border: 1px solid #D8D0BC; color: #7A7060;
+          font-size: 12.5px; line-height: 1.5; font-family: 'DM Sans', sans-serif;
+        }
+        .csv-actions { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 20px 4px; }
+        .csv-action-btn {
+          display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+          padding: 11px 16px; border-radius: 10px; background: transparent;
+          border: 1px solid #C9C0AA; color: #3A3530; font-size: 13px; font-weight: 600;
+          font-family: 'DM Sans', sans-serif; cursor: pointer; text-decoration: none;
+        }
+        .csv-action-btn:hover { border-color: #7A7060; }
+        .csv-action-wa { background: #1EA952; border-color: #1EA952; color: #fff; margin-left: auto; }
+        .csv-action-wa:hover { border-color: #1EA952; opacity: 0.92; }
+
         /* Footer */
         .csv-footer { padding: 24px 20px 12px; text-align: center; }
         .csv-footer-text {
@@ -662,6 +725,16 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
           }
           .csv-overlay.open { transform: translateX(0); }
           .csv-table { font-size: 13px; }
+        }
+
+        /* Desktop ancho: la tabla A/B/C aprovecha el espacio de la mesa de decisión */
+        @media (min-width: 1100px) {
+          .csv-overlay { width: min(1040px, 92vw); }
+          .csv-scroll { padding-left: 8px; padding-right: 8px; }
+          .csv-thumb { width: 76px; height: 76px; border-radius: 12px; }
+          .csv-th-text { font-size: 13px; white-space: normal; }
+          .csv-table { font-size: 14px; }
+          .csv-td { padding: 10px 6px; }
         }
 
         @media (prefers-reduced-motion: reduce) {

@@ -20,6 +20,7 @@ import ShortlistsPanel from '@/components/broker/ShortlistsPanel'
 import ReportPropertyModal from '@/components/broker/ReportPropertyModal'
 import DataReportsBanner from '@/components/broker/DataReportsBanner'
 import type { Broker } from '@/lib/simon-brokers'
+import FeedDesktopNav from '@/components/feed/FeedDesktopNav'
 
 // --- SEO types ---
 interface AlquileresSEO {
@@ -289,6 +290,9 @@ export default function AlquileresPage({
   const brokerSlug = brokerSlugProp
   const broker = brokerProp
   const brokerMode = broker !== null
+  // Layout desktop split (nav + lista densa + panel derecho) — solo feed
+  // público, espejo de ventas. Broker/public-share conservan su grid clásico.
+  const splitDesktop = isDesktop && !brokerMode && !publicShareMode
   const brokerInfoProp: { nombre: string; inmobiliaria?: string | null } | null = broker ? { nombre: broker.nombre, inmobiliaria: broker.inmobiliaria } : null
 
   const [properties, setProperties] = useState<UnidadAlquiler[]>(initialProps)
@@ -901,6 +905,28 @@ export default function AlquileresPage({
   const visibleNotMarked = useMemo(() => (
     brokerMode ? filteredProperties.filter(p => !favorites.has(p.id)) : []
   ), [brokerMode, filteredProperties, favorites])
+
+  // Resumen de mercado del filtro actual — panel derecho del layout split
+  // (estado sin propiedad seleccionada). Client-side sobre la lista visible;
+  // lenguaje fiduciario: mediana + rango observado + base declarada.
+  const panelMarketSummary = useMemo(() => {
+    if (!splitDesktop) return null
+    const precios = displayedProperties.filter(q => q.precio_mensual_bob > 0).map(q => q.precio_mensual_bob).sort((a, b) => a - b)
+    if (precios.length < 5) return { count: displayedProperties.length, mediana: null, rangoLow: null, rangoHigh: null, amobladoPct: null }
+    const pctl = (pct: number) => {
+      const idx = (precios.length - 1) * pct
+      const lo = Math.floor(idx), hi = Math.ceil(idx)
+      return lo === hi ? precios[lo] : Math.round(precios[lo] * (hi - idx) + precios[hi] * (idx - lo))
+    }
+    const amoblados = displayedProperties.filter(q => q.amoblado === 'si' || q.amoblado === 'semi').length
+    return {
+      count: displayedProperties.length,
+      mediana: pctl(0.5),
+      rangoLow: pctl(0.25),
+      rangoHigh: pctl(0.75),
+      amobladoPct: displayedProperties.length > 0 ? Math.round((amoblados / displayedProperties.length) * 100) : null,
+    }
+  }, [splitDesktop, displayedProperties])
   function markAllVisible() {
     if (visibleNotMarked.length === 0) return
     trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug, tipo_operacion: 'alquiler' })
@@ -1173,6 +1199,40 @@ export default function AlquileresPage({
     return items
   }, [properties, spotlightProperty, spotlightId, isFiltered])
 
+  // Drawers de menú/perfil — compartidos entre el layout mobile y el nav desktop
+  // (misma lógica y clases mfd-*/mfp-*; el scrim funciona en ambos viewports).
+  const menuDrawer = menuOpen && (
+    <div className="mfd-scrim" onClick={() => setMenuOpen(false)}>
+      <nav className="mfd" onClick={e => e.stopPropagation()} aria-label="Menú principal">
+        <div className="mfd-head"><span className="mfd-title">Menú</span><button className="mfd-close" aria-label="Cerrar menú" onClick={() => setMenuOpen(false)}>&times;</button></div>
+        <a className="mfd-item" href="/ventas?preventa=1">Preventa</a>
+        <a className="mfd-item" href="/ventas">Ventas</a>
+        <span className="mfd-item mfd-item-active">Alquileres</span>
+        <div className="mfd-sec">Simulá y calculá</div>
+        <button className="mfd-item mfd-sub" onClick={() => { setMenuOpen(false); if (favorites.size >= 2) openCompare(); else showToast(favorites.size === 1 ? 'Guardá al menos 2 alquileres con el corazón para comparar' : 'Guardá alquileres con el corazón para comparar') }}>Comparador de propiedades</button>
+        <span className="mfd-item mfd-sub mfd-soon">Calculadora de renta <span className="mfd-badge-soon">Próximamente</span></span>
+        <span className="mfd-item mfd-sub mfd-soon">Crédito hipotecario <span className="mfd-badge-soon">Próximamente</span></span>
+        <div className="mfd-divider" />
+        <a className="mfd-item" href="/mercado/equipetrol">Mercado</a>
+        <button className="mfd-item" onClick={() => { setMenuOpen(false); setProfileOpen(true) }}>Mis favoritos{favorites.size > 0 ? ` · ${favorites.size}` : ''}</button>
+        <a className="mfd-item mfd-item-wa" href={`https://wa.me/${SIMON_WHATSAPP}?text=${encodeURIComponent('Hola Simon, quiero ayuda para encontrar una propiedad')}`} target="_blank" rel="noopener noreferrer">Hablar por WhatsApp</a>
+      </nav>
+    </div>
+  )
+  const profileDrawer = profileOpen && (
+    <div className="mfd-scrim" onClick={() => setProfileOpen(false)}>
+      <div className="mfp" onClick={e => e.stopPropagation()}>
+        <div className="mfd-head"><span className="mfd-title">Tu cuenta</span><button className="mfd-close" aria-label="Cerrar" onClick={() => setProfileOpen(false)}>&times;</button></div>
+        <div className="mfp-body">
+          <div className="mfp-ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+          <p className="mfp-msg">Guardá favoritos y comparativos en este dispositivo.</p>
+          <p className="mfp-sub">{favorites.size === 0 ? 'Todavía no guardaste ninguna propiedad' : `${favorites.size} ${favorites.size === 1 ? 'favorito guardado' : 'favoritos guardados'}`}</p>
+          {favorites.size >= 2 && <button className="mfp-cta" onClick={() => { setProfileOpen(false); openCompare() }}>Comparar {favorites.size} favoritos</button>}
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <>
       <AlquileresHead
@@ -1192,6 +1252,7 @@ export default function AlquileresPage({
         onClose={() => setCompareOpen(false)}
         publicShareBroker={publicShareBrokerProp}
         contactoDirecto={contactoDirecto}
+        onOpenFavorites={() => setProfileOpen(true)}
       />
 
       {/* Simon Chat Bot — deferred to avoid TBT during initial load.
@@ -1224,9 +1285,10 @@ export default function AlquileresPage({
         }}
       />}
 
-      {/* Bottom sheet overlay */}
-      {sheetOpen && <div className="alq-sheet-overlay" onClick={() => setSheetOpen(false)} />}
-      <BottomSheet
+      {/* Bottom sheet overlay — en el layout split desktop el detalle se
+          renderiza embebido como side sheet en el panel derecho, no acá. */}
+      {!splitDesktop && sheetOpen && <div className="alq-sheet-overlay" onClick={() => setSheetOpen(false)} />}
+      {!splitDesktop && <BottomSheet
         open={sheetOpen}
         property={sheetProperty}
         onClose={() => setSheetOpen(false)}
@@ -1244,7 +1306,7 @@ export default function AlquileresPage({
         contactoDirecto={contactoDirecto}
         priceSnapshot={sheetProperty && priceSnapshotsMap ? priceSnapshotsMap[sheetProperty.id] || null : null}
         brokerComment={sheetProperty && itemCommentsMap ? itemCommentsMap[sheetProperty.id] || null : null}
-      />
+      />}
 
       {/* Banner inferior flotante brokerMode — visible en mobile Y desktop,
           el broker siempre tiene CTA "Enviar shortlist" + × para limpiar
@@ -1265,13 +1327,24 @@ export default function AlquileresPage({
            brokerMode = broker armando shortlist en /broker/[slug]/alquileres → mismo patrón que venta
            (paridad con /broker/[slug] que ya forzaba desktop layout en mobile via brokerMode).
            Patrón espejo de ventas.tsx (regla CLAUDE.md: paridad UX entre venta/alquiler). */
-        <div className={`desktop-layout ${publicShareMode ? 'desktop-layout-public' : ''} ${brokerMode ? 'desktop-layout-broker' : ''}`}>
+        <div className={`desktop-layout ${splitDesktop ? 'desktop-layout-split' : ''} ${publicShareMode ? 'desktop-layout-public' : ''} ${brokerMode ? 'desktop-layout-broker' : ''}`}>
+          {/* Nav superior desktop — solo feed público (broker/public-share tienen sus banners) */}
+          {splitDesktop && (
+            <FeedDesktopNav active="alquileres" variant="light"
+              whatsappHref={`https://wa.me/${SIMON_WHATSAPP}?text=${encodeURIComponent('Hola Simon, quiero ayuda para encontrar una propiedad')}`}
+              onComparador={() => { if (favorites.size >= 2) openCompare(); else showToast(favorites.size === 1 ? 'Guardá al menos 2 alquileres con el corazón para comparar' : 'Guardá alquileres con el corazón para comparar') }}
+              onMenu={() => setMenuOpen(true)}
+              onProfile={() => setProfileOpen(true)} />
+          )}
+          {splitDesktop && menuDrawer}
+          {splitDesktop && profileDrawer}
           {/* Left sidebar - filters. Oculto en:
               - publicShareMode: el cliente recibe una shortlist curada, no debe ver filtros globales.
               - brokerMode mobile: 320px de sidebar no caben en mobile; el broker usa el chip
                 ⚙ Filtros del banner (que abre el FilterOverlay full-screen). */}
           {!publicShareMode && !(brokerMode && !isDesktop) && (
           <aside className="desktop-sidebar" style={{ overscrollBehavior: 'contain' }}>
+            {!splitDesktop && (
             <div className="desktop-sidebar-header">
               <Link href="/" className="desktop-logo">
                 <svg width={22} height={22} viewBox="0 0 64 64" fill="none" style={{display:'inline-block',verticalAlign:'middle',marginRight:8}}>
@@ -1283,6 +1356,7 @@ export default function AlquileresPage({
               </Link>
               <div className="desktop-label">Alquileres</div>
             </div>
+            )}
             <div className="desktop-sidebar-count">
               <span className="desktop-count-num">{properties.length}</span>
               <span className="desktop-count-label">{isFiltered ? `de ${totalCount} alquileres` : 'alquileres en Equipetrol'}</span>
@@ -1300,6 +1374,14 @@ export default function AlquileresPage({
                 {natChips.length > 0 && <div className="dsk-search-chips">{natChips.map(c => <span key={c} className="mfh-chip">{c}</span>)}</div>}
                 {natAviso === 'moneda' && <div className="dsk-search-aviso">Los alquileres van en Bs — el monto en $us no se aplicó.</div>}
                 {natAviso === 'venta' && <a className="dsk-search-aviso dsk-search-link" href="/ventas">Parece que buscás comprar → Ver departamentos en venta</a>}
+                {/* Módulo guiado: pills sugeridas mientras no hay búsqueda ni filtros */}
+                {splitDesktop && !isFiltered && !natQuery && (
+                  <div className="dsk-pills">
+                    {['1 dorm amoblado', 'Hasta Bs 4.500', 'Sirari', 'Con parqueo', '2 dorm en Eq. Centro'].map(s => (
+                      <button key={s} type="button" className="dsk-pill" onClick={() => handleNaturalSearch(s, true)}>{s}</button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <DesktopFilters
@@ -1365,7 +1447,7 @@ export default function AlquileresPage({
             {/* View toggle bar — oculto en mobile publicShareMode (FAB negro cubre el mapa) y
                 en brokerMode siempre (toggle Grid|Mapa del banner broker ya cumple esa función,
                 desktop + mobile). Espejo de ventas.tsx (línea 2370). */}
-            {!(publicShareMode && !isDesktop) && !brokerMode && (
+            {!splitDesktop && !(publicShareMode && !isDesktop) && !brokerMode && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: publicShareMode ? 12 : 20, paddingBottom: publicShareMode ? 0 : 16, borderBottom: publicShareMode ? 'none' : '1px solid rgba(216,208,188,0.3)', flexShrink: 0, position: publicShareMode ? 'static' : 'sticky', top: 0, background: 'transparent', zIndex: 10, paddingTop: publicShareMode ? 0 : 8 }}>
               <div style={{ fontSize: 13, color: '#7A7060', display: 'flex', alignItems: 'center', gap: 12 }}>
                 {/* "Comparar" se unificó en la píldora flotante inferior (paridad con
@@ -1419,7 +1501,7 @@ export default function AlquileresPage({
             ) : viewMode === 'grid' ? (
               <>
                 {/* Spotlight: shared property */}
-                {spotlightProperty && (
+                {!splitDesktop && spotlightProperty && (
                   <div className="alq-spotlight">
                     <div className="alq-spotlight-banner">
                       <span>Te compartieron este departamento</span>
@@ -1487,6 +1569,101 @@ export default function AlquileresPage({
                       : 'No hay alquileres de las fuentes seleccionadas.'}
                   </div>
                 )}
+                {/* ===== Layout split: lista densa | panel derecho (mapa+mercado ↔ side sheet) ===== */}
+                {splitDesktop && (
+                  <div className="ad-cols">
+                    <div className="ad-list">
+                      {spotlightProperty && (
+                        <div className="ad-spotlight">
+                          <div className="alq-spotlight-banner">
+                            <span>Te compartieron este departamento</span>
+                            <button onClick={clearSpotlight}>&times;</button>
+                          </div>
+                          <AlquilerListCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
+                            isActive={sheetOpen && sheetProperty?.id === spotlightProperty.id}
+                            onToggleFavorite={toggleFavorite} onOpen={openDetail} />
+                        </div>
+                      )}
+                      {(spotlightProperty ? gridProperties.filter(p => p.id !== spotlightId) : gridProperties).map((p, idx) => {
+                        const showDivider = filters.acepta_mascotas && idx > 0 && gridProperties[idx - 1]?.acepta_mascotas === true && p.acepta_mascotas !== true
+                        return (
+                          <Fragment key={p.id}>
+                            {showDivider && <div className="alq-pet-divider">🐾 También podrían aceptar mascotas · consultar con el anunciante</div>}
+                            <AlquilerListCard property={p} isFavorite={favorites.has(p.id)}
+                              isActive={sheetOpen && sheetProperty?.id === p.id}
+                              onToggleFavorite={toggleFavorite} onOpen={openDetail} />
+                          </Fragment>
+                        )
+                      })}
+                    </div>
+                    <div className="ad-panel">
+                      {sheetOpen && sheetProperty ? (
+                        /* Estado con propiedad seleccionada: side sheet scrolleable */
+                        <BottomSheet
+                          open sideMode
+                          property={sheetProperty}
+                          onClose={() => setSheetOpen(false)}
+                          isDesktop
+                          gateCompleted={gateCompleted}
+                          onGate={handleGate}
+                          petFilterActive={filters.acepta_mascotas}
+                          isFavorite={favorites.has(sheetProperty.id)}
+                          onToggleFavorite={() => toggleFavorite(sheetProperty.id)}
+                          onShare={() => { trackShareClick(sheetProperty); window.open(buildShareWhatsAppUrl(sheetProperty), '_blank') }}
+                          properties={properties}
+                          onSwapProperty={(sp) => setSheetProperty(sp)} />
+                      ) : (
+                        /* Estado sin selección: mapa + resumen de mercado del filtro actual */
+                        <>
+                          <div className="ad-map">
+                            <MapMultiComponent properties={displayedProperties}
+                              onSelectProperty={(id: number) => { const sp = displayedProperties.find(x => x.id === id); if (sp) openDetail(sp) }}
+                              selectedId={null} />
+                            <button className="ad-map-full" onClick={() => { setViewMode('map'); trackEvent('switch_view', { view_mode: 'map', source: 'panel' }) }}>
+                              Ver mapa completo
+                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            </button>
+                          </div>
+                          {panelMarketSummary && (
+                            <div className="ad-mkt">
+                              <div className="ad-mkt-head">
+                                <div>
+                                  <div className="ad-mkt-title">Mercado de alquileres</div>
+                                  <div className="ad-mkt-sub">{filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : 'Equipetrol'} · publicaciones activas</div>
+                                </div>
+                                <a className="ad-mkt-link" href="/mercado/equipetrol/alquileres">Ver mercado completo →</a>
+                              </div>
+                              <div className="ad-mkt-stats">
+                                <div className="ad-mkt-stat">
+                                  <span className="ad-mkt-num">{panelMarketSummary.count}</span>
+                                  <span className="ad-mkt-label">alquileres activos con este filtro</span>
+                                </div>
+                                {panelMarketSummary.mediana !== null && (
+                                  <div className="ad-mkt-stat">
+                                    <span className="ad-mkt-num">{formatPrice(panelMarketSummary.mediana)}/mes</span>
+                                    <span className="ad-mkt-label">mediana · rango {formatPrice(panelMarketSummary.rangoLow!)} — {formatPrice(panelMarketSummary.rangoHigh!)}/mes</span>
+                                  </div>
+                                )}
+                                {panelMarketSummary.amobladoPct !== null && (
+                                  <div className="ad-mkt-stat">
+                                    <span className="ad-mkt-num">{panelMarketSummary.amobladoPct}%</span>
+                                    <span className="ad-mkt-label">amoblados o semi-amoblados</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="ad-mkt-caveat">
+                                {panelMarketSummary.mediana === null
+                                  ? 'Pocas publicaciones con este filtro para calcular mediana y rango.'
+                                  : `Análisis basado en ${panelMarketSummary.count} publicaciones activas de alquiler. El precio varía según amoblado, acabados y seriedad del edificio.`}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {!splitDesktop && (
                 <div className="desktop-grid">
                   {gridProperties.map((p, idx) => {
                     const showDivider = filters.acepta_mascotas && idx > 0 && gridProperties[idx - 1]?.acepta_mascotas === true && p.acepta_mascotas !== true
@@ -1522,6 +1699,7 @@ export default function AlquileresPage({
                     )
                   })}
                 </div>
+                )}
               </>
             ) : (
               /* Map view: full map + floating card on selection */
@@ -1762,39 +1940,10 @@ export default function AlquileresPage({
           })()}
 
           {/* Drawer menú hamburguesa — intenciones inmobiliarias primero */}
-          {menuOpen && (
-            <div className="mfd-scrim" onClick={() => setMenuOpen(false)}>
-              <nav className="mfd" onClick={e => e.stopPropagation()} aria-label="Menú principal">
-                <div className="mfd-head"><span className="mfd-title">Menú</span><button className="mfd-close" aria-label="Cerrar menú" onClick={() => setMenuOpen(false)}>&times;</button></div>
-                <a className="mfd-item" href="/ventas?preventa=1">Preventa</a>
-                <a className="mfd-item" href="/ventas">Ventas</a>
-                <span className="mfd-item mfd-item-active">Alquileres</span>
-                <div className="mfd-sec">Simulá y calculá</div>
-                <button className="mfd-item mfd-sub" onClick={() => { setMenuOpen(false); if (favorites.size >= 2) openCompare(); else showToast(favorites.size === 1 ? 'Guardá al menos 2 alquileres con el corazón para comparar' : 'Guardá alquileres con el corazón para comparar') }}>Comparador de propiedades</button>
-                <span className="mfd-item mfd-sub mfd-soon">Calculadora de renta <span className="mfd-badge-soon">Próximamente</span></span>
-                <span className="mfd-item mfd-sub mfd-soon">Crédito hipotecario <span className="mfd-badge-soon">Próximamente</span></span>
-                <div className="mfd-divider" />
-                <a className="mfd-item" href="/mercado/equipetrol">Mercado</a>
-                <button className="mfd-item" onClick={() => { setMenuOpen(false); setProfileOpen(true) }}>Mis favoritos{favorites.size > 0 ? ` · ${favorites.size}` : ''}</button>
-                <a className="mfd-item mfd-item-wa" href={`https://wa.me/${SIMON_WHATSAPP}?text=${encodeURIComponent('Hola Simon, quiero ayuda para encontrar una propiedad')}`} target="_blank" rel="noopener noreferrer">Hablar por WhatsApp</a>
-              </nav>
-            </div>
-          )}
+          {menuDrawer}
 
           {/* Drawer perfil — sin login: favoritos guardados en el dispositivo */}
-          {profileOpen && (
-            <div className="mfd-scrim" onClick={() => setProfileOpen(false)}>
-              <div className="mfp" onClick={e => e.stopPropagation()}>
-                <div className="mfd-head"><span className="mfd-title">Tu cuenta</span><button className="mfd-close" aria-label="Cerrar" onClick={() => setProfileOpen(false)}>&times;</button></div>
-                <div className="mfp-body">
-                  <div className="mfp-ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
-                  <p className="mfp-msg">Guardá favoritos y comparativos en este dispositivo.</p>
-                  <p className="mfp-sub">{favorites.size === 0 ? 'Todavía no guardaste ninguna propiedad' : `${favorites.size} ${favorites.size === 1 ? 'favorito guardado' : 'favoritos guardados'}`}</p>
-                  {favorites.size >= 2 && <button className="mfp-cta" onClick={() => { setProfileOpen(false); openCompare() }}>Comparar {favorites.size} favoritos</button>}
-                </div>
-              </div>
-            </div>
-          )}
+          {profileDrawer}
         </>
       )}
 
@@ -2048,8 +2197,17 @@ export default function AlquileresPage({
           inferior (mt-bottombar) del rediseño; esta píldora quedaría duplicada.
           Se muestra en desktop y en publicShareMode (cliente ve la shortlist en grid). */}
       {!brokerMode && (isDesktop || publicShareMode) && favorites.size >= 1 && (
-        <div className="alq-compare-banner-wrap">
+        <div className={`alq-compare-banner-wrap ${splitDesktop ? 'alq-tray-split' : ''}`}>
           <button className="alq-compare-banner" onClick={() => favorites.size >= 2 ? openCompare() : showToast('Elegí al menos 2 para comparar')} style={{ flex: 1 }}>
+            {splitDesktop && favorites.size >= 2 && (
+              <span className="alq-tray-thumbs">
+                {favoriteProperties.slice(0, 3).map((fp, i) => (
+                  fp.fotos_urls?.[0]
+                    ? <span key={fp.id} className="alq-tray-thumb" style={{ backgroundImage: `url('${fp.fotos_urls[0]}')` }}><em>{String.fromCharCode(65 + i)}</em></span>
+                    : <span key={fp.id} className="alq-tray-thumb"><em>{String.fromCharCode(65 + i)}</em></span>
+                ))}
+              </span>
+            )}
             <span className="alq-compare-banner-text">{favorites.size} favorito{favorites.size > 1 ? 's' : ''}{favorites.size >= 2 ? ' · Comparar' : ''}</span>
             {favorites.size >= 2 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M9 18l6-6-6-6"/></svg>}
           </button>
@@ -3179,6 +3337,75 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { 
 }
 
 // ===== BOTTOM SHEET GALLERY =====
+// ===== Desktop lista densa: AlquilerListCard =====
+// Card horizontal compacta para el layout desktop split (lista | mapa/side sheet).
+// Tap abre el side sheet; lo transaccional vive en el sheet — acá solo corazón.
+const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorite, isActive, onToggleFavorite, onOpen }: {
+  property: UnidadAlquiler; isFavorite: boolean; isActive: boolean
+  onToggleFavorite: (id: number) => void; onOpen: (p: UnidadAlquiler) => void
+}) {
+  const [photoIdx, setPhotoIdx] = useState(0)
+  const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
+  const hasPhotos = photos.length > 0
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setVisible(true); obs.disconnect() }
+    }, { rootMargin: '300px' })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  const chips: string[] = []
+  if (p.amoblado === 'si') chips.push('Amoblado')
+  else if (p.amoblado === 'semi') chips.push('Semi-amoblado')
+  if (p.acepta_mascotas) chips.push('Mascotas')
+  if (p.estacionamientos && p.estacionamientos > 0) chips.push('Parqueo')
+
+  return (
+    <div className={`alc ${isActive ? 'alc-active' : ''}`} ref={cardRef} onClick={() => onOpen(p)} role="button" tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') onOpen(p) }}>
+      <div className="alc-photo" style={hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
+        {!hasPhotos && <div className="alc-nofoto">Sin fotos</div>}
+        {photos.length > 1 && (<>
+          {photoIdx > 0 && <button className="alc-nav alc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>}
+          {photoIdx < photos.length - 1 && <button className="alc-nav alc-nav-next" aria-label="Foto siguiente" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
+          </button>}
+          <div className="alc-count">{photoIdx + 1}/{photos.length}</div>
+        </>)}
+      </div>
+      <div className="alc-body">
+        <div className="alc-toprow">
+          <span className="alc-chips">{chips.length > 0 ? chips.map(c => <em key={c}>{c}</em>) : <em className="alc-chip-muted">{dormLabel(p.dormitorios)}</em>}</span>
+          <button className={`alc-fav ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={e => { e.stopPropagation(); onToggleFavorite(p.id) }}>
+            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </button>
+        </div>
+        <div className="alc-name">{nombreAlquiler(p)}</div>
+        <div className="alc-zona">{displayZona(p.zona)} <span className="alc-id">#{p.id}</span></div>
+        <div className="alc-specs">{[
+          dormLabel(p.dormitorios),
+          p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
+          p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null,
+        ].filter(Boolean).join(' · ')}</div>
+        <div className="alc-bottomrow">
+          <span className="alc-exp">{p.monto_expensas_bob ? `+ Bs ${p.monto_expensas_bob.toLocaleString('es-BO')} expensas` : ''}</span>
+          <span className="alc-price">{formatPrice(p.precio_mensual_bob)}<span className="alc-mes">/mes</span></span>
+        </div>
+      </div>
+    </div>
+  )
+})
+
 function BottomSheetGallery({ photos, propertyId }: { photos: string[]; propertyId?: number }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [currentIdx, setCurrentIdx] = useState(0)
@@ -3239,9 +3466,12 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 }
 
 // ===== BOTTOM SHEET =====
+// sideMode: render embebido como SIDE SHEET desktop (panel derecho del layout
+// split) — sin overlay, sin position:fixed, sin swipe-to-dismiss, scroll
+// interno y tabs Resumen | Mercado | Costos | Similares. Mobile intacto.
 function BottomSheet({
   open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite, onShare, properties, onSwapProperty,
-  brokerMode = false, publicShareBroker = null, contactoDirecto = false, priceSnapshot = null, brokerComment = null,
+  brokerMode = false, publicShareBroker = null, contactoDirecto = false, priceSnapshot = null, brokerComment = null, sideMode = false,
 }: {
   open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; petFilterActive?: boolean
@@ -3258,6 +3488,7 @@ function BottomSheet({
   // Comentario del broker — se renderiza arriba del detalle, sin clamp (a diferencia
   // de la card en el feed que clampea a 2 líneas).
   brokerComment?: string | null
+  sideMode?: boolean
 }) {
   const publicShareMode = publicShareBroker !== null
   const [showGate, setShowGate] = useState(false)
@@ -3266,6 +3497,10 @@ function BottomSheet({
   const [gateEmail, setGateEmail] = useState('')
   const [descExpanded, setDescExpanded] = useState(false)
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
+  // Tabs del side sheet desktop. En mobile (sideMode=false) no aplican:
+  // showTab() devuelve true siempre y el sheet scrollea completo como hoy.
+  const [sideTab, setSideTab] = useState<'resumen' | 'mercado' | 'costos' | 'similares'>('resumen')
+  const showTab = (t: 'resumen' | 'mercado' | 'costos' | 'similares') => !sideMode || sideTab === t
 
   // Gesture dismiss (swipe down)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -3319,6 +3554,7 @@ function BottomSheet({
   const propId = property?.id
   useEffect(() => {
     setShowGate(false); setDescExpanded(false); setSelectedQs(new Set())
+    setSideTab('resumen')
     sheetRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }, [propId])
 
@@ -3436,7 +3672,7 @@ function BottomSheet({
   const hasGPS = p.latitud && p.longitud
 
   return (
-    <div className={`bs ${open ? 'open' : ''} ${isDesktop ? 'bs-desktop' : ''}`} ref={sheetRef}
+    <div className={`bs ${open ? 'open' : ''} ${sideMode ? 'bs-side-alq' : (isDesktop ? 'bs-desktop' : '')}`} ref={sheetRef}
       onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       <div className="bs-handle" />
       {/* Sticky close + fav bar */}
@@ -3483,12 +3719,22 @@ function BottomSheet({
           </div>
         )}
       </div>
+      {/* Tabs del side sheet — solo desktop split layout */}
+      {sideMode && (
+        <div className="bs-tabs-alq" role="tablist" aria-label="Secciones del detalle">
+          {([['resumen', 'Resumen'], ['mercado', 'Mercado'], ['costos', 'Costos'], ['similares', 'Similares']] as const).map(([key, label]) => (
+            <button key={key} role="tab" aria-selected={sideTab === key}
+              className={`bs-tab-alq ${sideTab === key ? 'active' : ''}`}
+              onClick={() => setSideTab(key)}>{label}</button>
+          ))}
+        </div>
+      )}
       {/* Galería de fotos horizontal */}
-      {p.fotos_urls && p.fotos_urls.length > 0 && (
+      {showTab('resumen') && p.fotos_urls && p.fotos_urls.length > 0 && (
         <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
       )}
       {/* Comentario del broker — solo en publicShareMode (link compartido /b/[hash]) */}
-      {publicShareMode && brokerComment && (
+      {showTab('resumen') && publicShareMode && brokerComment && (
         <div className="bs-section bs-broker-comment-section" id="bs-broker-comment">
           <div className="bs-sl"><span className="bs-sl-dot" />Comentario de tu broker</div>
           <div className="bs-broker-comment">
@@ -3499,6 +3745,7 @@ function BottomSheet({
         </div>
       )}
       {/* Body blanco — características, amenidades, ubicación, anuncio */}
+      {showTab('resumen') && (
       <div className="bs-section">
         <div className="bs-sl"><span className="bs-sl-dot" />Caracteristicas</div>
         <div className="bs-grid">
@@ -3511,13 +3758,14 @@ function BottomSheet({
           ))}
         </div>
       </div>
-      {p.amenities_lista && p.amenities_lista.length > 0 && (
+      )}
+      {showTab('resumen') && p.amenities_lista && p.amenities_lista.length > 0 && (
         <div className="bs-section">
           <div className="bs-sl"><span className="bs-sl-dot" />Amenidades</div>
           <div className="bs-aw">{p.amenities_lista.map((a, i) => <span key={i} className="bs-at">{a}</span>)}</div>
         </div>
       )}
-      {p.descripcion && (
+      {showTab('resumen') && p.descripcion && (
         <div className="bs-section">
           <div className="bs-sl"><span className="bs-sl-dot" />Sobre esta propiedad</div>
           <div className={`bs-desc ${descExpanded ? 'expanded' : ''}`}>{p.descripcion}</div>
@@ -3526,7 +3774,7 @@ function BottomSheet({
           )}
         </div>
       )}
-      {hasGPS && (
+      {showTab('resumen') && hasGPS && (
         <div className="bs-section">
           <a
             href={`https://www.google.com/maps?q=${p.latitud},${p.longitud}`}
@@ -3543,7 +3791,7 @@ function BottomSheet({
       )}
       {/* --- Mini Market Study — formato barra sin veredicto (unificado con
           ventas). Oculto en publicShare: `properties` ahí es la shortlist. --- */}
-      {!publicShareBroker && marketData && (
+      {showTab('mercado') && !publicShareBroker && marketData && (
         <div className="bs-section">
           <div className="bs-sl"><span className="bs-sl-dot" />Mercado en {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
           <div className="bs-mkt">
@@ -3577,13 +3825,35 @@ function BottomSheet({
         </div>
       )}
       {/* Nivel 3 de la cascada: la ausencia se explica, no se disimula. */}
-      {!publicShareBroker && !marketData && p.precio_mensual_bob > 0 && (
+      {showTab('mercado') && !publicShareBroker && !marketData && p.precio_mensual_bob > 0 && (
         <div className="bs-section">
           <div className="bs-mkta-empty">Sin suficientes deptos comparables activos para mostrar contexto de mercado.</div>
         </div>
       )}
+      {/* Tab Costos — costo real mensual + entrada (solo side sheet desktop) */}
+      {sideMode && sideTab === 'costos' && (
+        <div className="bs-section">
+          <div className="bs-sl"><span className="bs-sl-dot" />Costo real mensual</div>
+          <div className="bs-costos-rows">
+            <div className="bs-costos-row"><span>Alquiler</span><b>{formatPrice(p.precio_mensual_bob)}/mes</b></div>
+            <div className="bs-costos-row"><span>Expensas</span><b>{p.monto_expensas_bob ? `${formatPrice(p.monto_expensas_bob)}/mes` : 'No reporta'}</b></div>
+            <div className="bs-costos-row bs-costos-total"><span>Costo mensual estimado</span><b>{formatPrice(p.precio_mensual_bob + (p.monto_expensas_bob || 0))}/mes</b></div>
+            <div className="bs-costos-row"><span>Depósito de entrada</span><b>{formatPrice(p.precio_mensual_bob * (p.deposito_meses || 1))} <span className="bs-costos-sub">({p.deposito_meses || 1} mes{(p.deposito_meses || 1) > 1 ? 'es' : ''})</span></b></div>
+            {p.contrato_minimo_meses ? <div className="bs-costos-row"><span>Contrato mínimo</span><b>{p.contrato_minimo_meses} meses</b></div> : null}
+            {p.servicios_incluidos && p.servicios_incluidos.length > 0 && (
+              <div className="bs-costos-row"><span>Servicios incluidos</span><b>{p.servicios_incluidos.join(', ')}</b></div>
+            )}
+          </div>
+          <div className="bs-sl" style={{ marginTop: 18 }}><span className="bs-sl-dot" />Ingreso sugerido</div>
+          <div className="bs-costos-rows">
+            <div className="bs-costos-row"><span>Regla 2.5x del costo mensual</span><b>{formatPrice(Math.round((p.precio_mensual_bob + (p.monto_expensas_bob || 0)) * 2.5))}/mes</b></div>
+            <div className="bs-costos-row"><span>Regla 3x del costo mensual</span><b>{formatPrice((p.precio_mensual_bob + (p.monto_expensas_bob || 0)) * 3)}/mes</b></div>
+          </div>
+          <div className="bs-costos-caveat">Referencia general del mercado de alquileres — cada propietario define sus propias condiciones. Expensas y depósito se confirman con el anunciante.</div>
+        </div>
+      )}
       {/* --- Similar Properties --- */}
-      {similarProps.length > 0 && (
+      {showTab('similares') && similarProps.length > 0 && (
         <div className="bs-section">
           <div className="bs-sl"><span className="bs-sl-dot" />Tambien en {displayZona(p.zona)}</div>
           <div className="bs-sim-scroll">
@@ -3608,8 +3878,14 @@ function BottomSheet({
           </div>
         </div>
       )}
+      {/* Tab Similares vacío — la ausencia se explica, no se disimula */}
+      {sideMode && sideTab === 'similares' && similarProps.length === 0 && (
+        <div className="bs-section">
+          <div className="bs-mkta-empty">No hay alquileres similares activos en {displayZona(p.zona)} con esta tipología.</div>
+        </div>
+      )}
       {/* --- Preguntas para el broker --- Ocultas en brokerMode (el broker ya conoce) y publicShareMode (cliente habla directo con broker); en contactoDirecto (B2C) se muestran (van al captador) */}
-      {!brokerMode && (!publicShareMode || contactoDirecto) && brokerQuestions.length > 0 && (
+      {showTab('costos') && !brokerMode && (!publicShareMode || contactoDirecto) && brokerQuestions.length > 0 && (
         <div className="bs-section">
           <div className="bs-q-header">
             <div className="bs-sl"><span className="bs-sl-dot" />Preguntas para el broker</div>
@@ -3635,7 +3911,7 @@ function BottomSheet({
         </div>
       )}
       {/* Gate "Ver anuncio original" — oculto en brokerMode y publicShareMode (confianza en el broker); en contactoDirecto (B2C) se muestra como el feed (§6 dec.3) */}
-      {!brokerMode && (!publicShareMode || contactoDirecto) && p.url && (
+      {showTab('resumen') && !brokerMode && (!publicShareMode || contactoDirecto) && p.url && (
         <div className="bs-section">
           {!showGate ? (
             <button className="bs-ver-anuncio" onClick={() => {
@@ -3663,7 +3939,7 @@ function BottomSheet({
         </div>
       )}
       {/* En brokerMode: link directo al anuncio sin gate (broker confía en su flujo) */}
-      {brokerMode && p.url && (
+      {showTab('resumen') && brokerMode && p.url && (
         <div className="bs-section">
           <a className="bs-ver-anuncio" href={p.url} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('broker_open_listing', { property_id: p.id })}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
