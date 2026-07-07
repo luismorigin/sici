@@ -187,7 +187,8 @@ simon-mvp/src/
 ├── components/venta/ → VentaMap (Leaflet, pins de precio)
 ├── lib/          → supabase (cliente + RPC mappers), zonas, precio-utils, format-utils,
 │                   mercado-data, mercado-alquiler-data, casas (feed casas ZN), meta-pixel,
-│                   wa-message, broker-shortlists-server, informe/ (types+helpers+template);
+│                   wa-message, broker-shortlists-server, informe/ (types+helpers+template),
+│                   busqueda-natural (parser lenguaje natural $0 sin IA, feeds mobile+desktop);
 │                   + broker/demo/phone/property-reports/whatsapp/analytics
 ├── pages/admin/  → orquestadores delgados (ver tabla Admin Pages)
 ├── pages/api/    → API routes (ver Broker Pages & API)
@@ -218,8 +219,8 @@ Editores grandes: `propiedades/[id]` (~1035L, `usePropertyEditor`), `proyectos/[
 |------|-----------|
 | `/` → `/landing-v2` | Landing Premium (negro/crema/oro) |
 | `/filtros-v2`, `/formulario-v2`, `/resultados-v2` | Funnel premium `[legacy / dormido]` |
-| `/ventas` | **Feed ventas** — cards, filtros inline, mapa, TikTok mobile |
-| `/alquileres` | **Feed alquileres** (ver flujo abajo) |
+| `/ventas` | **Feed ventas** — rediseño mobile (ver abajo), buscador inteligente, card limpia, mapa, TikTok mobile |
+| `/alquileres` | **Feed alquileres** — mismo rediseño mobile que ventas (ver flujo abajo) |
 | `/zona-norte/ventas` + `/alquileres` | Feeds ZN `[dark launch/noindex]` — copia filtrando 14 microzonas ZN (`getMicrozonasZN()`), sin tocar Equipetrol. `lib/mercado-data-zn.ts` / `mercado-alquiler-data-zn.ts`. Memoria `project_feed_zona_norte_aislamiento` |
 | `/ventas/casas` | **Feed casas ZN** `[dark launch/noindex]` — sobre `v_mercado_casas` (SSG + client-side). Aislado de deptos. `pages/ventas/casas.tsx` + `lib/casas.ts`. Captura `/cron-casas` |
 | `/mercado/equipetrol` (+ `/ventas`, `/alquileres`) | Mercado hub + páginas SEO (Schema.org Article/Dataset/FAQPage) |
@@ -227,6 +228,8 @@ Editores grandes: `propiedades/[id]` (~1035L, `usePropertyEditor`), `proyectos/[
 | `/go` | Launcher personal (links rápidos, noindex). Editable en array `SECTIONS` de `pages/go.tsx` |
 
 Flujo prod: `simonbo.com (/) → /ventas`. **Alquileres**: cards → bottom sheet (galería, características, amenidades, Google Maps, mini estudio de mercado, props similares, preguntas al broker max 3, ver anuncio original [gate], sticky WA) → WhatsApp broker. Comparativo Express desde 2+ favoritos (CompareSheet).
+
+**Rediseño mobile feeds (7-jul, EN PROD — `feat/mobile-feed-redesign` mergeado)**: ambos feeds (venta+alquiler) comparten el mismo patrón. Ventas = styled-jsx inline (`mc-*`/`mfh-*`/`mt-*`); alquileres = CSS externo `styles/alquileres.css` (`amc-*`/`mfh-*`/`mt-*`). Piezas: **header sticky** (`mfh-*`: logo+perfil+hamburguesa; 2da fila buscador nativo + botón filtros); **buscador inteligente** (`lib/busqueda-natural`, $0 sin IA) también en sidebar desktop (`dsk-search`); **card limpia** (corazón dentro de la foto, tap abre el sheet, sin acciones/descripción — todo lo transaccional en el sheet); **barra fija inferior** (`mt-bottombar`: Ver mapa de la card activa + comparar 0/1/2+ favoritos + limpiar). Regla layout: los hijos del contenido de la card usan `flex-shrink:0` (sin esto, en viewports bajos tipo iPhone SE el flex aplasta el título y lo recorta). **Menú hamburguesa** (`mfd-*`): Preventa (`/ventas?preventa=1`, lector en ventas aplica filtro) · Ventas · Alquileres · *Simulá y calculá* → Comparador de propiedades (abre CompareSheet con 2+ favs) + **Calculadora de renta `[Próximamente]`** + **Crédito hipotecario `[Próximamente]`** · Mercado · Mis favoritos · Hablar por WhatsApp (`SIMON_WHATSAPP`, número de negocio, NO el del fundador). Perfil (`mfp-*`): sin login, "guardá favoritos en este dispositivo". **Pendiente**: isologo oficial (el header usa placeholder arena+punto verde).
 
 - **Fonts:** Figtree (display) + DM Sans (body) — brand v1.4
 - **Colores:** Arena #EDE8DC, Negro #141414, Salvia #3A6A48 — `simon-design-tokens.ts`
