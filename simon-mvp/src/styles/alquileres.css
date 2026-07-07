@@ -601,7 +601,8 @@
 .alq-card { --mfh-h: calc(104px + env(safe-area-inset-top)); height: calc(100dvh - var(--mfh-h)); scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #EDE8DC; }
 .alq-card.alq-card-first { height: calc(100dvh - var(--mfh-h)); }
 .amc-content { flex: 1 1 auto; min-height: 0; padding: 16px 24px 8px; padding-bottom: calc(72px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.amc-name { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 500; color: #141414; line-height: 1.3; margin: 0; padding: 0; max-height: 2.6em; overflow: hidden; }
+.amc-name { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 500; color: #141414; line-height: 1.3; margin: 0; padding: 0; max-height: 2.6em; overflow: hidden; flex-shrink: 0; }
+.amc-meta-row, .amc-price-block { flex-shrink: 0; }
 .amc-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 5px 0 12px; }
 .amc-reciente { font-size: 11px; font-weight: 600; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; background: rgba(58,106,72,0.12); padding: 2px 8px; border-radius: 4px; }
 .amc-zona { font-size: 13px; color: #7A7060; letter-spacing: 0.3px; margin-bottom: 0; font-family: 'DM Sans', sans-serif; }
