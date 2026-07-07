@@ -311,7 +311,7 @@ export default function LandingWhatsApp({ market }: { market: SuperficiesMarketD
           <div className="says stagger">
             <div className="say">
               <div className="av"><Norte size={34} sobre="negro" /></div>
-              <p><b>Eq. Centro.</b> El m² está a <Count value={market.precioM2Centro} prefix="$" />. <span className="ctx">Es la zona más cara, justo arriba del promedio de Equipetrol.</span></p>
+              <p><b>{market.zonaMasCara.zona}.</b> El m² está a <Count value={market.zonaMasCara.m2} prefix="$" />. <span className="ctx">Es la zona más cara de Equipetrol ahora mismo.</span></p>
             </div>
             <div className="say">
               <div className="av"><Norte size={34} sobre="negro" /></div>

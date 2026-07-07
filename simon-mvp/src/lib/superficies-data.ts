@@ -14,8 +14,8 @@ export interface SuperficiesMarketData {
   medianaAlquilerBob: number
   /** Zona a la que corresponde la mediana de alquiler (display) */
   medianaAlquilerZona: string
-  /** USD/m² venta en Eq. Centro (para /whatsapp — "el dato contado") */
-  precioM2Centro: number
+  /** Zona más cara por USD/m² + su valor (calculado, NO hardcodeado) — /whatsapp */
+  zonaMasCara: { zona: string; m2: number }
   /** TC paralelo del día (config_global.tipo_cambio_paralelo) — el que usa el sistema */
   tcParalelo: number
   /** USD/m² venta por zona (display) — para el demo de contexto de la home */
@@ -28,7 +28,7 @@ const FALLBACK: SuperficiesMarketData = {
   alquileresActivos: 121,
   medianaAlquilerBob: 3750,
   medianaAlquilerZona: 'Eq. Centro',
-  precioM2Centro: 2244,
+  zonaMasCara: { zona: 'Eq. Norte', m2: 2646 },
   tcParalelo: 9.72,
   m2PorZona: {},
 }
@@ -242,14 +242,18 @@ export async function fetchSuperficiesData(): Promise<SuperficiesMarketData> {
     const centro = zonasAlquiler.find(z => z.zona === 'Equipetrol Centro')
     const zonaTop = centro ?? zonasAlquiler[0]
 
-    const m2Centro = microzonas.find(m => m.zona === 'Eq. Centro')?.precio_m2
-
     // Mapa zona display → USD/m² (para comparar una prop real contra su zona).
     // displayZona() normaliza: microzonas puede devolver nombre BD o display.
     const m2PorZona: Record<string, number> = {}
     for (const m of microzonas) {
       if (m.zona && m.precio_m2) m2PorZona[displayZona(m.zona)] = m.precio_m2
     }
+
+    // Zona más cara REAL (mayor USD/m²) — no asumir cuál es; se calcula
+    const ordenadas = Object.entries(m2PorZona).sort((a, b) => b[1] - a[1])
+    const zonaMasCara = ordenadas.length
+      ? { zona: ordenadas[0][0], m2: ordenadas[0][1] }
+      : FALLBACK.zonaMasCara
 
     return {
       ventasActivas: ventasCount ?? FALLBACK.ventasActivas,
@@ -258,7 +262,7 @@ export async function fetchSuperficiesData(): Promise<SuperficiesMarketData> {
       medianaAlquilerZona: zonaTop
         ? (zonaTop.zona === 'Equipetrol Centro' ? 'Eq. Centro' : zonaTop.zona)
         : FALLBACK.medianaAlquilerZona,
-      precioM2Centro: m2Centro ?? FALLBACK.precioM2Centro,
+      zonaMasCara,
       tcParalelo,
       m2PorZona,
     }
