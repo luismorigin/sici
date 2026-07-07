@@ -1286,6 +1286,21 @@ export default function AlquileresPage({
               <span className="desktop-count-num">{properties.length}</span>
               <span className="desktop-count-label">{isFiltered ? `de ${totalCount} alquileres` : 'alquileres en Equipetrol'}</span>
             </div>
+            {/* Buscador inteligente también en desktop (igual que ventas) */}
+            {!brokerMode && (
+              <div className="dsk-search">
+                <form className="dsk-search-box" onSubmit={(e) => { e.preventDefault(); handleNaturalSearch(natQuery, true); (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.blur() }}>
+                  <svg className="dsk-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input className="dsk-search-input" type="search" enterKeyHint="search" value={natQuery}
+                    placeholder={'Buscá "2 dorm amoblado hasta 4.200 bs"'}
+                    onChange={(e) => handleNaturalSearch(e.target.value, false)} />
+                  {natQuery && <button type="button" className="dsk-search-clear" aria-label="Limpiar" onClick={() => { setNatQuery(''); setNatChips([]); setNatAviso(null) }}>&times;</button>}
+                </form>
+                {natChips.length > 0 && <div className="dsk-search-chips">{natChips.map(c => <span key={c} className="mfh-chip">{c}</span>)}</div>}
+                {natAviso === 'moneda' && <div className="dsk-search-aviso">Los alquileres van en Bs — el monto en $us no se aplicó.</div>}
+                {natAviso === 'venta' && <a className="dsk-search-aviso dsk-search-link" href="/ventas">Parece que buscás comprar → Ver departamentos en venta</a>}
+              </div>
+            )}
             <DesktopFilters
               key={`df-${filterComponentVersion}`}
               currentFilters={filters}
