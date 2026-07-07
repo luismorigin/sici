@@ -335,22 +335,24 @@ export default function LandingWhatsApp({ market }: { market: SuperficiesMarketD
           </div>
           <div className="doors stagger">
             <div className="door">
-              {/* Placeholder visual — reemplazar por captura real del feed cuando estén las fotos */}
-              <div className="pic pic-alq" role="img" aria-label="Listado de alquileres en Simón" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="pic" src="/wa-card-alquileres.jpg" alt="Departamento en alquiler en Equipetrol" loading="lazy" decoding="async" width={760} height={506} />
               <span className="tag"><span className="d" />Activo</span>
               <h3>Alquileres</h3>
               <p>{aproximado(market.alquileresActivos)} deptos de tres fuentes, al día. Filtrá por precio, zona, mascotas o parqueo y comparalos lado a lado.</p>
               <Link href="/alquileres" className="lnk">Buscar alquileres <span className="arr">→</span></Link>
             </div>
             <div className="door">
-              <div className="pic pic-vta" role="img" aria-label="Comparativo de ventas en Simón" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="pic" src="/wa-card-ventas.jpg" alt="Departamento en venta con piscina y vista en Equipetrol" loading="lazy" decoding="async" width={760} height={570} />
               <span className="tag"><span className="d" />Activo</span>
               <h3>Ventas</h3>
               <p>{aproximado(market.ventasActivas)} deptos en venta con el precio por m² de cada zona. Sabés si lo que te ofrecen está caro o justo.</p>
               <Link href="/ventas" className="lnk">Explorar ventas <span className="arr">→</span></Link>
             </div>
             <div className="door">
-              <div className="pic pic-mer" role="img" aria-label="Mapa de mercado de Equipetrol en Simón" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="pic" src="/wa-card-mercado.jpg" alt="Vista panorámica de Equipetrol desde un departamento" loading="lazy" decoding="async" width={760} height={570} />
               <span className="tag"><span className="d" />Datos públicos</span>
               <h3>Mercado</h3>
               <p>El pulso de Equipetrol abierto a todos. Precios por zona, por tipología, tendencias. Sin preguntarle a nadie.</p>
@@ -360,8 +362,10 @@ export default function LandingWhatsApp({ market }: { market: SuperficiesMarketD
         </div>
       </section>
 
-      {/* ─── BANDA EMOCIONAL ─────────────────────────────── */}
+      {/* ─── BANDA EMOCIONAL (foto aérea real de la Av. San Martín) ── */}
       <section className="band reveal">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="band-img" src="/equipetrol-aerea.jpg" alt="Vista aérea de la Av. San Martín, Equipetrol" loading="lazy" decoding="async" width={1600} height={900} />
         <div className="band-txt">
           <h2>Querés vivir en Equipetrol.<br />Yo ya lo conozco entero.</h2>
           <p>Cada edificio, cada precio, cada zona. Empezá por preguntarme.</p>
@@ -535,11 +539,8 @@ export default function LandingWhatsApp({ market }: { market: SuperficiesMarketD
         .doors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
         .door { background: var(--blanco); border: 1px solid var(--arena-mid); border-radius: var(--r-card); padding: 30px 28px; overflow: hidden; transition: transform 0.3s var(--smooth), box-shadow 0.3s var(--smooth); }
         .door:hover { transform: translateY(-6px); box-shadow: 0 14px 36px rgba(58, 53, 48, 0.1); }
-        .door .pic { display: block; width: calc(100% + 56px); height: 172px; margin: -30px -28px 24px; border-radius: var(--r-card) var(--r-card) 0 0; background: var(--arena-mid); transition: transform 0.45s var(--smooth); }
+        .door .pic { display: block; width: calc(100% + 56px); height: 172px; object-fit: cover; margin: -30px -28px 24px; border-radius: var(--r-card) var(--r-card) 0 0; background: var(--arena-mid); transition: transform 0.45s var(--smooth); }
         .door:hover .pic { transform: scale(1.06); }
-        .door .pic-alq { background: linear-gradient(135deg, #cdbfa4 0%, #a9987c 50%, #7d8a74 100%); }
-        .door .pic-vta { background: linear-gradient(135deg, #b9c2ba 0%, #8fa091 50%, #5c7261 100%); }
-        .door .pic-mer { background: linear-gradient(135deg, #d8d0bc 0%, #b6ab90 55%, #3a3530 100%); }
         .door .tag { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; color: var(--verde-txt); margin-bottom: 18px; }
         .door .tag .d { width: 7px; height: 7px; border-radius: 50%; background: var(--salvia-vivo); }
         .door h3 { font-size: 24px; margin-bottom: 12px; }
@@ -549,8 +550,11 @@ export default function LandingWhatsApp({ market }: { market: SuperficiesMarketD
         .door:hover :global(.lnk .arr) { transform: translateX(4px); }
 
         /* BANDA EMOCIONAL */
-        .band { position: relative; width: 100vw; left: 50%; margin-left: -50vw; height: clamp(440px, 50vw, 600px); display: flex; align-items: center; overflow: hidden; background: linear-gradient(115deg, #ede8dc 0%, #d8ceb4 30%, #b6a887 55%, #6f7d68 82%, #3a4a3d 100%); }
-        .band::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, rgba(237, 232, 220, 0.88) 0%, rgba(237, 232, 220, 0.5) 24%, rgba(237, 232, 220, 0.1) 46%, transparent 60%); }
+        .band { position: relative; width: 100vw; left: 50%; margin-left: -50vw; height: clamp(440px, 50vw, 600px); display: flex; align-items: center; overflow: hidden; background: #b6a887; }
+        /* foto aérea real de la Av. San Martín (object-position protege las torres) */
+        .band-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 42%; }
+        /* scrim crema a la izquierda: sostiene el texto sin lavar la foto */
+        .band::after { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(100deg, rgba(237, 232, 220, 0.92) 0%, rgba(237, 232, 220, 0.62) 26%, rgba(237, 232, 220, 0.12) 48%, transparent 62%); }
         .band-txt { position: relative; z-index: 2; max-width: 30ch; padding: 0 32px; margin-left: max(0px, calc((100vw - 1120px) / 2)); }
         .band-txt h2 { color: var(--negro); font-size: clamp(32px, 4.8vw, 56px); }
         .band-txt p { color: var(--tinta); font-size: 18px; margin-top: 14px; }
@@ -608,6 +612,8 @@ export default function LandingWhatsApp({ market }: { market: SuperficiesMarketD
           .close { padding: 88px 0; }
           .foot-in { flex-direction: column; gap: 10px; text-align: center; }
           .band { height: clamp(380px, 100vw, 480px); align-items: flex-start; }
+          .band-img { object-position: 62% center; }
+          .band::after { background: linear-gradient(155deg, rgba(237, 232, 220, 0.93) 0%, rgba(237, 232, 220, 0.62) 30%, rgba(237, 232, 220, 0.15) 56%, transparent 76%); }
           .band-txt { margin: 0; padding: 36px 24px 0; max-width: 16ch; }
           .band-txt h2 { font-size: clamp(28px, 8.2vw, 40px); }
           .band-txt p { display: none; }
