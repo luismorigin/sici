@@ -906,6 +906,14 @@ export default function AlquileresPage({
     brokerMode ? filteredProperties.filter(p => !favorites.has(p.id)) : []
   ), [brokerMode, filteredProperties, favorites])
 
+  // Pin del mapa del panel → abre el side sheet. Identidad ESTABLE vía ref:
+  // el componente de mapa reconstruye el mapa Leaflet cuando cambia la
+  // identidad de onSelectProperty (un lambda inline lo reconstruía en cada
+  // render, y desmontar/reconstruir Leaflet en plena animación crashea).
+  const openDetailFromMapRef = useRef<(id: number) => void>(() => {})
+  openDetailFromMapRef.current = (id: number) => { const sp = displayedProperties.find(x => x.id === id); if (sp) openDetail(sp) }
+  const onPanelMapSelect = useCallback((id: number) => openDetailFromMapRef.current(id), [])
+
   // Resumen de mercado del filtro actual — panel derecho del layout split
   // (estado sin propiedad seleccionada). Client-side sobre la lista visible;
   // lenguaje fiduciario: mediana + rango observado + base declarada.
@@ -1597,8 +1605,10 @@ export default function AlquileresPage({
                       })}
                     </div>
                     <div className="ad-panel">
-                      {sheetOpen && sheetProperty ? (
-                        /* Estado con propiedad seleccionada: side sheet scrolleable */
+                      {/* Estado con propiedad seleccionada: side sheet scrolleable.
+                          El bloque mapa+resumen NO se desmonta (se oculta con CSS):
+                          desmontar Leaflet en plena animación de zoom crashea. */}
+                      {sheetOpen && sheetProperty && (
                         <BottomSheet
                           open sideMode
                           property={sheetProperty}
@@ -1612,12 +1622,12 @@ export default function AlquileresPage({
                           onShare={() => { trackShareClick(sheetProperty); window.open(buildShareWhatsAppUrl(sheetProperty), '_blank') }}
                           properties={properties}
                           onSwapProperty={(sp) => setSheetProperty(sp)} />
-                      ) : (
-                        /* Estado sin selección: mapa + resumen de mercado del filtro actual */
-                        <>
+                      )}
+                      {/* Estado sin selección: mapa + resumen de mercado del filtro actual */}
+                      <div className={`ad-panel-home ${sheetOpen && sheetProperty ? 'ad-panel-hidden' : ''}`}>
                           <div className="ad-map">
                             <MapMultiComponent properties={displayedProperties}
-                              onSelectProperty={(id: number) => { const sp = displayedProperties.find(x => x.id === id); if (sp) openDetail(sp) }}
+                              onSelectProperty={onPanelMapSelect}
                               selectedId={null} />
                             <button className="ad-map-full" onClick={() => { setViewMode('map'); trackEvent('switch_view', { view_mode: 'map', source: 'panel' }) }}>
                               Ver mapa completo
@@ -1658,8 +1668,7 @@ export default function AlquileresPage({
                               </div>
                             </div>
                           )}
-                        </>
-                      )}
+                      </div>
                     </div>
                   </div>
                 )}

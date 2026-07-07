@@ -1056,6 +1056,12 @@
 .alc-mes { font-size: 11px; font-weight: 400; color: #7A7060; }
 /* Panel derecho: sticky dentro del scroll de .desktop-main */
 .ad-panel { position: sticky; top: 0; height: calc(100vh - 56px - 64px); display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* El bloque mapa+resumen se OCULTA (no se desmonta) cuando el side sheet está
+   abierto — desmontar Leaflet en plena animación de zoom crashea. */
+.ad-panel-home { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+/* visibility (no display:none): el contenedor conserva su tamaño y Leaflet
+   no queda en 0x0 si se reconstruye mientras está oculto */
+.ad-panel-hidden { visibility: hidden; position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 .ad-map { flex: 1; min-height: 260px; border-radius: 14px; overflow: hidden; border: 1px solid #D8D0BC; position: relative; background: #FAFAF8; }
 .ad-map > div { position: absolute; inset: 0; }
 .ad-map-full { position: absolute; top: 12px; right: 12px; z-index: 1100; display: inline-flex; align-items: center; gap: 6px; background: #141414; color: #EDE8DC; border: none; padding: 8px 14px; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }

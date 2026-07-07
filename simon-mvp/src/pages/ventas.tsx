@@ -2254,8 +2254,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   // sigue siendo válido), pero siempre ejecutan la versión más reciente de la
   // lógica vía ref — sin closures viejos sobre favorites/properties.
   const openCardMap = (p: UnidadVenta) => { setMapSelectedId(p.id); setMobileMapOpen(true); trackEvent('open_map_mobile_venta', { source: 'card' }) }
-  const latestHandlersRef = useRef({ toggleFavorite, shareProperty, openSheet, addToShortlist, openReportModal, openCardMap })
-  latestHandlersRef.current = { toggleFavorite, shareProperty, openSheet, addToShortlist, openReportModal, openCardMap }
+  // Pin del mapa del panel → abre el side sheet. Vive acá (y no inline en el
+  // JSX) porque VentaMap RECONSTRUYE el mapa entero cuando cambia la identidad
+  // de onSelectProperty — un lambda inline lo reconstruía en cada render.
+  const openSheetFromMap = (id: number) => { const sp = displayedProperties.find(x => x.id === id); if (sp) openSheet(sp) }
+  const latestHandlersRef = useRef({ toggleFavorite, shareProperty, openSheet, addToShortlist, openReportModal, openCardMap, openSheetFromMap })
+  latestHandlersRef.current = { toggleFavorite, shareProperty, openSheet, addToShortlist, openReportModal, openCardMap, openSheetFromMap }
+  const onPanelMapSelect = useCallback((id: number) => latestHandlersRef.current.openSheetFromMap(id), [])
   const onCardToggleFavorite = useCallback((id: number) => latestHandlersRef.current.toggleFavorite(id), [])
   const onCardShare = useCallback((p: UnidadVenta) => latestHandlersRef.current.shareProperty(p), [])
   const onCardOpenSheet = useCallback((p: UnidadVenta) => latestHandlersRef.current.openSheet(p), [])
@@ -3099,8 +3104,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   ))}
                 </div>
                 <div className="vd-panel">
-                  {sheetOpen && sheetProperty ? (
-                    /* Estado con propiedad seleccionada: side sheet scrolleable */
+                  {/* Estado con propiedad seleccionada: side sheet scrolleable.
+                      El bloque mapa+resumen NO se desmonta (se oculta con CSS):
+                      desmontar Leaflet en plena animación de zoom crashea
+                      (_leaflet_pos undefined en _onZoomTransitionEnd). */}
+                  {sheetOpen && sheetProperty && (
                     <BottomSheet property={sheetProperty} isOpen sideMode
                       onClose={() => { setSheetOpen(false); setSheetProperty(null) }}
                       onShare={() => shareProperty(sheetProperty)}
@@ -3108,12 +3116,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                       onToggleFavorite={() => toggleFavorite(sheetProperty.id)}
                       gateCompleted={gateCompleted} onGate={handleGate} isDesktop
                       properties={properties} onSwapProperty={(sp) => setSheetProperty(sp)} />
-                  ) : (
-                    /* Estado sin selección: mapa + resumen de mercado del filtro actual */
-                    <>
+                  )}
+                  {/* Estado sin selección: mapa + resumen de mercado del filtro actual */}
+                  <div className={`vd-panel-home ${sheetOpen && sheetProperty ? 'vd-panel-hidden' : ''}`}>
                       <div className="vd-map">
                         <VentaMap properties={displayedProperties}
-                          onSelectProperty={(id) => { const sp = displayedProperties.find(x => x.id === id); if (sp) openSheet(sp) }}
+                          onSelectProperty={onPanelMapSelect}
                           selectedId={null} />
                         <button className="vd-map-full" onClick={() => { setViewMode('map'); trackEvent('switch_view_venta', { view_mode: 'map', source: 'panel' }) }}>
                           Ver mapa completo
@@ -3154,8 +3162,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                           </div>
                         </div>
                       )}
-                    </>
-                  )}
+                  </div>
                 </div>
               </div>
             )}
@@ -3460,6 +3467,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vlc-tc { font-size:10px; font-weight:400; color:rgba(237,232,220,0.35) }
         /* Panel derecho */
         .vd-panel { position:sticky; top:76px; height:calc(100vh - 76px - 20px); display:flex; flex-direction:column; gap:16px; min-width:0 }
+        /* El bloque mapa+resumen se OCULTA (no se desmonta) cuando el side sheet
+           está abierto — desmontar Leaflet en plena animación de zoom crashea. */
+        .vd-panel-home { flex:1; min-height:0; display:flex; flex-direction:column; gap:16px }
+        /* visibility (no display:none): el contenedor conserva su tamaño y
+           Leaflet no queda en 0x0 si se reconstruye mientras está oculto */
+        .vd-panel-hidden { visibility:hidden; position:absolute; inset:0; z-index:0; pointer-events:none }
         .vd-map { flex:1; min-height:260px; border-radius:14px; overflow:hidden; border:1px solid rgba(237,232,220,0.08); position:relative }
         .vd-map .venta-map { position:absolute; inset:0 }
         .vd-map-full { position:absolute; top:12px; right:12px; z-index:1100; display:inline-flex; align-items:center; gap:6px; background:#141414; color:#EDE8DC; border:1px solid rgba(237,232,220,0.15); padding:8px 14px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.35) }
