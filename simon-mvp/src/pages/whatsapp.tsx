@@ -9,7 +9,17 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import type { GetStaticProps } from 'next'
+import { Schibsted_Grotesk } from 'next/font/google'
 import { fetchSuperficiesData, aproximado, type SuperficiesMarketData } from '@/lib/superficies-data'
+
+// Tipografía display ORIGINAL de la maqueta v6 (decisión de Lucho: mantenerla
+// en esta landing en vez de Figtree). Solo se carga en esta ruta.
+const schibsted = Schibsted_Grotesk({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  variable: '--font-schibsted',
+  display: 'swap',
+})
 
 const SIMON_WHATSAPP = '59177066308'
 const WA_URL = `https://wa.me/${SIMON_WHATSAPP}?text=${encodeURIComponent('Hola Simon, quiero buscar departamento en Equipetrol.')}`
@@ -156,7 +166,7 @@ export default function LandingWhatsApp({ market }: { market: SuperficiesMarketD
   }, [])
 
   return (
-    <div className="lw" ref={rootRef}>
+    <div className={`lw ${schibsted.variable}`} ref={rootRef}>
       <Head>
         <title>Simón por WhatsApp — Decile qué buscás y te arma una selección visual</title>
         <meta
@@ -389,7 +399,8 @@ export default function LandingWhatsApp({ market }: { market: SuperficiesMarketD
           --dark-1: #ede8dc;
           --dark-2: #c0b89e;
           --dark-3: #9a8e7a;
-          --display: var(--font-figtree), 'Figtree', sans-serif;
+          /* Display = Schibsted Grotesk (tipografía original de la maqueta v6) */
+          --display: var(--font-schibsted), 'Schibsted Grotesk', sans-serif;
           --body: var(--font-dm-sans), 'DM Sans', sans-serif;
           --r-card: 14px;
           --r-btn: 12px;
@@ -403,7 +414,8 @@ export default function LandingWhatsApp({ market }: { market: SuperficiesMarketD
           overflow-x: hidden;
         }
         .wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
-        h1, h2, h3 { font-family: var(--display); font-weight: 500; color: var(--negro); letter-spacing: -1px; line-height: 1.06; }
+        /* Peso 600 en títulos, como la maqueta original */
+        h1, h2, h3 { font-family: var(--display); font-weight: 600; color: var(--negro); letter-spacing: -1px; line-height: 1.06; }
 
         /* NAV */
         .nav { position: sticky; top: 0; z-index: 50; background: rgba(237, 232, 220, 0.82); backdrop-filter: blur(14px); border-bottom: 1px solid var(--arena-mid); }
