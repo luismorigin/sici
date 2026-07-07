@@ -293,11 +293,18 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
             {q.trim().length === 0 && (
               <div className="ejemplos">
                 <span className="ej-label">Probá:</span>
-                {EJEMPLOS_BUSQUEDA.map(e => (
-                  <button key={e} type="button" className="ej-chip" onClick={() => router.push(construirDestino(e))}>
-                    &ldquo;{e}&rdquo;
-                  </button>
-                ))}
+                {EJEMPLOS_BUSQUEDA.map(e => {
+                  // La etiqueta la decide el MISMO parser que ejecuta la búsqueda
+                  // — nunca puede prometer un feed distinto al que abre.
+                  const destino = construirDestino(e)
+                  const feed = destino.startsWith('/ventas') ? 'Ventas' : 'Alquileres'
+                  return (
+                    <button key={e} type="button" className="ej-chip" onClick={() => router.push(destino)}>
+                      &ldquo;{e}&rdquo;
+                      <span className="ej-dest">→ {feed}</span>
+                    </button>
+                  )
+                })}
               </div>
             )}
 
@@ -634,8 +641,9 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
         /* Búsquedas de ejemplo: un tap = resultados, cero tipeo */
         .ejemplos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
         .ej-label { font-size: 13px; color: var(--dark3); }
-        .ej-chip { font-family: var(--body); font-size: 13px; color: var(--dark2); background: transparent; border: 1px dashed rgba(237, 232, 220, 0.25); padding: 6px 13px; border-radius: 100px; cursor: pointer; transition: color 0.2s, border-color 0.2s, background 0.2s; }
+        .ej-chip { display: inline-flex; align-items: center; gap: 7px; font-family: var(--body); font-size: 13px; color: var(--dark2); background: transparent; border: 1px dashed rgba(237, 232, 220, 0.25); padding: 6px 13px; border-radius: 100px; cursor: pointer; transition: color 0.2s, border-color 0.2s, background 0.2s; }
         .ej-chip:hover { color: var(--arena); border-color: rgba(78, 155, 102, 0.55); background: rgba(58, 106, 72, 0.14); }
+        .ej-dest { font-size: 11.5px; color: var(--salvia-vivo); font-weight: 500; white-space: nowrap; }
 
         /* Accesos rápidos */
         .quick { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
