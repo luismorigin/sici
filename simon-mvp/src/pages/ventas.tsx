@@ -1931,14 +1931,48 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     }
   }, [router.query.id])
 
-  // ?preventa=1 — entrada "Preventa" del menú (desde el propio feed o desde /alquileres)
+  // Deep-link de filtros: ?zonas, ?dormitorios, ?precio_min, ?precio_max (USD),
+  // ?preventa=1 — usado por el buscador de la home al rutear a ventas y por la
+  // entrada "Preventa" del menú. Aplica una sola vez al montar (guard).
+  const deepLinkAppliedRef = useRef(false)
   useEffect(() => {
-    if (publicShareMode || brokerMode) return
-    if (router.query.preventa === '1') {
-      applyFilters({ ...filters, estado_entrega: 'solo_preventa', orden: filters.orden || 'recientes', solo_con_fotos: true })
-      setFilterComponentVersion(v => v + 1)
+    if (deepLinkAppliedRef.current) return
+    if (!router.isReady) return
+    if (publicShareMode || brokerMode) { deepLinkAppliedRef.current = true; return }
+    // ?edificio / ?id tienen sus propios effects — no interferir
+    if (router.query.edificio) { deepLinkAppliedRef.current = true; return }
+
+    const q = router.query
+    const dorms = new Set<number>()
+    const zonas = new Set<string>()
+    let minP = MIN_PRICE, maxP = MAX_PRICE, entrega = ''
+    let any = false
+
+    if (typeof q.dormitorios === 'string') {
+      q.dormitorios.split(',').map(s => parseInt(s, 10))
+        .filter(n => Number.isInteger(n) && n >= 0 && n <= 10)
+        .forEach(n => { dorms.add(n >= 3 ? 3 : n); any = true })
     }
-  }, [router.query.preventa]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (typeof q.zonas === 'string') {
+      q.zonas.split(',').map(s => s.trim().toLowerCase()).forEach(slug => {
+        const db = ZONAS_CANONICAS.find(z => z.slug === slug)?.db
+        if (db) { zonas.add(db); any = true }
+      })
+    }
+    const pmax = Number(q.precio_max)
+    if (Number.isFinite(pmax) && pmax > 0) { maxP = Math.max(MIN_PRICE + PRICE_STEP, Math.min(pmax, MAX_PRICE)); any = true }
+    const pmin = Number(q.precio_min)
+    if (Number.isFinite(pmin) && pmin > 0) { minP = Math.max(MIN_PRICE, Math.min(pmin, maxP - PRICE_STEP)); any = true }
+    if (q.preventa === '1') { entrega = 'solo_preventa'; any = true }
+
+    deepLinkAppliedRef.current = true
+    if (!any) return
+    const f = buildFilters(minP, maxP, dorms, zonas, entrega, 'recientes')
+    setFilters(f)
+    setIsFiltered(true)
+    fetchProperties(f)
+    setFilterComponentVersion(v => v + 1)
+  }, [router.isReady, router.query]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Spotlight: fetch if not in properties
   useEffect(() => {

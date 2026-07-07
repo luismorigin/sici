@@ -36,7 +36,18 @@ function construirDestino(texto: string): string {
   }
 
   if (op === 'venta') {
-    return s.entrega === 'solo_preventa' ? '/ventas?preventa=1' : '/ventas'
+    // Ventas lee estos deep-links al abrir (mismo espíritu que alquiler).
+    // Precio en USD (ventas es USD): si el user dijo "bs", no lo pasamos.
+    const params = new URLSearchParams()
+    if (s.zonas.length) params.set('zonas', s.zonas.join(','))
+    if (s.dormitorios.length) params.set('dormitorios', s.dormitorios.join(','))
+    if (s.moneda !== 'bob') {
+      if (s.precioMin) params.set('precio_min', String(s.precioMin))
+      if (s.precioMax) params.set('precio_max', String(s.precioMax))
+    }
+    if (s.entrega === 'solo_preventa') params.set('preventa', '1')
+    const qs = params.toString()
+    return qs ? `/ventas?${qs}` : '/ventas'
   }
 
   // Alquiler (default MVP: el ejemplo del placeholder es de alquiler en Bs)
