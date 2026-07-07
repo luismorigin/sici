@@ -1252,7 +1252,7 @@ export default function AlquileresPage({
           {!publicShareMode && !(brokerMode && !isDesktop) && (
           <aside className="desktop-sidebar" style={{ overscrollBehavior: 'contain' }}>
             <div className="desktop-sidebar-header">
-              <Link href="/landing-v2" className="desktop-logo">
+              <Link href="/" className="desktop-logo">
                 <svg width={22} height={22} viewBox="0 0 64 64" fill="none" style={{display:'inline-block',verticalAlign:'middle',marginRight:8}}>
                   <circle cx="32" cy="34" r="28" fill="#141414"/>
                   <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
@@ -3044,7 +3044,7 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
             </a>
           ) : null}
         </div>
-        {!publicShareMode && <a href="/landing-v2" className="amc-brand">simonbo.com</a>}
+        {!publicShareMode && <a href="/" className="amc-brand">simonbo.com</a>}
       </div>
       {isFirst && <div className="amc-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" style={{width:18,height:18}}><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>}
 

@@ -914,7 +914,7 @@ function MobileCasaCard({ casa: p, isFavorite, onToggleFavorite, onShare, onPhot
             </a>
           )}
         </div>
-        <a href="/landing-v2" className="mc-branding">simonbo.com</a>
+        <a href="/" className="mc-branding">simonbo.com</a>
       </div>
     </div>
   )

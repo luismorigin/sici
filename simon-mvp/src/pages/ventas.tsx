@@ -2789,7 +2789,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           {!publicShareMode && !(brokerMode && !isDesktop) && (
             <aside className="ventas-sidebar">
               <div className="ventas-sidebar-header">
-                <Link href="/landing-v2" className="ventas-logo">Simon</Link>
+                <Link href="/" className="ventas-logo">Simon</Link>
                 <div className="ventas-label">VENTAS</div>
               </div>
               <div className="ventas-sidebar-count">
@@ -2904,7 +2904,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           {/* Header sticky — redesign mobile (logo · perfil · hamburguesa · buscador nativo) */}
           <header className="mfh">
             <div className="mfh-top">
-              <a href="/landing-v2" className="mfh-brand" aria-label="Simon inicio">
+              <a href="/" className="mfh-brand" aria-label="Simon inicio">
                 <span className="mfh-logo" aria-hidden="true" />
                 <span className="mfh-brand-text">Simon</span>
               </a>

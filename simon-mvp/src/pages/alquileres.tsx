@@ -1273,7 +1273,7 @@ export default function AlquileresPage({
           {!publicShareMode && !(brokerMode && !isDesktop) && (
           <aside className="desktop-sidebar" style={{ overscrollBehavior: 'contain' }}>
             <div className="desktop-sidebar-header">
-              <Link href="/landing-v2" className="desktop-logo">
+              <Link href="/" className="desktop-logo">
                 <svg width={22} height={22} viewBox="0 0 64 64" fill="none" style={{display:'inline-block',verticalAlign:'middle',marginRight:8}}>
                   <circle cx="32" cy="34" r="28" fill="#141414"/>
                   <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
@@ -1594,7 +1594,7 @@ export default function AlquileresPage({
               Reemplaza el search pill flotante. Paridad con ventas.tsx. */}
           <header className="mfh">
             <div className="mfh-top">
-              <a href="/landing-v2" className="mfh-brand" aria-label="Simon inicio">
+              <a href="/" className="mfh-brand" aria-label="Simon inicio">
                 <span className="mfh-logo" aria-hidden="true" />
                 <span className="mfh-brand-text">Simon</span>
               </a>
