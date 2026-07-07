@@ -205,8 +205,24 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
   // Contexto: la prop real del mockup vs la mediana USD/m² de SU zona.
   const medianaZonaMk = mk && mkPrecioM2 ? market.m2PorZona[mk.zona] : undefined
   const maxM2 = medianaZonaMk && mkPrecioM2 ? Math.max(medianaZonaMk, mkPrecioM2) : 0
-  // Comparativo: dos alquileres reales con superficie (misma operación siempre)
-  const compa = destacados.filter(d => d.operacion === 'alquiler' && d.areaM2).slice(0, 2)
+  // Comparativo: dos alquileres reales con superficie (misma operación siempre).
+  // La ★ y los insights se CALCULAN de los datos — nada hardcodeado (misma
+  // lógica de "mejor valor por m²" que usa el CompareSheet real del feed).
+  const compa = destacados
+    .filter(d => d.operacion === 'alquiler' && d.areaM2)
+    .slice(0, 2)
+    .map(d => ({ ...d, bsM2: Math.round(d.precio / (d.areaM2 as number)) }))
+  const mejorM2Id =
+    compa.length === 2 && compa[0].bsM2 !== compa[1].bsM2
+      ? (compa[0].bsM2 < compa[1].bsM2 ? compa[0].id : compa[1].id)
+      : null
+  const cmpInsights: string[] = []
+  if (compa.length === 2) {
+    const mejor = compa.find(c => c.id === mejorM2Id)
+    if (mejor) cmpInsights.push(`${mejor.titulo}: mejor valor por m²`)
+    const amoblados = compa.filter(c => c.amoblado === true)
+    if (amoblados.length === 1) cmpInsights.push(`Solo ${amoblados[0].titulo} viene amoblado`)
+  }
 
   // Scroll-reveal: secciones entran con fade + subida al aparecer en viewport
   const rootRef = useRef<HTMLDivElement>(null)
@@ -556,19 +572,33 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
           <h3>Comparativo express</h3>
           <p>Compará propiedades guardadas en una vista clara y objetiva.</p>
           {compa.length === 2 && (
-            <div className="cmp-demo">
-              {compa.map(c => (
-                <div key={c.id} className="cmp-col">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={c.foto} alt="" loading="lazy" decoding="async" width={140} height={80} />
-                  <div className="cmp-nom">{c.titulo}</div>
-                  <div className="cmp-val">Bs {fmt(c.precio)}<small>/mes</small></div>
-                  <div className="cmp-sub">{c.areaM2} m² · Bs {fmt(Math.round(c.precio / (c.areaM2 as number)))}/m²</div>
-                  <div className="cmp-sub">{c.zona}</div>
+            <>
+              <div className="cmp-demo">
+                {compa.map(c => (
+                  <div key={c.id} className="cmp-col">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={c.foto} alt="" loading="lazy" decoding="async" width={140} height={80} />
+                    <div className="cmp-nom">{c.titulo}</div>
+                    <div className="cmp-val">Bs {fmt(c.precio)}<small>/mes</small></div>
+                    <div className="cmp-sub">
+                      {c.areaM2} m² · {c.id === mejorM2Id
+                        ? <strong className="cmp-star">Bs {fmt(c.bsM2)}/m² ★</strong>
+                        : <>Bs {fmt(c.bsM2)}/m²</>}
+                    </div>
+                    <div className="cmp-sub">{c.zona}</div>
+                  </div>
+                ))}
+                <span className="cmp-vs">vs</span>
+              </div>
+              {cmpInsights.length > 0 && (
+                <div className="cmp-insights">
+                  {cmpInsights.map(i => (
+                    <span key={i} className="cmp-insight"><i className="cmp-dot" aria-hidden="true" />{i}</span>
+                  ))}
                 </div>
-              ))}
-              <span className="cmp-vs">vs</span>
-            </div>
+              )}
+              <p className="cmp-mas">+ costo real mensual · preguntas al broker · checklist de visita</p>
+            </>
           )}
           <span className="vgo">Guardá favoritos y comparalos →</span>
         </Link>
@@ -873,6 +903,11 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
         .valor :global(.cmp-val small) { font-size: 11px; color: var(--dark3); font-weight: 400; }
         .valor :global(.cmp-sub) { font-size: 11px; color: var(--dark3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .valor :global(.cmp-vs) { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: var(--dark2); background: var(--bg); border: 1px solid var(--linea); border-radius: 100px; padding: 3px 8px; }
+        .valor :global(.cmp-star) { color: var(--salvia-vivo); font-weight: 500; }
+        .valor :global(.cmp-insights) { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+        .valor :global(.cmp-insight) { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--arena); background: rgba(58, 106, 72, 0.14); border: 1px solid rgba(78, 155, 102, 0.28); border-radius: 10px; padding: 6px 11px; }
+        .valor :global(.cmp-dot) { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--salvia-vivo); transform: translateY(-1px); }
+        .valor :global(p.cmp-mas) { font-size: 11px; color: var(--dark3); margin-top: 8px; }
 
         /* SIMULA Y CALCULA */
         .simula { padding-top: 56px; padding-bottom: 20px; }

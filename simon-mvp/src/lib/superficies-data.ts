@@ -57,6 +57,8 @@ export interface DestacadoHome {
   foto: string
   /** publicada hace ≤7 días */
   nueva: boolean
+  /** solo alquiler — para insights del demo comparativo */
+  amoblado: boolean | null
 }
 
 function mapDestacado(row: any, operacion: 'alquiler' | 'venta'): DestacadoHome | null {
@@ -79,6 +81,10 @@ function mapDestacado(row: any, operacion: 'alquiler' | 'venta'): DestacadoHome 
     areaM2: row.area_total_m2 ? Math.round(row.area_total_m2) : null,
     foto,
     nueva: fecha ? new Date(fecha).getTime() >= Date.now() - 7 * 86400000 : false,
+    // La vista expone amoblado como 'si'/'no' (string), no booleano
+    amoblado: row.amoblado === 'si' || row.amoblado === true ? true
+      : row.amoblado === 'no' || row.amoblado === false ? false
+      : null,
   }
 }
 
@@ -89,7 +95,7 @@ export async function fetchDestacadosHome(): Promise<DestacadoHome[]> {
     const [alq, vta] = await Promise.all([
       supabase
         .from('v_mercado_alquiler')
-        .select('id, nombre_edificio, zona, precio_mensual_bob, dormitorios, area_total_m2, datos_json, fecha_publicacion, fecha_creacion')
+        .select('id, nombre_edificio, zona, precio_mensual_bob, dormitorios, area_total_m2, amoblado, datos_json, fecha_publicacion, fecha_creacion')
         .eq('zona_general', 'Equipetrol')
         .eq('fuente', 'remax')
         .not('precio_mensual_bob', 'is', null)
