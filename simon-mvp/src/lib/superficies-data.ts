@@ -36,14 +36,19 @@ export function aproximado(n: number): string {
 }
 
 // ─── Destacados de la home ("Entraron esta semana") ─────────────────────────
+// Mezcla venta + alquiler, NADA hardcodeado: sale de las vistas de mercado en
+// cada build (ISR) y se renueva solo cuando el pipeline nocturno mete props.
 // SOLO fuente Remax: las fotos de Century21 llegan como thumbnail de su CDN con
 // el sello C21 impreso en la imagen (verificado 8-jul) — no sirven para la home.
 // Las de Remax (intramax.bo) están limpias, sin watermark.
+// Zona: v_mercado_venta NO filtra macrozona → filtrar acá (ticket #15 ZN).
 export interface DestacadoHome {
   id: number
+  operacion: 'alquiler' | 'venta'
   titulo: string
   zona: string
-  precioBob: number
+  /** Bs/mes para alquiler · $us normalizado (precio_norm) para venta */
+  precio: number
   dormitorios: number | null
   areaM2: number | null
   foto: string
@@ -51,46 +56,72 @@ export interface DestacadoHome {
   nueva: boolean
 }
 
+function mapDestacado(row: any, operacion: 'alquiler' | 'venta'): DestacadoHome | null {
+  const foto = row.datos_json?.contenido?.fotos_urls?.[0]
+  if (!foto || typeof foto !== 'string') return null
+  const precio = Math.round(parseFloat(operacion === 'alquiler' ? row.precio_mensual_bob : row.precio_norm))
+  if (!precio) return null
+  const dorms = row.dormitorios
+  const titulo =
+    row.nombre_edificio ||
+    (dorms === 0 ? 'Monoambiente' : dorms ? `Depto ${dorms} dorm` : 'Departamento')
+  const fecha = row.fecha_publicacion || row.fecha_creacion
+  return {
+    id: row.id,
+    operacion,
+    titulo,
+    zona: displayZona(row.zona),
+    precio,
+    dormitorios: dorms ?? null,
+    areaM2: row.area_total_m2 ? Math.round(row.area_total_m2) : null,
+    foto,
+    nueva: fecha ? new Date(fecha).getTime() >= Date.now() - 7 * 86400000 : false,
+  }
+}
+
 export async function fetchDestacadosHome(): Promise<DestacadoHome[]> {
   try {
     if (!supabase) return []
 
-    const { data, error } = await supabase
-      .from('v_mercado_alquiler')
-      .select('id, nombre_edificio, zona, precio_mensual_bob, dormitorios, area_total_m2, datos_json, fecha_publicacion, fecha_creacion')
-      .eq('zona_general', 'Equipetrol')
-      .eq('fuente', 'remax')
-      .not('precio_mensual_bob', 'is', null)
-      .order('fecha_publicacion', { ascending: false, nullsFirst: false })
-      .limit(15)
+    const [alq, vta] = await Promise.all([
+      supabase
+        .from('v_mercado_alquiler')
+        .select('id, nombre_edificio, zona, precio_mensual_bob, dormitorios, area_total_m2, datos_json, fecha_publicacion, fecha_creacion')
+        .eq('zona_general', 'Equipetrol')
+        .eq('fuente', 'remax')
+        .not('precio_mensual_bob', 'is', null)
+        .order('fecha_publicacion', { ascending: false, nullsFirst: false })
+        .limit(15),
+      supabase
+        .from('v_mercado_venta')
+        .select('id, nombre_edificio, zona, precio_norm, dormitorios, area_total_m2, datos_json, fecha_publicacion, fecha_creacion')
+        .in('zona', ZONAS_EQUIPETROL_DB)
+        .eq('fuente', 'remax')
+        .not('precio_norm', 'is', null)
+        .order('fecha_publicacion', { ascending: false, nullsFirst: false })
+        .limit(15),
+    ])
 
-    if (error || !data) return []
-
-    const semana = Date.now() - 7 * 86400000
-    const out: DestacadoHome[] = []
-    for (const row of data as any[]) {
-      const foto = row.datos_json?.contenido?.fotos_urls?.[0]
-      if (!foto || typeof foto !== 'string') continue
-      const precio = Math.round(parseFloat(row.precio_mensual_bob))
-      if (!precio) continue
-      const dorms = row.dormitorios
-      const titulo =
-        row.nombre_edificio ||
-        (dorms === 0 ? 'Monoambiente' : dorms ? `Depto ${dorms} dorm` : 'Departamento')
-      const fecha = row.fecha_publicacion || row.fecha_creacion
-      out.push({
-        id: row.id,
-        titulo,
-        zona: displayZona(row.zona),
-        precioBob: precio,
-        dormitorios: dorms ?? null,
-        areaM2: row.area_total_m2 ? Math.round(row.area_total_m2) : null,
-        foto,
-        nueva: fecha ? new Date(fecha).getTime() >= semana : false,
-      })
-      if (out.length === 3) break
+    const tomar = (rows: any[] | null, op: 'alquiler' | 'venta') => {
+      const out: DestacadoHome[] = []
+      for (const row of rows || []) {
+        const d = mapDestacado(row, op)
+        if (d) out.push(d)
+        if (out.length === 3) break
+      }
+      return out
     }
-    return out
+
+    const ventas = tomar(vta.data, 'venta')
+    const alquileres = tomar(alq.data, 'alquiler')
+
+    // Intercalar venta/alquiler para que la fila mezcle ambas operaciones
+    const mezcla: DestacadoHome[] = []
+    for (let i = 0; i < 3; i++) {
+      if (ventas[i]) mezcla.push(ventas[i])
+      if (alquileres[i]) mezcla.push(alquileres[i])
+    }
+    return mezcla
   } catch (error) {
     console.error('[superficies-data] Error fetching destacados:', error)
     return []

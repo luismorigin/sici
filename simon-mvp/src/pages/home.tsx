@@ -389,18 +389,22 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
         </div>
       </header>
 
-      {/* ─── ENTRARON ESTA SEMANA (inventario real, fotos sin watermark) ── */}
+      {/* ─── ENTRARON ESTA SEMANA (inventario real venta+alquiler, fotos sin watermark) ── */}
       {destacados.length > 0 && (
         <section className="destacados wrap">
           <div className="dest-head">
             <h2>Entraron esta semana</h2>
-            <Link href="/alquileres" className="dest-ver">Ver todos los alquileres →</Link>
+            <div className="dest-links">
+              <Link href="/ventas" className="dest-ver">Ver ventas →</Link>
+              <Link href="/alquileres" className="dest-ver">Ver alquileres →</Link>
+            </div>
           </div>
           <div className="dest-grid stagger">
             {destacados.map(d => (
-              <Link key={d.id} href={`/alquileres?id=${d.id}`} className="dest-card">
+              <Link key={`${d.operacion}-${d.id}`} href={`/${d.operacion === 'venta' ? 'ventas' : 'alquileres'}?id=${d.id}`} className="dest-card">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={d.foto} alt={`${d.titulo} en ${d.zona}`} loading="lazy" decoding="async" width={400} height={260} />
+                <span className={`dest-op ${d.operacion}`}>{d.operacion === 'venta' ? 'Venta' : 'Alquiler'}</span>
                 <div className="dest-body">
                   {d.nueva && <span className="dest-nueva">Nueva</span>}
                   <div className="dest-titulo">{d.titulo}</div>
@@ -409,7 +413,11 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
                     {d.dormitorios !== null && ` · ${d.dormitorios === 0 ? 'Mono' : `${d.dormitorios} dorm`}`}
                     {d.areaM2 && ` · ${d.areaM2} m²`}
                   </div>
-                  <div className="dest-precio">Bs {fmtNum(d.precioBob)}<small>/mes</small></div>
+                  <div className="dest-precio">
+                    {d.operacion === 'venta'
+                      ? <>$us {fmtNum(d.precio)}</>
+                      : <>Bs {fmtNum(d.precio)}<small>/mes</small></>}
+                  </div>
                 </div>
               </Link>
             ))}
@@ -507,7 +515,8 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
       <section className="cierre wrap reveal">
         <h2>Empezá buscando o hablá con Simon por WhatsApp.</h2>
         <div className="cierre-cta">
-          <Link href="/alquileres" className="btn btn-primario">Ver los {fmt(market.alquileresActivos)} alquileres de hoy</Link>
+          <Link href="/ventas" className="btn btn-primario">Ver los {fmt(market.ventasActivas)} deptos en venta</Link>
+          <Link href="/alquileres" className="btn btn-borde">Ver los {fmt(market.alquileresActivos)} alquileres</Link>
           <a href={WA_URL} className="btn btn-wa2" target="_blank" rel="noopener noreferrer">Hablar por WhatsApp</a>
         </div>
       </section>
@@ -672,10 +681,13 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
         .destacados { padding-top: 44px; }
         .dest-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
         .dest-head h2 { font-size: clamp(22px, 2.8vw, 30px); letter-spacing: -0.5px; }
+        .dest-links { display: flex; gap: 18px; }
         .dest-head :global(.dest-ver) { font-size: 14px; color: var(--dark2); text-decoration: none; border-bottom: 1px solid rgba(237, 232, 220, 0.25); padding-bottom: 1px; transition: color 0.2s, border-color 0.2s; }
         .dest-head :global(.dest-ver:hover) { color: var(--arena); border-color: var(--arena); }
         .dest-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .dest-grid :global(.dest-card) { display: block; background: var(--panel); border: 1px solid var(--linea); border-radius: 16px; overflow: hidden; text-decoration: none; transition: transform 0.25s var(--smooth), border-color 0.25s; }
+        .dest-grid :global(.dest-card) { position: relative; display: block; background: var(--panel); border: 1px solid var(--linea); border-radius: 16px; overflow: hidden; text-decoration: none; transition: transform 0.25s var(--smooth), border-color 0.25s; }
+        .dest-grid :global(.dest-op) { position: absolute; top: 12px; left: 12px; z-index: 2; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 11px; border-radius: 100px; background: rgba(13, 15, 13, 0.72); backdrop-filter: blur(6px); color: var(--arena); border: 1px solid rgba(237, 232, 220, 0.25); }
+        .dest-grid :global(.dest-op.alquiler) { color: #9fd8b4; border-color: rgba(78, 155, 102, 0.5); }
         .dest-grid :global(.dest-card:hover) { transform: translateY(-4px); border-color: rgba(237, 232, 220, 0.22); }
         .dest-grid :global(.dest-card img) { display: block; width: 100%; height: 185px; object-fit: cover; background: #181b18; }
         .dest-grid :global(.dest-body) { position: relative; padding: 14px 16px 16px; }
@@ -728,6 +740,8 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
         .cierre-cta { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
         .cierre-cta :global(.btn-primario) { background: var(--arena); color: #141414; }
         .cierre-cta :global(.btn-primario:hover) { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }
+        .cierre-cta :global(.btn-borde) { border: 1px solid rgba(237, 232, 220, 0.3); color: var(--arena); }
+        .cierre-cta :global(.btn-borde:hover) { transform: translateY(-2px); background: rgba(237, 232, 220, 0.07); }
         .cierre-cta :global(.btn-wa2) { background: var(--salvia); color: var(--arena); }
         .cierre-cta :global(.btn-wa2:hover) { transform: translateY(-2px); filter: brightness(1.12); }
 
@@ -747,6 +761,9 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
         .stagger.in > * { opacity: 1; transform: none; }
         .stagger.in > *:nth-child(2) { transition-delay: 0.1s; }
         .stagger.in > *:nth-child(3) { transition-delay: 0.2s; }
+        .stagger.in > *:nth-child(4) { transition-delay: 0.3s; }
+        .stagger.in > *:nth-child(5) { transition-delay: 0.4s; }
+        .stagger.in > *:nth-child(6) { transition-delay: 0.5s; }
 
         /* RESPONSIVE */
         @media (max-width: 980px) {
