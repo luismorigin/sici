@@ -135,6 +135,12 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
   const fmt = fmtNum
   const tcFmt = market.tcParalelo.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+  // El mockup del celular muestra una propiedad REAL que rota sola (ISR).
+  // Viene de fetchDestacadosHome() → solo fotos Remax, sin sello C21 garantizado.
+  const mk = destacados.find(d => d.operacion === 'venta') ?? destacados[0] ?? null
+  const mkTipologia = mk ? (mk.dormitorios === 0 ? 'Monoambiente' : mk.dormitorios ? `${mk.dormitorios} dorm` : 'Depto') : ''
+  const mkPrecioM2 = mk && mk.operacion === 'venta' && mk.areaM2 ? Math.round(mk.precio / mk.areaM2) : null
+
   // Scroll-reveal: secciones entran con fade + subida al aparecer en viewport
   const rootRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -361,6 +367,10 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
               </div>
               <div className="ph-card">
                 <div className="ph-photo">
+                  {mk && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={mk.foto} alt="" loading="lazy" decoding="async" width={340} height={210} />
+                  )}
                   <span className="ph-heart">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="#4E9B66" aria-hidden="true"><path d="M12 21s-7.5-4.7-9.7-9A5.6 5.6 0 0 1 12 6.2 5.6 5.6 0 0 1 21.7 12c-2.2 4.3-9.7 9-9.7 9Z" /></svg>
                   </span>
@@ -368,14 +378,20 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
                   <div className="ph-dots"><i className="on" /><i /><i /><i /><i /></div>
                 </div>
                 <div className="ph-body">
-                  <div className="ph-title">NanoTec by Smart Studio</div>
-                  <span className="ph-badge">Publicación reciente</span>
-                  <div className="ph-zona">Eq. Norte #3492</div>
+                  <div className="ph-title">{mk ? mk.titulo : 'NanoTec by Smart Studio'}</div>
+                  {(!mk || mk.nueva) && <span className="ph-badge">Publicación reciente</span>}
+                  <div className="ph-zona">{mk ? `${mk.zona} #${mk.id}` : 'Eq. Norte #3492'}</div>
                   <div className="ph-precio-row">
                     <div>
-                      <div className="ph-precio">$us 37.356 <small>(T.C. oficial)</small></div>
-                      <div className="ph-specs">Monoambiente · 30 m² · 1 baño</div>
-                      <div className="ph-specs">$us 1.245/m² · Entrega inmediata</div>
+                      <div className="ph-precio">
+                        {mk
+                          ? (mk.operacion === 'venta' ? <>$us {fmt(mk.precio)}</> : <>Bs {fmt(mk.precio)}<small>/mes</small></>)
+                          : <>$us 37.356 <small>(T.C. oficial)</small></>}
+                      </div>
+                      <div className="ph-specs">{mk ? [mkTipologia, mk.areaM2 && `${mk.areaM2} m²`].filter(Boolean).join(' · ') : 'Monoambiente · 30 m² · 1 baño'}</div>
+                      {(mkPrecioM2 || !mk) && (
+                        <div className="ph-specs">{mk ? `$us ${fmt(mkPrecioM2 as number)}/m²` : '$us 1.245/m² · Entrega inmediata'}</div>
+                      )}
                     </div>
                     <span className="ph-mapa">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m9 3-6 2v16l6-2 6 2 6-2V3l-6 2-6-2Z" /><path d="M9 3v16M15 5v16" /></svg>
@@ -400,7 +416,7 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
       {destacados.length > 0 && (
         <section className="destacados wrap">
           <div className="dest-head">
-            <h2>Entraron esta semana</h2>
+            <h2>Últimas en entrar</h2>
             <div className="dest-links">
               <Link href="/ventas" className="dest-ver">Ver ventas →</Link>
               <Link href="/alquileres" className="dest-ver">Ver alquileres →</Link>
@@ -666,8 +682,9 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
         .ph-ico { display: flex; gap: 12px; color: var(--arena); }
         .ph-search { display: flex; align-items: center; gap: 8px; background: #181b18; border: 1px solid var(--linea); border-radius: 100px; padding: 9px 14px; color: var(--dark3); font-size: 12px; margin-bottom: 12px; white-space: nowrap; overflow: hidden; }
         .ph-card { background: #131613; border: 1px solid var(--linea); border-radius: 18px; overflow: hidden; }
-        .ph-photo { position: relative; height: 210px; background: linear-gradient(135deg, #3d3428 0%, #56483a 34%, #2c343c 68%, #1c2126 100%); }
-        .ph-photo::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 25%, rgba(255, 196, 110, 0.35), transparent 55%), linear-gradient(to top, rgba(13, 15, 13, 0.75), transparent 45%); }
+        .ph-photo { position: relative; height: 210px; background: linear-gradient(135deg, #3d3428 0%, #56483a 34%, #2c343c 68%, #1c2126 100%); overflow: hidden; }
+        .ph-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .ph-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(13, 15, 13, 0.6), transparent 40%); }
         .ph-heart { position: absolute; top: 12px; right: 12px; z-index: 2; width: 34px; height: 34px; border-radius: 50%; background: rgba(13, 15, 13, 0.65); display: grid; place-items: center; }
         .ph-count { position: absolute; top: 54px; right: 12px; z-index: 2; background: rgba(13, 15, 13, 0.65); color: var(--arena); font-size: 11px; padding: 3px 9px; border-radius: 100px; }
         .ph-dots { position: absolute; bottom: 10px; left: 0; right: 0; z-index: 2; display: flex; justify-content: center; gap: 5px; }
