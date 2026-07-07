@@ -3,7 +3,7 @@
 // Regla del proyecto: los números NUNCA van hardcodeados en producción — se leen
 // de la BD en build (ISR) con fallbacks reales por si Supabase falla.
 import { supabase, obtenerZonasAlquiler, obtenerMicrozonas } from './supabase'
-import { ZONAS_EQUIPETROL_DB } from './zonas'
+import { ZONAS_EQUIPETROL_DB, displayZona } from './zonas'
 
 export interface SuperficiesMarketData {
   /** Deptos en venta activos en Equipetrol (filtros de calidad del feed) */
@@ -33,6 +33,68 @@ const FALLBACK: SuperficiesMarketData = {
 /** Redondeo para copy aproximado: 373 → "370+" (múltiplo de 10 inferior) */
 export function aproximado(n: number): string {
   return `${Math.floor(n / 10) * 10}+`
+}
+
+// ─── Destacados de la home ("Entraron esta semana") ─────────────────────────
+// SOLO fuente Remax: las fotos de Century21 llegan como thumbnail de su CDN con
+// el sello C21 impreso en la imagen (verificado 8-jul) — no sirven para la home.
+// Las de Remax (intramax.bo) están limpias, sin watermark.
+export interface DestacadoHome {
+  id: number
+  titulo: string
+  zona: string
+  precioBob: number
+  dormitorios: number | null
+  areaM2: number | null
+  foto: string
+  /** publicada hace ≤7 días */
+  nueva: boolean
+}
+
+export async function fetchDestacadosHome(): Promise<DestacadoHome[]> {
+  try {
+    if (!supabase) return []
+
+    const { data, error } = await supabase
+      .from('v_mercado_alquiler')
+      .select('id, nombre_edificio, zona, precio_mensual_bob, dormitorios, area_total_m2, datos_json, fecha_publicacion, fecha_creacion')
+      .eq('zona_general', 'Equipetrol')
+      .eq('fuente', 'remax')
+      .not('precio_mensual_bob', 'is', null)
+      .order('fecha_publicacion', { ascending: false, nullsFirst: false })
+      .limit(15)
+
+    if (error || !data) return []
+
+    const semana = Date.now() - 7 * 86400000
+    const out: DestacadoHome[] = []
+    for (const row of data as any[]) {
+      const foto = row.datos_json?.contenido?.fotos_urls?.[0]
+      if (!foto || typeof foto !== 'string') continue
+      const precio = Math.round(parseFloat(row.precio_mensual_bob))
+      if (!precio) continue
+      const dorms = row.dormitorios
+      const titulo =
+        row.nombre_edificio ||
+        (dorms === 0 ? 'Monoambiente' : dorms ? `Depto ${dorms} dorm` : 'Departamento')
+      const fecha = row.fecha_publicacion || row.fecha_creacion
+      out.push({
+        id: row.id,
+        titulo,
+        zona: displayZona(row.zona),
+        precioBob: precio,
+        dormitorios: dorms ?? null,
+        areaM2: row.area_total_m2 ? Math.round(row.area_total_m2) : null,
+        foto,
+        nueva: fecha ? new Date(fecha).getTime() >= semana : false,
+      })
+      if (out.length === 3) break
+    }
+    return out
+  } catch (error) {
+    console.error('[superficies-data] Error fetching destacados:', error)
+    return []
+  }
 }
 
 export async function fetchSuperficiesData(): Promise<SuperficiesMarketData> {

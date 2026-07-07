@@ -9,7 +9,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GetStaticProps } from 'next'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
-import { fetchSuperficiesData, type SuperficiesMarketData } from '@/lib/superficies-data'
+import { fetchSuperficiesData, fetchDestacadosHome, type SuperficiesMarketData, type DestacadoHome } from '@/lib/superficies-data'
 
 const SIMON_WHATSAPP = '59177066308'
 const WA_URL = `https://wa.me/${SIMON_WHATSAPP}?text=${encodeURIComponent('Hola Simon, quiero buscar departamento en Equipetrol.')}`
@@ -111,7 +111,15 @@ function Count({ value, prefix = '' }: { value: number; prefix?: string }) {
   return <span ref={ref}>{prefix + fmtNum(value)}</span>
 }
 
-export default function HomePrincipal({ market }: { market: SuperficiesMarketData }) {
+// Búsquedas de ejemplo tocables: un tap = resultados reales, cero tipeo.
+// Cada una pasa por el mismo parser que el buscador (transparente y corregible).
+const EJEMPLOS_BUSQUEDA = [
+  '1 dorm en Sirari hasta Bs 4.500',
+  'monoambiente amoblado',
+  'preventa en Eq. Norte',
+]
+
+export default function HomePrincipal({ market, destacados }: { market: SuperficiesMarketData; destacados: DestacadoHome[] }) {
   const router = useRouter()
   const [q, setQ] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -282,6 +290,16 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
                 {chips.map(c => <span key={c} className="chip-mini">{c}</span>)}
               </div>
             )}
+            {q.trim().length === 0 && (
+              <div className="ejemplos">
+                <span className="ej-label">Probá:</span>
+                {EJEMPLOS_BUSQUEDA.map(e => (
+                  <button key={e} type="button" className="ej-chip" onClick={() => router.push(construirDestino(e))}>
+                    &ldquo;{e}&rdquo;
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Accesos rápidos */}
             <div className="quick">
@@ -312,8 +330,9 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
             </div>
           </div>
 
-          {/* Preview mobile del producto (mockup CSS del feed rediseñado) */}
-          <div className="phone-col" aria-hidden="true">
+          {/* Preview mobile del producto (mockup CSS del feed rediseñado) — tocable */}
+          <div className="phone-col">
+            <Link href="/ventas" className="phone-link" aria-label="Abrir el feed de ventas de Simon">
             <div className="phone">
               <div className="ph-head">
                 <div className="ph-brand">
@@ -364,9 +383,39 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
                 <span className="ph-x">×</span>
               </div>
             </div>
+            <span className="ph-caption">Así se ve Simon — tocá para explorar →</span>
+            </Link>
           </div>
         </div>
       </header>
+
+      {/* ─── ENTRARON ESTA SEMANA (inventario real, fotos sin watermark) ── */}
+      {destacados.length > 0 && (
+        <section className="destacados wrap">
+          <div className="dest-head">
+            <h2>Entraron esta semana</h2>
+            <Link href="/alquileres" className="dest-ver">Ver todos los alquileres →</Link>
+          </div>
+          <div className="dest-grid stagger">
+            {destacados.map(d => (
+              <Link key={d.id} href={`/alquileres?id=${d.id}`} className="dest-card">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={d.foto} alt={`${d.titulo} en ${d.zona}`} loading="lazy" decoding="async" width={400} height={260} />
+                <div className="dest-body">
+                  {d.nueva && <span className="dest-nueva">Nueva</span>}
+                  <div className="dest-titulo">{d.titulo}</div>
+                  <div className="dest-meta">
+                    {d.zona}
+                    {d.dormitorios !== null && ` · ${d.dormitorios === 0 ? 'Mono' : `${d.dormitorios} dorm`}`}
+                    {d.areaM2 && ` · ${d.areaM2} m²`}
+                  </div>
+                  <div className="dest-precio">Bs {fmtNum(d.precioBob)}<small>/mes</small></div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ─── BLOQUES DE VALOR ────────────────────────────── */}
       <section className="valor wrap stagger">
@@ -458,7 +507,7 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
       <section className="cierre wrap reveal">
         <h2>Empezá buscando o hablá con Simon por WhatsApp.</h2>
         <div className="cierre-cta">
-          <Link href="/alquileres" className="btn btn-primario">Buscar propiedades</Link>
+          <Link href="/alquileres" className="btn btn-primario">Ver los {fmt(market.alquileresActivos)} alquileres de hoy</Link>
           <a href={WA_URL} className="btn btn-wa2" target="_blank" rel="noopener noreferrer">Hablar por WhatsApp</a>
         </div>
       </section>
@@ -573,6 +622,11 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
         .chips-live { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
         .entendido { font-size: 13px; color: var(--dark3); }
         .chip-mini { font-size: 13px; color: var(--arena); background: rgba(58, 106, 72, 0.28); border: 1px solid rgba(78, 155, 102, 0.4); padding: 3px 11px; border-radius: 100px; }
+        /* Búsquedas de ejemplo: un tap = resultados, cero tipeo */
+        .ejemplos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+        .ej-label { font-size: 13px; color: var(--dark3); }
+        .ej-chip { font-family: var(--body); font-size: 13px; color: var(--dark2); background: transparent; border: 1px dashed rgba(237, 232, 220, 0.25); padding: 6px 13px; border-radius: 100px; cursor: pointer; transition: color 0.2s, border-color 0.2s, background 0.2s; }
+        .ej-chip:hover { color: var(--arena); border-color: rgba(78, 155, 102, 0.55); background: rgba(58, 106, 72, 0.14); }
 
         /* Accesos rápidos */
         .quick { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
@@ -580,8 +634,12 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
         .quick :global(.chip:hover) { background: var(--panel-2); border-color: rgba(237, 232, 220, 0.25); }
         .quick :global(.chip svg) { color: var(--salvia-vivo); }
 
-        /* PHONE MOCKUP */
+        /* PHONE MOCKUP (tocable → feed) */
         .phone-col { position: relative; display: flex; justify-content: center; animation: riseIn 0.9s var(--smooth, cubic-bezier(0.16, 1, 0.3, 1)) 0.3s both; }
+        .phone-col :global(.phone-link) { display: block; text-decoration: none; transition: transform 0.3s var(--smooth); }
+        .phone-col :global(.phone-link:hover) { transform: translateY(-4px) scale(1.015); }
+        .ph-caption { display: block; text-align: center; margin-top: 14px; font-size: 13px; color: var(--dark3); transition: color 0.2s; }
+        .phone-col :global(.phone-link:hover) .ph-caption { color: var(--arena); }
         /* glow salvia detrás del teléfono */
         .phone-col::before { content: ''; position: absolute; top: 8%; left: 50%; transform: translateX(-50%); width: 78%; height: 84%; border-radius: 50%; background: radial-gradient(ellipse, rgba(58, 106, 72, 0.35), transparent 68%); filter: blur(28px); animation: aura 7s ease-in-out 0.5s infinite; pointer-events: none; }
         .phone { position: relative; width: 100%; max-width: 340px; background: #101210; border: 1px solid rgba(237, 232, 220, 0.14); border-radius: 26px; padding: 16px 14px 12px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); animation: floaty 7s ease-in-out 1.4s infinite; }
@@ -609,6 +667,23 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
         .ph-mapa { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--arena); border: 1px solid rgba(237, 232, 220, 0.25); border-radius: 100px; padding: 7px 13px; }
         .ph-tray { display: flex; align-items: center; gap: 8px; margin-top: 12px; border: 1px solid rgba(237, 232, 220, 0.22); border-radius: 100px; padding: 10px 16px; color: var(--arena); font-size: 13px; font-weight: 500; }
         .ph-x { margin-left: auto; color: var(--dark3); font-size: 17px; }
+
+        /* ENTRARON ESTA SEMANA (inventario real) */
+        .destacados { padding-top: 44px; }
+        .dest-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+        .dest-head h2 { font-size: clamp(22px, 2.8vw, 30px); letter-spacing: -0.5px; }
+        .dest-head :global(.dest-ver) { font-size: 14px; color: var(--dark2); text-decoration: none; border-bottom: 1px solid rgba(237, 232, 220, 0.25); padding-bottom: 1px; transition: color 0.2s, border-color 0.2s; }
+        .dest-head :global(.dest-ver:hover) { color: var(--arena); border-color: var(--arena); }
+        .dest-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .dest-grid :global(.dest-card) { display: block; background: var(--panel); border: 1px solid var(--linea); border-radius: 16px; overflow: hidden; text-decoration: none; transition: transform 0.25s var(--smooth), border-color 0.25s; }
+        .dest-grid :global(.dest-card:hover) { transform: translateY(-4px); border-color: rgba(237, 232, 220, 0.22); }
+        .dest-grid :global(.dest-card img) { display: block; width: 100%; height: 185px; object-fit: cover; background: #181b18; }
+        .dest-grid :global(.dest-body) { position: relative; padding: 14px 16px 16px; }
+        .dest-grid :global(.dest-nueva) { position: absolute; top: -13px; left: 14px; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: #d9f2e2; background: var(--salvia); padding: 4px 11px; border-radius: 100px; }
+        .dest-grid :global(.dest-titulo) { font-family: var(--display); font-weight: 500; font-size: 17px; color: var(--arena); margin-bottom: 4px; }
+        .dest-grid :global(.dest-meta) { font-size: 13px; color: var(--dark3); margin-bottom: 8px; }
+        .dest-grid :global(.dest-precio) { font-weight: 500; font-size: 18px; color: var(--arena); font-variant-numeric: tabular-nums; border-left: 2px solid var(--salvia); padding-left: 9px; }
+        .dest-grid :global(.dest-precio small) { font-size: 12.5px; color: var(--dark3); font-weight: 400; }
 
         /* BLOQUES DE VALOR */
         .valor { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding-top: 26px; padding-bottom: 10px; }
@@ -678,6 +753,7 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
           .hero-grid { grid-template-columns: 1fr; gap: 44px; }
           .phone-col { order: 2; }
           .valor, .sim-grid { grid-template-columns: 1fr; }
+          .dest-grid { grid-template-columns: 1fr; }
           .banda-in { flex-direction: column; align-items: flex-start; gap: 20px; }
           .banda-in :global(.btn-mercado) { margin-left: 0; }
         }
@@ -701,6 +777,7 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
           .hero::before, .hero-copy > *, .phone-col, .phone-col::before, .phone, h1 .soft, .tcdot::after { animation: none !important; }
           .mapa, .pin, .pin.viva::after, .grain { animation: none !important; }
           .pin { opacity: 0.15; }
+          .phone-col :global(.phone-link), .dest-grid :global(.dest-card), .ej-chip { transition: none !important; }
           h1 .soft { -webkit-text-fill-color: var(--arena); }
           .reveal, .stagger > * { opacity: 1 !important; transform: none !important; transition: none !important; }
         }
@@ -709,7 +786,7 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
   )
 }
 
-export const getStaticProps: GetStaticProps<{ market: SuperficiesMarketData }> = async () => {
-  const market = await fetchSuperficiesData()
-  return { props: { market }, revalidate: 21600 } // 6 horas, igual que la landing actual
+export const getStaticProps: GetStaticProps<{ market: SuperficiesMarketData; destacados: DestacadoHome[] }> = async () => {
+  const [market, destacados] = await Promise.all([fetchSuperficiesData(), fetchDestacadosHome()])
+  return { props: { market, destacados }, revalidate: 21600 } // 6 horas, igual que la landing actual
 }
