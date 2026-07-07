@@ -310,15 +310,15 @@ export default function LandingWhatsApp({ market }: { market: SuperficiesMarketD
           </div>
           <div className="says stagger">
             <div className="say">
-              <div className="av"><Norte size={20} sobre="negro" /></div>
+              <div className="av"><Norte size={34} sobre="negro" /></div>
               <p><b>Eq. Centro.</b> El m² está a <Count value={market.precioM2Centro} prefix="$" />. <span className="ctx">Es la zona más cara, justo arriba del promedio de Equipetrol.</span></p>
             </div>
             <div className="say">
-              <div className="av"><Norte size={20} sobre="negro" /></div>
+              <div className="av"><Norte size={34} sobre="negro" /></div>
               <p><b>Para alquilar,</b> la renta mediana anda en <Count value={market.medianaAlquilerBob} prefix="Bs " />. <span className="ctx">Si te piden mucho más por algo parecido, hay con qué negociar.</span></p>
             </div>
             <div className="say">
-              <div className="av"><Norte size={20} sobre="negro" /></div>
+              <div className="av"><Norte size={34} sobre="negro" /></div>
               <p><b>Hoy hay <Count value={market.ventasActivas} /> deptos en venta</b> y <Count value={market.alquileresActivos} /> en alquiler. <span className="ctx">De Century 21, Remax y Bien Inmuebles, juntos en un solo lugar. Lo reviso cada noche.</span></p>
             </div>
           </div>
@@ -529,7 +529,9 @@ export default function LandingWhatsApp({ market }: { market: SuperficiesMarketD
         .talk .sub { color: var(--dark-2); }
         .says { margin-top: 8px; display: flex; flex-direction: column; gap: 20px; max-width: 760px; margin-left: auto; margin-right: auto; }
         .say { display: flex; gap: 16px; align-items: flex-start; background: rgba(237, 232, 220, 0.04); border: 1px solid rgba(237, 232, 220, 0.1); padding: 22px 24px; border-radius: var(--r-card); }
-        .say .av { width: 34px; height: 34px; border-radius: 50%; background: var(--arena); flex-shrink: 0; display: grid; place-items: center; margin-top: 2px; }
+        /* símbolo Norte directo (sin disco de fondo): el círculo arena del logo
+           contrasta sobre la burbuja oscura, como en el nav — no se funde */
+        .say .av { width: 34px; height: 34px; flex-shrink: 0; display: grid; place-items: center; margin-top: 2px; }
         .say p { color: var(--dark-1); font-size: 18px; line-height: 1.55; margin: 0; }
         .say p b { font-family: var(--display); font-weight: 500; }
         .say p :global(.num) { color: var(--dark-1); font-weight: 500; font-variant-numeric: tabular-nums; }
