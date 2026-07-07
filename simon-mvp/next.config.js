@@ -33,6 +33,9 @@ const nextConfig = {
       { source: '/formulario-vivienda', destination: '/formulario-v2', permanent: true },
       { source: '/formulario-inversion-plusvalia', destination: '/formulario-v2', permanent: true },
       { source: '/formulario-inversion-renta', destination: '/formulario-v2', permanent: true },
+      // Switch home (7-jul): la home vive en `/`. /home canonicaliza a `/`
+      // para no tener contenido duplicado (misma página en dos URLs).
+      { source: '/home', destination: '/', permanent: true },
     ]
   },
   async headers() {

@@ -1,6 +1,5 @@
 // Sobre Simon — Fase 2 de superficies públicas.
 // Regla: Home = buscar. Sobre Simon = entender (método, principios, roadmap, confianza).
-// Dark launch (noindex) hasta OK de lanzamiento.
 // Spec: Analista de competncia codex/Frontend-Requests/sobre-simon.md
 import Head from 'next/head'
 import Link from 'next/link'
@@ -69,15 +68,13 @@ export default function SobreSimon() {
           name="description"
           content="Por qué existe Simon, cómo ordenamos los datos, nuestros principios, qué no prometemos y hacia dónde vamos."
         />
-        {/* Dark launch: quitar noindex al lanzar */}
-        <meta name="robots" content="noindex, nofollow" />
         <meta name="theme-color" content="#0D0F0D" />
       </Head>
 
-      {/* ─── NAV (mismo shell que /home) ─────────────────── */}
+      {/* ─── NAV (mismo shell que la home) ───────────────── */}
       <nav className="nav">
         <div className="wrap nav-in">
-          <Link href="/home" className="brand" aria-label="Simon — inicio">
+          <Link href="/" className="brand" aria-label="Simon — inicio">
             {NORTE}
             <span>Simon</span>
           </Link>
@@ -236,7 +233,7 @@ export default function SobreSimon() {
         <div className="wrap foot-in">
           <div className="foot-brand">{NORTE}<span>Decidí bien.</span></div>
           <div className="foot-links">
-            <Link href="/home">Inicio</Link>
+            <Link href="/">Inicio</Link>
             <Link href="/alquileres">Alquileres</Link>
             <Link href="/ventas">Ventas</Link>
             <Link href="/mercado/equipetrol">Mercado</Link>

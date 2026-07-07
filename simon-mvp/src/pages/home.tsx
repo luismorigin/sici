@@ -1,6 +1,6 @@
-// Home principal de Simon — Fase 1 de superficies públicas.
+// Home principal de Simon — servida en `/` (switch 7-jul-2026) e importada por index.tsx.
 // Regla: Home = buscar y entrar al producto. Método/principios/roadmap → /sobre-simon.
-// Dark launch (noindex) hasta OK de lanzamiento. Referencia visual:
+// Referencia visual:
 // Analista de competncia codex/References/home-principal-simon-reference.png
 // Spec: Frontend-Requests/home-principal-simon.md
 import Head from 'next/head'
@@ -308,15 +308,13 @@ export default function HomePrincipal({ market, destacados, contexto }: { market
           name="description"
           content="Simon ordena datos inmobiliarios de Equipetrol para que compares precios, edificios y zonas con contexto real de mercado."
         />
-        {/* Dark launch: quitar noindex al lanzar */}
-        <meta name="robots" content="noindex, nofollow" />
         <meta name="theme-color" content="#0D0F0D" />
       </Head>
 
       {/* ─── NAV ─────────────────────────────────────────── */}
       <nav className="nav">
         <div className="wrap nav-in">
-          <Link href="/home" className="brand" aria-label="Simon — inicio">
+          <Link href="/" className="brand" aria-label="Simon — inicio">
             {NORTE}
             <span>Simon</span>
           </Link>

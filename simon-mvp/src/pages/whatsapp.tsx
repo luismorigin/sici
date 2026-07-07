@@ -3,7 +3,6 @@
 // ("conversación viva"): chat de Simón como héroe, WhatsApp como puerta grande,
 // autoservicio como puerta secundaria, "una casa, dos puertas".
 // Datos dinámicos de Supabase (ISR) — NO hardcodear (regla de la maqueta).
-// Dark launch (noindex) hasta OK de lanzamiento.
 // Spec: Frontend-Requests/landing-whatsapp-conversacional.md
 import Head from 'next/head'
 import Link from 'next/link'
@@ -173,8 +172,6 @@ export default function LandingWhatsApp({ market }: { market: SuperficiesMarketD
           name="description"
           content="Buscá departamento en Equipetrol por WhatsApp. Simón te responde con contexto de mercado y un link visual para comparar con calma."
         />
-        {/* Dark launch: quitar noindex al lanzar */}
-        <meta name="robots" content="noindex, nofollow" />
         <meta name="theme-color" content="#EDE8DC" />
       </Head>
 
