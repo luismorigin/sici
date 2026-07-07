@@ -82,7 +82,9 @@ export function parsearBusqueda(texto: string): SenalesBusqueda {
   // --- Dormitorios ---
   if (/monoambiente|\bmono\b|\bestudio\b/.test(t)) { s.dormitorios.push(0); s.chips.push('Monoambiente') }
   const PALABRA_NUM: Record<string, number> = { un: 1, una: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5 }
-  const dormRe = /(\d+|un|una|uno|dos|tres|cuatro|cinco)\s*(?:\+|o mas)?\s*(dormitorios?|dorms?|habitaciones?|hab\b|cuartos?|recamaras?)/g
+  // Tolerante a typos comunes de "dormitorio" (dor?mit\w*: domitorios, dormitrio,
+  // dormitorios…) y de "habitación" (habitaci\w*). El número previo da contexto.
+  const dormRe = /(\d+|un|una|uno|dos|tres|cuatro|cinco)\s*(?:\+|o mas)?\s*(dor?mit\w*|dorms?|habitaci\w*|hab\b|cuartos?|recamaras?|piezas?)/g
   let m: RegExpExecArray | null
   while ((m = dormRe.exec(t)) !== null) {
     const n = PALABRA_NUM[m[1]] ?? parseInt(m[1], 10)
