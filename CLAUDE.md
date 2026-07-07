@@ -188,7 +188,8 @@ simon-mvp/src/
 ├── lib/          → supabase (cliente + RPC mappers), zonas, precio-utils, format-utils,
 │                   mercado-data, mercado-alquiler-data, casas (feed casas ZN), meta-pixel,
 │                   wa-message, broker-shortlists-server, informe/ (types+helpers+template),
-│                   busqueda-natural (parser lenguaje natural $0 sin IA, feeds mobile+desktop);
+│                   busqueda-natural (parser lenguaje natural $0 sin IA, feeds mobile+desktop),
+│                   superficies-data (datos vivos ISR de las superficies /,/sobre-simon,/whatsapp);
 │                   + broker/demo/phone/property-reports/whatsapp/analytics
 ├── pages/admin/  → orquestadores delgados (ver tabla Admin Pages)
 ├── pages/api/    → API routes (ver Broker Pages & API)
@@ -217,8 +218,11 @@ Editores grandes: `propiedades/[id]` (~1035L, `usePropertyEditor`), `proyectos/[
 
 | Ruta | Proposito |
 |------|-----------|
-| `/` → `/landing-v2` | Landing Premium (negro/crema/oro) |
-| `/filtros-v2`, `/formulario-v2`, `/resultados-v2` | Funnel premium `[legacy / dormido]` |
+| `/` | **Home principal** (switch 7-jul, `index.tsx` sirve `HomePrincipal` de `pages/home.tsx`) — buscador natural que rutea a los feeds filtrados, banda de mercado viva (TC del día), propiedades reales, demos de valor. `/home`→`/` (301). Datos: `lib/superficies-data.ts` (ISR 6h) |
+| `/sobre-simon` | **Sobre Simon** — método, principios, qué no promete, roadmap. Indexable |
+| `/whatsapp` | **Landing WhatsApp conversacional** — port de la maqueta v6 (chat-héroe animado, dos puertas), fotos reales de Equipetrol (`public/equipetrol-aerea.jpg`, `wa-card-*.jpg`). Indexable |
+| `/landing-v2` | Landing Premium anterior (negro/crema/oro) — ya NO es `/`, queda accesible directo |
+| `/filtros-v2`, `/formulario-v2`, `/resultados-v2` | Funnel premium `[legacy / dormido]` (su logo sigue apuntando a `/landing-v2` a propósito) |
 | `/ventas` | **Feed ventas** — rediseño mobile (ver abajo), buscador inteligente, card limpia, mapa, TikTok mobile |
 | `/alquileres` | **Feed alquileres** — mismo rediseño mobile que ventas (ver flujo abajo) |
 | `/zona-norte/ventas` + `/alquileres` | Feeds ZN `[dark launch/noindex]` — copia filtrando 14 microzonas ZN (`getMicrozonasZN()`), sin tocar Equipetrol. `lib/mercado-data-zn.ts` / `mercado-alquiler-data-zn.ts`. Memoria `project_feed_zona_norte_aislamiento` |
@@ -227,7 +231,7 @@ Editores grandes: `propiedades/[id]` (~1035L, `usePropertyEditor`), `proyectos/[
 | `/condado-vi` | Landing cliente (estudio de mercado) |
 | `/go` | Launcher personal (links rápidos, noindex). Editable en array `SECTIONS` de `pages/go.tsx` |
 
-Flujo prod: `simonbo.com (/) → /ventas`. **Alquileres**: cards → bottom sheet (galería, características, amenidades, Google Maps, mini estudio de mercado, props similares, preguntas al broker max 3, ver anuncio original [gate], sticky WA) → WhatsApp broker. Comparativo Express desde 2+ favoritos (CompareSheet).
+Flujo prod (desde switch 7-jul): `simonbo.com (/) = Home` → buscador natural o accesos rápidos → `/ventas` / `/alquileres`. El logo de los feeds vuelve a `/`. **Superficies públicas** (`/`, `/sobre-simon`, `/whatsapp`) comparten tokens brand v1.4 + `lib/superficies-data.ts`; el buscador de la home usa `construirDestino()` (infiere venta/alquiler por operación explícita → moneda → magnitud de precio ≥20.000=venta) y pasa deep-links a los feeds (`/ventas` lee `?zonas/?dormitorios/?precio_min/?precio_max/?preventa`; `/alquileres` sus equivalentes en Bs). **Alquileres**: cards → bottom sheet (galería, características, amenidades, Google Maps, mini estudio de mercado, props similares, preguntas al broker max 3, ver anuncio original [gate], sticky WA) → WhatsApp broker. Comparativo Express desde 2+ favoritos (CompareSheet).
 
 **Rediseño mobile feeds (7-jul, EN PROD — `feat/mobile-feed-redesign` mergeado)**: ambos feeds (venta+alquiler) comparten el mismo patrón. Ventas = styled-jsx inline (`mc-*`/`mfh-*`/`mt-*`); alquileres = CSS externo `styles/alquileres.css` (`amc-*`/`mfh-*`/`mt-*`). Piezas: **header sticky** (`mfh-*`: logo+perfil+hamburguesa; 2da fila buscador nativo + botón filtros); **buscador inteligente** (`lib/busqueda-natural`, $0 sin IA) también en sidebar desktop (`dsk-search`); **card limpia** (corazón dentro de la foto, tap abre el sheet, sin acciones/descripción — todo lo transaccional en el sheet); **barra fija inferior** (`mt-bottombar`: Ver mapa de la card activa + comparar 0/1/2+ favoritos + limpiar). Regla layout: los hijos del contenido de la card usan `flex-shrink:0` (sin esto, en viewports bajos tipo iPhone SE el flex aplasta el título y lo recorta). **Menú hamburguesa** (`mfd-*`): Preventa (`/ventas?preventa=1`, lector en ventas aplica filtro) · Ventas · Alquileres · *Simulá y calculá* → Comparador de propiedades (abre CompareSheet con 2+ favs) + **Calculadora de renta `[Próximamente]`** + **Crédito hipotecario `[Próximamente]`** · Mercado · Mis favoritos · Hablar por WhatsApp (`SIMON_WHATSAPP`, número de negocio, NO el del fundador). Perfil (`mfp-*`): sin login, "guardá favoritos en este dispositivo". **Pendiente**: isologo oficial (el header usa placeholder arena+punto verde).
 

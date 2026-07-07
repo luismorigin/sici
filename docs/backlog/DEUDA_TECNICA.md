@@ -1,6 +1,19 @@
 # Deuda Técnica — SICI
 
-> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 24 Jun 2026.
+> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 7 Jul 2026.
+
+## SEO de las superficies públicas nuevas — sitemap + robots (7 Jul 2026)
+
+**Contexto:** el switch del 7-jul (`main` `ebad62f`) hizo `/` la Home nueva y sacó de `noindex` a `/`, `/sobre-simon` y `/whatsapp` (ahora indexables). Falta cerrar el lado SEO para que Google las descubra rápido y bien.
+
+**Pendiente (media):**
+- **`sitemap.xml`** (`pages/sitemap.xml.tsx` es dinámico, `λ`): agregar `/`, `/sobre-simon`, `/whatsapp`. Verificar que NO liste `/home` (redirige 301 a `/`) ni las rutas dark launch (`/zona-norte/*`, `/ventas/casas`).
+- **`robots.txt`** (`public/robots.txt`): confirmar que no bloquea las 3 superficies y que apunta al sitemap.
+- **Metadatos sociales**: las 3 páginas tienen `<title>`/`description` pero les falta **og:image / og:title / twitter:card** (compartir en WhatsApp/redes muestra tarjeta pobre). El brief de casas ZN también tenía "og:image pendiente" — mismo patrón.
+- **Canonical**: agregar `<link rel="canonical">` a `/` en la Home por si Google indexa variantes con query params del buscador.
+- Tras deploy: revisar Search Console que las 3 entren al índice y no haya "duplicate content" entre `/` y `/landing-v2`.
+
+Archivos: `pages/index.tsx`, `pages/sobre-simon.tsx`, `pages/whatsapp.tsx`, `pages/sitemap.xml.tsx`, `public/robots.txt`. Memoria: `project_superficies_publicas_branch`.
 
 ## VentaMap se re-dibuja y resetea el zoom al seleccionar un pin (24 Jun 2026)
 
