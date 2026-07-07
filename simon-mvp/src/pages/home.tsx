@@ -54,6 +54,34 @@ const NORTE = (
 
 const fmtNum = (n: number) => n.toLocaleString('es-BO')
 
+// Constelación de propiedades del fondo del hero: posiciones FIJAS (no random)
+// para que SSR e hidratación coincidan. x/y en %, d = delay s, t = duración s.
+// Los "viva" pulsan en salvia con anillo ping (propiedad recién actualizada).
+const PINS: Array<{ x: number; y: number; d: number; t: number; viva?: boolean }> = [
+  { x: 6, y: 18, d: 0.0, t: 4.2 },
+  { x: 13, y: 64, d: 1.1, t: 5.0 },
+  { x: 19, y: 33, d: 2.3, t: 4.6 },
+  { x: 26, y: 80, d: 0.6, t: 5.4 },
+  { x: 31, y: 12, d: 1.8, t: 4.4 },
+  { x: 37, y: 51, d: 3.1, t: 5.2, viva: true },
+  { x: 43, y: 27, d: 0.9, t: 4.8 },
+  { x: 47, y: 72, d: 2.6, t: 4.3 },
+  { x: 52, y: 9, d: 1.4, t: 5.6 },
+  { x: 57, y: 44, d: 3.6, t: 4.5 },
+  { x: 61, y: 86, d: 0.3, t: 5.1 },
+  { x: 66, y: 22, d: 2.0, t: 4.7, viva: true },
+  { x: 70, y: 58, d: 1.6, t: 5.3 },
+  { x: 75, y: 36, d: 3.3, t: 4.4 },
+  { x: 79, y: 74, d: 0.7, t: 5.5 },
+  { x: 84, y: 15, d: 2.8, t: 4.6 },
+  { x: 88, y: 49, d: 1.2, t: 5.0, viva: true },
+  { x: 92, y: 78, d: 3.8, t: 4.9 },
+  { x: 96, y: 30, d: 0.5, t: 5.2 },
+  { x: 22, y: 92, d: 2.4, t: 4.5 },
+  { x: 55, y: 95, d: 1.9, t: 5.4 },
+  { x: 82, y: 93, d: 3.0, t: 4.8 },
+]
+
 // Contador animado: cuenta desde 0 hasta el valor de la BD al entrar en viewport
 function Count({ value, prefix = '' }: { value: number; prefix?: string }) {
   const ref = useRef<HTMLSpanElement>(null)
@@ -170,6 +198,37 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
 
       {/* ─── HERO ────────────────────────────────────────── */}
       <header className="hero">
+        {/* Fondo vivo: plano urbano de Equipetrol (anillos + radiales) en deriva
+            lenta + constelación de pins de propiedades titilando */}
+        <div className="bg-mapa" aria-hidden="true">
+          <svg className="mapa" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+            <g stroke="#EDE8DC" strokeWidth="1" fill="none">
+              {/* anillos (2do y 3er anillo, arcos amplios) */}
+              <path d="M -80 640 Q 420 460 1280 580" opacity="0.055" />
+              <path d="M -80 790 Q 470 610 1280 740" opacity="0.045" />
+              <path d="M -80 480 Q 380 330 1280 430" opacity="0.035" />
+              {/* radiales y calles */}
+              <line x1="150" y1="-40" x2="360" y2="840" opacity="0.05" />
+              <line x1="420" y1="-40" x2="560" y2="840" opacity="0.04" />
+              <line x1="700" y1="-40" x2="760" y2="840" opacity="0.05" />
+              <line x1="950" y1="-40" x2="1020" y2="840" opacity="0.035" />
+              <line x1="-40" y1="180" x2="1240" y2="120" opacity="0.04" />
+              <line x1="-40" y1="330" x2="1240" y2="290" opacity="0.03" />
+              {/* conexiones de la constelación */}
+              <line x1="444" y1="216" x2="660" y2="176" opacity="0.05" />
+              <line x1="660" y1="176" x2="900" y2="120" opacity="0.04" />
+              <line x1="684" y1="408" x2="880" y2="392" opacity="0.05" />
+              <line x1="370" y1="408" x2="570" y2="352" opacity="0.04" />
+            </g>
+          </svg>
+          {PINS.map((p, i) => (
+            <span
+              key={i}
+              className={`pin ${p.viva ? 'viva' : ''}`}
+              style={{ left: `${p.x}%`, top: `${p.y}%`, animationDelay: `${p.d}s`, animationDuration: `${p.t}s` }}
+            />
+          ))}
+        </div>
         <div className="wrap hero-grid">
           <div className="hero-copy">
             <div className="eyebrow-row">
@@ -404,6 +463,9 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
         </div>
       </section>
 
+      {/* Grain cinematográfico global — casi imperceptible, hace el negro "caro" */}
+      <div className="grain" aria-hidden="true" />
+
       <footer className="foot">
         <div className="wrap foot-in">
           <div className="foot-brand">{NORTE}<span>Decidí bien.</span></div>
@@ -462,6 +524,19 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
         .hero::before { content: ''; position: absolute; top: -180px; right: -120px; width: 640px; height: 640px; border-radius: 50%; background: radial-gradient(circle, rgba(58, 106, 72, 0.22), transparent 62%); filter: blur(10px); animation: aura 9s ease-in-out infinite; pointer-events: none; }
         @keyframes aura { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.12); } }
         .hero-grid { position: relative; display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 48px; align-items: start; }
+
+        /* FONDO VIVO: plano urbano + constelación */
+        .bg-mapa { position: absolute; inset: 0; pointer-events: none; }
+        .mapa { position: absolute; inset: -6%; width: 112%; height: 112%; animation: deriva 90s ease-in-out infinite alternate; }
+        @keyframes deriva { from { transform: translate3d(-1.5%, -1%, 0); } to { transform: translate3d(1.5%, 1.2%, 0); } }
+        .pin { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--arena); opacity: 0.1; animation: twinkle 4.5s ease-in-out infinite; }
+        @keyframes twinkle { 0%, 100% { opacity: 0.07; } 50% { opacity: 0.42; } }
+        .pin.viva { width: 5px; height: 5px; margin: -1px; background: var(--salvia-vivo); }
+        .pin.viva::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 1px solid var(--salvia-vivo); animation: ping 3.6s var(--smooth) infinite; animation-delay: inherit; }
+
+        /* GRAIN cinematográfico (tile SVG feTurbulence, se mueve a saltos) */
+        .grain { position: fixed; inset: -50%; width: 200%; height: 200%; pointer-events: none; z-index: 80; opacity: 0.045; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); animation: grano 9s steps(9) infinite; }
+        @keyframes grano { 0%, 100% { transform: translate3d(0, 0, 0); } 12% { transform: translate3d(-2%, 1%, 0); } 25% { transform: translate3d(1.5%, -1.8%, 0); } 37% { transform: translate3d(-1%, 2%, 0); } 50% { transform: translate3d(2%, 1%, 0); } 62% { transform: translate3d(-2%, -1.2%, 0); } 75% { transform: translate3d(1%, 1.8%, 0); } 87% { transform: translate3d(-1.4%, -1%, 0); } }
         /* entrada escalonada del hero al cargar */
         @keyframes riseIn { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
         .hero-copy > * { animation: riseIn 0.75s var(--smooth, cubic-bezier(0.16, 1, 0.3, 1)) both; }
@@ -624,6 +699,8 @@ export default function HomePrincipal({ market }: { market: SuperficiesMarketDat
           .vcard, .sh :global(.btn), .banda-in :global(.arr) { transition: none !important; }
           .sim-grid :global(.sim-card.activa) { transition: none !important; }
           .hero::before, .hero-copy > *, .phone-col, .phone-col::before, .phone, h1 .soft, .tcdot::after { animation: none !important; }
+          .mapa, .pin, .pin.viva::after, .grain { animation: none !important; }
+          .pin { opacity: 0.15; }
           h1 .soft { -webkit-text-fill-color: var(--arena); }
           .reveal, .stagger > * { opacity: 1 !important; transform: none !important; transition: none !important; }
         }
