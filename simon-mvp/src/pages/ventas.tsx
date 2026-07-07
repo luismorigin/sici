@@ -3359,7 +3359,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mt-bb-cmp:active { transform:scale(0.97) }
         /* La card reserva el alto de la barra fija para no quedar tapada */
         .mt-feed-compare .mc-content { padding-bottom:calc(72px + env(safe-area-inset-bottom)) }
-        .mc-name { font-family:'Figtree',sans-serif; font-size:22px; font-weight:500; color:#EDE8DC; line-height:1.3; margin:0; padding:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+        .mc-name { font-family:'Figtree',sans-serif; font-size:22px; font-weight:500; color:#EDE8DC; line-height:1.3; margin:0; padding:0; max-height:2.6em; overflow:hidden }
         .mc-meta-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:5px 0 12px }
         .mc-reciente { font-size:11px; font-weight:600; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:rgba(58,106,72,0.15); padding:2px 8px; border-radius:4px }
         .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; font-family:'DM Sans',sans-serif }
