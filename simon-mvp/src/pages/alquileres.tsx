@@ -717,6 +717,7 @@ export default function AlquileresPage({
     if (sig.mascotas === true) f.acepta_mascotas = true
     if (sig.parqueo === true) f.con_parqueo = true
     applyFilters(f)
+    setFilterComponentVersion(v => v + 1) // re-marca los controles del sidebar
   }
 
   // Abre el mapa mobile centrado en la card activa (barra fija inferior).

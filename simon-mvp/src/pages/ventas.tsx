@@ -402,7 +402,11 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }) {
   const [minPrice, setMinPrice] = useState(currentFilters.precio_min || MIN_PRICE)
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_max || MAX_PRICE)
-  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
+  // Dorms: leer currentFilters como los demás controles (antes arrancaba vacío →
+  // el chip no se marcaba). El feed guarda "3+" como [3,4,5]; se colapsa a 3.
+  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(
+    () => new Set((currentFilters.dormitorios_lista || []).map(d => (d >= 3 ? 3 : d)))
+  )
   const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
   const [entrega, setEntrega] = useState(currentFilters.estado_entrega || '')
   const [orden, setOrden] = useState<FiltrosVentaSimple['orden']>(currentFilters.orden || 'recientes')
@@ -1758,6 +1762,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const [loadError, setLoadError] = useState(false)
   const [filters, setFilters] = useState<FiltrosVentaSimple>({ orden: 'recientes' })
   const [isFiltered, setIsFiltered] = useState(false)
+  // Bump para re-montar el sidebar desktop (DesktopFilters) cuando los filtros
+  // cambian por una fuente EXTERNA (buscador natural, deep-link, menú) — así los
+  // controles reflejan lo aplicado. No se toca en los chips del propio sidebar
+  // (evita remontar mientras el usuario interactúa; ver alquileres).
+  const [filterComponentVersion, setFilterComponentVersion] = useState(0)
   const [totalCount, setTotalCount] = useState(initialProps.length)
   const [unfilteredCount, setUnfilteredCount] = useState(initialProps.length)
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
@@ -1927,6 +1936,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     if (publicShareMode || brokerMode) return
     if (router.query.preventa === '1') {
       applyFilters({ ...filters, estado_entrega: 'solo_preventa', orden: filters.orden || 'recientes', solo_con_fotos: true })
+      setFilterComponentVersion(v => v + 1)
     }
   }, [router.query.preventa]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -2194,10 +2204,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     if (dbs.length > 0) f.zonas_permitidas = dbs
     if (sig.entrega) f.estado_entrega = sig.entrega
     applyFilters(f)
+    setFilterComponentVersion(v => v + 1) // re-marca los controles del sidebar
   }
   function openPreventaFromMenu() {
     setMenuOpen(false)
     applyFilters({ ...filters, estado_entrega: 'solo_preventa', orden: filters.orden || 'recientes', solo_con_fotos: true })
+    setFilterComponentVersion(v => v + 1)
     showToast('Propiedades marcadas como preventa en las fuentes disponibles')
   }
   function openComparadorFromMenu() {
@@ -2765,7 +2777,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   {natAviso === 'alquiler' && <a className="dsk-search-aviso dsk-search-link" href="/alquileres">Parece que buscás alquilar → Ver alquileres</a>}
                 </div>
               )}
-              <DesktopFilters currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
+              <DesktopFilters key={`df-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
                 brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax}
                 onAreaMin={setAreaMin}
                 onAreaMax={setAreaMax} />

@@ -19,11 +19,23 @@ const WA_URL = `https://wa.me/${SIMON_WHATSAPP}?text=${encodeURIComponent('Hola 
 function construirDestino(texto: string): string {
   const s = parsearBusqueda(texto)
 
-  const esVenta =
-    s.operacion === 'venta' ||
-    (s.operacion === null && (s.moneda === 'usd' || s.entrega === 'solo_preventa'))
+  // Operación: explícita > señales fuertes (USD / preventa) > magnitud del precio.
+  // Sin operación ni moneda, el monto decide: un alquiler es miles de Bs/mes
+  // (rara vez >15.000), una venta son decenas/cientos de miles. Así
+  // "monoambiente hasta 85000" cae en venta, no en alquiler.
+  const UMBRAL_VENTA = 20000
+  let op = s.operacion
+  if (op === null) {
+    const precio = s.precioMax ?? s.precioMin
+    op =
+      s.moneda === 'usd' ||
+      s.entrega === 'solo_preventa' ||
+      (precio !== null && precio >= UMBRAL_VENTA)
+        ? 'venta'
+        : 'alquiler'
+  }
 
-  if (esVenta) {
+  if (op === 'venta') {
     return s.entrega === 'solo_preventa' ? '/ventas?preventa=1' : '/ventas'
   }
 

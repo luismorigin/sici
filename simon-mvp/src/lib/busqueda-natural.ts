@@ -124,8 +124,11 @@ export function parsearBusqueda(texto: string): SenalesBusqueda {
   else if (s.precioMin !== null) s.chips.push(`desde ${monedaLabel} ${fmtMonto(s.precioMin)}`.replace('  ', ' '))
 
   // --- Flags ---
-  if (/amoblad|amueblad|equipad/.test(t)) { s.amoblado = true; s.chips.push('Amoblado') }
-  if (/sin amoblar|sin muebles|no amoblad/.test(t)) { s.amoblado = false; s.chips.push('Sin amoblar') }
+  // "no amoblad" con \b: sin él, "moNO AMOBLADo" (mono amoblado) daba falso
+  // positivo de "sin amoblar" → marcaba amoblado true Y false (chips contradictorios).
+  // La negación va primero y como else para que gane sobre "amoblado".
+  if (/sin amoblar|sin muebles|\bno amoblad/.test(t)) { s.amoblado = false; s.chips.push('Sin amoblar') }
+  else if (/amoblad|amueblad|equipad/.test(t)) { s.amoblado = true; s.chips.push('Amoblado') }
   if (/mascotas?|perros?|gatos?|pet\s*friendly|\bpet\b/.test(t)) { s.mascotas = true; s.chips.push('Mascotas') }
   if (/parqueo|garaje|garage|cochera|estacionamiento/.test(t)) { s.parqueo = true; s.chips.push('Parqueo') }
 
