@@ -119,6 +119,66 @@ const EJEMPLOS_BUSQUEDA = [
   'preventa en Eq. Norte',
 ]
 
+// Demo de tipeo del bloque "Búsqueda natural": la frase se escribe sola al
+// entrar en viewport y los chips salen del parser REAL (parsearBusqueda).
+const FRASE_DEMO = '2 dorm amoblado en Eq. Norte hasta Bs 6.000'
+
+function DemoTipeo() {
+  const [n, setN] = useState(0)
+  const [play, setPlay] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const chips = parsearBusqueda(FRASE_DEMO).chips
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setN(FRASE_DEMO.length)
+      return
+    }
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { setPlay(true); obs.unobserve(el) }
+      })
+    }, { threshold: 0.5 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!play) return
+    let i = 0
+    let t: number
+    const tick = () => {
+      i++
+      setN(i)
+      if (i < FRASE_DEMO.length) {
+        t = window.setTimeout(tick, 42)
+      } else {
+        // pausa larga con chips visibles y vuelve a escribir
+        t = window.setTimeout(() => { i = 0; setN(0); t = window.setTimeout(tick, 500) }, 5200)
+      }
+    }
+    t = window.setTimeout(tick, 400)
+    return () => clearTimeout(t)
+  }, [play])
+
+  const listo = n >= FRASE_DEMO.length
+  return (
+    <div className="tipeo" ref={ref}>
+      <div className="tipeo-input">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.5" y2="16.5" />
+        </svg>
+        <span>{FRASE_DEMO.slice(0, n)}<i className={`caret ${listo ? 'off' : ''}`} /></span>
+      </div>
+      <div className={`tipeo-chips ${listo ? 'in' : ''}`}>
+        {chips.map(c => <span key={c}>{c}</span>)}
+      </div>
+    </div>
+  )
+}
+
 export default function HomePrincipal({ market, destacados }: { market: SuperficiesMarketData; destacados: DestacadoHome[] }) {
   const router = useRouter()
   const [q, setQ] = useState('')
@@ -140,6 +200,13 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
   const mk = destacados.find(d => d.operacion === 'venta') ?? destacados[0] ?? null
   const mkTipologia = mk ? (mk.dormitorios === 0 ? 'Monoambiente' : mk.dormitorios ? `${mk.dormitorios} dorm` : 'Depto') : ''
   const mkPrecioM2 = mk && mk.operacion === 'venta' && mk.areaM2 ? Math.round(mk.precio / mk.areaM2) : null
+
+  // Demos de los bloques de valor — SIEMPRE data real, con fallback estático.
+  // Contexto: la prop real del mockup vs la mediana USD/m² de SU zona.
+  const medianaZonaMk = mk && mkPrecioM2 ? market.m2PorZona[mk.zona] : undefined
+  const maxM2 = medianaZonaMk && mkPrecioM2 ? Math.max(medianaZonaMk, mkPrecioM2) : 0
+  // Comparativo: dos alquileres reales con superficie (misma operación siempre)
+  const compa = destacados.filter(d => d.operacion === 'alquiler' && d.areaM2).slice(0, 2)
 
   // Scroll-reveal: secciones entran con fade + subida al aparecer en viewport
   const rootRef = useRef<HTMLDivElement>(null)
@@ -448,29 +515,63 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
         </section>
       )}
 
-      {/* ─── BLOQUES DE VALOR ────────────────────────────── */}
+      {/* ─── BLOQUES DE VALOR (mini-demos del producto con data real) ── */}
       <section className="valor wrap stagger">
-        <div className="vcard">
+        {/* 1. Búsqueda natural: tipeo en vivo + chips del parser real. Tap = busca. */}
+        <Link href={construirDestino(FRASE_DEMO)} className="vcard vlink">
           <div className="vico">
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.5" y2="16.5" /></svg>
           </div>
           <h3>Búsqueda natural</h3>
           <p>Escribí como hablás y encontrá propiedades relevantes en segundos.</p>
-        </div>
-        <div className="vcard">
+          <DemoTipeo />
+          <span className="vgo">Probá esta búsqueda →</span>
+        </Link>
+
+        {/* 2. Contexto de mercado: prop real vs mediana real de su zona */}
+        <Link href={mk ? `/${mk.operacion === 'venta' ? 'ventas' : 'alquileres'}?id=${mk.id}` : '/mercado/equipetrol'} className="vcard vlink">
           <div className="vico">
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2" /></svg>
           </div>
           <h3>Contexto de mercado</h3>
           <p>Vemos más allá del precio: mediana, rango y comparables activos.</p>
-        </div>
-        <div className="vcard">
+          {mk && mkPrecioM2 && medianaZonaMk ? (
+            <div className="ctx-demo">
+              <div className="ctx-row"><span>{mk.titulo}</span><strong>$us {fmt(mkPrecioM2)}/m²</strong></div>
+              <div className="ctx-bar"><i style={{ width: `${(mkPrecioM2 / maxM2) * 100}%` }} /></div>
+              <div className="ctx-row"><span>Mediana {mk.zona}</span><strong>$us {fmt(medianaZonaMk)}/m²</strong></div>
+              <div className="ctx-bar salvia"><i style={{ width: `${(medianaZonaMk / maxM2) * 100}%` }} /></div>
+              <p className="ctx-nota">El precio por m² varía según acabados, amenidades y desarrollador.</p>
+            </div>
+          ) : (
+            <span className="vgo">Ver el mercado →</span>
+          )}
+        </Link>
+
+        {/* 3. Comparativo express: dos alquileres reales lado a lado, sin ganador */}
+        <Link href="/alquileres" className="vcard vlink">
           <div className="vico">
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v18M12 6l6 2-2.5 6a3.5 3.5 0 0 0 7 0L20 8M12 6 6 8l2.5 6a3.5 3.5 0 0 1-7 0L4 8M8 21h8" /></svg>
           </div>
           <h3>Comparativo express</h3>
           <p>Compará propiedades guardadas en una vista clara y objetiva.</p>
-        </div>
+          {compa.length === 2 && (
+            <div className="cmp-demo">
+              {compa.map(c => (
+                <div key={c.id} className="cmp-col">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={c.foto} alt="" loading="lazy" decoding="async" width={140} height={80} />
+                  <div className="cmp-nom">{c.titulo}</div>
+                  <div className="cmp-val">Bs {fmt(c.precio)}<small>/mes</small></div>
+                  <div className="cmp-sub">{c.areaM2} m² · Bs {fmt(Math.round(c.precio / (c.areaM2 as number)))}/m²</div>
+                  <div className="cmp-sub">{c.zona}</div>
+                </div>
+              ))}
+              <span className="cmp-vs">vs</span>
+            </div>
+          )}
+          <span className="vgo">Guardá favoritos y comparalos →</span>
+        </Link>
       </section>
 
       {/* ─── SIMULA Y CALCULA ────────────────────────────── */}
@@ -722,13 +823,56 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
         .dest-grid :global(.dest-precio) { font-weight: 500; font-size: 18px; color: var(--arena); font-variant-numeric: tabular-nums; border-left: 2px solid var(--salvia); padding-left: 9px; }
         .dest-grid :global(.dest-precio small) { font-size: 12.5px; color: var(--dark3); font-weight: 400; }
 
-        /* BLOQUES DE VALOR */
+        /* BLOQUES DE VALOR (mini-demos) — .vcard va sobre <Link> → :global */
         .valor { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding-top: 26px; padding-bottom: 10px; }
-        .vcard { background: var(--panel); border: 1px solid var(--linea); border-radius: 16px; padding: 24px 22px; transition: transform 0.25s ease, border-color 0.25s ease; }
-        .vcard:hover { transform: translateY(-4px); border-color: rgba(237, 232, 220, 0.2); }
-        .vico { width: 44px; height: 44px; border-radius: 12px; background: rgba(58, 106, 72, 0.22); border: 1px solid rgba(78, 155, 102, 0.3); color: var(--salvia-vivo); display: grid; place-items: center; margin-bottom: 14px; }
-        .vcard h3 { font-size: 18px; margin-bottom: 7px; }
-        .vcard p { font-size: 14.5px; color: var(--dark2); }
+        .valor :global(.vcard) { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--linea); border-radius: 16px; padding: 24px 22px; text-decoration: none; transition: transform 0.25s ease, border-color 0.25s ease; }
+        .valor :global(.vcard:hover) { transform: translateY(-4px); border-color: rgba(237, 232, 220, 0.2); }
+        .vico { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; background: rgba(58, 106, 72, 0.22); border: 1px solid rgba(78, 155, 102, 0.3); color: var(--salvia-vivo); display: grid; place-items: center; margin-bottom: 14px; }
+        .valor :global(.vcard h3) { font-family: var(--display); font-weight: 500; color: var(--arena); font-size: 18px; margin-bottom: 7px; }
+        .valor :global(.vcard p) { font-size: 14.5px; color: var(--dark2); }
+        .valor :global(.vgo) { margin-top: auto; padding-top: 16px; font-size: 13.5px; font-weight: 500; color: var(--dark2); transition: color 0.2s; }
+        .valor :global(.vcard:hover .vgo) { color: var(--arena); }
+        /* stagger para los hijos <Link> (la regla genérica no scopea componentes) */
+        .stagger > :global(.vlink) { opacity: 0; transform: translateY(22px); transition: opacity 0.65s var(--smooth), transform 0.65s var(--smooth); }
+        .stagger.in > :global(.vlink) { opacity: 1; transform: none; }
+        .stagger.in > :global(.vlink:nth-child(2)) { transition-delay: 0.1s; }
+        .stagger.in > :global(.vlink:nth-child(3)) { transition-delay: 0.2s; }
+
+        /* demo tipeo */
+        .valor :global(.tipeo) { margin-top: 16px; }
+        .valor :global(.tipeo-input) { display: flex; align-items: center; gap: 8px; background: var(--panel-2); border: 1px solid rgba(237, 232, 220, 0.16); border-radius: 10px; padding: 9px 12px; font-size: 13px; color: var(--arena); min-height: 38px; }
+        .valor :global(.tipeo-input svg) { color: var(--dark3); flex-shrink: 0; }
+        .valor :global(.tipeo-input span) { white-space: nowrap; overflow: hidden; }
+        .valor :global(.caret) { display: inline-block; width: 2px; height: 13px; background: var(--arena); margin-left: 2px; vertical-align: -2px; animation: caretBlink 1s steps(2) infinite; }
+        .valor :global(.caret.off) { opacity: 0; animation: none; }
+        @keyframes caretBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+        .valor :global(.tipeo-chips) { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; min-height: 24px; }
+        .valor :global(.tipeo-chips span) { font-size: 12px; color: var(--arena); background: rgba(58, 106, 72, 0.28); border: 1px solid rgba(78, 155, 102, 0.4); padding: 2px 10px; border-radius: 100px; opacity: 0; transform: translateY(6px); transition: opacity 0.4s var(--smooth), transform 0.4s var(--smooth); }
+        .valor :global(.tipeo-chips.in span) { opacity: 1; transform: none; }
+        .valor :global(.tipeo-chips.in span:nth-child(2)) { transition-delay: 0.08s; }
+        .valor :global(.tipeo-chips.in span:nth-child(3)) { transition-delay: 0.16s; }
+        .valor :global(.tipeo-chips.in span:nth-child(4)) { transition-delay: 0.24s; }
+
+        /* demo contexto — barras honestas (2 valores reales, sin rango inventado) */
+        .valor :global(.ctx-demo) { margin-top: 16px; }
+        .valor :global(.ctx-row) { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12.5px; color: var(--dark2); margin-bottom: 5px; }
+        .valor :global(.ctx-row span) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .valor :global(.ctx-row strong) { color: var(--arena); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .valor :global(.ctx-bar) { height: 6px; border-radius: 100px; background: rgba(237, 232, 220, 0.08); overflow: hidden; margin-bottom: 12px; }
+        .valor :global(.ctx-bar i) { display: block; height: 100%; border-radius: 100px; background: var(--arena); transform: scaleX(0); transform-origin: left; transition: transform 1s var(--smooth) 0.35s; }
+        .valor :global(.ctx-bar.salvia i) { background: var(--salvia-vivo); transition-delay: 0.6s; }
+        .valor.in :global(.ctx-bar i) { transform: scaleX(1); }
+        .valor :global(p.ctx-nota) { font-size: 11.5px; color: var(--dark3); }
+
+        /* demo comparativo — dos reales lado a lado, sin ganador */
+        .valor :global(.cmp-demo) { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+        .valor :global(.cmp-col) { background: rgba(237, 232, 220, 0.04); border: 1px solid var(--linea); border-radius: 12px; padding: 8px; min-width: 0; }
+        .valor :global(.cmp-col img) { display: block; width: 100%; height: 64px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; background: #181b18; }
+        .valor :global(.cmp-nom) { font-size: 12.5px; font-weight: 500; color: var(--arena); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .valor :global(.cmp-val) { font-size: 14px; font-weight: 500; color: var(--arena); font-variant-numeric: tabular-nums; margin-top: 2px; }
+        .valor :global(.cmp-val small) { font-size: 11px; color: var(--dark3); font-weight: 400; }
+        .valor :global(.cmp-sub) { font-size: 11px; color: var(--dark3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .valor :global(.cmp-vs) { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: var(--dark2); background: var(--bg); border: 1px solid var(--linea); border-radius: 100px; padding: 3px 8px; }
 
         /* SIMULA Y CALCULA */
         .simula { padding-top: 56px; padding-bottom: 20px; }
@@ -814,7 +958,9 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
           .cierre { padding-top: 60px; padding-bottom: 64px; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .vcard, .sh :global(.btn), .banda-in :global(.arr) { transition: none !important; }
+          .valor :global(.vcard), .sh :global(.btn), .banda-in :global(.arr) { transition: none !important; }
+          .valor :global(.caret) { animation: none !important; }
+          .valor :global(.ctx-bar i), .valor :global(.tipeo-chips span), .stagger > :global(.vlink) { transition: none !important; transform: none !important; opacity: 1 !important; }
           .sim-grid :global(.sim-card.activa) { transition: none !important; }
           .hero::before, .hero-copy > *, .phone-col, .phone-col::before, .phone, h1 .soft, .tcdot::after { animation: none !important; }
           .mapa, .pin, .pin.viva::after, .grain { animation: none !important; }

@@ -18,6 +18,8 @@ export interface SuperficiesMarketData {
   precioM2Centro: number
   /** TC paralelo del día (config_global.tipo_cambio_paralelo) — el que usa el sistema */
   tcParalelo: number
+  /** USD/m² venta por zona (display) — para el demo de contexto de la home */
+  m2PorZona: Record<string, number>
 }
 
 // Snapshot real (jul 2026) — solo si Supabase falla en build
@@ -28,6 +30,7 @@ const FALLBACK: SuperficiesMarketData = {
   medianaAlquilerZona: 'Eq. Centro',
   precioM2Centro: 2244,
   tcParalelo: 9.72,
+  m2PorZona: {},
 }
 
 /** Redondeo para copy aproximado: 373 → "370+" (múltiplo de 10 inferior) */
@@ -158,6 +161,13 @@ export async function fetchSuperficiesData(): Promise<SuperficiesMarketData> {
 
     const m2Centro = microzonas.find(m => m.zona === 'Eq. Centro')?.precio_m2
 
+    // Mapa zona display → USD/m² (para comparar una prop real contra su zona).
+    // displayZona() normaliza: microzonas puede devolver nombre BD o display.
+    const m2PorZona: Record<string, number> = {}
+    for (const m of microzonas) {
+      if (m.zona && m.precio_m2) m2PorZona[displayZona(m.zona)] = m.precio_m2
+    }
+
     return {
       ventasActivas: ventasCount ?? FALLBACK.ventasActivas,
       alquileresActivos: alquileresActivos > 0 ? alquileresActivos : FALLBACK.alquileresActivos,
@@ -167,6 +177,7 @@ export async function fetchSuperficiesData(): Promise<SuperficiesMarketData> {
         : FALLBACK.medianaAlquilerZona,
       precioM2Centro: m2Centro ?? FALLBACK.precioM2Centro,
       tcParalelo,
+      m2PorZona,
     }
   } catch (error) {
     console.error('[superficies-data] Error fetching data:', error)
