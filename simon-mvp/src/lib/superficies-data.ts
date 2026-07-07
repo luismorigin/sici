@@ -137,6 +137,83 @@ export async function fetchDestacadosHome(): Promise<DestacadoHome[]> {
   }
 }
 
+// ─── Contexto de mercado para la prop del mockup (demo home) ────────────────
+// Réplica honesta del bloque del bottom sheet: mediana + rango típico (p25-p75)
+// + conteo de comparables, calculados EN VIVO de v_mercado_venta. Segmentación
+// como el sheet real: zona+tipología → todo Equipetrol (zona ampliada) → zona.
+export interface ContextoVenta {
+  medianaM2: number
+  p25M2: number
+  p75M2: number
+  count: number
+  /** etiqueta del segmento comparado, ej. "1 dorm" / "Mono" */
+  segmento: string
+  /** true si hubo pocos comparables en la zona y se amplió a todo Equipetrol */
+  ampliada: boolean
+}
+
+function percentil(sorted: number[], p: number): number {
+  const idx = (sorted.length - 1) * p
+  const lo = Math.floor(idx)
+  const hi = Math.ceil(idx)
+  if (lo === hi) return Math.round(sorted[lo])
+  return Math.round(sorted[lo] * (hi - idx) + sorted[hi] * (idx - lo))
+}
+
+export async function fetchContextoVenta(
+  zonaDisplay: string,
+  dormitorios: number | null
+): Promise<ContextoVenta | null> {
+  try {
+    if (!supabase) return null
+
+    // La vista ya aplica filtros de calidad; macrozona se filtra acá (ticket #15)
+    const { data, error } = await supabase
+      .from('v_mercado_venta')
+      .select('zona, precio_norm, area_total_m2, dormitorios')
+      .in('zona', ZONAS_EQUIPETROL_DB)
+      .not('precio_norm', 'is', null)
+      .gte('area_total_m2', 20)
+
+    if (error || !data) return null
+
+    const rows = (data as any[])
+      .map(r => ({
+        zona: displayZona(r.zona),
+        dorms: r.dormitorios as number | null,
+        m2: parseFloat(r.precio_norm) / parseFloat(r.area_total_m2),
+      }))
+      .filter(r => r.m2 >= 800 && r.m2 <= 5000) // saneo, mismo criterio que landing-data
+
+    const segLabel = dormitorios === 0 ? 'Mono' : dormitorios ? `${dormitorios} dorm` : 'todas las tipologías'
+
+    // Niveles de segmentación (mínimo 5 comparables, como el sheet)
+    const niveles: Array<{ filtro: (r: typeof rows[number]) => boolean; segmento: string; ampliada: boolean }> = [
+      { filtro: r => r.zona === zonaDisplay && r.dorms === dormitorios, segmento: segLabel, ampliada: false },
+      { filtro: r => r.dorms === dormitorios, segmento: segLabel, ampliada: true },
+      { filtro: r => r.zona === zonaDisplay, segmento: 'todas las tipologías', ampliada: false },
+    ]
+
+    for (const nivel of niveles) {
+      const vals = rows.filter(nivel.filtro).map(r => r.m2).sort((a, b) => a - b)
+      if (vals.length >= 5) {
+        return {
+          medianaM2: percentil(vals, 0.5),
+          p25M2: percentil(vals, 0.25),
+          p75M2: percentil(vals, 0.75),
+          count: vals.length,
+          segmento: nivel.segmento,
+          ampliada: nivel.ampliada,
+        }
+      }
+    }
+    return null
+  } catch (error) {
+    console.error('[superficies-data] Error fetching contexto:', error)
+    return null
+  }
+}
+
 export async function fetchSuperficiesData(): Promise<SuperficiesMarketData> {
   try {
     if (!supabase) throw new Error('Supabase not initialized')

@@ -9,7 +9,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GetStaticProps } from 'next'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
-import { fetchSuperficiesData, fetchDestacadosHome, type SuperficiesMarketData, type DestacadoHome } from '@/lib/superficies-data'
+import { fetchSuperficiesData, fetchDestacadosHome, fetchContextoVenta, type SuperficiesMarketData, type DestacadoHome, type ContextoVenta } from '@/lib/superficies-data'
 
 const SIMON_WHATSAPP = '59177066308'
 const WA_URL = `https://wa.me/${SIMON_WHATSAPP}?text=${encodeURIComponent('Hola Simon, quiero buscar departamento en Equipetrol.')}`
@@ -179,10 +179,41 @@ function DemoTipeo() {
   )
 }
 
-export default function HomePrincipal({ market, destacados }: { market: SuperficiesMarketData; destacados: DestacadoHome[] }) {
+const PLACEHOLDER_ESTATICO = 'Buscá "1 dorm en Sirari hasta Bs 4.500"'
+
+export default function HomePrincipal({ market, destacados, contexto }: { market: SuperficiesMarketData; destacados: DestacadoHome[]; contexto: ContextoVenta | null }) {
   const router = useRouter()
   const [q, setQ] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
+
+  // Placeholder del buscador del hero: se tipea solo rotando los ejemplos
+  // (misma animación que el bloque de valor). Se frena al enfocar o escribir.
+  const [ph, setPh] = useState(PLACEHOLDER_ESTATICO)
+  const [phPausa, setPhPausa] = useState(false)
+  useEffect(() => {
+    if (phPausa || q) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    let i = 0
+    let n = 0
+    let borrando = false
+    let t: number
+    const step = () => {
+      const f = EJEMPLOS_BUSQUEDA[i]
+      if (!borrando) {
+        n++
+        setPh(`Buscá "${f.slice(0, n)}${n >= f.length ? '"' : ''}`)
+        if (n >= f.length) { t = window.setTimeout(() => { borrando = true; step() }, 2400); return }
+        t = window.setTimeout(step, 45)
+      } else {
+        n--
+        setPh(`Buscá "${f.slice(0, Math.max(n, 0))}`)
+        if (n <= 0) { borrando = false; i = (i + 1) % EJEMPLOS_BUSQUEDA.length; t = window.setTimeout(step, 400); return }
+        t = window.setTimeout(step, 16)
+      }
+    }
+    t = window.setTimeout(step, 700)
+    return () => clearTimeout(t)
+  }, [phPausa, q])
 
   // Chips en vivo: lo que Simon entendió de la frase, visible y corregible
   const chips = useMemo(() => (q.trim().length >= 3 ? parsearBusqueda(q).chips : []), [q])
@@ -202,9 +233,12 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
   const mkPrecioM2 = mk && mk.operacion === 'venta' && mk.areaM2 ? Math.round(mk.precio / mk.areaM2) : null
 
   // Demos de los bloques de valor — SIEMPRE data real, con fallback estático.
-  // Contexto: la prop real del mockup vs la mediana USD/m² de SU zona.
-  const medianaZonaMk = mk && mkPrecioM2 ? market.m2PorZona[mk.zona] : undefined
-  const maxM2 = medianaZonaMk && mkPrecioM2 ? Math.max(medianaZonaMk, mkPrecioM2) : 0
+  // Contexto: réplica del bloque del bottom sheet (mediana + rango típico p25-p75
+  // + comparables, calculados en vivo). Escala del slider: cubre rango y depto.
+  const ctxOk = !!(mk && mkPrecioM2 && contexto)
+  const ctxLo = ctxOk ? Math.min(contexto!.p25M2, mkPrecioM2!) * 0.94 : 0
+  const ctxHi = ctxOk ? Math.max(contexto!.p75M2, mkPrecioM2!) * 1.06 : 1
+  const ctxPct = (x: number) => Math.max(0, Math.min(100, ((x - ctxLo) / (ctxHi - ctxLo)) * 100))
   // Comparativo: dos alquileres reales con superficie (misma operación siempre).
   // La ★ y los insights se CALCULAN de los datos — nada hardcodeado (misma
   // lógica de "mejor valor por m²" que usa el CompareSheet real del feed).
@@ -364,7 +398,9 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
                 type="text"
                 value={q}
                 onChange={e => setQ(e.target.value)}
-                placeholder='Buscá "1 dorm en Sirari hasta Bs 4.500"'
+                onFocus={() => { setPhPausa(true); setPh(PLACEHOLDER_ESTATICO) }}
+                onBlur={() => setPhPausa(false)}
+                placeholder={ph}
                 aria-label="Buscá propiedades escribiendo como hablás"
               />
               <button type="submit" aria-label="Buscar">
@@ -551,13 +587,22 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
           </div>
           <h3>Contexto de mercado</h3>
           <p>Vemos más allá del precio: mediana, rango y comparables activos.</p>
-          {mk && mkPrecioM2 && medianaZonaMk ? (
+          {ctxOk ? (
             <div className="ctx-demo">
-              <div className="ctx-row"><span>{mk.titulo}</span><strong>$us {fmt(mkPrecioM2)}/m²</strong></div>
-              <div className="ctx-bar"><i style={{ width: `${(mkPrecioM2 / maxM2) * 100}%` }} /></div>
-              <div className="ctx-row"><span>Mediana {mk.zona}</span><strong>$us {fmt(medianaZonaMk)}/m²</strong></div>
-              <div className="ctx-bar salvia"><i style={{ width: `${(medianaZonaMk / maxM2) * 100}%` }} /></div>
-              <p className="ctx-nota">El precio por m² varía según acabados, amenidades y desarrollador.</p>
+              <div className="ctx-eyebrow">Contexto de mercado · {contexto!.ampliada ? 'Equipetrol (zona ampliada)' : mk!.zona}</div>
+              <div className="ctx-este"><span>Este depto</span><strong>$us {fmt(mkPrecioM2!)}/m²</strong></div>
+              <div className="ctx-linea">Zona ({contexto!.segmento}): mediana <strong>$us {fmt(contexto!.medianaM2)}/m²</strong></div>
+              <div className="ctx-linea">Rango típico $us {fmt(contexto!.p25M2)} — {fmt(contexto!.p75M2)}/m²</div>
+              <div className="ctx-slider">
+                <span className="ctx-band" style={{ left: `${ctxPct(contexto!.p25M2)}%`, width: `${ctxPct(contexto!.p75M2) - ctxPct(contexto!.p25M2)}%` }} />
+                <span className="ctx-marker" style={{ left: `${ctxPct(mkPrecioM2!)}%` }} />
+                <span className="ctx-lbl" style={{ left: `${ctxPct(contexto!.p25M2)}%` }}>{fmt(contexto!.p25M2)}</span>
+                <span className="ctx-lbl" style={{ left: `${ctxPct(contexto!.p75M2)}%` }}>{fmt(contexto!.p75M2)}</span>
+              </div>
+              <p className="ctx-nota">
+                {contexto!.ampliada ? `Pocos anuncios de esta tipología en ${mk!.zona} — comparado con todo Equipetrol. ` : ''}
+                Basado en {contexto!.count} deptos comparables activos. El precio por m² varía según acabados, amenidades y desarrollador.
+              </p>
             </div>
           ) : (
             <span className="vgo">Ver el mercado →</span>
@@ -883,15 +928,21 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
         .valor :global(.tipeo-chips.in span:nth-child(3)) { transition-delay: 0.16s; }
         .valor :global(.tipeo-chips.in span:nth-child(4)) { transition-delay: 0.24s; }
 
-        /* demo contexto — barras honestas (2 valores reales, sin rango inventado) */
+        /* demo contexto — réplica del bloque del bottom sheet (mediana + rango
+           típico p25-p75 + marcador del depto), todo calculado de la BD */
         .valor :global(.ctx-demo) { margin-top: 16px; }
-        .valor :global(.ctx-row) { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12.5px; color: var(--dark2); margin-bottom: 5px; }
-        .valor :global(.ctx-row span) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .valor :global(.ctx-row strong) { color: var(--arena); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
-        .valor :global(.ctx-bar) { height: 6px; border-radius: 100px; background: rgba(237, 232, 220, 0.08); overflow: hidden; margin-bottom: 12px; }
-        .valor :global(.ctx-bar i) { display: block; height: 100%; border-radius: 100px; background: var(--arena); transform: scaleX(0); transform-origin: left; transition: transform 1s var(--smooth) 0.35s; }
-        .valor :global(.ctx-bar.salvia i) { background: var(--salvia-vivo); transition-delay: 0.6s; }
-        .valor.in :global(.ctx-bar i) { transform: scaleX(1); }
+        .valor :global(.ctx-eyebrow) { font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: var(--dark3); margin-bottom: 8px; }
+        .valor :global(.ctx-este) { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+        .valor :global(.ctx-este span) { font-size: 12.5px; color: var(--dark2); }
+        .valor :global(.ctx-este strong) { font-family: var(--display); font-weight: 500; font-size: 21px; color: var(--arena); font-variant-numeric: tabular-nums; }
+        .valor :global(.ctx-linea) { font-size: 12.5px; color: var(--dark2); margin-bottom: 3px; }
+        .valor :global(.ctx-linea strong) { color: var(--arena); font-weight: 500; font-variant-numeric: tabular-nums; }
+        .valor :global(.ctx-slider) { position: relative; height: 8px; border-radius: 100px; background: rgba(237, 232, 220, 0.08); margin: 12px 0 24px; }
+        .valor :global(.ctx-band) { position: absolute; top: 0; bottom: 0; border-radius: 100px; background: rgba(78, 155, 102, 0.55); transform: scaleX(0); transform-origin: left; transition: transform 1s var(--smooth) 0.35s; }
+        .valor.in :global(.ctx-band) { transform: scaleX(1); }
+        .valor :global(.ctx-marker) { position: absolute; top: -4px; width: 3px; height: 16px; border-radius: 2px; background: var(--arena); box-shadow: 0 0 6px rgba(0, 0, 0, 0.6); transform: translateX(-50%); opacity: 0; transition: opacity 0.5s var(--smooth) 1.1s; }
+        .valor.in :global(.ctx-marker) { opacity: 1; }
+        .valor :global(.ctx-lbl) { position: absolute; top: 13px; font-size: 10.5px; color: var(--dark3); transform: translateX(-50%); font-variant-numeric: tabular-nums; }
         .valor :global(p.ctx-nota) { font-size: 11.5px; color: var(--dark3); }
 
         /* demo comparativo — dos reales lado a lado, sin ganador */
@@ -995,7 +1046,9 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
         @media (prefers-reduced-motion: reduce) {
           .valor :global(.vcard), .sh :global(.btn), .banda-in :global(.arr) { transition: none !important; }
           .valor :global(.caret) { animation: none !important; }
-          .valor :global(.ctx-bar i), .valor :global(.tipeo-chips span), .stagger > :global(.vlink) { transition: none !important; transform: none !important; opacity: 1 !important; }
+          .valor :global(.ctx-band), .valor :global(.ctx-marker), .valor :global(.tipeo-chips span), .stagger > :global(.vlink) { transition: none !important; opacity: 1 !important; }
+          .valor :global(.ctx-band) { transform: scaleX(1) !important; }
+          .valor :global(.tipeo-chips span), .stagger > :global(.vlink) { transform: none !important; }
           .sim-grid :global(.sim-card.activa) { transition: none !important; }
           .hero::before, .hero-copy > *, .phone-col, .phone-col::before, .phone, h1 .soft, .tcdot::after { animation: none !important; }
           .mapa, .pin, .pin.viva::after, .grain { animation: none !important; }
@@ -1009,7 +1062,12 @@ export default function HomePrincipal({ market, destacados }: { market: Superfic
   )
 }
 
-export const getStaticProps: GetStaticProps<{ market: SuperficiesMarketData; destacados: DestacadoHome[] }> = async () => {
+export const getStaticProps: GetStaticProps<{ market: SuperficiesMarketData; destacados: DestacadoHome[]; contexto: ContextoVenta | null }> = async () => {
   const [market, destacados] = await Promise.all([fetchSuperficiesData(), fetchDestacadosHome()])
-  return { props: { market, destacados }, revalidate: 21600 } // 6 horas, igual que la landing actual
+  // Contexto del sheet para la prop del mockup (la misma que elige el componente)
+  const mkV = destacados.find(d => d.operacion === 'venta') ?? destacados[0] ?? null
+  const contexto = mkV && mkV.operacion === 'venta' && mkV.areaM2
+    ? await fetchContextoVenta(mkV.zona, mkV.dormitorios)
+    : null
+  return { props: { market, destacados, contexto }, revalidate: 21600 } // 6 horas, igual que la landing actual
 }
