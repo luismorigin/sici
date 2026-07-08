@@ -1,0 +1,76 @@
+# Paquete TC NUEVO — decisión de detección + normalización (INACTIVO hasta el switch)
+
+> **Estado: INACTIVO.** El régimen ACTUAL sigue vivo y es el que gobierna hoy (ver
+> `READER_SPEC.md` sección "PRECIO + TC" + `precio_normalizado()` en prod). Este doc congela la
+> DECISIÓN del régimen nuevo (TC unificado) para ensamblarlo cuando el oficial nuevo esté firme,
+> sin suponer nada y sin perder la lógica vieja.
+>
+> Motivo: Bolivia unifica el oficial ≈ paralelo (Binance). Colapsan los tags; solo el precio anclado
+> al oficial VIEJO (6.96/7 explícito) necesita trato especial. La normalización es en vivo (SQL) →
+> el switch NO obliga a re-cargar (salvo el re-tag de data vieja + la repoblación por campos ricos).
+
+## Régimen ACTUAL (activo — NO tocar hasta el switch)
+- Tags: `paralelo` / `oficial` / `no_especificado`.
+- `precio_normalizado()`: `paralelo` → `precio_usd × tc_paralelo / 6.96` (×1.47); resto → directo.
+- Queda como legacy: al switch, se conserva para rollback (repuntar las vistas/RPC a la vieja).
+
+---
+
+## PIEZA 1 — Detección del tag (el LECTOR / flujo). Va PRIMERO.
+
+Nuevo esquema de tags (2 que importan):
+
+### `default` (oficial nuevo = USD real)
+Cuando el texto: dice "paralelo" / "al día" · dice "oficial del día" (post-unificación = Binance, NO el viejo) ·
+solo declara USD/moneda ("$us X", "dólares") · o CALLA. → normaliza **directo** (USD real).
+
+### `oficial_viejo` (SOLO si el texto ancla EXPLÍCITO al rate muerto)
+Cuando el texto dice literal: **"6.96"** · **"Bs 7"** · **"TC 7"** · **"al cambio oficial 7"** · "tipo de cambio 6.96".
+→ se **descuenta** (fue coticado al rate viejo barato). Es el ÚNICO caso especial.
+
+### Interacción con la MONEDA del portal (lo delicado)
+- **Remax** trae el precio en **USD** (`price_in_dollars`) → `default` (USD real), salvo 6.96/7 explícito.
+- **Century21** trae el precio en **BOB** →
+  - texto calla → convertir BOB→USD a la **tasa nueva** (Binance, `config_global.tipo_cambio_paralelo`) → `default`. **[decisión: lo recomendado]**
+  - texto dice "6.96/7" → `oficial_viejo`.
+
+> ⚠️ El `oficial` del régimen viejo era AMBIGUO (mezclaba "6.96/7 explícito" con "oficial del día").
+> Por eso el lector debe re-emitir el tag correcto — no se puede deducir 100% del tag viejo (está en el TEXTO).
+> Ej del test: 3521 "a Bs 7" → `oficial_viejo`; 3578 "oficial del día" → `default` (Binance, no el viejo).
+
+## PIEZA 2 — Función SQL (consume el tag). Va con la Pieza 1.
+
+Función NUEVA aparte (NO sobrescribir la de prod hasta estar seguro):
+
+```sql
+CREATE OR REPLACE FUNCTION precio_normalizado_v2(p_precio_usd numeric, p_tipo_cambio_detectado text)
+RETURNS numeric LANGUAGE sql STABLE AS $$
+  SELECT CASE
+    WHEN p_tipo_cambio_detectado = 'oficial_viejo' THEN
+      ROUND(p_precio_usd * 6.96 / (SELECT valor FROM config_global WHERE clave='tipo_cambio_paralelo'), 2)
+    ELSE p_precio_usd   -- default (paralelo/oficial-nuevo/no_especificado) = USD real directo; se va el ×1.47
+  END;
+$$;
+-- 6.96 = constante fija (rate muerto). tipo_cambio_paralelo = Binance dinámico (cron diario, "binance_p2p").
+-- Switch = repuntar v_mercado_venta / buscar_unidades_simple a v2 (reversible: repuntar a la vieja).
+```
+
+Efecto (con paralelo 10.222): paralelo $100k → $100k (era $146.868, se va el premium); `oficial_viejo` "$100k al 7" → $68.088.
+
+## PIEZA 3 — Re-tag de la data vieja (acompaña el switch)
+- `paralelo` → `default` (mecánico). `no_especificado` → `default` (mecánico).
+- `oficial` → AMBIGUO: re-leer los que aplique (o heurística) para separar `oficial_viejo` vs `default`.
+- One-time SQL UPDATE + candado.
+
+## 4 decisiones (tomadas — confirmar valor)
+1. **Oficial nuevo = Binance dinámico** ✅ (ya vive en `config_global.tipo_cambio_paralelo`, cron diario; no hace falta cron nuevo).
+2. **C21 BOB sin TC → tasa nueva (USD real)** ✅ [lo recomendado].
+3. **Tag nuevo `oficial_viejo`** ✅ (solo 6.96/7 explícito).
+4. **Default pasa a oficial nuevo** ✅ (paralelo/oficial/no_especificado colapsan a directo).
+   - Pendiente: ¿el valor del oficial nuevo se fija o queda 100% dinámico Binance? · el descuento de `oficial_viejo`
+     es la interpretación fiduciaria ("al oficial" = acepta Bs baratos) — confirmar antes del switch.
+
+## Orden de ensamble
+Pieza 1 (lector) **+** Pieza 2 (función) se prenden JUNTOS (atómico) · Pieza 3 (re-tag) acompaña ·
+**probar todo en shadow** (`precio_normalizado_shadow`) antes de tocar prod · switch junto a prod.
+NO bloquea seguir cargando shadow con el lector actual (crudo + tag conservador).
