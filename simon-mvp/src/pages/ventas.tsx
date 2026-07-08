@@ -3295,6 +3295,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                       </div>
                     )}
                   </div>
+                  {/* Barra sticky: pills de filtro + toggle + contador quedan
+                      pegados bajo el nav al scrollear (herramienta de uso
+                      repetido). El buscador ancho y el H1 scrollean. */}
+                  <div className="vd-sticky">
                   {/* Fila de pills de filtros */}
                   <FilterPillsVentas key={`fp-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered}
                     onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
@@ -3316,6 +3320,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
                       </button>
                     </div>
+                  </div>
                   </div>
                 <div className="vd-list">
                   {loading && displayedProperties.length === 0 && <div className="ventas-status" style={{ minHeight: 160 }}>Cargando departamentos en venta...</div>}
@@ -3672,6 +3677,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-desktop-split .ventas-main { margin-left:0; padding-top:76px }
         .ventas-desktop-split .ventas-map-container { height:calc(100vh - 76px - 24px) }
         .vd-left { display:flex; flex-direction:column; gap:14px; min-width:0 }
+        /* Barra sticky: pills + toggle + contador pegados bajo el nav (56px).
+           Fondo sólido del main para tapar las cards que scrollean por detrás.
+           z-index alto para ganarle a las cards; los popovers de las pills
+           (z-80, hijos) siguen abriendo sobre todo. */
+        .vd-sticky { position:sticky; top:56px; z-index:40; display:flex; flex-direction:column; gap:12px; background:#1a1a1a; padding:12px 0 12px; border-bottom:1px solid rgba(237,232,220,0.08) }
         .vd-search { padding:0; border-bottom:none; margin-bottom:0 }
         .vd-search .dsk-search-box { height:46px; border-radius:12px }
         .vd-count-row { display:flex; align-items:baseline; justify-content:space-between; gap:10px; font-family:'DM Sans',sans-serif; font-size:13px; color:#9A8E7A }

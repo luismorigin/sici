@@ -1019,6 +1019,11 @@
 /* La nav superior (FeedDesktopNav, 56px fija) desplaza sidebar y main hacia abajo */
 .desktop-layout-split .desktop-sidebar { height: calc(100vh - 56px); margin-top: 56px; }
 .desktop-layout-split .desktop-main { height: calc(100vh - 56px); margin-top: 56px; }
+/* El padding-top del scroll container corre el anclaje del sticky (quedaba a
+   88px en vez de 56). Se pasa el aire superior del container al contenido:
+   así .ad-sticky top:0 se pega justo bajo el nav. */
+.desktop-layout-split .desktop-main { padding-top: 0; }
+.desktop-layout-split .ad-cols { padding-top: 24px; }
 /* Pills sugeridas bajo el buscador (módulo guiado sin búsqueda activa) */
 .dsk-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .dsk-pill { background: #FAFAF8; border: 1px solid #D8D0BC; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; padding: 5px 12px; border-radius: 100px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
@@ -1026,6 +1031,11 @@
 /* Columnas: lista = columna dominante (como la referencia); panel 380-520px */
 .ad-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(380px, 520px); gap: 20px; align-items: start; }
 .ad-left { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+/* Barra sticky: pills + toggle + contador pegados al tope del scroll (el
+   scroll vive en .desktop-main, por eso top:0). Fondo arena sólido para
+   tapar las cards que scrollean por detrás; z alto sobre las cards, los
+   popovers de las pills (z-80, hijos) siguen abriendo sobre todo. */
+.ad-sticky { position: sticky; top: 0; z-index: 40; display: flex; flex-direction: column; gap: 12px; background: #EDE8DC; padding: 12px 0; border-bottom: 1px solid #D8D0BC; }
 .ad-search { padding: 0; border-bottom: none; margin-bottom: 0; }
 .ad-search .dsk-search-box { height: 46px; border-radius: 12px; }
 .ad-count-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #7A7060; }

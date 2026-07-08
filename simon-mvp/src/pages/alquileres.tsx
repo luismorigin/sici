@@ -1621,6 +1621,9 @@ export default function AlquileresPage({
                           </div>
                         )}
                       </div>
+                      {/* Barra sticky: pills de filtro + toggle + contador quedan
+                          pegados bajo el nav al scrollear. El buscador y el H1 scrollean. */}
+                      <div className="ad-sticky">
                       {/* Fila de pills de filtros */}
                       <FilterPillsAlquiler key={`fp-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered}
                         onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
@@ -1642,6 +1645,7 @@ export default function AlquileresPage({
                             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
                           </button>
                         </div>
+                      </div>
                       </div>
                     <div className="ad-list">
                       {loading && gridProperties.length === 0 && <div className="desktop-loading" style={{ minHeight: 160 }}>Cargando alquileres...</div>}
