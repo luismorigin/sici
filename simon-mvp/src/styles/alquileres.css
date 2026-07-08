@@ -1030,8 +1030,22 @@
 .ad-search .dsk-search-box { height: 46px; border-radius: 12px; }
 .ad-count-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #7A7060; }
 .ad-count-row b { color: #141414; font-weight: 600; font-variant-numeric: tabular-nums; }
-.ad-h1 { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 500; color: #141414; margin: 0; line-height: 1.2; }
+.ad-h1 { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 500; color: #141414; margin: 0; line-height: 1.2; margin-right: auto; }
 .ad-count-num2 { white-space: nowrap; }
+/* Toggle lista | mixto | mapa */
+.ad-count-row { align-items: center; }
+.ad-viewtoggle { display: inline-flex; gap: 2px; background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 10px; padding: 3px; flex-shrink: 0; }
+.ad-vt-btn { width: 32px; height: 26px; display: flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 7px; color: #9A8E7A; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.ad-vt-btn:hover { color: #141414; }
+.ad-vt-btn.active { background: #141414; color: #EDE8DC; }
+/* Modo solo lista: sin panel, lista a 2 columnas (densidad máxima).
+   Doble clase: gana en especificidad a .ad-cols sin depender del orden. */
+.ad-cols.ad-cols-solo { grid-template-columns: 1fr; }
+.ad-cols-solo .ad-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.ad-cols-solo .ad-list > .desktop-loading, .ad-cols-solo .ad-spotlight, .ad-cols-solo .alq-pet-divider { grid-column: 1 / -1; }
+/* Botón de retorno del mapa completo (en split no existe el toggle clásico) */
+.ad-back-to-grid { position: absolute; top: 14px; left: 14px; z-index: 1100; display: inline-flex; align-items: center; gap: 6px; background: #141414; color: #EDE8DC; border: none; padding: 10px 16px; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.3px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+.ad-back-to-grid:active { transform: scale(0.97); }
 /* Chip fiduciario en card */
 .alc-mkt { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; font-size: 12px; color: #7A7060; }
 .alc-mkt::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #B8AD9E; flex-shrink: 0; }

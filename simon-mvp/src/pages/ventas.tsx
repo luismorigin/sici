@@ -2080,6 +2080,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const [sheetProperty, setSheetProperty] = useState<UnidadVenta | null>(null)
   const [gateCompleted, setGateCompleted] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
+  // Modo "solo lista" del layout split: oculta el panel derecho y la lista
+  // pasa a 2 columnas (densidad máxima). Con el side sheet abierto vuelve
+  // al split mientras dure, y al cerrarlo retoma la lista pura.
+  const [listOnly, setListOnly] = useState(false)
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
   const [proyectoNames, setProyectoNames] = useState<string[]>(() => [...new Set(initialProps.map(p => p.proyecto).filter(Boolean))].sort())
@@ -3268,7 +3272,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             )}
             {/* ===== Layout split: buscador+pills+lista densa | panel derecho (mapa+mercado ↔ side sheet) ===== */}
             {splitDesktop && viewMode === 'grid' && !loadError && (
-              <div className="vd-cols">
+              <div className={`vd-cols ${listOnly && !(sheetOpen && sheetProperty) ? 'vd-cols-solo' : ''}`}>
                 <div className="vd-left">
                   {/* Buscador natural ancho — arriba de la lista, como la referencia */}
                   <div className="dsk-search vd-search">
@@ -3294,10 +3298,24 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   {/* Fila de pills de filtros */}
                   <FilterPillsVentas key={`fp-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered}
                     onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
-                  {/* Título + contador de resultados */}
+                  {/* Título + contador + toggle lista|mixto|mapa */}
                   <div className="vd-count-row">
                     <h1 className="vd-h1">Departamentos en venta en {filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : 'Equipetrol'}</h1>
                     <span className="vd-count-num2"><b>{displayedProperties.length}</b> {isFiltered ? `de ${unfilteredCount}` : 'activos'}</span>
+                    <div className="vd-viewtoggle" role="tablist" aria-label="Modo de vista">
+                      <button type="button" title="Solo lista" aria-selected={listOnly} className={`vd-vt-btn ${listOnly ? 'active' : ''}`}
+                        onClick={() => { setListOnly(true); trackEvent('switch_view_venta', { view_mode: 'lista' }) }}>
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                      </button>
+                      <button type="button" title="Lista + mapa" aria-selected={!listOnly} className={`vd-vt-btn ${!listOnly ? 'active' : ''}`}
+                        onClick={() => { setListOnly(false); trackEvent('switch_view_venta', { view_mode: 'mixto' }) }}>
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="8" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
+                      </button>
+                      <button type="button" title="Solo mapa" className="vd-vt-btn"
+                        onClick={() => { setViewMode('map'); trackEvent('switch_view_venta', { view_mode: 'map', source: 'toggle' }) }}>
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                      </button>
+                    </div>
                   </div>
                 <div className="vd-list">
                   {loading && displayedProperties.length === 0 && <div className="ventas-status" style={{ minHeight: 160 }}>Cargando departamentos en venta...</div>}
@@ -3322,6 +3340,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   ))}
                 </div>
                 </div>
+                {(!listOnly || (sheetOpen && sheetProperty)) && (
                 <div className="vd-panel">
                   {/* Estado con propiedad seleccionada: side sheet scrolleable.
                       El bloque mapa+resumen NO se desmonta (se oculta con CSS):
@@ -3383,6 +3402,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                       )}
                   </div>
                 </div>
+                )}
               </div>
             )}
             {!splitDesktop && displayedProperties.length > 0 && viewMode === 'grid' && (
@@ -3656,8 +3676,19 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vd-search .dsk-search-box { height:46px; border-radius:12px }
         .vd-count-row { display:flex; align-items:baseline; justify-content:space-between; gap:10px; font-family:'DM Sans',sans-serif; font-size:13px; color:#9A8E7A }
         .vd-count-row b { color:#EDE8DC; font-weight:600; font-variant-numeric:tabular-nums }
-        .vd-h1 { font-family:'Figtree',sans-serif; font-size:22px; font-weight:500; color:#EDE8DC; margin:0; line-height:1.2 }
+        .vd-h1 { font-family:'Figtree',sans-serif; font-size:22px; font-weight:500; color:#EDE8DC; margin:0; line-height:1.2; margin-right:auto }
         .vd-count-num2 { white-space:nowrap }
+        /* Toggle lista | mixto | mapa */
+        .vd-count-row { align-items:center }
+        .vd-viewtoggle { display:inline-flex; gap:2px; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.12); border-radius:10px; padding:3px; flex-shrink:0 }
+        .vd-vt-btn { width:32px; height:26px; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:7px; color:#9A8E7A; cursor:pointer; transition:background 0.15s, color 0.15s }
+        .vd-vt-btn:hover { color:#EDE8DC }
+        .vd-vt-btn.active { background:rgba(237,232,220,0.12); color:#EDE8DC }
+        /* Modo solo lista: sin panel, lista a 2 columnas (densidad máxima).
+           Doble clase: gana en especificidad a .vd-cols sin depender del orden. */
+        .vd-cols.vd-cols-solo { grid-template-columns:1fr }
+        .vd-cols-solo .vd-list { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start }
+        .vd-cols-solo .vd-list > .ventas-status, .vd-cols-solo .vd-spotlight { grid-column:1 / -1 }
         /* Chip fiduciario en card */
         .vlc-mkt { display:inline-flex; align-items:center; gap:6px; margin-top:7px; font-size:12px; color:#9A8E7A }
         .vlc-mkt::before { content:''; width:6px; height:6px; border-radius:50%; background:#7A7060; flex-shrink:0 }

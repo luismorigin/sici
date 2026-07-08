@@ -425,6 +425,9 @@ export default function AlquileresPage({
   const [toastMessage, setToastMessage] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
+  // Modo "solo lista" del layout split: oculta el panel derecho y la lista
+  // pasa a 2 columnas. Con el side sheet abierto vuelve al split mientras dure.
+  const [listOnly, setListOnly] = useState(false)
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [chipsExpanded, setChipsExpanded] = useState(false)
@@ -1595,7 +1598,7 @@ export default function AlquileresPage({
                 )}
                 {/* ===== Layout split: buscador+pills+lista densa | panel derecho (mapa+mercado ↔ side sheet) ===== */}
                 {splitDesktop && (
-                  <div className="ad-cols">
+                  <div className={`ad-cols ${listOnly && !(sheetOpen && sheetProperty) ? 'ad-cols-solo' : ''}`}>
                     <div className="ad-left">
                       {/* Buscador natural ancho — arriba de la lista, como la referencia */}
                       <div className="dsk-search ad-search">
@@ -1621,10 +1624,24 @@ export default function AlquileresPage({
                       {/* Fila de pills de filtros */}
                       <FilterPillsAlquiler key={`fp-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered}
                         onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
-                      {/* Título + contador de resultados */}
+                      {/* Título + contador + toggle lista|mixto|mapa */}
                       <div className="ad-count-row">
                         <h1 className="ad-h1">Departamentos en alquiler en {filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(id => ZONAS_ALQUILER_UI.find(z => z.id === id)?.label || id).join(', ') : 'Equipetrol'}</h1>
                         <span className="ad-count-num2"><b>{displayedProperties.length}</b> {isFiltered ? `de ${totalCount}` : 'activos'}</span>
+                        <div className="ad-viewtoggle" role="tablist" aria-label="Modo de vista">
+                          <button type="button" title="Solo lista" aria-selected={listOnly} className={`ad-vt-btn ${listOnly ? 'active' : ''}`}
+                            onClick={() => { setListOnly(true); trackEvent('switch_view', { view_mode: 'lista' }) }}>
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                          </button>
+                          <button type="button" title="Lista + mapa" aria-selected={!listOnly} className={`ad-vt-btn ${!listOnly ? 'active' : ''}`}
+                            onClick={() => { setListOnly(false); trackEvent('switch_view', { view_mode: 'mixto' }) }}>
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="8" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
+                          </button>
+                          <button type="button" title="Solo mapa" className="ad-vt-btn"
+                            onClick={() => { setViewMode('map'); trackEvent('switch_view', { view_mode: 'map', source: 'toggle' }) }}>
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                          </button>
+                        </div>
                       </div>
                     <div className="ad-list">
                       {loading && gridProperties.length === 0 && <div className="desktop-loading" style={{ minHeight: 160 }}>Cargando alquileres...</div>}
@@ -1655,6 +1672,7 @@ export default function AlquileresPage({
                       })}
                     </div>
                     </div>
+                    {(!listOnly || (sheetOpen && sheetProperty)) && (
                     <div className="ad-panel">
                       {/* Estado con propiedad seleccionada: side sheet scrolleable.
                           El bloque mapa+resumen NO se desmonta (se oculta con CSS):
@@ -1721,6 +1739,7 @@ export default function AlquileresPage({
                           )}
                       </div>
                     </div>
+                    )}
                   </div>
                 )}
                 {!splitDesktop && (
@@ -1764,6 +1783,13 @@ export default function AlquileresPage({
             ) : (
               /* Map view: full map + floating card on selection */
               <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+                {/* En split no existe el toggle Grid|Mapa clásico — botón de retorno propio */}
+                {splitDesktop && (
+                  <button className="ad-back-to-grid" onClick={() => { setViewMode('grid'); setMapSelectedId(null) }} aria-label="Volver a la lista">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ flexShrink: 0 }}><path d="M15 18l-6-6 6-6"/></svg>
+                    Volver a la lista
+                  </button>
+                )}
                 <div style={{ position: 'absolute', inset: 0, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', zIndex: 0 }}>
                   <MapMultiComponent
                     properties={displayedProperties}
