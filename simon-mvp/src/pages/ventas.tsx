@@ -3792,7 +3792,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* Footer WhatsApp/Compartir FIJO a la pantalla (misma columna que el
            sheet), garantiza que quede siempre abajo sin depender del scroll
            interno. El sheet reserva 84px abajo (padding) para no taparlo. */
-        .bs-venta.bs-side .bs-sticky-footer { position:fixed; left:auto; right:24px; bottom:20px; width:calc((100vw - 68px) * 0.52); z-index:60; border-radius:0 0 14px 14px }
+        .bs-venta.bs-side .bs-sticky-footer { position:fixed; box-sizing:border-box; left:auto; right:24px; bottom:20px; width:calc((100vw - 68px) * 0.52); z-index:60; border-radius:0 0 14px 14px }
         .bs-venta.bs-side.open { transform:none }
         /* fav+close: fijos en la esquina del sheet (absolute sobre el sheet
            fixed), siempre visibles, sin ocupar flujo ni chocar con las tabs. */

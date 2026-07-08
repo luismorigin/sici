@@ -1144,7 +1144,7 @@
 .bs.bs-side-alq { position: fixed; inset: auto; left: auto; top: 80px; right: 32px; bottom: 32px; width: calc((100vw - 84px) * 0.52); max-height: none; overflow-y: auto; overflow-x: hidden; transform: none; max-width: none; border-radius: 14px; border: 1px solid #D8D0BC; z-index: 40; padding-bottom: 84px; }
 /* Footer WhatsApp/Compartir FIJO a la pantalla (misma columna que el sheet),
    siempre abajo sin depender del scroll interno. El sheet reserva 84px. */
-.bs-side-alq .bs-sticky-footer { position: fixed; left: auto; right: 32px; bottom: 32px; width: calc((100vw - 84px) * 0.52); z-index: 60; border-radius: 0 0 14px 14px; }
+.bs-side-alq .bs-sticky-footer { position: fixed; box-sizing: border-box; left: auto; right: 32px; bottom: 32px; width: calc((100vw - 84px) * 0.52); z-index: 60; border-radius: 0 0 14px 14px; }
 .bs.bs-side-alq.open { transform: none; }
 /* fav+close: fijos en la esquina del sheet (absolute sobre el sheet fixed),
    siempre visibles, sin ocupar flujo ni chocar con las tabs. */
