@@ -9,6 +9,7 @@ import { getSupabaseClient, getPropsViejasFromFeed } from './lib/db.mjs';
 import { compararDescripciones } from './lib/similarity.mjs';
 import { runChecks as runInternalChecks, extraerPreciosCercanosKeyword } from './lib/internal-checks.mjs';
 import { checkMatching } from './lib/matching-checks.mjs';
+import { detectarDuplicados } from './lib/dup-checks.mjs';
 // Capa 1 con fetcher directo ($0) en vez de Firecrawl — reusa el del híbrido ZN.
 import { c21Detalle, remaxDetalle } from '../sonda-suelo/lib/portales.mjs';
 import { pace, circuit } from '../sonda-suelo/lib/fetcher.mjs';
@@ -96,11 +97,18 @@ async function main() {
   const capa3Items = await runCapa3(supabase, capa1Items);
   console.log(`  ${capa3Items.size} props con issues de matching`);
 
+  // === FASE 4: Detector de duplicados (apart-hoteles / re-publicaciones) ===
+  console.log('\n▶ Capa 4: Duplicados (nombre+precio+área + desc similar)');
+  const clustersDup = await runDuplicados(supabase, capa1Items);
+  console.log(`  ${clustersDup.length} clusters de posibles duplicados`);
+
   // === Combinar resultados ===
   const combined = combinarResultados(capa1Items, capa2Items, capa3Items);
 
   // === Stats ===
   const stats = computeStats(combined);
+  stats.clusters_duplicados = clustersDup.length;
+  stats.props_duplicadas = clustersDup.reduce((s, c) => s + c.duplicados.length, 0);
   console.log('\n=== Stats globales ===');
   Object.entries(stats).forEach(([k, v]) => console.log(`  ${k}: ${v}`));
 
@@ -123,12 +131,13 @@ async function main() {
 
   // === Generar reportes locales ===
   await writeFile(join(runDir, 'combined.json'), JSON.stringify(combined, null, 2), 'utf8');
+  await writeFile(join(runDir, 'duplicados.json'), JSON.stringify(clustersDup, null, 2), 'utf8');
   await writeFile(
     join(runDir, 'meta.json'),
     JSON.stringify({ runId, stats, costoFirecrawl, modo: USE_CACHED ? 'cached' : 'fetch', cachedFrom: USE_CACHED || null, durationMs: Date.now() - tStart }, null, 2),
     'utf8'
   );
-  await writeFile(join(runDir, 'summary.md'), renderSummary(combined, stats, runId, USE_CACHED), 'utf8');
+  await writeFile(join(runDir, 'summary.md'), renderSummary(combined, stats, runId, USE_CACHED, clustersDup), 'utf8');
 
   console.log(`\n✔ Reportes en ${runDir}`);
   console.log(`  - combined.json: detalle completo de ${combined.length} props`);
@@ -405,6 +414,31 @@ function maxSeveridad(arr) {
 }
 
 // ============================================================
+// FASE 4: DUPLICADOS (portado del mensual Firecrawl — antes el fetch $0 no lo corría)
+// ============================================================
+
+async function runDuplicados(supabase, capa1Items) {
+  // Mismo universo que la Capa 1 (por ids). Trae nombre + precio_norm + área del feed.
+  const ids = capa1Items.map((c) => c.id);
+  const { data, error } = await supabase
+    .from('v_mercado_venta')
+    .select('id, nombre_edificio, precio_norm, area_total_m2')
+    .in('id', ids);
+  if (error) throw error;
+  // Desc preferida: la fetcheada hoy (capa1); fallback a la cruda BD.
+  const descById = new Map();
+  for (const c of capa1Items) descById.set(c.id, c.descripcion_scraped || c.descripcion_bd || '');
+  const props = (data || []).map((r) => ({
+    id: r.id,
+    nombre_edificio: r.nombre_edificio,
+    precio: parseFloat(r.precio_norm) || 0,
+    area: parseFloat(r.area_total_m2) || 0,
+    descripcion: descById.get(r.id) || '',
+  }));
+  return detectarDuplicados(props);
+}
+
+// ============================================================
 // STATS
 // ============================================================
 
@@ -511,7 +545,7 @@ async function persistRunAndItems(supabase, payload) {
 // SUMMARY
 // ============================================================
 
-function renderSummary(combined, stats, runId, modo) {
+function renderSummary(combined, stats, runId, modo, clustersDup = []) {
   const lines = [];
   lines.push(`# Audit mensual — ${new Date().toISOString().slice(0, 10)}`);
   lines.push('');
@@ -533,6 +567,7 @@ function renderSummary(combined, stats, runId, modo) {
   lines.push(`| **Con inconsistencia interna** | ${stats.con_inconsistencia_interna} |`);
   lines.push(`| **Con mismatch matching** | ${stats.con_mismatch_matching} |`);
   lines.push(`| **💲 Cambio de precio en portal** | ${stats.con_precio_drift_portal} |`);
+  lines.push(`| **👥 Posibles duplicados** | ${stats.props_duplicadas || 0} (${stats.clusters_duplicados || 0} clusters) |`);
   lines.push(`| 🔴 Severidad alta | ${stats.severidad_alta} |`);
   lines.push(`| 🟡 Severidad media | ${stats.severidad_media} |`);
   lines.push(`| Scrape fallidos | ${stats.scrape_failed} |`);
@@ -563,6 +598,20 @@ function renderSummary(combined, stats, runId, modo) {
     for (const r of conDrift) {
       const d = r.capa1.precio_drift;
       lines.push(`| ${r.id} | ${r.fuente} | ${d.viejo.toLocaleString()} | ${d.nuevo.toLocaleString()} | ${d.diff_pct > 0 ? '+' : ''}${d.diff_pct}% | ${d.direccion === 'rebaja' ? '🔻 rebaja' : '🔺 suba'} |`);
+    }
+    lines.push('');
+  }
+
+  if (clustersDup.length > 0) {
+    const totalDup = clustersDup.reduce((s, c) => s + c.duplicados.length, 0);
+    lines.push(`## 👥 Posibles duplicados (${clustersDup.length} clusters, ${totalDup} props)`);
+    lines.push('');
+    lines.push('Mismo edificio + precio + área + descripción similar. **Verificar leyendo el anuncio** (código de propiedad / piso / ID-base Remax): puede ser el mismo depto republicado (marcar `duplicado_de`) o unidades gemelas de preventa (legítimas — ojo: precios distintos = unidades distintas).');
+    lines.push('');
+    lines.push('| Edificio | Precio | Área | Mantener | Posibles duplicados |');
+    lines.push('|---|---:|---:|---:|---|');
+    for (const c of clustersDup) {
+      lines.push(`| ${c.nombre_edificio} | $${Math.round(c.precio).toLocaleString()} | ${c.area} | #${c.sobreviviente} | ${c.duplicados.map((id) => '#' + id).join(', ')} |`);
     }
     lines.push('');
   }
