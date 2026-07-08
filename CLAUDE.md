@@ -116,6 +116,7 @@ Referencia completa: `docs/arquitectura/TIPO_CAMBIO_SICI.md` (flujo portal→ext
 | **Límites data fiduciaria** | `docs/canonical/LIMITES_DATA_FIDUCIARIA.md` — qué puede aseverar Simón, matriz verde/amarillo/rojo |
 | **TC sospechoso criterios** | `docs/canonical/TC_SOSPECHOSO_CRITERIOS.md` — badge /ventas, factor 0.72 (mig 227) |
 | **Refactor ventas / UX alquileres** | `docs/refactor/VENTAS_SIMPLIFICADO.md`, `AUDITORIA_UX_ALQUILERES.md`, `docs/design/UX_AUDIT_MOBILE_ALQUILERES.md` |
+| **Verificar feeds desktop** | `docs/design/VERIFICAR_FEEDS_DESKTOP.md` — usar Playwright headless (el preview interno no hidrata el layout desktop); gotcha: no pinta tiles satelitales JPEG |
 | **Análisis (LLM/precios/comparativas)** | `docs/analysis/` — AUDITORIA_DATOS_VENTAS, COMPARATIVA_VENTAS_VS_ALQUILERES, PRUEBA_LLM_VS_REGEX_VENTAS, RESUMEN_EJECUTIVO_LLM_VENTAS, COMPARATIVA_ALQUILERES_VS_VENTAS_LLM |
 | **Prompts LLM activos** | `scripts/llm-enrichment/` — `prompt-ventas.md` (v4.1), `prompt-alquiler-v2.md` (v2.0), casas/terrenos v1.0; README en la carpeta |
 | **Tracking (GA4/Meta/Clarity)** | `docs/meta/` — GA4_EVENTOS, META_PIXEL_EVENTOS, CLARITY_TRACKING |
