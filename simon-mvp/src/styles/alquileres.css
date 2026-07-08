@@ -1023,8 +1023,32 @@
 .dsk-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .dsk-pill { background: #FAFAF8; border: 1px solid #D8D0BC; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; padding: 5px 12px; border-radius: 100px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
 .dsk-pill:hover { color: #141414; border-color: #3A6A48; }
-/* Columnas: lista densa izquierda + panel derecho */
-.ad-cols { display: grid; grid-template-columns: minmax(360px, 470px) minmax(0, 1fr); gap: 20px; align-items: start; }
+/* Columnas: buscador+pills+lista densa izquierda + panel derecho */
+.ad-cols { display: grid; grid-template-columns: minmax(440px, 620px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.ad-left { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ad-search { padding: 0; border-bottom: none; margin-bottom: 0; }
+.ad-search .dsk-search-box { height: 46px; border-radius: 12px; }
+.ad-count-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #7A7060; }
+.ad-count-row b { color: #141414; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* Fila de pills de filtros (tema claro) */
+.afp { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: 'DM Sans', sans-serif; }
+.afp-feed { display: inline-flex; align-items: center; gap: 6px; background: #3A6A48; color: #EDE8DC; font-size: 13px; font-weight: 600; padding: 8px 15px; border-radius: 100px; letter-spacing: 0.2px; }
+.afp-item { position: relative; }
+.afp-pill { display: inline-flex; align-items: center; gap: 6px; background: #FAFAF8; border: 1px solid #D8D0BC; color: #7A7060; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 14px; border-radius: 100px; cursor: pointer; transition: color 0.15s, border-color 0.15s; white-space: nowrap; }
+.afp-pill:hover { color: #141414; border-color: #9A8E7A; }
+.afp-pill.open { color: #141414; border-color: #3A6A48; }
+.afp-on { color: #3A6A48; border-color: rgba(58,106,72,0.45); background: rgba(58,106,72,0.08); font-weight: 600; }
+.afp-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 80; min-width: 250px; background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; padding: 14px; box-shadow: 0 12px 34px rgba(58,53,48,0.18); }
+.afp-pop-precio { min-width: 300px; }
+.afp-pop-mas { min-width: 300px; }
+.afp-pop-right { left: auto; right: 0; }
+.afp-pop .df-label { margin-bottom: 8px; }
+.afp-reset { background: none; border: none; color: #7A7060; font-family: 'DM Sans', sans-serif; font-size: 12.5px; text-decoration: underline; cursor: pointer; padding: 8px 6px; white-space: nowrap; }
+.afp-reset:hover { color: #141414; }
+.afp-orden { margin-left: auto; }
+.afp-orden .afp-pill { background: transparent; border-color: transparent; }
+.afp-orden .afp-pill:hover { border-color: #D8D0BC; }
+.afp-orden-label { color: #9A8E7A; font-size: 12px; }
 .ad-list { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .ad-spotlight { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
 /* Card de lista densa (tema claro alquileres) */
@@ -1095,7 +1119,7 @@
 .bs-costos-sub { font-size: 11.5px; color: #7A7060; font-weight: 400; }
 .bs-costos-caveat { font-size: 11.5px; color: #9A8E7A; margin-top: 12px; line-height: 1.45; }
 /* Bandeja comparar en split: anclada a la columna de lista, con thumbnails */
-.alq-tray-split { left: calc(320px + 32px); transform: none; animation: alqBannerInSplit 0.3s ease-out; }
+.alq-tray-split { left: 32px; transform: none; animation: alqBannerInSplit 0.3s ease-out; }
 @keyframes alqBannerInSplit { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 .alq-tray-thumbs { display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; }
 .alq-tray-thumb { position: relative; width: 30px; height: 30px; border-radius: 8px; background-size: cover; background-position: center; background-color: #3A3530; border: 1px solid rgba(237,232,220,0.25); display: inline-flex; align-items: flex-end; justify-content: flex-start; }

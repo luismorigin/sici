@@ -1350,7 +1350,9 @@ export default function AlquileresPage({
               - publicShareMode: el cliente recibe una shortlist curada, no debe ver filtros globales.
               - brokerMode mobile: 320px de sidebar no caben en mobile; el broker usa el chip
                 ⚙ Filtros del banner (que abre el FilterOverlay full-screen). */}
-          {!publicShareMode && !(brokerMode && !isDesktop) && (
+          {/* Sidebar clásico — solo fuera del layout split (broker desktop).
+              En split los filtros viven en la fila de pills sobre la lista. */}
+          {!splitDesktop && !publicShareMode && !(brokerMode && !isDesktop) && (
           <aside className="desktop-sidebar" style={{ overscrollBehavior: 'contain' }}>
             {!splitDesktop && (
             <div className="desktop-sidebar-header">
@@ -1369,29 +1371,8 @@ export default function AlquileresPage({
               <span className="desktop-count-num">{properties.length}</span>
               <span className="desktop-count-label">{isFiltered ? `de ${totalCount} alquileres` : 'alquileres en Equipetrol'}</span>
             </div>
-            {/* Buscador inteligente también en desktop (igual que ventas) */}
-            {!brokerMode && (
-              <div className="dsk-search">
-                <form className="dsk-search-box" onSubmit={(e) => { e.preventDefault(); handleNaturalSearch(natQuery, true); (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.blur() }}>
-                  <svg className="dsk-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  <input className="dsk-search-input" type="search" enterKeyHint="search" value={natQuery}
-                    placeholder={'Buscá "2 dorm amoblado hasta 4.200 bs"'}
-                    onChange={(e) => handleNaturalSearch(e.target.value, false)} />
-                  {natQuery && <button type="button" className="dsk-search-clear" aria-label="Limpiar" onClick={() => { setNatQuery(''); setNatChips([]); setNatAviso(null) }}>&times;</button>}
-                </form>
-                {natChips.length > 0 && <div className="dsk-search-chips">{natChips.map(c => <span key={c} className="mfh-chip">{c}</span>)}</div>}
-                {natAviso === 'moneda' && <div className="dsk-search-aviso">Los alquileres van en Bs — el monto en $us no se aplicó.</div>}
-                {natAviso === 'venta' && <a className="dsk-search-aviso dsk-search-link" href="/ventas">Parece que buscás comprar → Ver departamentos en venta</a>}
-                {/* Módulo guiado: pills sugeridas mientras no hay búsqueda ni filtros */}
-                {splitDesktop && !isFiltered && !natQuery && (
-                  <div className="dsk-pills">
-                    {['1 dorm amoblado', 'Hasta Bs 4.500', 'Sirari', 'Con parqueo', '2 dorm en Eq. Centro'].map(s => (
-                      <button key={s} type="button" className="dsk-pill" onClick={() => handleNaturalSearch(s, true)}>{s}</button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* El buscador natural del feed público vive ahora en la columna
+                izquierda del layout split (este sidebar solo se ve en broker) */}
             <DesktopFilters
               key={`df-${filterComponentVersion}`}
               currentFilters={filters}
@@ -1504,7 +1485,9 @@ export default function AlquileresPage({
               </div>
             ) : loading && properties.length === 0 ? (
               <div className="desktop-loading">Cargando alquileres...</div>
-            ) : properties.length === 0 ? (
+            ) : (properties.length === 0 && !splitDesktop) ? (
+              /* En split el mensaje de vacío vive DENTRO de la lista — los
+                 filtros/pills siguen visibles para poder deshacer el filtro */
               <div className="desktop-loading">{buildEmptyMessage(filters)}</div>
             ) : viewMode === 'grid' ? (
               <>
@@ -1577,10 +1560,41 @@ export default function AlquileresPage({
                       : 'No hay alquileres de las fuentes seleccionadas.'}
                   </div>
                 )}
-                {/* ===== Layout split: lista densa | panel derecho (mapa+mercado ↔ side sheet) ===== */}
+                {/* ===== Layout split: buscador+pills+lista densa | panel derecho (mapa+mercado ↔ side sheet) ===== */}
                 {splitDesktop && (
                   <div className="ad-cols">
+                    <div className="ad-left">
+                      {/* Buscador natural ancho — arriba de la lista, como la referencia */}
+                      <div className="dsk-search ad-search">
+                        <form className="dsk-search-box" onSubmit={(e) => { e.preventDefault(); handleNaturalSearch(natQuery, true); (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.blur() }}>
+                          <svg className="dsk-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                          <input className="dsk-search-input" type="search" enterKeyHint="search" value={natQuery}
+                            placeholder={'Buscá "1 dorm en Sirari hasta Bs 4.500"'}
+                            onChange={(e) => handleNaturalSearch(e.target.value, false)} />
+                          {natQuery && <button type="button" className="dsk-search-clear" aria-label="Limpiar" onClick={() => { setNatQuery(''); setNatChips([]); setNatAviso(null) }}>&times;</button>}
+                        </form>
+                        {natChips.length > 0 && <div className="dsk-search-chips">{natChips.map(c => <span key={c} className="mfh-chip">{c}</span>)}</div>}
+                        {natAviso === 'moneda' && <div className="dsk-search-aviso">Los alquileres van en Bs — el monto en $us no se aplicó.</div>}
+                        {natAviso === 'venta' && <a className="dsk-search-aviso dsk-search-link" href="/ventas">Parece que buscás comprar → Ver departamentos en venta</a>}
+                        {/* Módulo guiado: pills sugeridas mientras no hay búsqueda ni filtros */}
+                        {!isFiltered && !natQuery && (
+                          <div className="dsk-pills">
+                            {['1 dorm amoblado', 'Hasta Bs 4.500', 'Sirari', 'Con parqueo', '2 dorm en Eq. Centro'].map(s => (
+                              <button key={s} type="button" className="dsk-pill" onClick={() => handleNaturalSearch(s, true)}>{s}</button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {/* Fila de pills de filtros */}
+                      <FilterPillsAlquiler key={`fp-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered}
+                        onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
+                      {/* Contador de resultados */}
+                      <div className="ad-count-row">
+                        <span><b>{displayedProperties.length}</b> {isFiltered ? `de ${totalCount} alquileres` : 'alquileres en Equipetrol'}</span>
+                      </div>
                     <div className="ad-list">
+                      {loading && gridProperties.length === 0 && <div className="desktop-loading" style={{ minHeight: 160 }}>Cargando alquileres...</div>}
+                      {!loading && gridProperties.length === 0 && <div className="desktop-loading" style={{ minHeight: 160 }}>{buildEmptyMessage(filters)}</div>}
                       {spotlightProperty && (
                         <div className="ad-spotlight">
                           <div className="alq-spotlight-banner">
@@ -1603,6 +1617,7 @@ export default function AlquileresPage({
                           </Fragment>
                         )
                       })}
+                    </div>
                     </div>
                     <div className="ad-panel">
                       {/* Estado con propiedad seleccionada: side sheet scrolleable.
@@ -2441,6 +2456,164 @@ function AreaInputsAlq({ areaMin, areaMax, onAreaMin, onAreaMax }: {
 }
 
 // ===== DESKTOP FILTERS (sidebar, auto-apply) =====
+// ===== Fila de pills de filtros (layout split desktop) =====
+// Presentación tipo referencia: [Alquiler] [Zonas ▾] [Precio ▾] [Dorms ▾]
+// [Más filtros ▾] ... [Ordenar ▾]. MISMO motor que DesktopFilters (estado local
+// inicializado de currentFilters al montar + autoApply con debounce + remount
+// vía key={filterComponentVersion} cuando el filtro cambia desde afuera).
+function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, proyectoNames }: {
+  currentFilters: FiltrosAlquiler; isFiltered: boolean
+  onApply: (f: FiltrosAlquiler) => void; onReset: () => void; proyectoNames?: string[]
+}) {
+  const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
+  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set(currentFilters.dormitorios_lista || []))
+  const [amoblado, setAmoblado] = useState(currentFilters.amoblado || false)
+  const [mascotas, setMascotas] = useState(currentFilters.acepta_mascotas || false)
+  const [conParqueo, setConParqueo] = useState(currentFilters.con_parqueo || false)
+  const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
+  const [orden, setOrden] = useState<FiltrosAlquiler['orden']>(currentFilters.orden || 'recientes')
+  const [proyecto, setProyecto] = useState(currentFilters.proyecto || '')
+  const [openPill, setOpenPill] = useState<null | 'zonas' | 'precio' | 'dorms' | 'mas' | 'orden'>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  // Click afuera cierra el popover abierto
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpenPill(null)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+
+  const buildFilters = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, parq: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden'], proy?: string) => {
+    const f: FiltrosAlquiler = { orden: ord || 'recientes', limite: 200, solo_con_fotos: true }
+    if (price < MAX_SLIDER_PRICE) f.precio_mensual_max = price
+    if (dorms.size > 0) f.dormitorios_lista = Array.from(dorms)
+    if (amob) f.amoblado = true
+    if (masc) f.acepta_mascotas = true
+    if (parq) f.con_parqueo = true
+    if (zonas.size > 0) f.zonas_permitidas = Array.from(zonas)
+    if (proy?.trim()) f.proyecto = proy.trim()
+    return f
+  }, [])
+
+  const autoApply = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, parq: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden'], proy?: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      onApply(buildFilters(price, dorms, amob, masc, parq, zonas, ord, proy))
+    }, 400)
+  }, [onApply, buildFilters])
+
+  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); autoApply(maxPrice, n, amoblado, mascotas, conParqueo, selectedZonas, orden, proyecto); return n }) }
+  function toggleZona(id: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, n, orden, proyecto); return n }) }
+  function handlePriceChange(price: number) { setMaxPrice(price); autoApply(price, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden, proyecto) }
+  function handleAmoblado() { const next = !amoblado; setAmoblado(next); autoApply(maxPrice, selectedDorms, next, mascotas, conParqueo, selectedZonas, orden, proyecto) }
+  function handleMascotas() { const next = !mascotas; setMascotas(next); autoApply(maxPrice, selectedDorms, amoblado, next, conParqueo, selectedZonas, orden, proyecto) }
+  function handleParqueo() { const next = !conParqueo; setConParqueo(next); autoApply(maxPrice, selectedDorms, amoblado, mascotas, next, selectedZonas, orden, proyecto) }
+  function handleOrden(o: FiltrosAlquiler['orden']) { setOrden(o); autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, o, proyecto) }
+  function handleProyecto(v: string) { setProyecto(v); autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden, v) }
+
+  // Labels dinámicos: la pill muestra lo aplicado, no un nombre genérico
+  const zonasLabel = selectedZonas.size === 0 ? 'Todas las zonas' : (() => {
+    const arr = ZONAS_ALQUILER_UI.filter(z => selectedZonas.has(z.id)).map(z => z.label)
+    return arr.length === 1 ? arr[0] : `${arr[0]} +${arr.length - 1}`
+  })()
+  const precioActivo = maxPrice < MAX_SLIDER_PRICE
+  const precioLabel = precioActivo ? `Hasta Bs ${maxPrice.toLocaleString('es-BO')}` : 'Precio'
+  const dormsLabel = selectedDorms.size === 0 ? 'Dorms' : [...selectedDorms].sort((a, b) => a - b).map(d => d === 0 ? 'Mono' : d === 3 ? '3+' : `${d}d`).join(', ')
+  const masCount = (amoblado ? 1 : 0) + (mascotas ? 1 : 0) + (conParqueo ? 1 : 0) + (proyecto.trim() ? 1 : 0)
+  const ordenLabel = ORDEN_OPTIONS.find(o => o.value === orden)?.label || 'Recientes'
+
+  const toggle = (p: typeof openPill) => setOpenPill(prev => prev === p ? null : p)
+  const caret = <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+
+  return (
+    <div className="afp" ref={wrapRef}>
+      <span className="afp-feed">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M15 21v-8a1 1 0 00-1-1h-4a1 1 0 00-1 1v8"/><path d="M3 10a2 2 0 01.709-1.528l7-5.999a2 2 0 012.582 0l7 5.999A2 2 0 0121 10v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        Alquiler
+      </span>
+      <div className="afp-item">
+        <button type="button" className={`afp-pill ${selectedZonas.size > 0 ? 'afp-on' : ''} ${openPill === 'zonas' ? 'open' : ''}`} onClick={() => toggle('zonas')} aria-expanded={openPill === 'zonas'}>{zonasLabel} {caret}</button>
+        {openPill === 'zonas' && (
+          <div className="afp-pop">
+            <div className="df-zona-btns">
+              {ZONAS_ALQUILER_UI.filter(z => z.id !== 'sin_zona').map(z => (
+                <button key={z.id} className={`df-zona-btn ${selectedZonas.has(z.id) ? 'active' : ''}`}
+                  onClick={() => toggleZona(z.id)}>{z.label}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="afp-item">
+        <button type="button" className={`afp-pill ${precioActivo ? 'afp-on' : ''} ${openPill === 'precio' ? 'open' : ''}`} onClick={() => toggle('precio')} aria-expanded={openPill === 'precio'}>{precioLabel} {caret}</button>
+        {openPill === 'precio' && (
+          <div className="afp-pop afp-pop-precio">
+            <div className="df-label"><span className="df-dot" />PRESUPUESTO MAXIMO</div>
+            <input type="range" className="df-slider" min={2000} max={18000} step={500} value={maxPrice}
+              onChange={e => handlePriceChange(parseInt(e.target.value))} />
+            <PriceInputAlqMaxOnly maxPrice={maxPrice} onMaxPrice={handlePriceChange} />
+          </div>
+        )}
+      </div>
+      <div className="afp-item">
+        <button type="button" className={`afp-pill ${selectedDorms.size > 0 ? 'afp-on' : ''} ${openPill === 'dorms' ? 'open' : ''}`} onClick={() => toggle('dorms')} aria-expanded={openPill === 'dorms'}>{dormsLabel} {caret}</button>
+        {openPill === 'dorms' && (
+          <div className="afp-pop">
+            <div className="df-dorm-btns">
+              {[0, 1, 2, 3].map(d => (
+                <button key={d} className={`df-dorm-btn ${selectedDorms.has(d) ? 'active' : ''}`}
+                  onClick={() => toggleDorm(d)}>{d === 0 ? 'Mono' : d === 3 ? '3+' : d}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="afp-item">
+        <button type="button" className={`afp-pill ${masCount > 0 ? 'afp-on' : ''} ${openPill === 'mas' ? 'open' : ''}`} onClick={() => toggle('mas')} aria-expanded={openPill === 'mas'}>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+          Más filtros{masCount > 0 ? ` · ${masCount}` : ''} {caret}
+        </button>
+        {openPill === 'mas' && (
+          <div className="afp-pop afp-pop-mas">
+            <div className="df-dorm-btns" style={{ marginBottom: 14 }}>
+              <button className={`df-dorm-btn df-amoblado ${amoblado ? 'active' : ''}`} onClick={handleAmoblado}>Amoblado</button>
+              <button className={`df-dorm-btn df-mascotas ${mascotas ? 'active' : ''}`} onClick={handleMascotas}>Mascotas</button>
+              <button className={`df-dorm-btn ${conParqueo ? 'active' : ''}`} onClick={handleParqueo}>Parqueo</button>
+            </div>
+            <div className="df-label"><span className="df-dot" />EDIFICIO</div>
+            <input type="text" className="df-search" placeholder="Buscar edificio..." value={proyecto}
+              onChange={e => handleProyecto(e.target.value)} list="afp-proyectos" autoComplete="off" />
+            {proyectoNames && proyectoNames.length > 0 && (
+              <datalist id="afp-proyectos">
+                {proyectoNames.map(n => <option key={n} value={n} />)}
+              </datalist>
+            )}
+          </div>
+        )}
+      </div>
+      {isFiltered && <button type="button" className="afp-reset" onClick={onReset}>Quitar filtros</button>}
+      <div className="afp-item afp-orden">
+        <button type="button" className={`afp-pill ${openPill === 'orden' ? 'open' : ''}`} onClick={() => toggle('orden')} aria-expanded={openPill === 'orden'}>
+          <span className="afp-orden-label">Ordenar por</span> {ordenLabel} {caret}
+        </button>
+        {openPill === 'orden' && (
+          <div className="afp-pop afp-pop-right">
+            <div className="df-dorm-btns">
+              {ORDEN_OPTIONS.map(o => (
+                <button key={o.value} className={`df-dorm-btn ${orden === o.value ? 'active' : ''}`}
+                  onClick={() => { handleOrden(o.value); setOpenPill(null) }}>{o.label}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, precioMin, onPrecioMin }: {
   currentFilters: FiltrosAlquiler; isFiltered: boolean
   onApply: (f: FiltrosAlquiler) => void; onReset: () => void; proyectoNames?: string[]

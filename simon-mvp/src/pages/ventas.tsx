@@ -440,6 +440,165 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
   )
 }
 
+// ===== Fila de pills de filtros (layout split desktop) =====
+// Presentación tipo referencia: [Venta] [Zonas ▾] [Precio ▾] [Dorms ▾] [Estado ▾]
+// [Más filtros ▾] ... [Ordenar ▾]. MISMO motor que DesktopFilters (estado local
+// inicializado de currentFilters al montar + autoApply con debounce + remount
+// vía key={filterComponentVersion} cuando el filtro cambia desde afuera).
+function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proyectoNames }: {
+  currentFilters: FiltrosVentaSimple; isFiltered: boolean
+  onApply: (f: FiltrosVentaSimple) => void; onReset: () => void; proyectoNames?: string[]
+}) {
+  const [minPrice, setMinPrice] = useState(currentFilters.precio_min || MIN_PRICE)
+  const [maxPrice, setMaxPrice] = useState(currentFilters.precio_max || MAX_PRICE)
+  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(
+    () => new Set((currentFilters.dormitorios_lista || []).map(d => (d >= 3 ? 3 : d)))
+  )
+  const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
+  const [entrega, setEntrega] = useState(currentFilters.estado_entrega || '')
+  const [orden, setOrden] = useState<FiltrosVentaSimple['orden']>(currentFilters.orden || 'recientes')
+  const [proyecto, setProyecto] = useState(currentFilters.proyecto || '')
+  const [openPill, setOpenPill] = useState<null | 'zonas' | 'precio' | 'dorms' | 'estado' | 'mas' | 'orden'>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  // Click afuera cierra el popover abierto
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpenPill(null)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+
+  const autoApply = useCallback((mnP: number, mxP: number, dorms: Set<number>, zonas: Set<string>, ent: string, ord: FiltrosVentaSimple['orden'], proy?: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      onApply(buildFilters(mnP, mxP, dorms, zonas, ent, ord, proy))
+    }, 400)
+  }, [onApply])
+
+  function toggleZona(db: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(db)) n.delete(db); else n.add(db); autoApply(minPrice, maxPrice, selectedDorms, n, entrega, orden, proyecto); return n }) }
+  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); autoApply(minPrice, maxPrice, n, selectedZonas, entrega, orden, proyecto); return n }) }
+  function handleMinPrice(v: number) { const c = Math.min(v, maxPrice - PRICE_STEP); setMinPrice(c); autoApply(c, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto) }
+  function handleMaxPrice(v: number) { const c = Math.max(v, minPrice + PRICE_STEP); setMaxPrice(c); autoApply(minPrice, c, selectedDorms, selectedZonas, entrega, orden, proyecto) }
+  function handleEntrega(v: string) { setEntrega(v); autoApply(minPrice, maxPrice, selectedDorms, selectedZonas, v, orden, proyecto) }
+  function handleOrden(v: FiltrosVentaSimple['orden']) { setOrden(v); autoApply(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, v, proyecto) }
+  function handleProyecto(v: string) { setProyecto(v); autoApply(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, v) }
+
+  // Labels dinámicos: la pill muestra lo aplicado, no un nombre genérico
+  const zonasLabel = selectedZonas.size === 0 ? 'Todas las zonas' : (() => {
+    const arr = ZONAS_CANONICAS.filter(z => selectedZonas.has(z.db)).map(z => z.labelCorto)
+    return arr.length === 1 ? arr[0] : `${arr[0]} +${arr.length - 1}`
+  })()
+  const precioActivo = minPrice > MIN_PRICE || maxPrice < MAX_PRICE
+  const precioLabel = precioActivo ? `${formatPriceK(minPrice)} – ${formatPriceK(maxPrice)}` : 'Precio'
+  const dormsLabel = selectedDorms.size === 0 ? 'Dorms' : [...selectedDorms].sort((a, b) => a - b).map(d => d === 0 ? 'Mono' : d === 3 ? '3+' : `${d}d`).join(', ')
+  const estadoLabel = entrega === 'entrega_inmediata' ? 'Inmediata' : entrega === 'solo_preventa' ? 'Preventa' : 'Estado'
+  const ordenLabel = ORDEN_OPTIONS.find(o => o.value === orden)?.label || 'Recientes'
+  const masActivo = proyecto.trim().length > 0
+
+  const toggle = (p: typeof openPill) => setOpenPill(prev => prev === p ? null : p)
+  const caret = <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+
+  return (
+    <div className="vfp" ref={wrapRef}>
+      <span className="vfp-feed">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/></svg>
+        Venta
+      </span>
+      <div className="vfp-item">
+        <button type="button" className={`vfp-pill ${selectedZonas.size > 0 ? 'vfp-on' : ''} ${openPill === 'zonas' ? 'open' : ''}`} onClick={() => toggle('zonas')} aria-expanded={openPill === 'zonas'}>{zonasLabel} {caret}</button>
+        {openPill === 'zonas' && (
+          <div className="vfp-pop">
+            <div className="vf-zona-btns">
+              {ZONAS_CANONICAS.map(z => (
+                <button key={z.db} className={`vf-zona-btn ${selectedZonas.has(z.db) ? 'active' : ''}`}
+                  onClick={() => toggleZona(z.db)}>{z.labelCorto}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="vfp-item">
+        <button type="button" className={`vfp-pill ${precioActivo ? 'vfp-on' : ''} ${openPill === 'precio' ? 'open' : ''}`} onClick={() => toggle('precio')} aria-expanded={openPill === 'precio'}>{precioLabel} {caret}</button>
+        {openPill === 'precio' && (
+          <div className="vfp-pop vfp-pop-precio">
+            <PriceInputsVT minPrice={minPrice} maxPrice={maxPrice} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice} />
+            <div className="vf-range-wrap">
+              <input type="range" className="vf-slider vf-slider-min" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
+                value={minPrice} aria-label="Precio mínimo" onChange={e => handleMinPrice(parseInt(e.target.value))} />
+              <input type="range" className="vf-slider vf-slider-max" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
+                value={maxPrice} aria-label="Precio máximo" onChange={e => handleMaxPrice(parseInt(e.target.value))} />
+            </div>
+            <div className="vf-tc-note">Precios en USD oficial · TC Bs 6.96</div>
+          </div>
+        )}
+      </div>
+      <div className="vfp-item">
+        <button type="button" className={`vfp-pill ${selectedDorms.size > 0 ? 'vfp-on' : ''} ${openPill === 'dorms' ? 'open' : ''}`} onClick={() => toggle('dorms')} aria-expanded={openPill === 'dorms'}>{dormsLabel} {caret}</button>
+        {openPill === 'dorms' && (
+          <div className="vfp-pop">
+            <div className="vf-btn-row">
+              {[0, 1, 2, 3].map(d => (
+                <button key={d} className={`vf-btn ${selectedDorms.has(d) ? 'active' : ''}`}
+                  onClick={() => toggleDorm(d)}>{d === 0 ? 'Mono' : d === 3 ? '3+' : d}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="vfp-item">
+        <button type="button" className={`vfp-pill ${entrega ? 'vfp-on' : ''} ${openPill === 'estado' ? 'open' : ''}`} onClick={() => toggle('estado')} aria-expanded={openPill === 'estado'}>{estadoLabel} {caret}</button>
+        {openPill === 'estado' && (
+          <div className="vfp-pop">
+            <div className="vf-btn-row">
+              {ENTREGA_OPTIONS.map(o => (
+                <button key={o.value} className={`vf-btn ${entrega === o.value ? 'active' : ''}`}
+                  onClick={() => handleEntrega(o.value)}>{o.label}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="vfp-item">
+        <button type="button" className={`vfp-pill ${masActivo ? 'vfp-on' : ''} ${openPill === 'mas' ? 'open' : ''}`} onClick={() => toggle('mas')} aria-expanded={openPill === 'mas'}>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+          Más filtros {caret}
+        </button>
+        {openPill === 'mas' && (
+          <div className="vfp-pop vfp-pop-mas">
+            <div className="vf-label">EDIFICIO</div>
+            <input type="text" className="vf-search" placeholder="Buscar edificio..." value={proyecto}
+              onChange={e => handleProyecto(e.target.value)} list="vfp-proyectos" autoComplete="off" />
+            {proyectoNames && proyectoNames.length > 0 && (
+              <datalist id="vfp-proyectos">
+                {proyectoNames.map(n => <option key={n} value={n} />)}
+              </datalist>
+            )}
+          </div>
+        )}
+      </div>
+      {isFiltered && <button type="button" className="vfp-reset" onClick={onReset}>Quitar filtros</button>}
+      <div className="vfp-item vfp-orden">
+        <button type="button" className={`vfp-pill ${openPill === 'orden' ? 'open' : ''}`} onClick={() => toggle('orden')} aria-expanded={openPill === 'orden'}>
+          <span className="vfp-orden-label">Ordenar por</span> {ordenLabel} {caret}
+        </button>
+        {openPill === 'orden' && (
+          <div className="vfp-pop vfp-pop-right">
+            <div className="vf-btn-row">
+              {ORDEN_OPTIONS.map(o => (
+                <button key={o.value} className={`vf-btn ${orden === o.value ? 'active' : ''}`}
+                  onClick={() => { handleOrden(o.value); setOpenPill(null) }}>{o.label}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ===== Desktop VentaCard =====
 // memo + handlers estables (referencian la prop, no closures del padre): al
 // favoritar/filtrar solo re-renderizan las cards cuyos datos cambiaron.
@@ -2997,7 +3156,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           )}
           {splitDesktop && menuDrawer}
           {splitDesktop && profileDrawer}
-          {!publicShareMode && !(brokerMode && !isDesktop) && (
+          {/* Sidebar clásico — solo fuera del layout split (broker desktop).
+              En split los filtros viven en la fila de pills sobre la lista. */}
+          {!splitDesktop && !publicShareMode && !(brokerMode && !isDesktop) && (
             <aside className="ventas-sidebar">
               {!splitDesktop && (
                 <div className="ventas-sidebar-header">
@@ -3009,29 +3170,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 <span className="ventas-count-num">{properties.length}</span>
                 <span className="ventas-count-text">{isFiltered ? `de ${unfilteredCount} departamentos` : 'departamentos en Equipetrol'}</span>
               </div>
-              {/* Buscador natural también en desktop (antes solo estaba en mobile) */}
-              {!brokerMode && (
-                <div className="dsk-search">
-                  <form className="dsk-search-box" onSubmit={(e) => { e.preventDefault(); handleNaturalSearch(natQuery, true); (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.blur() }}>
-                    <svg className="dsk-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input className="dsk-search-input" type="search" enterKeyHint="search" value={natQuery}
-                      placeholder={'Buscá "2 dorm en Sirari hasta 150 mil"'}
-                      onChange={(e) => handleNaturalSearch(e.target.value, false)} />
-                    {natQuery && <button type="button" className="dsk-search-clear" aria-label="Limpiar" onClick={() => { setNatQuery(''); setNatChips([]); setNatAviso(null) }}>&times;</button>}
-                  </form>
-                  {natChips.length > 0 && <div className="dsk-search-chips">{natChips.map(c => <span key={c} className="mfh-chip">{c}</span>)}</div>}
-                  {natAviso === 'moneda' && <div className="dsk-search-aviso">Los precios de venta van en $us — el monto en Bs no se aplicó.</div>}
-                  {natAviso === 'alquiler' && <a className="dsk-search-aviso dsk-search-link" href="/alquileres">Parece que buscás alquilar → Ver alquileres</a>}
-                  {/* Módulo guiado: pills sugeridas mientras no hay búsqueda ni filtros */}
-                  {splitDesktop && !isFiltered && !natQuery && (
-                    <div className="dsk-pills">
-                      {['2 dorm en Sirari', 'Hasta 120 mil', 'Preventa en Eq. Norte', 'Monoambiente con parqueo', 'Entrega inmediata'].map(s => (
-                        <button key={s} type="button" className="dsk-pill" onClick={() => handleNaturalSearch(s, true)}>{s}</button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* El buscador natural del feed público vive ahora en la columna
+                  izquierda del layout split (este sidebar solo se ve en broker) */}
               <DesktopFilters key={`df-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
                 brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax}
                 onAreaMin={setAreaMin}
@@ -3061,7 +3201,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             )}
             {loadError && <div className="ventas-status"><p>No se pudo cargar.</p><button onClick={() => fetchProperties()}>Reintentar</button></div>}
             {loading && properties.length === 0 && !loadError && <div className="ventas-status">Cargando departamentos en venta...</div>}
-            {!loading && properties.length === 0 && !loadError && <div className="ventas-status">{buildEmptyMessage(filters)}</div>}
+            {/* Empty state genérico — en split el mensaje vive DENTRO de la lista
+                (los filtros/pills siguen visibles para poder deshacer el filtro) */}
+            {!splitDesktop && !loading && properties.length === 0 && !loadError && <div className="ventas-status">{buildEmptyMessage(filters)}</div>}
             {/* Desktop spotlight — visible también en publicShareMode (link compartido /b/[hash]?id=X) */}
             {!splitDesktop && spotlightProperty && (
               <div className="ds-spotlight">
@@ -3082,10 +3224,41 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 </div>
               </div>
             )}
-            {/* ===== Layout split: lista densa | panel derecho (mapa+mercado ↔ side sheet) ===== */}
-            {splitDesktop && displayedProperties.length > 0 && viewMode === 'grid' && (
+            {/* ===== Layout split: buscador+pills+lista densa | panel derecho (mapa+mercado ↔ side sheet) ===== */}
+            {splitDesktop && viewMode === 'grid' && !loadError && (
               <div className="vd-cols">
+                <div className="vd-left">
+                  {/* Buscador natural ancho — arriba de la lista, como la referencia */}
+                  <div className="dsk-search vd-search">
+                    <form className="dsk-search-box" onSubmit={(e) => { e.preventDefault(); handleNaturalSearch(natQuery, true); (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.blur() }}>
+                      <svg className="dsk-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                      <input className="dsk-search-input" type="search" enterKeyHint="search" value={natQuery}
+                        placeholder={'Buscá "preventa en Eq. Norte hasta 100 mil"'}
+                        onChange={(e) => handleNaturalSearch(e.target.value, false)} />
+                      {natQuery && <button type="button" className="dsk-search-clear" aria-label="Limpiar" onClick={() => { setNatQuery(''); setNatChips([]); setNatAviso(null) }}>&times;</button>}
+                    </form>
+                    {natChips.length > 0 && <div className="dsk-search-chips">{natChips.map(c => <span key={c} className="mfh-chip">{c}</span>)}</div>}
+                    {natAviso === 'moneda' && <div className="dsk-search-aviso">Los precios de venta van en $us — el monto en Bs no se aplicó.</div>}
+                    {natAviso === 'alquiler' && <a className="dsk-search-aviso dsk-search-link" href="/alquileres">Parece que buscás alquilar → Ver alquileres</a>}
+                    {/* Módulo guiado: pills sugeridas mientras no hay búsqueda ni filtros */}
+                    {!isFiltered && !natQuery && (
+                      <div className="dsk-pills">
+                        {['2 dorm en Sirari', 'Hasta 120 mil', 'Preventa en Eq. Norte', 'Monoambiente con parqueo', 'Entrega inmediata'].map(s => (
+                          <button key={s} type="button" className="dsk-pill" onClick={() => handleNaturalSearch(s, true)}>{s}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Fila de pills de filtros */}
+                  <FilterPillsVentas key={`fp-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered}
+                    onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
+                  {/* Contador de resultados */}
+                  <div className="vd-count-row">
+                    <span><b>{displayedProperties.length}</b> {isFiltered ? `de ${unfilteredCount} departamentos` : 'departamentos en Equipetrol'}</span>
+                  </div>
                 <div className="vd-list">
+                  {loading && displayedProperties.length === 0 && <div className="ventas-status" style={{ minHeight: 160 }}>Cargando departamentos en venta...</div>}
+                  {!loading && displayedProperties.length === 0 && <div className="ventas-status" style={{ minHeight: 160 }}>{buildEmptyMessage(filters)}</div>}
                   {spotlightProperty && (
                     <div className="vd-spotlight">
                       <div className="ds-spotlight-banner">
@@ -3102,6 +3275,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                       isActive={sheetOpen && sheetProperty?.id === p.id}
                       onToggleFavorite={onCardToggleFavorite} onOpen={onCardOpenSheet} />
                   ))}
+                </div>
                 </div>
                 <div className="vd-panel">
                   {/* Estado con propiedad seleccionada: side sheet scrolleable.
@@ -3429,14 +3603,37 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vm-btn { display:flex; align-items:center; gap:6px; padding:8px 16px; border:none; border-radius:8px; background:transparent; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:12px; cursor:pointer; transition:all 0.15s }
         .vm-btn.active { background:rgba(237,232,220,0.1); color:#EDE8DC; font-weight:600 }
 
-        /* ===== LAYOUT SPLIT DESKTOP (nav + lista densa + panel derecho) ===== */
-        .ventas-desktop-split .ventas-sidebar { top:56px }
-        .ventas-desktop-split .ventas-main { padding-top:76px }
+        /* ===== LAYOUT SPLIT DESKTOP (nav + buscador+pills + lista densa + panel derecho) ===== */
+        .ventas-desktop-split .ventas-main { margin-left:0; padding-top:76px }
         .ventas-desktop-split .ventas-map-container { height:calc(100vh - 76px - 24px) }
+        .vd-left { display:flex; flex-direction:column; gap:14px; min-width:0 }
+        .vd-search { padding:0; border-bottom:none; margin-bottom:0 }
+        .vd-search .dsk-search-box { height:46px; border-radius:12px }
+        .vd-count-row { display:flex; align-items:baseline; justify-content:space-between; gap:10px; font-family:'DM Sans',sans-serif; font-size:13px; color:#9A8E7A }
+        .vd-count-row b { color:#EDE8DC; font-weight:600; font-variant-numeric:tabular-nums }
+        /* Fila de pills de filtros */
+        .vfp { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-family:'DM Sans',sans-serif }
+        .vfp-feed { display:inline-flex; align-items:center; gap:6px; background:#3A6A48; color:#EDE8DC; font-size:13px; font-weight:600; padding:8px 15px; border-radius:100px; letter-spacing:0.2px }
+        .vfp-item { position:relative }
+        .vfp-pill { display:inline-flex; align-items:center; gap:6px; background:rgba(237,232,220,0.05); border:1px solid rgba(237,232,220,0.16); color:#B8AD9E; font-family:'DM Sans',sans-serif; font-size:13px; padding:8px 14px; border-radius:100px; cursor:pointer; transition:color 0.15s, border-color 0.15s; white-space:nowrap }
+        .vfp-pill:hover { color:#EDE8DC; border-color:rgba(237,232,220,0.35) }
+        .vfp-pill.open { color:#EDE8DC; border-color:#7BB389 }
+        .vfp-on { color:#7BB389; border-color:rgba(123,179,137,0.45); background:rgba(58,106,72,0.14); font-weight:600 }
+        .vfp-pop { position:absolute; top:calc(100% + 8px); left:0; z-index:80; min-width:250px; background:#1e1e1e; border:1px solid rgba(237,232,220,0.14); border-radius:14px; padding:14px; box-shadow:0 12px 34px rgba(0,0,0,0.45) }
+        .vfp-pop-precio { min-width:300px }
+        .vfp-pop-mas { min-width:280px }
+        .vfp-pop-right { left:auto; right:0 }
+        .vfp-pop .vf-label { margin-bottom:8px }
+        .vfp-reset { background:none; border:none; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:12.5px; text-decoration:underline; cursor:pointer; padding:8px 6px; white-space:nowrap }
+        .vfp-reset:hover { color:#EDE8DC }
+        .vfp-orden { margin-left:auto }
+        .vfp-orden .vfp-pill { background:transparent; border-color:transparent }
+        .vfp-orden .vfp-pill:hover { border-color:rgba(237,232,220,0.2) }
+        .vfp-orden-label { color:#7A7060; font-size:12px }
         .dsk-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px }
         .dsk-pill { background:rgba(237,232,220,0.05); border:1px solid rgba(237,232,220,0.14); color:#B8AD9E; font-size:12px; font-family:'DM Sans',sans-serif; padding:5px 12px; border-radius:100px; cursor:pointer; transition:color 0.15s, border-color 0.15s }
         .dsk-pill:hover { color:#EDE8DC; border-color:#7BB389 }
-        .vd-cols { display:grid; grid-template-columns:minmax(360px, 470px) minmax(0, 1fr); gap:20px; align-items:start }
+        .vd-cols { display:grid; grid-template-columns:minmax(440px, 620px) minmax(0, 1fr); gap:20px; align-items:start }
         .vd-list { display:flex; flex-direction:column; gap:12px; min-width:0 }
         .vd-spotlight { display:flex; flex-direction:column; gap:10px; margin-bottom:4px }
         /* Card de lista densa */
@@ -3504,7 +3701,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-compra-soon { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; padding:12px 14px; border-radius:10px; background:rgba(237,232,220,0.04); border:1px dashed rgba(237,232,220,0.15); color:#9A8E7A; font-size:13px; font-family:'DM Sans',sans-serif }
         .bs-compra-soon em { font-style:normal; font-size:10px; font-weight:600; color:#9A8E7A; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.12); padding:2px 8px; border-radius:100px }
         /* Bandeja comparar en split: anclada a la columna de lista, no tapa panel */
-        .vt-tray-split { left:calc(320px + 24px); transform:none; bottom:20px }
+        .vt-tray-split { left:24px; transform:none; bottom:20px }
         .vt-tray-thumbs { display:inline-flex; align-items:center; gap:4px; margin-right:10px }
         .vt-tray-thumb { position:relative; width:30px; height:30px; border-radius:8px; background-size:cover; background-position:center; background-color:#2a2a2a; border:1px solid rgba(237,232,220,0.2); display:inline-flex; align-items:flex-end; justify-content:flex-start }
         .vt-tray-thumb em { font-style:normal; font-size:8px; font-weight:700; color:#EDE8DC; background:rgba(20,20,20,0.8); border-radius:4px 0 0 0; padding:1px 4px; line-height:1 }
