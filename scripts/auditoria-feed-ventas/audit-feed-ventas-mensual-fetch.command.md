@@ -6,7 +6,7 @@ description: Audit mensual del feed /ventas con FETCHER DIRECTO ($0, sin Firecra
 
 **Gemela de `/audit-feed-ventas-mensual`**, con una sola diferencia: la **Capa 1** trae las descripciones con el **fetcher directo del híbrido ZN** (C21 `?json=true` / Remax `data-page`) en vez de Firecrawl → **costo $0**.
 
-Todo lo demás es idéntico: Capa 2 (inconsistencias internas), Capa 3 (matching), detector de cambio de precio, `--macrozona`, stats, persistencia y reporte. **Las dos skills conviven**: esta es la de uso por defecto ($0); la de Firecrawl queda como **respaldo** por si algún portal cambia su API pública.
+Todo lo demás es idéntico: Capa 2 (inconsistencias internas), Capa 3 (matching), **Capa 4 (detector de duplicados, `lib/dup-checks.mjs`)**, detector de cambio de precio, `--macrozona`, stats, persistencia y reporte. **Las dos skills conviven**: esta es la de uso por defecto ($0); la de Firecrawl queda como **respaldo** por si algún portal cambia su API pública.
 
 > **Cuál usar:** por defecto **esta** ($0). Si un día el fetcher falla mucho (portal cambió `?json=true`/`data-page`, o bloqueo de IP), caé a `/audit-feed-ventas-mensual` (Firecrawl, paga pero absorbe anti-bot).
 
@@ -36,7 +36,9 @@ cd "C:\Users\LUCHO\Desktop\Censo inmobiliario\sici\scripts\auditoria-feed-ventas
 node audit-feed-ventas-mensual-fetch.mjs $ARGUMENTS
 ```
 
-Genera los mismos 3 archivos en `reports/mensual-<timestamp>/` (`combined.json`, `meta.json`, `summary.md`). Leerlos igual que en la skill de Firecrawl.
+Genera los archivos en `reports/mensual-<timestamp>/` (`combined.json`, `duplicados.json`, `meta.json`, `summary.md`). Leerlos igual que en la skill de Firecrawl. El `summary.md` incluye la sección **👥 Posibles duplicados** (clusters de mismo edificio+precio+área+desc; **verificar leyendo el anuncio** — código/piso/ID-base Remax — antes de marcar `duplicado_de`; precios distintos = unidades distintas, típico de preventa).
+
+> **Changelog 8-jul-2026 — Capa 4 (duplicados) portada del Firecrawl.** Hasta hoy la gemela $0 NO corría el detector de duplicados (solo lo tenía la de Firecrawl), pese a que su descripción decía "mismas capas". Se portó `runDuplicados()` (reusa `lib/dup-checks.mjs` sobre el mismo universo de la Capa 1 por `id`, desc fetcheada). Detectado al correr el mensual-fetch de Equipetrol del 8-jul (había que correr el `dup-checks` a mano). Ahora ambas gemelas detectan apart-hoteles / re-publicaciones.
 
 ## Anti-bloqueo (importante)
 
