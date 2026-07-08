@@ -24,6 +24,18 @@ interface VentaMapProps {
   selectedId?: number | null
 }
 
+// Teardown seguro: si el mapa muere en plena animación (rebuild por cambio de
+// properties, unmount por toggle de vista), Leaflet puede disparar
+// _onZoomTransitionEnd sobre un pane ya removido → "_leaflet_pos undefined".
+// stop() corta animaciones en curso y el try/catch traga cualquier resto.
+function safeRemoveMap(map: L.Map | null) {
+  if (!map) return
+  try { map.stop() } catch { /* ya detenido */ }
+  try { map.remove() } catch { /* ya removido */ }
+}
+
+const TILES_CALLE = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+
 function formatPricePin(price: number): string {
   if (price >= 1000000) return `$us ${(price / 1000000).toFixed(1)}M`
   if (price >= 1000) return `$us ${Math.round(price / 1000)}k`
@@ -63,7 +75,7 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
     if (!mapRef.current) return
 
     if (mapInstance.current) {
-      mapInstance.current.remove()
+      safeRemoveMap(mapInstance.current)
       mapInstance.current = null
     }
     markersRef.current.clear()
@@ -78,9 +90,14 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
     const map = L.map(mapRef.current, {
       zoomControl: true,
       attributionControl: false,
+      // Sin animación CSS de zoom: elimina la clase entera de crashes
+      // _onZoomTransitionEnd/_leaflet_pos cuando el mapa se reconstruye o
+      // desmonta en medio de un zoom (feed re-renderiza seguido).
+      zoomAnimation: false,
+      markerZoomAnimation: false,
     }).setView([centerLat, centerLng], 15)
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+    L.tileLayer(TILES_CALLE, { maxZoom: 20 }).addTo(map)
 
     const clusterGroup = L.markerClusterGroup({
       maxClusterRadius: 45,
@@ -156,7 +173,7 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
     return () => {
       clearTimeout(timer)
       if (mapInstance.current) {
-        mapInstance.current.remove()
+        safeRemoveMap(mapInstance.current)
         mapInstance.current = null
       }
     }
