@@ -23,6 +23,14 @@ export const ZONAS = {
     bbox: { N: -17.750, S: -17.775, E: -63.185, O: -63.205 },
     poligono: null,
   },
+  // Red ANCHA que cubre las 6 microzonas Equipetrol (bbox empírico de propiedades_v2
+  // + margen). SIN polígono a propósito: la zonificación fina la da la BD por hit
+  // (get_zona_by_gps ∈ 6 zonas) — fuente de verdad canónica, no duplicar polígono acá.
+  'equipetrol-deptos': {
+    nombre: 'Equipetrol (deptos — red ancha)',
+    bbox: { N: -17.745, S: -17.786, E: -63.176, O: -63.219 },
+    poligono: null,
+  },
 };
 
 const enBbox = (lat, lon, b) => lat <= b.N && lat >= b.S && lon <= b.E && lon >= b.O;
