@@ -3788,7 +3788,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
            bottom:0 queda SIEMPRE visible, sin importar el scroll de la página.
            El .vd-panel mantiene su height fija → la columna no colapsa aunque
            el sheet salga del flujo. Ancho = columna derecha del grid (~52%). */
-        .bs-venta.bs-side { position:fixed; inset:auto; left:auto; top:76px; right:24px; bottom:20px; width:calc((100vw - 68px) * 0.52); height:auto; max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:14px; border:1px solid rgba(237,232,220,0.08); z-index:40; padding-bottom:0; transform:none }
+        .bs-venta.bs-side { position:fixed; inset:auto; left:auto; top:76px; right:24px; bottom:20px; width:calc((100vw - 68px) * 0.52); max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:14px; border:1px solid rgba(237,232,220,0.08); z-index:40; padding-bottom:84px; transform:none }
+        /* Footer WhatsApp/Compartir FIJO a la pantalla (misma columna que el
+           sheet), garantiza que quede siempre abajo sin depender del scroll
+           interno. El sheet reserva 84px abajo (padding) para no taparlo. */
+        .bs-venta.bs-side .bs-sticky-footer { position:fixed; left:auto; right:24px; bottom:20px; width:calc((100vw - 68px) * 0.52); z-index:60; border-radius:0 0 14px 14px }
         .bs-venta.bs-side.open { transform:none }
         /* fav+close: fijos en la esquina del sheet (absolute sobre el sheet
            fixed), siempre visibles, sin ocupar flujo ni chocar con las tabs. */
