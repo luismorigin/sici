@@ -1,18 +1,18 @@
-# Paquete TC NUEVO — decisión de detección + normalización (INACTIVO hasta el switch)
+# Paquete TC NUEVO — decisión de detección + normalización
 
-> **Estado: INACTIVO.** El régimen ACTUAL sigue vivo y es el que gobierna hoy (ver
-> `READER_SPEC.md` sección "PRECIO + TC" + `precio_normalizado()` en prod). Este doc congela la
-> DECISIÓN del régimen nuevo (TC unificado) para ensamblarlo cuando el oficial nuevo esté firme,
-> sin suponer nada y sin perder la lógica vieja.
+> **Estado: la DETECCIÓN de tag (Pieza 1) es el RÉGIMEN ACTIVO del HÍBRIDO** (READER_SPEC ya lo marca así).
+> **PRODUCCIÓN = n8n**, que sigue con el régimen VIEJO — intacto. El híbrido/shadow NO es producción todavía.
+> Pieza 2 (función `precio_normalizado_v2`) + Pieza 3 (re-tag) quedan **por APLICAR en shadow** (SQL, paso humano);
+> el switch a n8n/prod es al cutover, cuando el oficial nuevo esté firme.
 >
 > Motivo: Bolivia unifica el oficial ≈ paralelo (Binance). Colapsan los tags; solo el precio anclado
 > al oficial VIEJO (6.96/7 explícito) necesita trato especial. La normalización es en vivo (SQL) →
 > el switch NO obliga a re-cargar (salvo el re-tag de data vieja + la repoblación por campos ricos).
 
-## Régimen ACTUAL (activo — NO tocar hasta el switch)
+## Régimen VIEJO (el de n8n = PRODUCCIÓN — NO tocar; legacy/rollback)
 - Tags: `paralelo` / `oficial` / `no_especificado`.
 - `precio_normalizado()`: `paralelo` → `precio_usd × tc_paralelo / 6.96` (×1.47); resto → directo.
-- Queda como legacy: al switch, se conserva para rollback (repuntar las vistas/RPC a la vieja).
+- Se conserva para rollback (repuntar las vistas/RPC a la vieja). El híbrido NO lo usa.
 
 ---
 

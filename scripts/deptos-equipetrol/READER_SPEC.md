@@ -50,7 +50,19 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 
 ## Reglas de decisión (validadas en el lote 3-jul)
 
-### PRECIO + TC (CONSERVADOR — comparable con prod; el TEXTO manda)
+### PRECIO + TC — RÉGIMEN NUEVO (activo para el HÍBRIDO)
+> Fuente de verdad de la detección de tag: **`TC_NUEVO_DECISION.md`** (pieza 1). Resumen:
+> - **`default`** (oficial nuevo = USD real): texto dice "paralelo"/"al día", "oficial del día" (= Binance, NO el viejo),
+>   solo declara USD/moneda, o CALLA → normaliza **directo**.
+> - **`oficial_viejo`**: SOLO si el texto ancla EXPLÍCITO al rate muerto ("6.96" / "Bs 7" / "TC 7" / "al oficial 7") → se descuenta.
+> - Moneda: Remax (USD) → default. C21 (BOB): calla → convertir a USD a la tasa nueva (Binance) → default; dice 6.96/7 → oficial_viejo.
+> - `precio_usd` = CRUDO; el feed normaliza (`precio_normalizado_v2`). `precio_candidato` es HELPER, leé el número del TEXTO.
+>
+> **PRODUCCIÓN = n8n** (sigue con el régimen VIEJO de abajo, intacto). El de abajo se conserva como **legacy/rollback**.
+
+<hr>
+
+### PRECIO + TC — LEGACY (régimen viejo n8n, rollback — NO usar en el híbrido nuevo)
 1. Texto dice **"paralelo"** / "al día" → `paralelo`; `precio_usd` = el USD **billete** del texto.
 2. Texto dice **"TC 7"** / "oficial" / "a Bs 7" / "6.96" → `oficial`; `precio_usd` = el USD del texto.
 3. **Bs equivalente en el texto** → el ratio Bs/USD manda: **≈7/6.96 → oficial**, **≈10 → paralelo**
