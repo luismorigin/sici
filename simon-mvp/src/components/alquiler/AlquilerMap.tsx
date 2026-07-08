@@ -7,6 +7,14 @@ interface AlquilerMapProps {
   lng: number
 }
 
+// Teardown seguro — ver AlquilerMapMulti: evita "_leaflet_pos undefined"
+// si el mapa muere en plena animación.
+function safeRemoveMap(map: L.Map | null) {
+  if (!map) return
+  try { map.stop() } catch { /* ya detenido */ }
+  try { map.remove() } catch { /* ya removido */ }
+}
+
 export default function AlquilerMap({ lat, lng }: AlquilerMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
@@ -23,13 +31,15 @@ export default function AlquilerMap({ lat, lng }: AlquilerMapProps) {
 
     // Clean up previous map if it exists
     if (mapInstance.current) {
-      mapInstance.current.remove()
+      safeRemoveMap(mapInstance.current)
       mapInstance.current = null
     }
 
     const map = L.map(mapRef.current, {
       zoomControl: true,
       attributionControl: false,
+      zoomAnimation: false,
+      markerZoomAnimation: false,
     }).setView([lat, lng], 16)
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
@@ -56,7 +66,7 @@ export default function AlquilerMap({ lat, lng }: AlquilerMapProps) {
     mapRef.current.appendChild(style)
 
     return () => {
-      map.remove()
+      safeRemoveMap(map)
       mapInstance.current = null
     }
   }, [lat, lng, ready])

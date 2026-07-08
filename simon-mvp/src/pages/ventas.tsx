@@ -3633,14 +3633,16 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .dsk-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px }
         .dsk-pill { background:rgba(237,232,220,0.05); border:1px solid rgba(237,232,220,0.14); color:#B8AD9E; font-size:12px; font-family:'DM Sans',sans-serif; padding:5px 12px; border-radius:100px; cursor:pointer; transition:color 0.15s, border-color 0.15s }
         .dsk-pill:hover { color:#EDE8DC; border-color:#7BB389 }
-        .vd-cols { display:grid; grid-template-columns:minmax(440px, 620px) minmax(0, 1fr); gap:20px; align-items:start }
+        /* Lista = columna dominante (como la referencia); el panel mapa/sheet
+           ocupa 380-520px a la derecha */
+        .vd-cols { display:grid; grid-template-columns:minmax(0, 1fr) minmax(380px, 520px); gap:20px; align-items:start }
         .vd-list { display:flex; flex-direction:column; gap:12px; min-width:0 }
         .vd-spotlight { display:flex; flex-direction:column; gap:10px; margin-bottom:4px }
         /* Card de lista densa */
-        .vlc { display:flex; background:#1e1e1e; border:1px solid rgba(237,232,220,0.08); border-radius:14px; overflow:hidden; cursor:pointer; transition:border-color 0.15s, transform 0.15s; min-height:132px }
+        .vlc { display:flex; background:#1e1e1e; border:1px solid rgba(237,232,220,0.08); border-radius:14px; overflow:hidden; cursor:pointer; transition:border-color 0.15s, transform 0.15s; min-height:172px }
         .vlc:hover { border-color:rgba(237,232,220,0.25) }
         .vlc-active { border-color:#3A6A48; box-shadow:0 0 0 1px #3A6A48 }
-        .vlc-photo { width:148px; min-width:148px; background-size:cover; background-position:center; background-color:#2a2a2a; position:relative }
+        .vlc-photo { width:230px; min-width:230px; background-size:cover; background-position:center; background-color:#2a2a2a; position:relative }
         .vlc-nofoto { display:flex; align-items:center; justify-content:center; height:100%; color:#9A8E7A; font-size:12px; font-family:'DM Sans',sans-serif }
         .vlc-nav { position:absolute; top:50%; transform:translateY(-50%); width:28px; height:28px; border-radius:50%; background:rgba(20,20,20,0.65); border:none; cursor:pointer; display:none; align-items:center; justify-content:center; z-index:3; color:#EDE8DC }
         .vlc:hover .vlc-nav { display:flex }
@@ -3648,20 +3650,20 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vlc-nav-prev { left:6px }
         .vlc-nav-next { right:6px }
         .vlc-count { position:absolute; bottom:6px; left:6px; background:rgba(20,20,20,0.75); color:rgba(255,255,255,0.85); font-size:10px; padding:2px 7px; border-radius:100px; font-family:'DM Sans',sans-serif }
-        .vlc-body { flex:1; min-width:0; padding:12px 14px; display:flex; flex-direction:column; font-family:'DM Sans',sans-serif }
+        .vlc-body { flex:1; min-width:0; padding:14px 18px; display:flex; flex-direction:column; font-family:'DM Sans',sans-serif }
         .vlc-toprow { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px }
         .vlc-estado { font-size:11px; font-weight:600; letter-spacing:0.3px; color:#9A8E7A; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.12); padding:2px 9px; border-radius:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
         .vlc-estado-pre { color:#7BB389; background:rgba(58,106,72,0.16); border-color:rgba(123,179,137,0.3) }
         .vlc-fav { width:32px; height:32px; min-width:32px; border-radius:50%; background:none; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#9A8E7A }
         .vlc-fav:hover { color:#EDE8DC }
-        .vlc-name { font-family:'Figtree',sans-serif; font-size:17px; font-weight:500; color:#EDE8DC; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-        .vlc-zona { font-size:11.5px; color:#9A8E7A; letter-spacing:0.3px; margin:2px 0 6px }
+        .vlc-name { font-family:'Figtree',sans-serif; font-size:19px; font-weight:500; color:#EDE8DC; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+        .vlc-zona { font-size:12.5px; color:#9A8E7A; letter-spacing:0.3px; margin:3px 0 8px }
         .vlc-id { color:rgba(237,232,220,0.3) }
-        .vlc-specs { font-size:13px; color:#B8AD9E; font-weight:300 }
+        .vlc-specs { font-size:14px; color:#B8AD9E; font-weight:300 }
         .vlc-bottomrow { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-top:auto; padding-top:8px }
-        .vlc-m2 { font-size:12px; color:#9A8E7A; font-variant-numeric:tabular-nums }
-        .vlc-price { font-size:17px; font-weight:600; color:#EDE8DC; font-variant-numeric:tabular-nums; white-space:nowrap }
-        .vlc-tc { font-size:10px; font-weight:400; color:rgba(237,232,220,0.35) }
+        .vlc-m2 { font-size:13px; color:#9A8E7A; font-variant-numeric:tabular-nums }
+        .vlc-price { font-size:20px; font-weight:600; color:#EDE8DC; font-variant-numeric:tabular-nums; white-space:nowrap }
+        .vlc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.35) }
         /* Panel derecho */
         .vd-panel { position:sticky; top:76px; height:calc(100vh - 76px - 20px); display:flex; flex-direction:column; gap:16px; min-width:0 }
         /* El bloque mapa+resumen se OCULTA (no se desmonta) cuando el side sheet
