@@ -825,9 +825,11 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
 // Card horizontal compacta para el layout desktop split (lista | mapa/side sheet).
 // Mesa de decisión: más propiedades por pantalla, tap abre el side sheet.
 // Lo transaccional (WA, compartir, ver original) vive en el sheet — acá solo corazón.
-const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isActive, onToggleFavorite, onOpen }: {
+const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isActive, onToggleFavorite, onOpen, marketChip = null }: {
   property: UnidadVenta; isFavorite: boolean; isActive: boolean
   onToggleFavorite: (id: number) => void; onOpen: (p: UnidadVenta) => void
+  // Posición fiduciaria vs rango típico de su tipología (null = sin base suficiente)
+  marketChip?: { pos: 'bajo' | 'dentro' | 'sobre'; count: number } | null
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
@@ -873,6 +875,12 @@ const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isA
           p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
           p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
         ].filter(Boolean).join(' · ')}</div>
+        {/* Chip fiduciario: posición vs rango típico — sin veredicto, con base contable */}
+        {marketChip && (
+          <div className={`vlc-mkt ${marketChip.pos === 'bajo' ? 'vlc-mkt-bajo' : ''}`}>
+            {marketChip.pos === 'bajo' ? 'Bajo el rango típico' : marketChip.pos === 'sobre' ? 'Sobre el rango típico' : 'Dentro del rango típico'} de su tipología · {marketChip.count} comparables
+          </div>
+        )}
         <div className="vlc-bottomrow">
           <span className="vlc-m2">{p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : ''}</span>
           <span className="vlc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="vlc-tc">T.C. oficial</span></span>
@@ -2470,6 +2478,40 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     }
   }, [splitDesktop, displayedProperties])
 
+  // Chip fiduciario por card — posición del precio/m² vs el rango típico
+  // (p25-p75) de su tipología. Misma filosofía de cascada que el sheet:
+  // zona+tipología+estado (≥6) → Equipetrol+tipología+estado → canasta mixta.
+  // SIN veredicto ("oportunidad"/"caro"): solo posición declarada + base
+  // contable, verificable en el tab Mercado. Map estable por id para no
+  // romper el memo de las cards.
+  const cardChips = useMemo(() => {
+    if (!splitDesktop) return null
+    const pools = new Map<string, number[]>()
+    const push = (k: string, v: number) => { const a = pools.get(k); if (a) a.push(v); else pools.set(k, [v]) }
+    for (const q of properties) {
+      if (!(q.precio_m2 > 0)) continue
+      const seg = q.estado_construccion === 'preventa' || q.estado_construccion === 'entrega_inmediata' ? q.estado_construccion : null
+      if (seg) { push(`z|${q.zona}|${q.dormitorios}|${seg}`, q.precio_m2); push(`g|${q.dormitorios}|${seg}`, q.precio_m2) }
+      push(`z|${q.zona}|${q.dormitorios}|mix`, q.precio_m2)
+      push(`g|${q.dormitorios}|mix`, q.precio_m2)
+    }
+    pools.forEach(a => a.sort((x, y) => x - y))
+    const pctl = (s: number[], pct: number) => { const i = (s.length - 1) * pct; const lo = Math.floor(i), hi = Math.ceil(i); return lo === hi ? s[lo] : s[lo] * (hi - i) + s[hi] * (i - lo) }
+    const m = new Map<number, { pos: 'bajo' | 'dentro' | 'sobre'; count: number }>()
+    for (const p of properties) {
+      if (!(p.precio_m2 > 0)) continue
+      const seg = p.estado_construccion === 'preventa' || p.estado_construccion === 'entrega_inmediata' ? p.estado_construccion : null
+      const keys = seg
+        ? [`z|${p.zona}|${p.dormitorios}|${seg}`, `g|${p.dormitorios}|${seg}`, `z|${p.zona}|${p.dormitorios}|mix`, `g|${p.dormitorios}|mix`]
+        : [`z|${p.zona}|${p.dormitorios}|mix`, `g|${p.dormitorios}|mix`]
+      const pool = keys.map(k => pools.get(k)).find(a => a && a.length >= 6)
+      if (!pool) continue
+      const lo = pctl(pool, 0.25), hi = pctl(pool, 0.75)
+      m.set(p.id, { pos: p.precio_m2 < lo ? 'bajo' : p.precio_m2 > hi ? 'sobre' : 'dentro', count: pool.length - 1 })
+    }
+    return m
+  }, [splitDesktop, properties])
+
   const visibleNotMarked = useMemo(() => {
     if (!brokerMode) return []
     let list: UnidadVenta[] = properties
@@ -3252,9 +3294,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   {/* Fila de pills de filtros */}
                   <FilterPillsVentas key={`fp-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered}
                     onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
-                  {/* Contador de resultados */}
+                  {/* Título + contador de resultados */}
                   <div className="vd-count-row">
-                    <span><b>{displayedProperties.length}</b> {isFiltered ? `de ${unfilteredCount} departamentos` : 'departamentos en Equipetrol'}</span>
+                    <h1 className="vd-h1">Departamentos en venta en {filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : 'Equipetrol'}</h1>
+                    <span className="vd-count-num2"><b>{displayedProperties.length}</b> {isFiltered ? `de ${unfilteredCount}` : 'activos'}</span>
                   </div>
                 <div className="vd-list">
                   {loading && displayedProperties.length === 0 && <div className="ventas-status" style={{ minHeight: 160 }}>Cargando departamentos en venta...</div>}
@@ -3267,12 +3310,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                       </div>
                       <VentaListCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
                         isActive={sheetOpen && sheetProperty?.id === spotlightProperty.id}
+                        marketChip={cardChips?.get(spotlightProperty.id) ?? null}
                         onToggleFavorite={onCardToggleFavorite} onOpen={onCardOpenSheet} />
                     </div>
                   )}
                   {(spotlightProperty ? displayedProperties.filter(p => p.id !== spotlightId) : displayedProperties).map(p => (
                     <VentaListCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
                       isActive={sheetOpen && sheetProperty?.id === p.id}
+                      marketChip={cardChips?.get(p.id) ?? null}
                       onToggleFavorite={onCardToggleFavorite} onOpen={onCardOpenSheet} />
                   ))}
                 </div>
@@ -3611,6 +3656,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vd-search .dsk-search-box { height:46px; border-radius:12px }
         .vd-count-row { display:flex; align-items:baseline; justify-content:space-between; gap:10px; font-family:'DM Sans',sans-serif; font-size:13px; color:#9A8E7A }
         .vd-count-row b { color:#EDE8DC; font-weight:600; font-variant-numeric:tabular-nums }
+        .vd-h1 { font-family:'Figtree',sans-serif; font-size:22px; font-weight:500; color:#EDE8DC; margin:0; line-height:1.2 }
+        .vd-count-num2 { white-space:nowrap }
+        /* Chip fiduciario en card */
+        .vlc-mkt { display:inline-flex; align-items:center; gap:6px; margin-top:7px; font-size:12px; color:#9A8E7A }
+        .vlc-mkt::before { content:''; width:6px; height:6px; border-radius:50%; background:#7A7060; flex-shrink:0 }
+        .vlc-mkt-bajo { color:#7BB389 }
+        .vlc-mkt-bajo::before { background:#3A6A48 }
         /* Fila de pills de filtros */
         .vfp { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-family:'DM Sans',sans-serif }
         .vfp-feed { display:inline-flex; align-items:center; gap:6px; background:#3A6A48; color:#EDE8DC; font-size:13px; font-weight:600; padding:8px 15px; border-radius:100px; letter-spacing:0.2px }

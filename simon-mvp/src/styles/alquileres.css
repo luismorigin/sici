@@ -1030,6 +1030,13 @@
 .ad-search .dsk-search-box { height: 46px; border-radius: 12px; }
 .ad-count-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #7A7060; }
 .ad-count-row b { color: #141414; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ad-h1 { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 500; color: #141414; margin: 0; line-height: 1.2; }
+.ad-count-num2 { white-space: nowrap; }
+/* Chip fiduciario en card */
+.alc-mkt { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; font-size: 12px; color: #7A7060; }
+.alc-mkt::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #B8AD9E; flex-shrink: 0; }
+.alc-mkt-bajo { color: #3A6A48; }
+.alc-mkt-bajo::before { background: #3A6A48; }
 /* Fila de pills de filtros (tema claro) */
 .afp { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: 'DM Sans', sans-serif; }
 .afp-feed { display: inline-flex; align-items: center; gap: 6px; background: #3A6A48; color: #EDE8DC; font-size: 13px; font-weight: 600; padding: 8px 15px; border-radius: 100px; letter-spacing: 0.2px; }

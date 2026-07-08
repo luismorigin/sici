@@ -906,6 +906,39 @@ export default function AlquileresPage({
     brokerMode ? filteredProperties.filter(p => !favorites.has(p.id)) : []
   ), [brokerMode, filteredProperties, favorites])
 
+  // Chip fiduciario por card — posición del alquiler (Bs/mes) vs el rango
+  // típico (p25-p75) de su tipología. Misma cascada que el sheet:
+  // zona+tipología+amoblado (≥6) → Equipetrol+tipología+amoblado → mixta.
+  // SIN veredicto: solo posición declarada + base contable.
+  const cardChips = useMemo(() => {
+    if (!splitDesktop) return null
+    const bucket = (v: string | null | undefined) => v === 'si' || v === 'semi' ? 'amob' : v === 'no' ? 'noamob' : null
+    const pools = new Map<string, number[]>()
+    const push = (k: string, v: number) => { const a = pools.get(k); if (a) a.push(v); else pools.set(k, [v]) }
+    for (const q of properties) {
+      if (!(q.precio_mensual_bob > 0)) continue
+      const seg = bucket(q.amoblado)
+      if (seg) { push(`z|${q.zona}|${q.dormitorios}|${seg}`, q.precio_mensual_bob); push(`g|${q.dormitorios}|${seg}`, q.precio_mensual_bob) }
+      push(`z|${q.zona}|${q.dormitorios}|mix`, q.precio_mensual_bob)
+      push(`g|${q.dormitorios}|mix`, q.precio_mensual_bob)
+    }
+    pools.forEach(a => a.sort((x, y) => x - y))
+    const pctl = (s: number[], pct: number) => { const i = (s.length - 1) * pct; const lo = Math.floor(i), hi = Math.ceil(i); return lo === hi ? s[lo] : s[lo] * (hi - i) + s[hi] * (i - lo) }
+    const m = new Map<number, { pos: 'bajo' | 'dentro' | 'sobre'; count: number }>()
+    for (const p of properties) {
+      if (!(p.precio_mensual_bob > 0)) continue
+      const seg = bucket(p.amoblado)
+      const keys = seg
+        ? [`z|${p.zona}|${p.dormitorios}|${seg}`, `g|${p.dormitorios}|${seg}`, `z|${p.zona}|${p.dormitorios}|mix`, `g|${p.dormitorios}|mix`]
+        : [`z|${p.zona}|${p.dormitorios}|mix`, `g|${p.dormitorios}|mix`]
+      const pool = keys.map(k => pools.get(k)).find(a => a && a.length >= 6)
+      if (!pool) continue
+      const lo = pctl(pool, 0.25), hi = pctl(pool, 0.75)
+      m.set(p.id, { pos: p.precio_mensual_bob < lo ? 'bajo' : p.precio_mensual_bob > hi ? 'sobre' : 'dentro', count: pool.length - 1 })
+    }
+    return m
+  }, [splitDesktop, properties])
+
   // Pin del mapa del panel → abre el side sheet. Identidad ESTABLE vía ref:
   // el componente de mapa reconstruye el mapa Leaflet cuando cambia la
   // identidad de onSelectProperty (un lambda inline lo reconstruía en cada
@@ -1588,9 +1621,10 @@ export default function AlquileresPage({
                       {/* Fila de pills de filtros */}
                       <FilterPillsAlquiler key={`fp-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered}
                         onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
-                      {/* Contador de resultados */}
+                      {/* Título + contador de resultados */}
                       <div className="ad-count-row">
-                        <span><b>{displayedProperties.length}</b> {isFiltered ? `de ${totalCount} alquileres` : 'alquileres en Equipetrol'}</span>
+                        <h1 className="ad-h1">Departamentos en alquiler en {filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(id => ZONAS_ALQUILER_UI.find(z => z.id === id)?.label || id).join(', ') : 'Equipetrol'}</h1>
+                        <span className="ad-count-num2"><b>{displayedProperties.length}</b> {isFiltered ? `de ${totalCount}` : 'activos'}</span>
                       </div>
                     <div className="ad-list">
                       {loading && gridProperties.length === 0 && <div className="desktop-loading" style={{ minHeight: 160 }}>Cargando alquileres...</div>}
@@ -1603,6 +1637,7 @@ export default function AlquileresPage({
                           </div>
                           <AlquilerListCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
                             isActive={sheetOpen && sheetProperty?.id === spotlightProperty.id}
+                            marketChip={cardChips?.get(spotlightProperty.id) ?? null}
                             onToggleFavorite={toggleFavorite} onOpen={openDetail} />
                         </div>
                       )}
@@ -1613,6 +1648,7 @@ export default function AlquileresPage({
                             {showDivider && <div className="alq-pet-divider">🐾 También podrían aceptar mascotas · consultar con el anunciante</div>}
                             <AlquilerListCard property={p} isFavorite={favorites.has(p.id)}
                               isActive={sheetOpen && sheetProperty?.id === p.id}
+                              marketChip={cardChips?.get(p.id) ?? null}
                               onToggleFavorite={toggleFavorite} onOpen={openDetail} />
                           </Fragment>
                         )
@@ -3522,9 +3558,11 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { 
 // ===== Desktop lista densa: AlquilerListCard =====
 // Card horizontal compacta para el layout desktop split (lista | mapa/side sheet).
 // Tap abre el side sheet; lo transaccional vive en el sheet — acá solo corazón.
-const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorite, isActive, onToggleFavorite, onOpen }: {
+const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorite, isActive, onToggleFavorite, onOpen, marketChip = null }: {
   property: UnidadAlquiler; isFavorite: boolean; isActive: boolean
   onToggleFavorite: (id: number) => void; onOpen: (p: UnidadAlquiler) => void
+  // Posición fiduciaria vs rango típico de su tipología (null = sin base suficiente)
+  marketChip?: { pos: 'bajo' | 'dentro' | 'sobre'; count: number } | null
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
@@ -3579,6 +3617,12 @@ const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorit
           p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
           p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null,
         ].filter(Boolean).join(' · ')}</div>
+        {/* Chip fiduciario: posición vs rango típico — sin veredicto, con base contable */}
+        {marketChip && (
+          <div className={`alc-mkt ${marketChip.pos === 'bajo' ? 'alc-mkt-bajo' : ''}`}>
+            {marketChip.pos === 'bajo' ? 'Bajo el rango típico' : marketChip.pos === 'sobre' ? 'Sobre el rango típico' : 'Dentro del rango típico'} de su tipología · {marketChip.count} comparables
+          </div>
+        )}
         <div className="alc-bottomrow">
           <span className="alc-exp">{p.monto_expensas_bob ? `+ Bs ${p.monto_expensas_bob.toLocaleString('es-BO')} expensas` : ''}</span>
           <span className="alc-price">{formatPrice(p.precio_mensual_bob)}<span className="alc-mes">/mes</span></span>

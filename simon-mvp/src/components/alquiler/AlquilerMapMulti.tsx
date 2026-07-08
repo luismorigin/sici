@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
@@ -36,11 +36,19 @@ function safeRemoveMap(map: L.Map | null) {
   try { map.remove() } catch { /* ya removido */ }
 }
 
+// Capas de tiles: callejero (OSM) y satelital (Esri World Imagery, gratuita).
+const TILES_CALLE = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+const TILES_SATELITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+
 export default function AlquilerMapMulti({ properties, onSelectProperty, selectedId }: AlquilerMapMultiProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null)
+  // Modo satélite: swap de tile layer sin reconstruir el mapa (conserva zoom/posición)
+  const [satellite, setSatellite] = useState(false)
+  const satelliteRef = useRef(false)
+  const tileRef = useRef<L.TileLayer | null>(null)
 
   const makeIcon = useCallback((price: string, isSelected: boolean) => {
     return L.divIcon({
@@ -92,7 +100,7 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
       markerZoomAnimation: false,
     }).setView([centerLat, centerLng], 15)
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+    tileRef.current = L.tileLayer(satelliteRef.current ? TILES_SATELITE : TILES_CALLE).addTo(map)
 
     const clusterGroup = L.markerClusterGroup({
       maxClusterRadius: 45,
@@ -154,6 +162,7 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
     const style = document.createElement('style')
     style.textContent = `
       .alq-map-multi .leaflet-tile { filter: brightness(1.05) saturate(0.4) sepia(0.15); }
+      .alq-map-multi.map-sat .leaflet-tile { filter: none; }
       .alq-map-multi .leaflet-control-zoom a { background: #FAFAF8 !important; color: #141414 !important; border-color: #D8D0BC !important; }
       .alq-map-multi .leaflet-tooltip { background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; padding: 10px 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
       .alq-map-multi .leaflet-tooltip-top::before { border-top-color: #FAFAF8; }
@@ -184,5 +193,23 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
     })
   }, [selectedId, properties, makeIcon])
 
-  return <div ref={mapRef} className="alq-map-multi" style={{ width: '100%', height: '100%' }} />
+  // Toggle satélite: swap de capa sin reconstruir el mapa
+  useEffect(() => {
+    satelliteRef.current = satellite
+    const map = mapInstance.current
+    if (!map) return
+    if (tileRef.current) { try { map.removeLayer(tileRef.current) } catch { /* mapa muerto */ } }
+    tileRef.current = L.tileLayer(satellite ? TILES_SATELITE : TILES_CALLE).addTo(map)
+  }, [satellite])
+
+  return (
+    <div className="alq-map-multi-wrap" style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div ref={mapRef} className={`alq-map-multi ${satellite ? 'map-sat' : ''}`} style={{ position: 'absolute', inset: 0 }} />
+      <button type="button" aria-pressed={satellite} onClick={() => setSatellite(s => !s)}
+        style={{ position: 'absolute', bottom: 12, right: 12, zIndex: 1000, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(20,20,20,0.85)', color: '#EDE8DC', border: '1px solid rgba(237,232,220,0.25)', padding: '7px 13px', borderRadius: 100, fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        {satellite ? 'Mapa' : 'Satélite'}
+      </button>
+    </div>
+  )
 }
