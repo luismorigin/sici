@@ -45,10 +45,13 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
   const mapInstance = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null)
-  // Modo satélite: swap de tile layer sin reconstruir el mapa (conserva zoom/posición)
+  // Modo satélite RESILIENTE: la capa de calles (OSM) NUNCA se remueve — el
+  // satélite se agrega ENCIMA (zIndex 2) y al volver solo se quita esa capa.
+  // Si las tiles satelitales no cargan (red/firewall), el usuario sigue viendo
+  // el mapa de calles en vez de un fondo vacío.
   const [satellite, setSatellite] = useState(false)
   const satelliteRef = useRef(false)
-  const tileRef = useRef<L.TileLayer | null>(null)
+  const satLayerRef = useRef<L.TileLayer | null>(null)
 
   const makeIcon = useCallback((price: string, isSelected: boolean) => {
     return L.divIcon({
@@ -100,7 +103,8 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
       markerZoomAnimation: false,
     }).setView([centerLat, centerLng], 15)
 
-    tileRef.current = L.tileLayer(satelliteRef.current ? TILES_SATELITE : TILES_CALLE).addTo(map)
+    L.tileLayer(TILES_CALLE).addTo(map)
+    satLayerRef.current = satelliteRef.current ? L.tileLayer(TILES_SATELITE, { zIndex: 2 }).addTo(map) : null
 
     const clusterGroup = L.markerClusterGroup({
       maxClusterRadius: 45,
@@ -193,13 +197,19 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
     })
   }, [selectedId, properties, makeIcon])
 
-  // Toggle satélite: swap de capa sin reconstruir el mapa
+  // Toggle satélite: agrega/quita SOLO la capa satelital (la base queda intacta)
   useEffect(() => {
     satelliteRef.current = satellite
     const map = mapInstance.current
     if (!map) return
-    if (tileRef.current) { try { map.removeLayer(tileRef.current) } catch { /* mapa muerto */ } }
-    tileRef.current = L.tileLayer(satellite ? TILES_SATELITE : TILES_CALLE).addTo(map)
+    if (satellite) {
+      if (!satLayerRef.current) {
+        try { satLayerRef.current = L.tileLayer(TILES_SATELITE, { zIndex: 2 }).addTo(map) } catch { satLayerRef.current = null }
+      }
+    } else if (satLayerRef.current) {
+      try { map.removeLayer(satLayerRef.current) } catch { /* mapa muerto */ }
+      satLayerRef.current = null
+    }
   }, [satellite])
 
   return (
