@@ -3654,8 +3654,8 @@ const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorit
           </div>
         )}
         <div className="alc-bottomrow">
-          <span className="alc-exp">{p.monto_expensas_bob ? `+ Bs ${p.monto_expensas_bob.toLocaleString('es-BO')} expensas` : ''}</span>
           <span className="alc-price">{formatPrice(p.precio_mensual_bob)}<span className="alc-mes">/mes</span></span>
+          {p.monto_expensas_bob ? <span className="alc-exp">+ Bs {p.monto_expensas_bob.toLocaleString('es-BO')} expensas</span> : null}
         </div>
       </div>
     </div>

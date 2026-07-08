@@ -882,8 +882,8 @@ const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isA
           </div>
         )}
         <div className="vlc-bottomrow">
-          <span className="vlc-m2">{p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : ''}</span>
           <span className="vlc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="vlc-tc">T.C. oficial</span></span>
+          {p.precio_m2 > 0 && <span className="vlc-m2">· $us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>}
         </div>
       </div>
     </div>
@@ -3728,7 +3728,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .dsk-pill:hover { color:#EDE8DC; border-color:#7BB389 }
         /* Lista = columna dominante (como la referencia); el panel mapa/sheet
            ocupa 380-520px a la derecha */
-        .vd-cols { display:grid; grid-template-columns:minmax(0, 1fr) minmax(380px, 520px); gap:20px; align-items:start }
+        /* Mixto rebalanceado: mapa más ancho (~52%) — es el diferenciador de
+           decisión. Lista ~48%, mínimo 440px el panel. */
+        .vd-cols { display:grid; grid-template-columns:minmax(0, 48fr) minmax(440px, 52fr); gap:20px; align-items:start }
         .vd-list { display:flex; flex-direction:column; gap:12px; min-width:0 }
         .vd-spotlight { display:flex; flex-direction:column; gap:10px; margin-bottom:4px }
         /* Card de lista densa */
@@ -3753,7 +3755,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vlc-zona { font-size:12.5px; color:#9A8E7A; letter-spacing:0.3px; margin:3px 0 8px }
         .vlc-id { color:rgba(237,232,220,0.3) }
         .vlc-specs { font-size:14px; color:#B8AD9E; font-weight:300 }
-        .vlc-bottomrow { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-top:auto; padding-top:8px }
+        /* Precio + $/m² juntos a la izquierda (sin hueco central) — card compacta */
+        .vlc-bottomrow { display:flex; align-items:baseline; flex-wrap:wrap; gap:8px; margin-top:auto; padding-top:8px }
         .vlc-m2 { font-size:13px; color:#9A8E7A; font-variant-numeric:tabular-nums }
         .vlc-price { font-size:20px; font-weight:600; color:#EDE8DC; font-variant-numeric:tabular-nums; white-space:nowrap }
         .vlc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.35) }
