@@ -3783,26 +3783,31 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vd-mkt-num { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; font-variant-numeric:tabular-nums; line-height:1.1 }
         .vd-mkt-label { font-size:11.5px; color:#9A8E7A; line-height:1.35 }
         .vd-mkt-caveat { font-size:11.5px; color:#7A7060; line-height:1.45; border-top:1px solid rgba(237,232,220,0.06); padding-top:10px }
-        /* Side sheet embebido (variant del bottom sheet).
-           Altura fija = scroll container real (así el footer sticky se pega
-           siempre abajo, no queda flotando en medio del scroll). */
-        .bs-venta.bs-side { position:relative; inset:auto; transform:none; height:calc(100vh - 76px - 20px); max-height:calc(100vh - 76px - 20px); overflow-y:auto; overflow-x:hidden; width:100%; max-width:none; border-radius:14px; border:1px solid rgba(237,232,220,0.08); z-index:1; padding-bottom:0 }
+        /* Side sheet ANCLADO al viewport (fixed): entre el nav (76) y el borde
+           inferior. Así el sheet nunca excede la pantalla y el footer sticky
+           bottom:0 queda SIEMPRE visible, sin importar el scroll de la página.
+           El .vd-panel mantiene su height fija → la columna no colapsa aunque
+           el sheet salga del flujo. Ancho = columna derecha del grid (~52%). */
+        .bs-venta.bs-side { position:fixed; top:76px; bottom:20px; right:24px; width:calc((100vw - 68px) * 0.52); height:auto; max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:14px; border:1px solid rgba(237,232,220,0.08); z-index:40; padding-bottom:0; transform:none }
         .bs-venta.bs-side.open { transform:none }
-        .bs-venta.bs-side .bs-floating-actions { background:#1a1a1a; padding-top:8px }
+        /* fav+close: fijos en la esquina del sheet (absolute sobre el sheet
+           fixed), siempre visibles, sin ocupar flujo ni chocar con las tabs. */
+        .bs-venta.bs-side .bs-floating-actions { position:absolute; top:10px; right:12px; z-index:50; background:transparent; padding:0 }
         /* Contenido acotado a medida de lectura (~640px) centrado — el panel es
            ancho para el mapa, pero leer el detalle a 710px cansa. La galería
            queda full-bleed (no lleva este padding). Padding dinámico: crece a
            los lados cuando el panel es más ancho que 640. */
         .bs-venta.bs-side .bs-dark-header,
-        .bs-venta.bs-side .bs-tabs,
         .bs-venta.bs-side .bs-section,
         .bs-venta.bs-side .bs-sticky-footer {
           padding-left:max(24px, calc((100% - 640px) / 2));
           padding-right:max(24px, calc((100% - 640px) / 2));
         }
+        /* Tabs full-width con espacio a la derecha para el botón cerrar */
+        .bs-venta.bs-side .bs-tabs { padding-left:16px; padding-right:56px }
         /* Precio menos gigante en el side sheet ancho */
         .bs-venta.bs-side .bs-h-price { font-size:24px }
-        .bs-tabs { position:sticky; top:56px; z-index:9; display:flex; gap:2px; background:#141414; border-bottom:1px solid rgba(237,232,220,0.1); padding:0 16px }
+        .bs-tabs { position:sticky; top:0; z-index:9; display:flex; gap:2px; background:#141414; border-bottom:1px solid rgba(237,232,220,0.1); padding:0 16px }
         .bs-tab { flex:1; background:none; border:none; border-bottom:2px solid transparent; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:11px 4px; cursor:pointer; transition:color 0.15s }
         .bs-tab:hover { color:#EDE8DC }
         .bs-tab.active { color:#7BB389; border-bottom-color:#7BB389; font-weight:600 }
