@@ -1141,7 +1141,7 @@
    queda SIEMPRE visible. El .ad-panel mantiene su height → la columna no
    colapsa. Ancho = columna derecha del grid (~52%); padding lateral del main
    es 32, por eso el calc y el right difieren de ventas. */
-.bs.bs-side-alq { position: fixed; top: 80px; bottom: 32px; right: 32px; width: calc((100vw - 84px) * 0.52); height: auto; max-height: none; overflow-y: auto; overflow-x: hidden; inset: auto; transform: none; max-width: none; border-radius: 14px; border: 1px solid #D8D0BC; z-index: 40; }
+.bs.bs-side-alq { position: fixed; inset: auto; left: auto; top: 80px; right: 32px; bottom: 32px; width: calc((100vw - 84px) * 0.52); height: auto; max-height: none; overflow-y: auto; overflow-x: hidden; transform: none; max-width: none; border-radius: 14px; border: 1px solid #D8D0BC; z-index: 40; }
 .bs.bs-side-alq.open { transform: none; }
 /* fav+close: fijos en la esquina del sheet (absolute sobre el sheet fixed),
    siempre visibles, sin ocupar flujo ni chocar con las tabs. */
