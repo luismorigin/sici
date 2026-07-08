@@ -1153,8 +1153,7 @@
 /* Contenido acotado a medida de lectura (~640px) centrado — la galería queda
    full-bleed (no lleva este padding). Padding dinámico crece a los lados. */
 .bs-side-alq .bs-header-redesign,
-.bs-side-alq .bs-section,
-.bs-side-alq .bs-sticky-footer {
+.bs-side-alq .bs-section {
   padding-left: max(24px, calc((100% - 640px) / 2));
   padding-right: max(24px, calc((100% - 640px) / 2));
 }

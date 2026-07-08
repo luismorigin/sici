@@ -3802,8 +3802,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
            queda full-bleed (no lleva este padding). Padding dinámico: crece a
            los lados cuando el panel es más ancho que 640. */
         .bs-venta.bs-side .bs-dark-header,
-        .bs-venta.bs-side .bs-section,
-        .bs-venta.bs-side .bs-sticky-footer {
+        .bs-venta.bs-side .bs-section {
           padding-left:max(24px, calc((100% - 640px) / 2));
           padding-right:max(24px, calc((100% - 640px) / 2));
         }
