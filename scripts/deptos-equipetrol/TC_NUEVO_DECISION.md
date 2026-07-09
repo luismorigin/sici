@@ -70,6 +70,31 @@ Efecto (con paralelo 10.222): paralelo $100k → $100k (era $146.868, se va el p
    - Pendiente: ¿el valor del oficial nuevo se fija o queda 100% dinámico Binance? · el descuento de `oficial_viejo`
      es la interpretación fiduciaria ("al oficial" = acepta Bs baratos) — confirmar antes del switch.
 
+## PRINCIPIO DE ARQUITECTURA — normalización = FRONTERA de acceso (portable)
+La regla "nunca leas `precio_usd` directo, siempre `precio_normalizado()`" NO debe ser una convención
+de CLAUDE.md (repo-específica, recordable, violable). Debe ser una **frontera de acceso** encodada en el sistema:
+
+```
+DATOS (interna)      →  crudo + moneda_original + tag   (verdad en bruto; NADIE la lee directo)
+NORMALIZACIÓN        →  UNA función (crudo, moneda, tag) → precio comparable; keyed en el tag; 1 sola vez
+ACCESO (vistas/RPC)  →  ÚNICO camino de lectura; SIEMPRE normaliza; NUNCA expone el crudo
+CONSUMIDORES         →  frontend / comando / otro repo → reciben SIEMPRE el normalizado (no pueden leer mal lo que no se expone)
+```
+- **Discovery** produce `crudo + tag` (no normaliza). **Comando/pipeline** escribe `crudo + tag` (no normaliza).
+  **Frontend** solo muestra lo que el acceso da (ya normalizado). La invariante vive en la **capa de acceso**.
+- Hoy SICI lo tiene A MEDIAS: `buscar_unidades_simple` devuelve `precio_normalizado() AS precio_usd` → el feed ya
+  recibe el normalizado. Gap: scripts/queries del backend aún pueden leer el crudo → por eso la regla en CLAUDE.md
+  es para ellos. Para portabilidad plena: el crudo = interno por diseño, no regla de honor.
+- **Para la Plataforma Híbrida Genérica**: este contrato (crudo+tag adentro, normalizado afuera, la función es el
+  único traductor) es agnóstico de repo/tipo/operación/zona. Hornearlo ahí. Ver `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md`.
+
+### C21-BOB — decisión final (crudo real, NO crudo-falso)
+Guardar `precio_usd = BOB/tasa` = guardar una **normalización disfrazada de crudo** → riesgo de doble-normalización
+(el dolor viejo del cron `recalcular-precios-diario`). Decisión: **guardar el BOB CRUDO** (`precio_usd`=monto BOB,
+`moneda_original='BOB'`, tag `bob`) y que la normalización haga `crudo / tasa_paralelo` **en vivo, una vez**.
+El TAG es lo que evita re-normalizar: la función mira el tag y convierte una sola vez; el crudo nunca está
+pre-normalizado. Mata el freezing Y la doble-norm. (Reemplaza el fix "BOB/tasa en el fill", que era el approach A congelado.)
+
 ## Orden de ensamble
 Pieza 1 (lector) **+** Pieza 2 (función) se prenden JUNTOS (atómico) · Pieza 3 (re-tag) acompaña ·
 **probar todo en shadow** (`precio_normalizado_shadow`) antes de tocar prod · switch junto a prod.
