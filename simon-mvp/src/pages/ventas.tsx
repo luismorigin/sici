@@ -2228,8 +2228,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     } finally { if (gen === fetchGenRef.current) setLoading(false) }
   }, [filters])
 
-  // Only fetch on mount if no SSG data (fallback) or if spotlight needs fetching
-  useEffect(() => { if (publicShareMode) return; if (initialProperties.length === 0 || spotlightId) fetchProperties() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Fetch on mount si: no hay SSG data / spotlight / o ?shadow=1 (el SSG es PROD → hay que
+  // refetchear del endpoint shadow para NO quedarse mostrando prod en dark-launch).
+  useEffect(() => {
+    if (publicShareMode) return
+    const isShadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
+    if (initialProperties.length === 0 || spotlightId || isShadow) fetchProperties()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function applyFilters(newFilters: FiltrosVentaSimple) {
     setFilters(newFilters); setIsFiltered(true)
