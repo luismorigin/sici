@@ -34,7 +34,7 @@ dotenv.config({ path: `${ROOT}/simon-mvp/.env.local` });
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 const OUT = join(__dirname, 'output'); mkdirSync(OUT, { recursive: true });
 const ZONAS_EQ = ['Equipetrol Centro', 'Equipetrol Norte', 'Sirari', 'Villa Brigida', 'Equipetrol Oeste', 'Eq. 3er Anillo'];
-const SCRAPER_VERSION = 'hibrido-shadow-v2';
+const SCRAPER_VERSION = 'hibrido-shadow-v3';  // v3 = reader extendido (amenidades/extra/equipamiento/baños/piso/estado/fecha/amoblado/multiproyecto)
 const TS = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
 // ---- args ----
@@ -153,27 +153,43 @@ async function prep() {
 // ===========================================================================
 function construirFila(e, v, match) {
   const a = e._apply;
-  const estado_amenities = {}; for (const k of a.amenities) estado_amenities[k] = { valor: true, fuente: 'structured', confianza: 'alta' };
+  // AMENIDADES: el LECTOR manda (diferenciadores + extra + equipamiento). Fallback al
+  // estructurado (canonizar) SOLO si el lector no trajo lista.
+  const usaLector = Array.isArray(v.amenidades) && v.amenidades.length > 0;
+  const amenLista = usaLector ? v.amenidades : (a.amenities || []);
+  const estado_amenities = {};
+  for (const k of amenLista) estado_amenities[k] = { valor: true, fuente: usaLector ? 'lector' : 'structured', confianza: 'alta' };
+  // parqueo/baulera: el TEXTO (veredicto) manda sobre el estructurado
+  const estac = v.estacionamientos_incluidos ?? a.estacionamientos ?? null;
+  const bauleraIncl = v.baulera_incluida ?? a.baulera ?? null;
+  const parqueoIncl = (estac != null && estac > 0) ? true : !!a.parqueo_incluido;
   return {
     id: e.id, url: a.url, fuente: e.fuente,
     tipo_operacion: 'venta', tipo_propiedad_original: a.tipo_propiedad_original || 'Departamento',
     estado_construccion: v.estado_construccion || a.estado_construccion,
     precio_usd: v.precio_usd, tipo_cambio_detectado: v.tipo_cambio_detectado, moneda_original: a.moneda || null,
-    area_total_m2: a.area, dormitorios: v.dormitorios, banos: a.banos ?? null,
-    piso: a.piso != null && /^\d+$/.test(String(a.piso)) ? Number(a.piso) : null,
-    estacionamientos: a.estacionamientos ?? null,
+    area_total_m2: a.area, dormitorios: v.dormitorios,
+    banos: v.banos ?? a.banos ?? null,                                          // ← veredicto manda
+    piso: v.piso != null ? Number(v.piso)
+          : (a.piso != null && /^\d+$/.test(String(a.piso)) ? Number(a.piso) : null),   // ← veredicto manda
+    estacionamientos: estac,                                                    // ← veredicto manda
     latitud: a.latitud, longitud: a.longitud, zona: e.zona, microzona: a.microzona,
     id_proyecto_master: match.pm, nombre_edificio: v.nombre_edificio_canonico || null,
     fecha_publicacion: a.fecha_publicacion, score_calidad_dato: a.score_calidad_dato,
-    es_multiproyecto: a.es_multiproyecto ?? false, duplicado_de: a.duplicado_de ?? null,
-    baulera: a.baulera ?? null, solo_tc_paralelo: a.solo_tc_paralelo ?? null, parqueo_incluido: !!a.parqueo_incluido,
+    es_multiproyecto: v.es_multiproyecto ?? a.es_multiproyecto ?? false,        // ← taguea multiproyecto (no rechaza)
+    duplicado_de: a.duplicado_de ?? null,
+    baulera: bauleraIncl, solo_tc_paralelo: a.solo_tc_paralelo ?? null, parqueo_incluido: parqueoIncl,
     status: 'completado', es_activa: true, es_para_matching: true, scraper_version: SCRAPER_VERSION,
     datos_json: {
       agente: a.agente,
       contenido: { fotos_urls: a.fotos_urls, descripcion: e.descripcion || '', cantidad_fotos: a.cantidad_fotos },
-      amenities: { lista: a.amenities, estado_amenities, equipamiento: [] },
-      parqueo_incluido: !!a.parqueo_incluido, expensas: a.expensas,
-      trazabilidad: { scraper_version: SCRAPER_VERSION, fuente_precio: 'lector', metodo_match: match.metodo },
+      // amenities: lista (diferenciadores) + estado + extra (no-canónicas) + equipamiento (de unidad)
+      amenities: { lista: amenLista, estado_amenities, extra: v.amenidades_extra || [], equipamiento: v.equipamiento_unidad || [] },
+      parqueo_incluido: parqueoIncl, parqueo_precio_adicional: v.parqueo_precio_adicional_usd ?? null,
+      baulera_incluido: bauleraIncl, baulera_precio_adicional: v.baulera_precio_adicional_usd ?? null,
+      fecha_entrega: v.fecha_entrega_estimada ?? null, amoblado: v.amoblado ?? null,   // ← nuevos
+      expensas: a.expensas,
+      trazabilidad: { scraper_version: SCRAPER_VERSION, fuente_precio: 'lector', fuente_amenidades: usaLector ? 'lector' : 'structured', metodo_match: match.metodo },
     },
   };
 }
