@@ -27,7 +27,8 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
   "piso": 3,                         // piso de LA UNIDAD (ver regla). null si no se declara / solo hay pisos de amenidades.
   "estado_construccion": "preventa", // "preventa" | "entrega_inmediata" | null (ver regla; port de prod)
   "fecha_entrega_estimada": "Diciembre 2026", // solo si preventa y el texto la da. null si no.
-  "amoblado": null,                  // true si el texto dice AMOBLADO (con muebles). "equipado" NO cuenta. null si no menciona.
+  "amoblado": null,                  // FLAG: true si el texto dice AMOBLADO (con muebles: living/camas/sofás). null si no menciona.
+  "equipado": null,                  // FLAG: true si el texto dice "totalmente equipado"/"entrega equipada"/"equipado" (electrodomésticos/cocina). Distinto de amoblado.
   "nombre_edificio_canonico": "Stone 3", // el nombre CANÓNICO (romano→arábigo, sin ruido). El matcher lo usa.
   "id_proyecto_master": null,        // opcional: si YO ya resolví el pm (deja null → lo resuelve el matcher con el nombre)
   "alias_sugerido": "Stone III",     // opcional: variante cruda a guardar como alias del pm (se registra, NO se escribe a prod en fase shadow)
@@ -35,7 +36,8 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
   // ── AMENIDADES + EQUIPAMIENTO (solo lo CONFIRMADO por el texto; NUNCA inferir/asumir) ──
   "amenidades": ["Piscina", "Gimnasio"],   // diferenciadores del EDIFICIO mapeados al vocabulario canónico (ver abajo)
   "amenidades_extra": ["Salas de TV"],     // confirmadas NO canónicas → no se pierden (patrón casas caracteristicas_extra)
-  "equipamiento_unidad": ["Cocina equipada", "Vestidor"], // features de la UNIDAD (libre)
+  "equipamiento_canonico": ["Cocina equipada", "Heladera", "Roperos/Closets"], // features de UNIDAD del vocabulario canónico (filtrable, ver abajo)
+  "equipamiento_otros": ["Doble vidrio", "Espejos"],  // confirmadas fuera del canónico → se muestran, no se filtran. Cola larga.
 
   // ── PARQUEO + BAULERA (estructurado como base; la DESCRIPCIÓN manda si dice otra cosa) ──
   "estacionamientos_incluidos": 2,   // cantidad incluida en el precio. null si no hay señal.
@@ -121,15 +123,34 @@ Pet Friendly, Sauna, Ascensor, etc. sin mención. Absencia en el texto = en blan
 **`amenidades_extra`** — cualquier amenidad de edificio CONFIRMADA que no esté en el vocabulario canónico
 (ej "Salas de TV", "Cine", "Rooftop"). Balde catch-all: no se pierde nada, pero no ensucia el vocabulario.
 
-**`equipamiento_unidad`** — atributos de la UNIDAD: cocina equipada, cajonería/closets, calefón, aire
-acondicionado, domótica, box de baño, mobiliario, **cuarto de servicio, vestidor, balcón, sala-comedor**.
-Libre (sin vocabulario fijo). Son data útil del depto.
-- **ÚNICA exclusión**: `suite`/`en suite` NO va acá — es una habitación-con-baño → **señal de baños**
-  (ver BAÑOS), no un atributo aparte.
+### EQUIPAMIENTO de la UNIDAD — 3 baldes (captura TODO, solo lo tiera)
+El equipamiento de unidad es una **cola larga impredecible** (chapa digital, domótica, doble vidrio…). NO se
+intenta predecir todo. Se separa en:
 
-**Desambiguación edificio vs unidad** (el juez lee CONTEXTO, el regex no puede):
-- "área de lavandería común / en el piso 20" → edificio · "lavandería propia del depto" → `equipamiento_unidad`.
-- "terraza social panorámica" → edificio · "cada depto con su balcón" → `equipamiento_unidad`.
+**A) FLAGS de decisión** (booleanos de alto nivel — filtrables como "solo equipados"):
+- `amoblado` = viene con **muebles** (living/camas/sofás).
+- `equipado` = viene con **electrodomésticos/cocina** — "totalmente equipado" / "entrega equipada" / "equipado" → `true`.
+  El flag captura la AFIRMACIÓN resumen; **NO inventa** electrodomésticos específicos que el texto no nombre.
+
+**B) `equipamiento_canonico`** — vocabulario FIJO, filtrable (mapeá sinónimos a estas claves):
+> **Electrodomésticos**: Cocina equipada · Heladera · Lavadora · Secadora · Termotanque/Calefón · Aire acondicionado
+> **Almacenamiento**: Roperos/Closets · Vestidor
+> **Espacios**: Balcón · Terraza propia · Cuarto de servicio · Box de baño
+> **Seguridad/smart**: Chapa digital · Domótica · Video portero
+- **"Cocina equipada" = concepto**: mapeá acá cuando el texto diga muebles/cajonería de cocina, cocina
+  empotrada/americana equipada, mesón, extractor, hornallas → todo colapsa a `Cocina equipada` (implica
+  muebles empotrados + extractor + cocina). Así los ~8 nombres de cocina → 1.
+- Lavadora/lavandería (área de lavandería / espacio para lavadora / lavadora incluida) → `Lavadora` (o `Lavandería`).
+
+**C) `equipamiento_otros`** — todo lo demás CONFIRMADO fuera del canónico, tal cual, **sin predecir**:
+> doble vidrio · mesón de granito · pisos de porcelanato · intercomunicador · iluminación LED · espejos · cortinas
+- Se MUESTRAN (línea "También:…"), no se filtran. Nada se descarta salvo palabras que no son features.
+
+**Exclusiones**: `suite`/`en suite` NO es equipamiento — es **señal de baños** (ver BAÑOS).
+
+**Desambiguación edificio vs unidad** (el juez lee CONTEXTO):
+- "área de lavandería común / en el piso 20" → amenidad de edificio · "lavandería propia del depto" → equipamiento (Lavadora).
+- "terraza social panorámica" → edificio · "cada depto con su balcón" → equipamiento (Balcón).
 
 > Escalabilidad: el vocabulario de diferenciadores es zona-INDEPENDIENTE (una piscina es una piscina en
 > Equipetrol o ZN). El `%`/`esEstandar` es capa de DISPLAY por-zona, NUNCA entra en la extracción del juez.
@@ -158,10 +179,11 @@ Libre (sin vocabulario fijo). Son data útil del depto.
 - Sin evidencia clara → `null`. ⚠️ **"amoblado"/"equipado" SOLOS NO implican entrega_inmediata.**
 - `fecha_entrega_estimada`: solo si preventa Y el texto la da ("entrega Diciembre 2026", "entrega 2027"). Sino `null`.
 
-### AMOBLADO
-- `true` SOLO si el texto dice **amoblado / amueblado / con muebles / se vende amoblado**.
-- ⚠️ **"equipado" / "cocina equipada" NO es amoblado** (eso es `equipamiento_unidad`). Amoblado = viene con muebles.
-- `null` si no se menciona (no asumir "sin muebles" — la venta suele ser vacía, pero no lo afirmamos).
+### AMOBLADO vs EQUIPADO (2 flags de decisión, distintos)
+- **`amoblado`** = `true` SOLO si el texto dice **amoblado / amueblado / con muebles / se vende amoblado** (muebles: living/camas/sofás).
+- **`equipado`** = `true` si el texto dice **"totalmente equipado" / "entrega equipada" / "equipado"** (electrodomésticos/cocina).
+- Un depto puede estar **equipado sin amoblar** (lo más común en venta): electrodomésticos sí, muebles no.
+- Ambos `null` si no se mencionan (no asumir). El flag NO inventa ítems específicos del `equipamiento_canonico`.
 
 ### NOMBRE DE EDIFICIO (para matching, name-first)
 - Leé el nombre del **slug (C21) / descripción (Remax)** y entregá el **canónico**: romano→arábigo

@@ -183,11 +183,16 @@ function construirFila(e, v, match) {
     datos_json: {
       agente: a.agente,
       contenido: { fotos_urls: a.fotos_urls, descripcion: e.descripcion || '', cantidad_fotos: a.cantidad_fotos },
-      // amenities: lista (diferenciadores) + estado + extra (no-canónicas) + equipamiento (de unidad)
-      amenities: { lista: amenLista, estado_amenities, extra: v.amenidades_extra || [], equipamiento: v.equipamiento_unidad || [] },
+      // amenities: lista (diferenciadores) + estado + extra (no-canónicas) + equipamiento (canónico + otros)
+      amenities: {
+        lista: amenLista, estado_amenities, extra: v.amenidades_extra || [],
+        equipamiento: v.equipamiento_canonico || v.equipamiento_unidad || [],   // canónico filtrable (fallback al viejo)
+        equipamiento_otros: v.equipamiento_otros || [],                          // cola larga (mostrar, no filtrar)
+      },
       parqueo_incluido: parqueoIncl, parqueo_precio_adicional: v.parqueo_precio_adicional_usd ?? null,
       baulera_incluido: bauleraIncl, baulera_precio_adicional: v.baulera_precio_adicional_usd ?? null,
-      fecha_entrega: v.fecha_entrega_estimada ?? null, amoblado: v.amoblado ?? null,   // ← nuevos
+      fecha_entrega: v.fecha_entrega_estimada ?? null,
+      amoblado: v.amoblado ?? null, equipado: v.equipado ?? null,   // ← flags de decisión
       expensas: a.expensas,
       trazabilidad: { scraper_version: SCRAPER_VERSION, fuente_precio: 'lector', fuente_amenidades: usaLector ? 'lector' : 'structured', metodo_match: match.metodo },
     },
