@@ -1299,6 +1299,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
               {p.descuento_contado_pct && p.descuento_contado_pct > 0 && <span className="bs-badge gold">-{p.descuento_contado_pct}% contado</span>}
               {p.parqueo_incluido && <span className="bs-badge">Parqueo incluido</span>}
               {p.baulera_incluido && <span className="bs-badge">Baulera incluida</span>}
+              {(p as any).amoblado && <span className="bs-badge gold">Amoblado</span>}
+              {(p as any).equipado && <span className="bs-badge">Equipado</span>}
               {p.solo_tc_paralelo && <span className="bs-badge">TC Paralelo</span>}
             </div>
           </div>
@@ -1307,18 +1309,24 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           {brokerMode && <ACMInline propiedadId={p.id} tcSospechoso={p.tc_sospechoso} />}
 
           {/* Amenidades */}
-          {amenities.length > 0 && (
+          {(amenities.length > 0 || ((p as any).amenidades_extra || []).length > 0) && (
             <div className="bs-section">
               <div className="bs-sl"><span className="bs-sl-dot" />Edificio</div>
               <div className="bs-aw">{amenities.map((a, i) => <span key={i} className="bs-at">{a}</span>)}</div>
+              {((p as any).amenidades_extra || []).length > 0 && (
+                <div className="bs-tambien">También: {((p as any).amenidades_extra as string[]).join(' · ')}</div>
+              )}
             </div>
           )}
 
           {/* Equipamiento */}
-          {equipamiento.length > 0 && (
+          {(equipamiento.length > 0 || ((p as any).equipamiento_otros || []).length > 0) && (
             <div className="bs-section">
               <div className="bs-sl"><span className="bs-sl-dot" />Departamento</div>
               <div className="bs-aw">{equipamiento.map((e, i) => <span key={i} className="bs-at">{e}</span>)}</div>
+              {((p as any).equipamiento_otros || []).length > 0 && (
+                <div className="bs-tambien">También: {((p as any).equipamiento_otros as string[]).join(' · ')}</div>
+              )}
             </div>
           )}
 
@@ -3170,6 +3178,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta .bs-feat.hl .bs-fv { color:#EDE8DC; font-weight:600 }
         .bs-venta .bs-aw { display:flex; flex-wrap:wrap; gap:6px }
         .bs-venta .bs-at { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.1); color:#EDE8DC }
+        .bs-venta .bs-tambien { margin-top:8px; font-family:'DM Sans',sans-serif; font-size:12px; color:#9A8E7A; line-height:1.5 }
         .bs-venta .bs-sl { color:#9A8E7A }
         .bs-venta .bs-badges { display:flex; flex-wrap:wrap; gap:8px }
         .bs-venta .bs-badge { border:1px solid rgba(237,232,220,0.15); color:#9A8E7A; background:transparent }

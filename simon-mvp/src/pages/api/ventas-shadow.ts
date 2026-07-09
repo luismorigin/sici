@@ -92,6 +92,11 @@ function mapRow(p: RawUnidadSimpleRow) {
     plan_pagos_texto: p.plan_pagos_texto || null,
     fuente: p.fuente || '',
     tc_sospechoso: p.tc_sospechoso ?? false,
+    // Campos nuevos del lector extendido (se mergean vía buscar_extras_shadow, mig 271)
+    amenidades_extra: [] as string[],
+    equipamiento_otros: [] as string[],
+    amoblado: null as boolean | null,
+    equipado: null as boolean | null,
   }
 }
 
@@ -140,6 +145,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const data = (dataResult.data || []).map((r: RawUnidadSimpleRow) => mapRow(r))
+
+    // Merge campos nuevos del lector (amenidades_extra/equipamiento_otros/amoblado/equipado)
+    // vía helper shadow (mig 271). Graceful: si el SQL no está aplicado, se saltea sin romper.
+    if (data.length) {
+      try {
+        const ids = data.map((d: any) => d.id)
+        const extras = await supabase.rpc('buscar_extras_shadow', { p_ids: ids })
+        if (!extras.error && Array.isArray(extras.data)) {
+          const byId = new Map(extras.data.map((e: any) => [e.id, e]))
+          for (const d of data as any[]) {
+            const e: any = byId.get(d.id)
+            if (e) {
+              d.amenidades_extra = e.amenidades_extra || []
+              d.equipamiento_otros = e.equipamiento_otros || []
+              d.amoblado = e.amoblado ?? null
+              d.equipado = e.equipado ?? null
+            }
+          }
+        }
+      } catch { /* helper opcional: si no existe aún, no rompe el feed */ }
+    }
 
     // Spotlight: fetch a specific property by ID if not in current results
     let spotlight = null
