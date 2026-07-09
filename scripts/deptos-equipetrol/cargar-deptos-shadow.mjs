@@ -90,7 +90,11 @@ async function traerLote() {
 // ===========================================================================
 async function prep() {
   const lote = await traerLote();
-  console.log(`\n🔎 PREP — material de lectura para ${lote.length} deptos${idsArg ? ' (--ids)' : ` (hasta ${N} frescos, agnóstico a fuente)`}. NO escribe a la BD.\n`);
+  // Tasa paralelo ACTUAL (Binance) — una sola para TODO el lote → los lectores convierten
+  // el BOB con la MISMA tasa (mata la divergencia C21-BOB). Fuente: config_global.
+  const { data: tcRow } = await sb.from('config_global').select('valor').eq('clave', 'tipo_cambio_paralelo').single();
+  const tasaParalelo = tcRow?.valor != null ? Number(tcRow.valor) : null;
+  console.log(`\n🔎 PREP — material de lectura para ${lote.length} deptos${idsArg ? ' (--ids)' : ` (hasta ${N} frescos, agnóstico a fuente)`}. tasa_paralelo=${tasaParalelo}. NO escribe a la BD.\n`);
   const entradas = [];
   for (const p of lote) {
     if (circuit.tripped) { console.log('🛑 circuit breaker.'); break; }
@@ -115,6 +119,7 @@ async function prep() {
       descripcion: h.descripcion || null,
       senales: {
         precio_candidato: h.precio_fuente_usd, precio_bob_portal: h.precio_bob_portal ?? null,
+        tasa_paralelo: tasaParalelo,  // ← tasa Binance del lote; para C21-BOB-sin-precio: precio_usd = precio_bob_portal / tasa_paralelo
         tc_portal: h.tc_portal ?? null, moneda: h.moneda,
         recamaras: h.dormitorios, banos: h.banos, piso: h.piso, estacionamientos: h.estacionamientos,
         area: p.area_total_m2 != null ? Number(p.area_total_m2) : (h.area_const_m2 ?? h.area_texto ?? null),

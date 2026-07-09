@@ -57,8 +57,12 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 > - **`default`** (oficial nuevo = USD real): texto dice "paralelo"/"al día", "oficial del día" (= Binance, NO el viejo),
 >   solo declara USD/moneda, o CALLA → normaliza **directo**.
 > - **`oficial_viejo`**: SOLO si el texto ancla EXPLÍCITO al rate muerto ("6.96" / "Bs 7" / "TC 7" / "al oficial 7") → se descuenta.
-> - Moneda: Remax (USD) → default. C21 (BOB): calla → convertir a USD a la tasa nueva (Binance) → default; dice 6.96/7 → oficial_viejo.
-> - `precio_usd` = CRUDO; el feed normaliza (`precio_normalizado_v2`). `precio_candidato` es HELPER, leé el número del TEXTO.
+> - **PRECIO del texto SIEMPRE primero** (con su TC según reglas de arriba). El siguiente bloque es SOLO fallback.
+> - **Fallback C21-BOB (sin precio en el texto)** — regla INEQUÍVOCA: `precio_usd = señales.precio_bob_portal / señales.tasa_paralelo`.
+>   Tag `no_especificado`. **NUNCA** uses `precio_candidato` (viene como BOB/6.96, sobre-valúa) NI dividas por 6.96.
+>   Ej: Maré BOB 1.026.982 / 10.3 = **$99.700** (no 147.555 = BOB/6.96). Si el texto dice 6.96/7 explícito → `oficial_viejo`.
+> - Remax trae precio en USD → usá ese, tag según texto. `precio_usd` = CRUDO; el feed normaliza (`precio_normalizado_v2`).
+> - ⚠️ El crudo BOB→USD queda CONGELADO a la `tasa_paralelo` de lectura (se refresca al re-leer). Aceptable con re-lectura periódica.
 >
 > **PRODUCCIÓN = n8n** (sigue con el régimen VIEJO de abajo, intacto). El de abajo se conserva como **legacy/rollback**.
 
