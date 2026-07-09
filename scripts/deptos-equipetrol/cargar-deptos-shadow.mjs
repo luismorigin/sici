@@ -172,7 +172,9 @@ function construirFila(e, v, match) {
     id: e.id, url: a.url, fuente: e.fuente,
     tipo_operacion: 'venta', tipo_propiedad_original: a.tipo_propiedad_original || 'Departamento',
     estado_construccion: v.estado_construccion || a.estado_construccion,
-    precio_usd: v.precio_usd, tipo_cambio_detectado: v.tipo_cambio_detectado, moneda_original: a.moneda || null,
+    // tag "bob" → el crudo (precio_usd) está en BOLIVIANOS; moneda_original lo documenta y la normalización divide vivo.
+    precio_usd: v.precio_usd, tipo_cambio_detectado: v.tipo_cambio_detectado,
+    moneda_original: v.tipo_cambio_detectado === 'bob' ? 'BOB' : (a.moneda || null),
     area_total_m2: a.area, dormitorios: v.dormitorios,
     banos: v.banos ?? a.banos ?? null,                                          // ← veredicto manda
     piso: v.piso != null ? Number(v.piso)

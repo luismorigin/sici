@@ -46,7 +46,9 @@ Función NUEVA aparte (NO sobrescribir la de prod hasta estar seguro):
 CREATE OR REPLACE FUNCTION precio_normalizado_v2(p_precio_usd numeric, p_tipo_cambio_detectado text)
 RETURNS numeric LANGUAGE sql STABLE AS $$
   SELECT CASE
-    WHEN p_tipo_cambio_detectado = 'oficial_viejo' THEN
+    WHEN p_tipo_cambio_detectado = 'bob' THEN            -- crudo en BOLIVIANOS → USD real = BOB / tasa (LIVE)
+      ROUND(p_precio_usd / (SELECT valor FROM config_global WHERE clave='tipo_cambio_paralelo'), 2)
+    WHEN p_tipo_cambio_detectado = 'oficial_viejo' THEN  -- 6.96/7 explícito → descuenta
       ROUND(p_precio_usd * 6.96 / (SELECT valor FROM config_global WHERE clave='tipo_cambio_paralelo'), 2)
     ELSE p_precio_usd   -- default (paralelo/oficial-nuevo/no_especificado) = USD real directo; se va el ×1.47
   END;

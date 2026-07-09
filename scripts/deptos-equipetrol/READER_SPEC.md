@@ -20,8 +20,8 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
   "gate": "aceptar",                 // "aceptar" | "rechazar" (basura REAL: baulera/parqueo suelto, otra-operación)
   "razon_gate": null,                // si rechazar, por qué
   "es_multiproyecto": false,         // true = aviso a nivel PROYECTO (rangos, "Desde X m²", tipologías sin unidad). Se GUARDA con el tag (feed lo excluye), NO se rechaza.
-  "precio_usd": 78571,               // CRUDO: billete si paralelo; USD directo si oficial/no_especificado. NO normalizar.
-  "tipo_cambio_detectado": "oficial",// "paralelo" | "oficial" | "no_especificado"
+  "precio_usd": 78571,               // CRUDO en su moneda nativa: USD (billete/directo) o BOB si tag="bob". NO normalizar (lo hace el feed).
+  "tipo_cambio_detectado": "oficial",// "paralelo" | "oficial" | "no_especificado" | "oficial_viejo" (6.96/7 explícito) | "bob" (crudo en bolivianos)
   "dormitorios": 1,                  // 0 = monoambiente (válido). Corregir 0→N solo si el texto dice N.
   "banos": 1,                        // base estructurada; el texto corrige si dice otra cosa. null si no hay señal.
   "piso": 3,                         // piso de LA UNIDAD (ver regla). null si no se declara / solo hay pisos de amenidades.
@@ -58,11 +58,11 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 >   solo declara USD/moneda, o CALLA → normaliza **directo**.
 > - **`oficial_viejo`**: SOLO si el texto ancla EXPLÍCITO al rate muerto ("6.96" / "Bs 7" / "TC 7" / "al oficial 7") → se descuenta.
 > - **PRECIO del texto SIEMPRE primero** (con su TC según reglas de arriba). El siguiente bloque es SOLO fallback.
-> - **Fallback C21-BOB (sin precio en el texto)** — regla INEQUÍVOCA: `precio_usd = señales.precio_bob_portal / señales.tasa_paralelo`.
->   Tag `no_especificado`. **NUNCA** uses `precio_candidato` (viene como BOB/6.96, sobre-valúa) NI dividas por 6.96.
->   Ej: Maré BOB 1.026.982 / 10.3 = **$99.700** (no 147.555 = BOB/6.96). Si el texto dice 6.96/7 explícito → `oficial_viejo`.
-> - Remax trae precio en USD → usá ese, tag según texto. `precio_usd` = CRUDO; el feed normaliza (`precio_normalizado_v2`).
-> - ⚠️ El crudo BOB→USD queda CONGELADO a la `tasa_paralelo` de lectura (se refresca al re-leer). Aceptable con re-lectura periódica.
+> - **Fallback C21-BOB (sin precio en el texto)** — regla INEQUÍVOCA, **crudo REAL (no dividir al leer)**:
+>   `precio_usd = señales.precio_bob_portal` (el monto en **BOLIVIANOS, tal cual**) · `tipo_cambio_detectado = "bob"` · `moneda_original = "BOB"`.
+>   La normalización hace `BOB / tasa_paralelo` **en vivo** (una vez, al consultar) → sin freezing, sin doble-norm.
+>   **NUNCA** guardes `BOB/tasa` (eso es crudo-falso) NI uses `precio_candidato` (BOB/6.96). Si el texto dice 6.96/7 explícito → `oficial_viejo`.
+> - Remax trae precio en USD → usá ese, tag según texto. `precio_usd` = CRUDO en su moneda nativa; el feed normaliza (keyed en el tag).
 >
 > **PRODUCCIÓN = n8n** (sigue con el régimen VIEJO de abajo, intacto). El de abajo se conserva como **legacy/rollback**.
 
