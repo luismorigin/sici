@@ -39,10 +39,11 @@ const TS = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
 // ---- args ----
 const argv = process.argv.slice(2);
-const MODE = argv.includes('--prep') ? 'prep' : argv.includes('--apply') ? 'apply' : null;
+const MODE = argv.includes('--prep') ? 'prep' : argv.includes('--apply') ? 'apply' : argv.includes('--nuevas') ? 'nuevas' : null;
 const idsArg = (() => { const i = argv.indexOf('--ids'); return i >= 0 ? (argv[i + 1] || '').split(',').map((x) => Number(x.trim())).filter(Boolean) : null; })();
 const N = Number(argv.find((a) => /^\d+$/.test(a))) || 4;
 const applyFile = MODE === 'apply' ? argv[argv.indexOf('--apply') + 1] : null;
+const nuevasFile = MODE === 'nuevas' ? argv[argv.indexOf('--nuevas') + 1] : null;
 
 // ---- amenidades canónicas (deriva `lista`; cero drift de vocabulario) ----
 // SOLO DIFERENCIADORES (esEstandar:false). Las esEstandar (Seguridad/Ascensor/Recepción/Área Social/
@@ -155,6 +156,61 @@ async function prep() {
 }
 
 // ===========================================================================
+// FASE 1b — PREP NUEVAS (incremento 2): deptos del DISCOVERY que NO están en prod.
+// No hay fila de prod → se baja el detalle desde la URL (no por id) y se les asigna un
+// id RESERVADO en shadow (rango 8M, no choca con ids de prod). Al cutover el id lo da prod.
+// ===========================================================================
+async function prepNuevas(discoveryFile, n) {
+  const disc = JSON.parse(readFileSync(discoveryFile, 'utf8'));
+  const nuevas = (disc.nuevas || []).slice(0, n);
+  const { data: tcRow } = await sb.from('config_global').select('valor').eq('clave', 'tipo_cambio_paralelo').single();
+  const tasaParalelo = tcRow?.valor != null ? Number(tcRow.valor) : null;
+  console.log(`\n🌱 PREP NUEVAS — ${nuevas.length} deptos del discovery (no en prod). tasa_paralelo=${tasaParalelo}. NO escribe a la BD.\n`);
+  const entradas = [];
+  let i = 0;
+  for (const nv of nuevas) {
+    i++;
+    if (circuit.tripped) { console.log('🛑 circuit breaker.'); break; }
+    let h = null, err = null;
+    try { h = await fetchDetalleDepto(nv.fuente, nv.url); } catch (e) { err = String(e.message); }
+    if (!h) { console.log(`   ✗ fetch ${nv.url.slice(0, 55)}: ${err || ''}`); await pace(400); continue; }
+    const id = 8_000_000 + i;                       // id reservado shadow (TEMPORAL; al cutover lo da prod)
+    const area = h.area_const_m2 ?? h.area_texto ?? null;
+    entradas.push({
+      id, fuente: nv.fuente, zona: nv.zona || null, slug: slugDe(nv.url),
+      titulo: null, subtitulo: null, descripcion: h.descripcion || null,
+      senales: {
+        precio_candidato: h.precio_fuente_usd, precio_bob_portal: h.precio_bob_portal ?? null,
+        tasa_paralelo: tasaParalelo, tc_portal: h.tc_portal ?? null, moneda: h.moneda,
+        recamaras: h.dormitorios, banos: h.banos, piso: h.piso, estacionamientos: h.estacionamientos,
+        area, n8n: null,                            // NUEVA: sin referencia n8n (no la trajo el pipeline viejo)
+      },
+      nombre_guess: null, match_candidatos: [],     // el lector da el nombre; el matcher lo resuelve en --apply
+      _apply: {
+        url: nv.url, tipo_propiedad_original: 'departamento', estado_construccion: null,
+        latitud: nv.lat ?? null, longitud: nv.lon ?? null, microzona: null,
+        // fecha_publicacion (DOM real): Remax date_of_listing (h) · C21 fecha_alta del listado (nv.fecha_alta, ISO).
+        // fecha_discovery=hoy queda de FALLBACK (la vista usa COALESCE). El verificador NO usa estas fechas para
+        // dar de baja (usa primera_ausencia_at) → corregir la fecha no lo afecta.
+        fecha_publicacion: h.fecha_publicacion ?? fechaDia(nv.fecha_alta), fecha_discovery: new Date().toISOString().slice(0, 10),
+        score_calidad_dato: null,
+        es_multiproyecto: false, duplicado_de: null, baulera: null, solo_tc_paralelo: null,
+        area, moneda: h.moneda, banos: h.banos, piso: h.piso, estacionamientos: h.estacionamientos,
+        agente: { nombre: h.agente_nombre, telefono: h.agente_telefono, oficina_nombre: h.oficina_nombre },
+        fotos_urls: h.fotos_urls || [], cantidad_fotos: h.cantidad_fotos || 0,
+        amenities: canonizar(h.amenities), parqueo_incluido: !!h.parqueo_incluido, expensas: h.expensas ?? null,
+      },
+      veredicto: null,
+    });
+    console.log(`   ${id} ${nv.fuente} nueva  zona=${nv.zona}  precio_cand=${h.precio_fuente_usd}  slug:${(slugDe(nv.url) || '').slice(0, 44)}`);
+    await pace(500);
+  }
+  const file = join(OUT, `material-nuevas-${TS}.json`);
+  writeFileSync(file, JSON.stringify({ generado: TS, spec: 'READER_SPEC.md', origen: 'discovery-nuevas', total: entradas.length, entradas }, null, 2));
+  console.log(`\n💾 ${file}\n   → LÉELO y llená "veredicto" (READER_SPEC.md), después: node cargar-deptos-shadow.mjs --apply ${file}\n`);
+}
+
+// ===========================================================================
 // FASE 3 — APPLY: escribe la fila correcta de una + resuelve match name-first
 // ===========================================================================
 function construirFila(e, v, match) {
@@ -185,7 +241,7 @@ function construirFila(e, v, match) {
     estacionamientos: estac,                                                    // ← veredicto manda
     latitud: a.latitud, longitud: a.longitud, zona: e.zona, microzona: a.microzona,
     id_proyecto_master: match.pm, nombre_edificio: v.nombre_edificio_canonico || null,
-    fecha_publicacion: a.fecha_publicacion, score_calidad_dato: a.score_calidad_dato,
+    fecha_publicacion: a.fecha_publicacion, fecha_discovery: a.fecha_discovery ?? null, score_calidad_dato: a.score_calidad_dato,
     es_multiproyecto: v.es_multiproyecto ?? a.es_multiproyecto ?? false,        // ← taguea multiproyecto (no rechaza)
     duplicado_de: a.duplicado_de ?? null,
     baulera: bauleraIncl, solo_tc_paralelo: a.solo_tc_paralelo ?? null, parqueo_incluido: parqueoIncl,
@@ -291,5 +347,6 @@ async function apply(file) {
 
 // ---------------------------------------------------------------------------
 if (MODE === 'prep') await prep();
+else if (MODE === 'nuevas') { if (!nuevasFile) { console.error('Falta la ruta: --nuevas <discovery-*.json> [N]'); process.exit(1); } await prepNuevas(nuevasFile, N); }
 else if (MODE === 'apply') { if (!applyFile) { console.error('Falta la ruta: --apply <material.json>'); process.exit(1); } await apply(applyFile); }
-else console.error('Uso: --prep [N | --ids a,b,c]   |   --apply <output/material-*.json>');
+else console.error('Uso: --prep [N | --ids a,b,c]   |   --nuevas <discovery-*.json> [N]   |   --apply <output/material-*.json>');

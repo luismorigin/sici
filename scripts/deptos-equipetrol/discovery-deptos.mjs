@@ -133,7 +133,7 @@ writeFileSync(outPath, JSON.stringify({
       remax: portal.filter((p) => p.fuente === 'remax').length,
     },
   },
-  nuevas: nuevas.map((p) => ({ url: p.url, fuente: p.fuente, lat: p.lat, lon: p.lon, zona: zonaDe.get(p.url), precio_usd: p.precio_usd, dorms: p.dorms })),
+  nuevas: nuevas.map((p) => ({ url: p.url, fuente: p.fuente, lat: p.lat, lon: p.lon, zona: zonaDe.get(p.url), precio_usd: p.precio_usd, dorms: p.dorms, fecha_alta: p.fecha_alta ?? null })),
   existentes_urls: existentes.map((p) => p.url),
   desaparecidas: desaparecidas.map((r) => ({ id: r.id, url: r.url, status: r.status, zona: r.zona })),
 }, null, 2), 'utf8');

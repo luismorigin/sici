@@ -42,6 +42,7 @@ export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {} 
         precio_raw: raw, moneda: moneda || null,
         precio_usd: raw ? (moneda === 'BOB' ? Math.round(raw / TC) : raw) : null,
         tipo_portal: p.tipoPropiedad ?? null,
+        fecha_alta: p.fechaAlta ?? p.fecha_alta ?? null,   // fecha de PUBLICACIÓN del listado (n8n la usa para DOM; el detalle C21 no la trae)
         url: p.urlCorrectaPropiedad ? `https://c21.com.bo${p.urlCorrectaPropiedad}` : null,
       });
     }
