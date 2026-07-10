@@ -221,10 +221,14 @@ function construirFila(e, v, match) {
   const amenLista = usaLector ? v.amenidades : (a.amenities || []);
   const estado_amenities = {};
   for (const k of amenLista) estado_amenities[k] = { valor: true, fuente: usaLector ? 'lector' : 'structured', confianza: 'alta' };
-  // parqueo/baulera: el TEXTO (veredicto) manda sobre el estructurado
+  // parqueo/baulera: el TEXTO (veredicto) manda. v4 — APARTE ⟺ NO incluido; el flag estructurado del portal
+  // (a.parqueo_incluido) MIENTE (contradictorio entre duplicados, true cuando el texto dice "aparte") → NO usarlo.
   const estac = v.estacionamientos_incluidos ?? a.estacionamientos ?? null;
-  const bauleraIncl = v.baulera_incluida ?? a.baulera ?? null;
-  const parqueoIncl = (estac != null && estac > 0) ? true : !!a.parqueo_incluido;
+  const parqueoIncl = v.parqueo_precio_adicional_usd != null ? false        // hay precio aparte → NO incluido
+                      : estac == null ? null                                // sin señal → null (no inventar "incluido")
+                      : estac > 0;
+  const bauleraIncl = v.baulera_precio_adicional_usd != null ? false        // ídem baulera
+                      : (v.baulera_incluida ?? a.baulera ?? null);
   return {
     id: e.id, url: a.url, fuente: e.fuente,
     tipo_operacion: 'venta', tipo_propiedad_original: a.tipo_propiedad_original || 'Departamento',
