@@ -13,12 +13,16 @@ const C21_HEADERS = () => ({
   'cookie': `PHPSESSID=sici_sonda_${Math.random().toString(36).slice(2, 12)}`,
 });
 
-export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {} } = {}) {
+export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {}, step = STEP } = {}) {
+  // step: tamaño del cuadrante. C21 corta a ~100 props/request → cuadrante grande PIERDE inventario.
+  // Default 0.02 (casas). Deptos pasa 0.005: Equipetrol es ULTRA-denso y con 0.01 los cuadrantes del core
+  // TOPABAN a 100 (perdía ~44% del inventario C21, verificado 10-jul: 1 cuadrante 0.01=100 → 4 sub 0.005=137).
+  // n8n evita el tope con un bbox chico y alineado (0.025×0.020); acá el bbox es ancho → hace falta 0.005.
   const b = bboxDe(zonaKey);
   const cuadrantes = [];
-  for (let lat = b.S; lat < b.N; lat += STEP)
-    for (let lon = b.O; lon < b.E; lon += STEP)
-      cuadrantes.push({ N: Math.min(lat + STEP, b.N), E: Math.min(lon + STEP, b.E), S: lat, O: lon });
+  for (let lat = b.S; lat < b.N; lat += step)
+    for (let lon = b.O; lon < b.E; lon += step)
+      cuadrantes.push({ N: Math.min(lat + step, b.N), E: Math.min(lon + step, b.E), S: lat, O: lon });
 
   const vistos = new Set(), out = [];
   for (const [idx, c] of cuadrantes.entries()) {

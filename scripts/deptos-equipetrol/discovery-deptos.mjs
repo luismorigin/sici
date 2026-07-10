@@ -76,7 +76,7 @@ log(`\n🏢 DISCOVERY DEPTOS EQUIPETROL — DRY-RUN (read-only) · tipo=${TIPO} 
 // ---------- 1. DISCOVERY ----------
 log('1) Discovery (C21 + Remax, red ancha Equipetrol)…');
 const listings = [];
-for (const p of await c21Listado(ZONA_KEY, TIPO, { log })) if (p.url && enZona(p.lat, p.lon, ZONA_KEY)) listings.push({ ...p, fuente: 'century21' });
+for (const p of await c21Listado(ZONA_KEY, TIPO, { log, step: 0.005 })) if (p.url && enZona(p.lat, p.lon, ZONA_KEY)) listings.push({ ...p, fuente: 'century21' });
 for (const p of await remaxListadoSC(TIPO, { log })) if (p.url && enZona(p.lat, p.lon, ZONA_KEY)) listings.push({ ...p, fuente: 'remax' });
 const byUrl = new Map();
 for (const p of listings) if (!byUrl.has(p.url)) byUrl.set(p.url, p);
