@@ -16,7 +16,7 @@
 | Columna | Origen en el híbrido | Notas |
 |---|---|---|
 | `precio_usd` | **LECTOR** (texto) | billete si `paralelo`; USD directo si `oficial`/`no_especificado`. NUNCA normalizar al guardar |
-| `tipo_cambio_detectado` | **LECTOR** (TEXTO primero, ratio de respaldo) | `paralelo`/`oficial`/`no_especificado`. **Precedencia**: (1) texto "paralelo"→paralelo; (2) "TC 7"/"oficial"/"a Bs 7"→oficial; (3) texto calla→ratio BOB/USD vs paralelo VIVO de Binance (`config_global`, hoy 9.97): ≈paralelo→paralelo, ≈6.96→`no_especificado` (NO forzar). Remax `exchange_rate_amount` = tasa GLOBAL del portal (no por-anuncio) → NO marcar paralelo solo por eso. Ver `lib/tc.mjs`. ⚠️ **Transición**: el oficial se está unificando; anuncios viejos siguen 6.96/"TC 7"=oficial-viejo; el nuevo oficial unificado se maneja DESPUÉS. |
+| `tipo_cambio_detectado` | **LECTOR** (TEXTO primero, ratio de respaldo) | `paralelo`/`oficial`/`no_especificado`. **Precedencia**: (1) texto "paralelo"→paralelo; (2) "TC 7"/"oficial"/"a Bs 7"→oficial; (3) texto calla→ratio BOB/USD vs paralelo VIVO de Binance (`config_global`, hoy 9.97): ≈paralelo→paralelo, ≈6.96→`no_especificado` (NO forzar). Remax `exchange_rate_amount` = tasa GLOBAL del portal (no por-anuncio) → NO marcar paralelo solo por eso. Ver `lib/tc.mjs`. ⚠️ **RÉGIMEN NUEVO (híbrido, act. 10-jul)**: tags `bob` (C21 crudo en Bs → normaliza ÷paralelo vivo), `oficial_viejo` (texto ancla EXPLÍCITO a 6.96/"Bs 7" → descuenta) y **default** (paralelo/oficial/no_especificado → USD directo). El fallback C21-sin-precio-en-texto elige USD-directo vs `bob` por **$/m² coherente**. Detalle: `READER_SPEC.md` + `TC_NUEVO_DECISION.md`. El "paquete TC" (normalización con estos tags en SQL+vistas+estudios+snapshots) va JUNTO a prod al unificarse el oficial. |
 | `area_total_m2` | DISCOVERY (search API) → **fallback texto** | C21 `m2C` / Remax `construction_area_m` (hoy 265/265 Remax la traen). **Si faltara: `parseAreaTexto()` de la descripción** (`lib/detalle-deptos.mjs`, `area_texto`) — tolerante a formatos BO `mts2`/`mts.`/`metros cuadrados`. NO está en slug ni título (verificado). |
 | `dormitorios` | extractor + **LECTOR** corrige | **`0` = monoambiente = CORRECTO** (el frontend lo muestra "Monoambiente": `propiedad-constants.ts:52`, `usePropertyEditor.ts:168`, `VentaMap`/`CompareSheet` "Mono"). El extractor conserva 0 (`numOrZero`). El LECTOR sube 0→N **solo** si el texto dice "N dormitorios" y NO es monoambiente (ej. Sky Eclipse `recamaras=0` pero "2 DORMITORIOS"). |
 | `banos` | extractor | |
@@ -42,24 +42,39 @@
     // estacionamientos/baulera acá SOLO los usa buscar_unidades_reales (no el feed vivo)
   },
   "amenities": {
-    "lista":            ["Piscina", "Gimnasio", …],   // chips de la card — DERIVAR de estado_amenities (valor=true)
-    "estado_amenities": { "Piscina": { "valor": true, "fuente": "structured", "confianza": "alta" }, … }, // catálogo canónico → alimenta "por_verificar"
-    "equipamiento":     ["Aire acondicionado", …]     // equipo de la UNIDAD
+    "lista":              ["Piscina", "Gimnasio", …],  // chips — SOLO diferenciadores canónicos (esEstandar:false)
+    "estado_amenities":   { "Piscina": { "valor": true, "fuente": "lector|structured", "confianza": "alta" }, … },
+    "extra":              ["Rooftop", "Cine", …],       // amenidades de edificio CONFIRMADAS no-canónicas (no se pierden)
+    "equipamiento":       ["Cocina equipada", "Heladera", …],   // canónico de UNIDAD (FILTRABLE) → RPC `equipamiento_detectado`
+    "equipamiento_otros": ["Doble vidrio", "Espejos", …]        // cola larga de UNIDAD (mostrar, no filtrar)
   },
   "plan_pagos": { "cuotas": [...], "texto": "…" },     // LECTOR
   "fecha_entrega": "…",                                 // LECTOR (preventa)
+  "amoblado": null, "equipado": null,                   // FLAGS de decisión (LECTOR): muebles / electrodomésticos (distintos)
   // flags escalares (LECTOR, del texto):
   "plan_pagos_desarrollador": false, "acepta_permuta": false, "precio_negociable": false,
   "descuento_contado_pct": null,
-  "parqueo_incluido": false, "parqueo_precio_adicional": null,
-  "baulera_incluido": false,  "baulera_precio_adicional": null
+  "parqueo_incluido": false, "parqueo_precio_adicional": null,   // 🔴 APARTE ⟺ incluido=false + estac=0 (regla dura, no coexisten)
+  "baulera_incluido": false,  "baulera_precio_adicional": null   // ídem baulera
 }
+
+> **Extras vía helper (mig 271):** `amenidades_extra`, `equipamiento_otros`, `amoblado`, `equipado` los expone
+> `buscar_extras_shadow` y el `/api/ventas-shadow` los mergea. **Pendiente para prod: portar ese merge al
+> `/api/ventas`** para que el front nuevo los reciba (hoy solo el shadow). Los demás campos salen directo de la RPC.
 ```
 
-### Vocabulario canónico de amenidades (único, fijo)
-Las ~16 keys de `estado_amenities`: `Piscina, Gimnasio, Sauna/Jacuzzi, Churrasquera, Co-working, Seguridad 24/7, Ascensor, Recepción, Salón de Eventos, Área Social, Pet Friendly, Parque Infantil, Terraza/Balcón, Estacionamiento para Visitas, Lavandería, Cámaras de seguridad`. `lista` se deriva de acá (las `valor:true`) → cero drift de vocabulario.
+### Vocabulario canónico de amenidades (SOLO diferenciadores — act. 10-jul-2026)
+`amenidades` = SOLO **diferenciadores** del edificio (`esEstandar:false` de `amenidades-mercado.ts`):
+`Piscina, Gimnasio, Sauna/Jacuzzi, Churrasquera, Co-working, Salón de Eventos, Pet Friendly, Parque Infantil,
+Jardín, Estacionamiento para Visitas`. **Las `esEstandar` (Seguridad 24/7, Ascensor, Recepción, Área Social,
+Terraza, Lavandería, Cámaras) NO van a `amenidades`** — casi todo edificio las tiene, no diferencian. Si el texto
+las nombra explícito → `extra`.
 
-**Relleno de `estado_amenities`:** estructurado primero (C21 `caracteristicasJSON.campos[valor=true]` / Remax `features[].name` → `fuente:"structured", confianza:"alta"`); el lector completa del texto → `fuente:"descripcion", confianza:"media"`. Lo no detectado → `valor:"por_confirmar"` (alimenta el badge "por verificar").
+⚠️ **El CANON del cargador se limpió (10-jul, commit 72cd780):** se sacaron las `esEstandar` porque el fallback
+estructurado (checkbox C21) las volcaba a `amenidades` inventando amenidades falsas (auditoría 2674/3343).
+
+**Relleno:** estructurado primero (C21 `caracteristicasJSON.campos[valor=true]` / Remax `features[].name`); el
+lector completa del texto. NUNCA inferir/promover `esEstandar`, ni derivar amenidades del NOMBRE del edificio.
 
 ## C) Fallbacks (el feed cae a estos si falta lo de arriba)
 - Fotos: `datos_json_discovery.default_imagen.url` (Remax) / `datos_json_discovery.fotos.propiedadThumbnail` (C21).
