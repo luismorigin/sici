@@ -45,15 +45,16 @@ const N = Number(argv.find((a) => /^\d+$/.test(a))) || 4;
 const applyFile = MODE === 'apply' ? argv[argv.indexOf('--apply') + 1] : null;
 
 // ---- amenidades canónicas (deriva `lista`; cero drift de vocabulario) ----
+// SOLO DIFERENCIADORES (esEstandar:false). Las esEstandar (Seguridad/Ascensor/Recepción/Área Social/
+// Terraza/Lavandería/Cámaras) se EXCLUYEN a propósito: el spec (§AMENIDADES) las prohíbe en `amenidades`
+// (casi todo edificio las tiene, no diferencian). Si el fallback estructural las incluía, poblaba amenidades
+// falsas desde el checkbox (auditoría 10-jul: 2674/3343). NO reagregar acá.
 const CANON = [
   [/piscina|pool/i, 'Piscina'], [/gimnasio|gym/i, 'Gimnasio'], [/sauna|jacuzzi/i, 'Sauna/Jacuzzi'],
   [/churrasq|parrill|barbacoa|quincho/i, 'Churrasquera'], [/co-?work/i, 'Co-working'],
-  [/seguridad|vigilancia|24 ?\/ ?7/i, 'Seguridad 24/7'], [/ascensor|elevador/i, 'Ascensor'],
-  [/recepci|lobby/i, 'Recepción'], [/sal[oó]n.*event|eventos/i, 'Salón de Eventos'],
-  [/[aá]rea social|social/i, 'Área Social'], [/pet ?friendly|mascota/i, 'Pet Friendly'],
-  [/parque infantil|juegos/i, 'Parque Infantil'], [/terraza|balc[oó]n/i, 'Terraza/Balcón'],
+  [/sal[oó]n.*event|eventos/i, 'Salón de Eventos'], [/pet ?friendly|mascota/i, 'Pet Friendly'],
+  [/parque infantil/i, 'Parque Infantil'], [/jard[ií]n/i, 'Jardín'],
   [/estacionamiento.*visita|parqueo.*visita/i, 'Estacionamiento para Visitas'],
-  [/lavander|lavado/i, 'Lavandería'], [/c[aá]mara/i, 'Cámaras de seguridad'],
 ];
 const canonizar = (arr) => { const s = new Set(); for (const a of arr || []) for (const [re, k] of CANON) if (re.test(a)) s.add(k); return [...s]; };
 const slugDe = (url) => (url ? String(url).replace(/^https?:\/\/[^/]+\//, '').replace(/^propiedad\//, '') : null);
@@ -214,10 +215,25 @@ async function apply(file) {
   const sinVer = doc.entradas.filter((e) => !e.veredicto);
   console.log(`\n✍️  APPLY — ${conVer.length}/${doc.entradas.length} con veredicto${sinVer.length ? ` (faltan ${sinVer.length}: ${sinVer.map((e) => e.id).join(',')})` : ''}\n`);
 
-  const filas = [], rechazados = [], aliasSugeridos = [], reporte = [];
+  const filas = [], rechazados = [], aliasSugeridos = [], reporte = [], proyectos = [];
   for (const e of conVer) {
     const v = e.veredicto;
     if (v.gate === 'rechazar') { rechazados.push({ id: e.id, razon: v.razon_gate }); continue; }
+
+    // MULTIPROYECTO → NO va a propiedades_v2_shadow (viola check_multiproperty_completo_v2 y el
+    // feed lo excluye igual). Se guarda la CRUDA en proyectos_detectados (mig 273) para el
+    // despliegue diferido de tipologías. Ver READER_SPEC §GATE + MULTIPROYECTO.
+    if (v.es_multiproyecto) {
+      proyectos.push({
+        url: e._apply.url, fuente: e.fuente, codigo_propiedad: slugDe(e._apply.url),
+        descripcion_cruda: e.descripcion || null,
+        datos_json: { senales: e.senales, veredicto: v },
+        zona: e.zona || null, macrozona: 'equipetrol',
+        latitud: e._apply.latitud ?? null, longitud: e._apply.longitud ?? null,
+        nombre_proyecto: v.nombre_edificio_canonico || null, estado: 'pendiente',
+      });
+      continue;
+    }
 
     // MATCH name-first (matcher.mjs). El lector puede fijar pm a mano (id_proyecto_master).
     let match = { pm: null, metodo: 'sin_nombre', motivo: '', auto: false };
@@ -246,12 +262,24 @@ async function apply(file) {
       f.fecha_publicacion = min;
     }
   }
-  if (filas.length) {
-    const { error } = await sb.from('propiedades_v2_shadow').upsert(filas, { onConflict: 'id' });
-    if (error) { console.error(`❌ upsert shadow:`, error.message); process.exit(1); }
+  // Upsert RESILIENTE (fila-por-fila): una fila que viole un constraint NO tira el lote entero
+  // (ej. multiproyecto sin rangos → check_multiproperty_completo_v2). Se reporta, no se aborta.
+  const fallidas = [];
+  for (const f of filas) {
+    const { error } = await sb.from('propiedades_v2_shadow').upsert(f, { onConflict: 'id' });
+    if (error) fallidas.push({ id: f.id, mp: f.es_multiproyecto, motivo: (error.message.split('\n')[0] || '').slice(0, 70) });
   }
+  const escritas = filas.length - fallidas.length;
   if (rechazados.length) { const prev = leerRechazados(); for (const r of rechazados) prev.add(r.id); writeFileSync(REJ_FILE, JSON.stringify([...prev])); }
-  console.log(`✅ ${filas.length} escritos en propiedades_v2_shadow.  Rechazados (gate): ${rechazados.length}${rechazados.length ? ' → ' + rechazados.map((r) => `${r.id}(${r.razon})`).join(', ') : ''}${protegidas ? `  ·  fecha_publicacion protegida (LEAST) en ${protegidas}` : ''}\n`);
+  console.log(`✅ ${escritas} escritos en propiedades_v2_shadow.  Rechazados (gate): ${rechazados.length}${rechazados.length ? ' → ' + rechazados.map((r) => `${r.id}(${r.razon})`).join(', ') : ''}${protegidas ? `  ·  fecha_publicacion protegida (LEAST) en ${protegidas}` : ''}`);
+  if (fallidas.length) console.log(`⚠️  ${fallidas.length} NO escritas (constraint): ${fallidas.map((f) => `${f.id}${f.mp ? '[multiproyecto]' : ''}(${f.motivo})`).join(', ')}`);
+  // Multiproyectos → cola proyectos_detectados (mig 273; upsert por url+fuente → la cruda no se pierde)
+  if (proyectos.length) {
+    const { error } = await sb.from('proyectos_detectados').upsert(proyectos, { onConflict: 'url,fuente' });
+    if (error) console.error(`❌ proyectos_detectados:`, error.message);
+    else console.log(`📦 ${proyectos.length} multiproyecto(s) → proyectos_detectados (cruda guardada, feed los excluye): ${proyectos.map((p) => p.nombre_proyecto || slugDe(p.url)).join(', ')}`);
+  }
+  console.log('');
   for (const r of reporte) console.log(`   ${r.id}  $${r.precio} ${r.tc}  ${r.dorm}d  edif="${r.edif || '—'}" → pm ${r.pm ?? '—'} [${r.match}]${r.motivo ? '  ·  ' + r.motivo : ''}`);
   if (aliasSugeridos.length) {
     console.log(`\n🏷️  Alias sugeridos (NO se escriben a prod en fase shadow — registrados para el cutover/audit):`);

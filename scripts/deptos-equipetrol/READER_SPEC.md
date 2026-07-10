@@ -56,6 +56,10 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 > Fuente de verdad de la detección de tag: **`TC_NUEVO_DECISION.md`** (pieza 1). Resumen:
 > - **`default`** (oficial nuevo = USD real): texto dice "paralelo"/"al día", "oficial del día" (= Binance, NO el viejo),
 >   solo declara USD/moneda, o CALLA → normaliza **directo**.
+> - **Tag consistente (evitar drift, auditoría 10-jul):** las frases que EQUIPARAN USD=paralelo — "dólares o
+>   paralelo", "paralelo o dólares", "TC del día", "al día", "USD o TCP" — emití SIEMPRE el mismo tag
+>   **`no_especificado`** (todas normalizan directo igual; usar tags distintos para la misma frase ensucia la data).
+>   Reservá el tag `paralelo` para señal FUERTE y sola ("al paralelo", "TCP", "dólares físicos/billete").
 > - **`oficial_viejo`**: SOLO si el texto ancla EXPLÍCITO al rate muerto ("6.96" / "Bs 7" / "TC 7" / "al oficial 7") → se descuenta.
 > - **PRECIO del texto SIEMPRE primero** (con su TC según reglas de arriba). El siguiente bloque es SOLO fallback.
 > - **Fallback C21-BOB (sin precio en el texto)** — regla INEQUÍVOCA, **crudo REAL (no dividir al leer)**:
@@ -189,9 +193,15 @@ intenta predecir todo. Se separa en:
 ### PARQUEO + BAULERA (estructurado como base; la DESCRIPCIÓN manda)
 - `estacionamientos_incluidos`: cuántos parqueos incluye el precio. Base = estructurado; **el texto pisa**
   ("2 parqueos incluidos" > el dato del portal). `null` si ninguna fuente lo dice.
-- `parqueo_precio_adicional_usd`: si el parqueo es APARTE, su costo del texto ("parqueo opcional $8.000").
+- `parqueo_precio_adicional_usd`: si el parqueo es APARTE, su costo del texto ("parqueo opcional/disponible/reservado $8.000").
 - `baulera_incluida`: true/false del texto o estructurado (**texto manda**). `null` si no hay señal.
 - `baulera_precio_adicional_usd`: si la baulera es aparte, su costo del texto.
+- **🔴 APARTE ⟺ NO incluido (regla dura, falla frecuente 10-jul):** si hay `parqueo_precio_adicional_usd` (el
+  texto dice "parqueo opcional/aparte/disponible $X") → `estacionamientos_incluidos = 0` (NO null, NO ≥1) — es
+  incompatible con "incluido". Ídem baulera. **NUNCA** coexisten un precio adicional y "incluido=true".
+- **Sin señal → null, no true:** si NI el texto NI el estructurado mencionan parqueo → `estacionamientos_incluidos = null`.
+  NO inventar parqueo incluido (Remax sin checkboxes: parqueo ausente del texto = null). "Parqueo Y baulera: $X"
+  conjunto → ambos APARTE (registrá el costo conjunto), no uno incluido.
 - Siempre: **tomar como válido lo de la descripción** — el estructurado es solo respaldo por si el texto calla.
 
 > **Fuera de alcance (nice-to-have, casi ningún aviso los trae — NO extraer):** plan de pagos, permuta,
@@ -202,7 +212,10 @@ intenta predecir todo. Se separa en:
 - ⚠️ **Desambiguación** — NO confundir el piso de la UNIDAD con:
   - **pisos de amenidades**: "áreas sociales en pisos 4, 27 y 28" → NO es el piso del depto.
   - **altura del edificio**: "torre de 20 pisos", "niveles_edificio" → es el total, no la unidad.
-- Si el texto NO declara el piso de la unidad (aunque mencione otros pisos) → `null`. No adivinar.
+  - **"Pasillo N" / nº de departamento** ("Pasillo 1", "Dpto 302") → dirección/unidad, NO piso (falla 3342).
+  - **romano del NOMBRE del edificio**: "Stone II", "Siria II" → el II es del nombre, NO el piso (falla 2656).
+- Si el texto NO declara el piso de la unidad (aunque mencione otros pisos) → `null`. **NO heredes ciegamente el
+  `piso` estructurado si el texto no lo corrobora** (viene mal seguido). No adivinar.
 
 ### ESTADO_CONSTRUCCION + FECHA_ENTREGA (port de prod `prompt-ventas.md`)
 - **preventa**: "precios desde", "entrega [fecha futura]", "en construcción", "obra gruesa", "avance X%", fecha de entrega futura.
@@ -230,10 +243,22 @@ intenta predecir todo. Se separa en:
 ### GATE (aceptar/rechazar) + MULTIPROYECTO
 - **rechazar** = basura REAL que no se debe guardar: baulera/parqueo/depósito suelto, otra operación mal tipeada
   (anticrético/alquiler como venta), precio no confiable/contradictorio. Va a `rechazados.json`.
-- **Multiproyecto NO se rechaza** — se TAGUEA. Aviso a nivel proyecto (rangos "1650$/m²", "Desde 62 m²",
-  "1,2,3 dormitorios" sin unidad concreta ni precio total) → `gate: aceptar` + `es_multiproyecto: true`.
-  Se guarda con el tag (el feed lo excluye por `es_multiproyecto`), para que una solución futura parsee sus
-  tipologías en unidades. NO se pierde. (Ej: 2731 Condado VI Plaza Italia.)
+- **🔴 GATE de OPERACIÓN — leé la palabra en el TEXTO (falla real 10-jul, 2697):** si el CUERPO del aviso dice
+  **"en Alquiler" / "en anticrético" / "en renta" / "se alquila"** → `gate: rechazar` (razon_gate: "operación
+  alquiler/anticrético tipeada como venta"), **aunque la metadata sea venta y el precio parezca de venta**. La
+  contradicción de operación gana. No te fíes solo del `tipo_operacion` del portal — el broker tipea mal.
+- **Multiproyecto NO se rechaza** — se TAGUEA `es_multiproyecto: true` (+ `gate: aceptar`). El cargador lo
+  DESVÍA a la tabla `proyectos_detectados` (mig 273): NO entra a `propiedades_v2_shadow` ni al feed. Se guarda
+  la **cruda** (activo durable, portable, contable) para el **despliegue diferido** de tipologías.
+- **Discriminador UNIDAD vs MULTIPROYECTO (2 niveles) — el estructurado puede MENTIR:**
+  1. El **TEXTO** da un **PRECIO TOTAL de una unidad** ("$132.750") → es una **UNIDAD**, aunque el copy sea de
+     proyecto (Ej: Sky Level — copy "desde 52-94m²" pero cada fila con precio+área reales → unidades).
+  2. El texto solo da **$/m² / rangos** ("Desde 62m²", "1,2,3 dorms", "1650$/m²") → mirá la **COHERENCIA del par
+     (precio, área)** del estructurado: área realista (≤~400 m²) + $/m² en banda → unidad real; **área ABSURDA**
+     (ej `14431`) o `precio = $/m² × área` → **multiproyecto** (el estructurado fabricó el precio). Ej: Condado VI
+     2731 (área "14431", precio 238.111 = 1650 × 144,31).
+- **`tipologias` (dorms/area/precio desde-hasta) NO se captura ahora** — se extrae en una SEGUNDA PASADA sobre la
+  cruda guardada (decisión founder 10-jul). Nada se pierde: la cruda está en `proyectos_detectados`.
 - El feed ya filtra área<20 / duplicados / es_multiproyecto — el gate cubre lo que la metadata no ve pero el texto delata.
 
 ## Matching (lo hace el `matcher.mjs`, NO el lector)
