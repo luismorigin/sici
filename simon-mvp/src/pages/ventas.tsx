@@ -3765,10 +3765,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* El bloque mapa+resumen se OCULTA (no se desmonta) cuando el side sheet
            está abierto — desmontar Leaflet en plena animación de zoom crashea. */
         .vd-panel-home { flex:1; min-height:0; display:flex; flex-direction:column; gap:16px }
-        /* visibility (no display:none): el contenedor conserva su tamaño y
-           Leaflet no queda en 0x0 si se reconstruye mientras está oculto */
+        /* Con el side sheet abierto TODO el bloque mapa+resumen se oculta
+           (decisión de Lucho: una cosa a la vez, sin mapa de fondo).
+           visibility (no display:none): el contenedor conserva su tamaño,
+           Leaflet no queda en 0x0 y nunca se desmonta (crash Leaflet). */
         .vd-panel-hidden { visibility:hidden; position:absolute; inset:0; z-index:0; pointer-events:none }
-        .vd-map { flex:1; min-height:260px; border-radius:14px; overflow:hidden; border:1px solid rgba(237,232,220,0.08); position:relative }
+        /* isolation: los z-index internos de Leaflet (panes 200-700) quedan
+           encapsulados y no compiten con el side sheet (z-index 40) */
+        .vd-map { flex:1; min-height:260px; border-radius:14px; overflow:hidden; border:1px solid rgba(237,232,220,0.08); position:relative; z-index:1; isolation:isolate }
         .vd-map .venta-map { position:absolute; inset:0 }
         .vd-map-full { position:absolute; top:12px; right:12px; z-index:1100; display:inline-flex; align-items:center; gap:6px; background:#141414; color:#EDE8DC; border:1px solid rgba(237,232,220,0.15); padding:8px 14px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.35) }
         .vd-map-full:hover { background:#1e1e1e }
@@ -3787,12 +3791,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
            inferior. Así el sheet nunca excede la pantalla y el footer sticky
            bottom:0 queda SIEMPRE visible, sin importar el scroll de la página.
            El .vd-panel mantiene su height fija → la columna no colapsa aunque
-           el sheet salga del flujo. Ancho = columna derecha del grid (~52%). */
-        .bs-venta.bs-side { position:fixed; inset:auto; left:auto; top:76px; right:24px; bottom:20px; width:calc((100vw - 68px) * 0.52); max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:14px; border:1px solid rgba(237,232,220,0.08); z-index:40; padding-bottom:84px; transform:none }
+           el sheet salga del flujo. Ancho acotado a 520px (medida de lectura):
+           la franja sobrante de la columna la ocupa el mapa (vd-panel-peek). */
+        .bs-venta.bs-side { position:fixed; inset:auto; left:auto; top:76px; right:24px; bottom:20px; width:min(520px, calc((100vw - 68px) * 0.52)); max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:14px; border:1px solid rgba(237,232,220,0.08); z-index:40; padding-bottom:84px; transform:none }
         /* Footer WhatsApp/Compartir FIJO a la pantalla (misma columna que el
            sheet), garantiza que quede siempre abajo sin depender del scroll
            interno. El sheet reserva 84px abajo (padding) para no taparlo. */
-        .bs-venta.bs-side .bs-sticky-footer { position:fixed; box-sizing:border-box; left:auto; right:24px; bottom:20px; width:calc((100vw - 68px) * 0.52); z-index:60; border-radius:0 0 14px 14px }
+        .bs-venta.bs-side .bs-sticky-footer { position:fixed; box-sizing:border-box; left:auto; right:24px; bottom:20px; width:min(520px, calc((100vw - 68px) * 0.52)); z-index:60; border-radius:0 0 14px 14px }
         .bs-venta.bs-side.open { transform:none }
         /* fav+close: fijos en la esquina del sheet (absolute sobre el sheet
            fixed), siempre visibles, sin ocupar flujo ni chocar con las tabs. */
@@ -3810,6 +3815,19 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta.bs-side .bs-tabs { padding-left:16px; padding-right:56px }
         /* Precio menos gigante en el side sheet ancho */
         .bs-venta.bs-side .bs-h-price { font-size:24px }
+        /* Modo compacto del side sheet: menos aire vertical en cada sección
+           para reducir el scroll interno (el contenido base es de mobile,
+           donde el aire ayuda; a 520px de ancho sobra). */
+        .bs-venta.bs-side .bs-section { padding-top:13px; padding-bottom:13px }
+        .bs-venta.bs-side .bs-sl { margin-bottom:8px }
+        .bs-venta.bs-side .bs-grid { gap:8px }
+        .bs-venta.bs-side .bs-feat { flex-direction:row; justify-content:flex-start; gap:9px; padding:9px 12px; border-radius:10px }
+        .bs-venta.bs-side .bs-fi { width:16px; height:16px; flex-shrink:0 }
+        .bs-venta.bs-side .bs-fv { font-size:13.5px }
+        /* Etiquetas fuera: "51m²", "1 dorm", "1 baño", "Piso 12" se explican
+           solos. Excepción: parqueo ("1 incl.") necesita su etiqueta. */
+        .bs-venta.bs-side .bs-fl { display:none }
+        .bs-venta.bs-side .bs-feat.hl .bs-fl { display:block; font-size:11.5px }
         .bs-tabs { position:sticky; top:0; z-index:9; display:flex; gap:2px; background:#141414; border-bottom:1px solid rgba(237,232,220,0.1); padding:0 16px }
         .bs-tab { flex:1; background:none; border:none; border-bottom:2px solid transparent; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:11px 4px; cursor:pointer; transition:color 0.15s }
         .bs-tab:hover { color:#EDE8DC }
