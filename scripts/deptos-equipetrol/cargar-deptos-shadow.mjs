@@ -34,7 +34,7 @@ dotenv.config({ path: `${ROOT}/simon-mvp/.env.local` });
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 const OUT = join(__dirname, 'output'); mkdirSync(OUT, { recursive: true });
 const ZONAS_EQ = ['Equipetrol Centro', 'Equipetrol Norte', 'Sirari', 'Villa Brigida', 'Equipetrol Oeste', 'Eq. 3er Anillo'];
-const SCRAPER_VERSION = 'hibrido-shadow-v3';  // v3 = reader extendido (amenidades/extra/equipamiento/baños/piso/estado/fecha/amoblado/multiproyecto)
+const SCRAPER_VERSION = 'hibrido-shadow-v4';  // v4 = 4 cortes de ambigüedad de la validación ciega de 100 (equipado-literal / TC-palabra-sin-número / dos-precios-el-bajo / gate-renta-oferta-vs-pitch). v3 = reader extendido (amenidades/extra/equipamiento/baños/piso/estado/fecha/amoblado/multiproyecto)
 const TS = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
 // ---- args ----

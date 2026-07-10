@@ -5,6 +5,10 @@
 > mañana)** — con el MISMO texto como system-prompt. El cargador (`cargar-deptos-shadow.mjs`)
 > prepara el material ($0) y aplica el veredicto; NO decide nada de esto.
 
+> **v4 (10-jul-2026)** — cerró 4 zonas grises que destapó la validación ciega de 100 (spec v3 congelado):
+> ② `equipado` solo con la PALABRA · ④ TC "oficial/paralelo" sin número = directo · ⑤ dos precios = el bajo ·
+> 🚨 gate-renta distingue OFERTA de PITCH. El reader lee bien; estos son cortes de ambigüedad del TEXTO, no fixes.
+
 ## Entrada (lo que el lector LEE)
 Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente, sin regex):
 - `slug` (de la URL) — **fuerte en C21** (`...green-tower`, `...edificio-hh-once`); código en Remax.
@@ -61,6 +65,17 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 >   **`no_especificado`** (todas normalizan directo igual; usar tags distintos para la misma frase ensucia la data).
 >   Reservá el tag `paralelo` para señal FUERTE y sola ("al paralelo", "TCP", "dólares físicos/billete").
 > - **`oficial_viejo`**: SOLO si el texto ancla EXPLÍCITO al rate muerto ("6.96" / "Bs 7" / "TC 7" / "al oficial 7") → se descuenta.
+> - **v4 — tag fiel a la cruda (NINGÚN tag infla: el feed shadow toma paralelo / oficial-nuevo / no_especificado
+>   DIRECTO; solo `oficial_viejo` descuenta y `bob` convierte de bolivianos):**
+>   · **"oficial" solo** (sin número) = oficial NUEVO (≈paralelo) → `no_especificado`. `oficial_viejo` SOLO con el
+>     número viejo explícito (6.96/7) — único que descuenta; la palabra "oficial" sola NO descuenta (subvaluaría: Onix
+>     Art $1.800→$1.188/m²).
+>   · **"paralelo" DECLARADO solo** ("al paralelo", "TC/tipo de cambio paralelo", "dólares físicos/billete") → tag
+>     `paralelo` (registro fiel; hoy normaliza directo igual que no_especificado — no infla).
+>   · **"paralelo" EQUIPARADO** ("dólares O paralelo", "USD o TC del día") o **SILENCIO** → `no_especificado`.
+> - **v4 — DOS precios en el aviso (sin amoblar / amoblado):** tomá el **MÁS BAJO** (inmueble sin muebles) como
+>   `precio_usd` — comparable por $/m². El extra amoblado va a `notas` ("amoblado +$5.000"), NO al precio; `amoblado`
+>   refleja que la opción existe. Ej: Sky Luxia 60.000 sin / 65.000 amoblado → `precio_usd=60000`.
 > - **PRECIO del texto SIEMPRE primero** (con su TC según reglas de arriba). El siguiente bloque es SOLO fallback.
 > - **Fallback C21-BOB (sin precio en el texto)** — regla INEQUÍVOCA, **crudo REAL (no dividir al leer)**:
 >   `precio_usd = señales.precio_bob_portal` (el monto en **BOLIVIANOS, tal cual**) · `tipo_cambio_detectado = "bob"` · `moneda_original = "BOB"`.
@@ -160,8 +175,16 @@ intenta predecir todo. Se separa en:
 
 **A) FLAGS de decisión** (booleanos de alto nivel — filtrables como "solo equipados"):
 - `amoblado` = viene con **muebles** (living/camas/sofás).
-- `equipado` = viene con **electrodomésticos/cocina** — "totalmente equipado" / "entrega equipada" / "equipado" → `true`.
-  El flag captura la AFIRMACIÓN resumen; **NO inventa** electrodomésticos específicos que el texto no nombre.
+- `equipado` = viene con **electrodomésticos/cocina**. **v4 — SOLO la afirmación del broker:** `true` únicamente si el
+  texto usa la PALABRA ("totalmente equipado" / "entrega equipada" / "equipado"). Si el aviso solo **ENUMERA**
+  electrodomésticos (heladera, cocina, AC) SIN decir "equipado" → flag `null` (no lo inferimos), PERO esos ítems SÍ
+  van a `equipamiento_canonico` — no se pierde el detalle, el filtro por-ítem sigue funcionando. Así el flag no exige
+  definir un combo arbitrario de "qué cuenta como equipado". El flag **NO inventa** electrodomésticos que el texto no nombre.
+  - **v4 — la palabra debe recaer sobre la UNIDAD/entrega, NO sobre un ambiente aislado (decisión founder 10-jul):**
+    "totalmente equipado" / "departamento equipado" → `true`. **"Cocina equipada"** / "baño equipado" / "gimnasio
+    equipado" → NO disparan el flag (`null`): describen un ambiente, no la unidad. ("Cocina equipada" igual va a
+    `equipamiento_canonico` como ítem → filtrable.) También el sustantivo "equipamiento completo/full" SIN el participio
+    "equipad*" a nivel unidad → `null` (es enumeración, no la afirmación).
 
 **B) `equipamiento_canonico`** — vocabulario FIJO, filtrable (mapeá sinónimos a estas claves):
 > **Electrodomésticos**: Cocina equipada · Heladera · Lavadora · Secadora · Termotanque/Calefón · Aire acondicionado
@@ -229,7 +252,8 @@ intenta predecir todo. Se separa en:
 
 ### AMOBLADO vs EQUIPADO (2 flags de decisión, distintos)
 - **`amoblado`** = `true` SOLO si el texto dice **amoblado / amueblado / con muebles / se vende amoblado** (muebles: living/camas/sofás).
-- **`equipado`** = `true` si el texto dice **"totalmente equipado" / "entrega equipada" / "equipado"** (electrodomésticos/cocina).
+- **`equipado`** = `true` **SOLO** si el texto usa la PALABRA **"totalmente equipado" / "entrega equipada" / "equipado"** (v4).
+  Enumerar electrodomésticos sin la palabra → flag `null` (los ítems van igual a `equipamiento_canonico`).
 - Un depto puede estar **equipado sin amoblar** (lo más común en venta): electrodomésticos sí, muebles no.
 - Ambos `null` si no se mencionan (no asumir). El flag NO inventa ítems específicos del `equipamiento_canonico`.
 
@@ -243,10 +267,15 @@ intenta predecir todo. Se separa en:
 ### GATE (aceptar/rechazar) + MULTIPROYECTO
 - **rechazar** = basura REAL que no se debe guardar: baulera/parqueo/depósito suelto, otra operación mal tipeada
   (anticrético/alquiler como venta), precio no confiable/contradictorio. Va a `rechazados.json`.
-- **🔴 GATE de OPERACIÓN — leé la palabra en el TEXTO (falla real 10-jul, 2697):** si el CUERPO del aviso dice
-  **"en Alquiler" / "en anticrético" / "en renta" / "se alquila"** → `gate: rechazar` (razon_gate: "operación
-  alquiler/anticrético tipeada como venta"), **aunque la metadata sea venta y el precio parezca de venta**. La
-  contradicción de operación gana. No te fíes solo del `tipo_operacion` del portal — el broker tipea mal.
+- **🔴 GATE de OPERACIÓN — leé el TEXTO (falla real 10-jul, 2697):** si el CUERPO del aviso **OFRECE** alquiler/
+  anticrético → `gate: rechazar` (razon_gate: "operación alquiler/anticrético tipeada como venta"), **aunque la
+  metadata sea venta**. La contradicción de operación gana; no te fíes solo del `tipo_operacion` del portal.
+  - **RECHAZAR** = el aviso OFRECE la operación: verbo de oferta ("se alquila", "en alquiler", "en anticrético",
+    "en renta", "disponible para alquiler") **O** un precio **MENSUAL / Bs-por-mes / monto de anticrético**.
+  - **v4 — NO rechazar** si "renta/rentabilidad/rentable/Airbnb" es **PITCH de inversión sobre una VENTA** ("renta
+    ejecutiva", "alta rentabilidad", "ideal para renta corta/Airbnb", "excelente inversión") Y el precio es de venta
+    (6 cifras USD, no mensual). El adjetivo de inversión NO es la operación. **Señal dura:** precio mensual → alquiler;
+    precio de venta + "renta" adjetivo → venta.
 - **Multiproyecto NO se rechaza** — se TAGUEA `es_multiproyecto: true` (+ `gate: aceptar`). El cargador lo
   DESVÍA a la tabla `proyectos_detectados` (mig 273): NO entra a `propiedades_v2_shadow` ni al feed. Se guarda
   la **cruda** (activo durable, portable, contable) para el **despliegue diferido** de tipologías.
