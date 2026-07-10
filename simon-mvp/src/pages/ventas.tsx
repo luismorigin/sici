@@ -1337,10 +1337,10 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
   const [descExpanded, setDescExpanded] = useState(false)
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
   const MAX_QS = 3
-  // Tabs del side sheet desktop. En mobile (sideMode=false) no aplican:
-  // showTab() devuelve true siempre y el sheet scrollea completo como hoy.
-  const [sideTab, setSideTab] = useState<'resumen' | 'mercado' | 'compra' | 'similares'>('resumen')
-  const showTab = (t: 'resumen' | 'mercado' | 'compra' | 'similares') => !sideMode || sideTab === t
+  // Desktop (sideMode) = modal estilo Zillow: un solo scroll con todas las
+  // secciones en orden, sin tabs. Mobile ya era un solo scroll — showTab()
+  // queda como marcador de sección por si se reintroducen cortes.
+  const showTab = (_t: 'resumen' | 'mercado' | 'compra' | 'similares') => true
 
   // Reset state when property changes
   const propId = p?.id
@@ -1348,7 +1348,6 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
     setDescExpanded(false)
     setShowGate(false)
     setSelectedQs(new Set())
-    setSideTab('resumen')
   }, [propId])
 
   const similarProps = useMemo(() => {
@@ -1450,7 +1449,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
 
   return (
     <>
-      {!sideMode && <div className={`bs-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />}
+      <div className={`bs-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />
       <div className={`bs bs-venta ${isOpen ? 'open' : ''} ${sideMode ? 'bs-side' : (isDesktop ? 'bs-desktop' : '')}`}>
         {/* Floating close + fav — always visible */}
         <div className="bs-floating-actions">
@@ -1492,17 +1491,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             ].filter(Boolean).join(' · ')}</div>
           </div>
         </div>
-          {/* Tabs del side sheet — solo desktop split layout */}
-          {sideMode && (
-            <div className="bs-tabs" role="tablist" aria-label="Secciones del detalle">
-              {([['resumen', 'Resumen'], ['mercado', 'Mercado'], ['compra', 'Compra'], ['similares', 'Similares']] as const).map(([key, label]) => (
-                <button key={key} role="tab" aria-selected={sideTab === key}
-                  className={`bs-tab ${sideTab === key ? 'active' : ''}`}
-                  onClick={() => setSideTab(key)}>{label}</button>
-              ))}
-            </div>
-          )}
-          {/* Galería de fotos horizontal */}
+          {/* Galería de fotos horizontal (mobile) / mosaico (modal desktop) */}
           {showTab('resumen') && p.fotos_urls && p.fotos_urls.length > 0 && (
             <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
           )}
@@ -1662,18 +1651,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
               <div className="bs-mktv-empty">Sin suficientes deptos comparables activos para mostrar contexto de mercado.</div>
             </div>
           )}
-          {/* Tab Mercado — precio de esta unidad como referencia arriba del contexto */}
-          {sideMode && sideTab === 'mercado' && p.precio_m2 > 0 && (
-            <div className="bs-section">
-              <div className="bs-sl"><span className="bs-sl-dot" />Precio por m² de esta unidad</div>
-              <div className="bs-compra-rows">
-                <div className="bs-compra-row"><span>Precio/m²</span><b>$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</b></div>
-                <div className="bs-compra-row"><span>Precio total</span><b>$us {Math.round(p.precio_usd).toLocaleString('en-US')}</b></div>
-              </div>
-            </div>
-          )}
-          {/* Tab Compra — datos de compra disponibles (solo side sheet desktop) */}
-          {sideMode && sideTab === 'compra' && (
+          {/* Datos de compra — sección del modal desktop */}
+          {sideMode && (
             <div className="bs-section">
               <div className="bs-sl"><span className="bs-sl-dot" />Datos de compra</div>
               <div className="bs-compra-rows">
@@ -1715,13 +1694,6 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                   </button>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* Tab Similares vacío — la ausencia se explica, no se disimula */}
-          {sideMode && sideTab === 'similares' && similarProps.length === 0 && (
-            <div className="bs-section">
-              <div className="bs-mktv-empty">No hay unidades similares activas en {displayZona(p.zona)} con esta tipología.</div>
             </div>
           )}
 
@@ -1808,8 +1780,22 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Sticky footer CTA */}
+          {/* Sticky footer CTA — en el modal desktop es la tarjeta fija derecha */}
           <div className="bs-sticky-footer">
+            {sideMode && (
+              <div className="bs-card-top">
+                <div className="bs-card-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span></div>
+                <div className="bs-card-sub">{[
+                  p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : null,
+                  p.estado_construccion === 'preventa' ? 'Preventa' : 'Entrega inmediata',
+                ].filter(Boolean).join(' · ')}</div>
+                {marketData && p.precio_m2 > 0 && (() => {
+                  const pos = p.precio_m2 < marketData.rangoLow ? 'bajo' : p.precio_m2 > marketData.rangoHigh ? 'sobre' : 'dentro'
+                  const label = pos === 'bajo' ? 'Bajo el rango típico' : pos === 'sobre' ? 'Sobre el rango típico' : 'Dentro del rango típico'
+                  return <div className={`bs-card-chip ${pos === 'bajo' ? 'bs-card-chip-bajo' : ''}`}>{label} · {marketData.count} comparables</div>
+                })()}
+              </div>
+            )}
             {publicShareMode && !contactoDirecto && publicShareBroker ? (
               <a href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${firstName(publicShareBroker.nombre)}, me interesa: ${p.proyecto} (${p.dormitorios === 0 ? 'Mono' : p.dormitorios + ' dorm'}, ${Math.round(p.area_m2)}m², $us ${Math.round(p.precio_usd).toLocaleString('en-US')}).`)}`}
                 target="_blank" rel="noopener noreferrer" className="bs-wsp-cta"
@@ -3272,7 +3258,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             )}
             {/* ===== Layout split: buscador+pills+lista densa | panel derecho (mapa+mercado ↔ side sheet) ===== */}
             {splitDesktop && viewMode === 'grid' && !loadError && (
-              <div className={`vd-cols ${listOnly && !(sheetOpen && sheetProperty) ? 'vd-cols-solo' : ''}`}>
+              <div className={`vd-cols ${listOnly ? 'vd-cols-solo' : ''}`}>
                 <div className="vd-left">
                   {/* Buscador natural ancho — arriba de la lista, como la referencia */}
                   <div className="dsk-search vd-search">
@@ -3345,23 +3331,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   ))}
                 </div>
                 </div>
-                {(!listOnly || (sheetOpen && sheetProperty)) && (
+                {!listOnly && (
                 <div className="vd-panel">
-                  {/* Estado con propiedad seleccionada: side sheet scrolleable.
-                      El bloque mapa+resumen NO se desmonta (se oculta con CSS):
-                      desmontar Leaflet en plena animación de zoom crashea
-                      (_leaflet_pos undefined en _onZoomTransitionEnd). */}
-                  {sheetOpen && sheetProperty && (
-                    <BottomSheet property={sheetProperty} isOpen sideMode
-                      onClose={() => { setSheetOpen(false); setSheetProperty(null) }}
-                      onShare={() => shareProperty(sheetProperty)}
-                      isFavorite={favorites.has(sheetProperty.id)}
-                      onToggleFavorite={() => toggleFavorite(sheetProperty.id)}
-                      gateCompleted={gateCompleted} onGate={handleGate} isDesktop
-                      properties={properties} onSwapProperty={(sp) => setSheetProperty(sp)} />
-                  )}
-                  {/* Estado sin selección: mapa + resumen de mercado del filtro actual */}
-                  <div className={`vd-panel-home ${sheetOpen && sheetProperty ? 'vd-panel-hidden' : ''}`}>
+                  {/* Mapa + resumen de mercado del filtro actual. El detalle de
+                      propiedad ya NO vive en esta columna: es un modal centrado
+                      (BottomSheet sideMode) renderizado aparte, con overlay.
+                      El mapa nunca se desmonta (crash Leaflet _leaflet_pos). */}
+                  <div className="vd-panel-home">
                       <div className="vd-map">
                         <VentaMap properties={displayedProperties}
                           onSelectProperty={onPanelMapSelect}
@@ -3407,6 +3383,17 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                       )}
                   </div>
                 </div>
+                )}
+                {/* Modal de propiedad (estilo Zillow): centrado sobre el feed
+                    oscurecido, un solo scroll + tarjeta de contacto fija */}
+                {sheetOpen && sheetProperty && (
+                  <BottomSheet property={sheetProperty} isOpen sideMode
+                    onClose={() => { setSheetOpen(false); setSheetProperty(null) }}
+                    onShare={() => shareProperty(sheetProperty)}
+                    isFavorite={favorites.has(sheetProperty.id)}
+                    onToggleFavorite={() => toggleFavorite(sheetProperty.id)}
+                    gateCompleted={gateCompleted} onGate={handleGate} isDesktop
+                    properties={properties} onSwapProperty={(sp) => setSheetProperty(sp)} />
                 )}
               </div>
             )}
@@ -3762,16 +3749,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vlc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.35) }
         /* Panel derecho */
         .vd-panel { position:sticky; top:76px; height:calc(100vh - 76px - 20px); display:flex; flex-direction:column; gap:16px; min-width:0 }
-        /* El bloque mapa+resumen se OCULTA (no se desmonta) cuando el side sheet
-           está abierto — desmontar Leaflet en plena animación de zoom crashea. */
         .vd-panel-home { flex:1; min-height:0; display:flex; flex-direction:column; gap:16px }
-        /* Con el side sheet abierto TODO el bloque mapa+resumen se oculta
-           (decisión de Lucho: una cosa a la vez, sin mapa de fondo).
-           visibility (no display:none): el contenedor conserva su tamaño,
-           Leaflet no queda en 0x0 y nunca se desmonta (crash Leaflet). */
-        .vd-panel-hidden { visibility:hidden; position:absolute; inset:0; z-index:0; pointer-events:none }
         /* isolation: los z-index internos de Leaflet (panes 200-700) quedan
-           encapsulados y no compiten con el side sheet (z-index 40) */
+           encapsulados y no compiten con el overlay/modal del detalle */
         .vd-map { flex:1; min-height:260px; border-radius:14px; overflow:hidden; border:1px solid rgba(237,232,220,0.08); position:relative; z-index:1; isolation:isolate }
         .vd-map .venta-map { position:absolute; inset:0 }
         .vd-map-full { position:absolute; top:12px; right:12px; z-index:1100; display:inline-flex; align-items:center; gap:6px; background:#141414; color:#EDE8DC; border:1px solid rgba(237,232,220,0.15); padding:8px 14px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.35) }
@@ -3787,40 +3767,42 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vd-mkt-num { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; font-variant-numeric:tabular-nums; line-height:1.1 }
         .vd-mkt-label { font-size:11.5px; color:#9A8E7A; line-height:1.35 }
         .vd-mkt-caveat { font-size:11.5px; color:#7A7060; line-height:1.45; border-top:1px solid rgba(237,232,220,0.06); padding-top:10px }
-        /* Side sheet ANCLADO al viewport (fixed): entre el nav (76) y el borde
-           inferior. Así el sheet nunca excede la pantalla y el footer sticky
-           bottom:0 queda SIEMPRE visible, sin importar el scroll de la página.
-           El .vd-panel mantiene su height fija → la columna no colapsa aunque
-           el sheet salga del flujo. Ancho acotado a 520px (medida de lectura):
-           la franja sobrante de la columna la ocupa el mapa (vd-panel-peek). */
-        .bs-venta.bs-side { position:fixed; inset:auto; left:auto; top:76px; right:24px; bottom:20px; width:min(520px, calc((100vw - 68px) * 0.52)); max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:14px; border:1px solid rgba(237,232,220,0.08); z-index:40; padding-bottom:84px; transform:none }
-        /* Footer WhatsApp/Compartir FIJO a la pantalla (misma columna que el
-           sheet), garantiza que quede siempre abajo sin depender del scroll
-           interno. El sheet reserva 84px abajo (padding) para no taparlo. */
-        .bs-venta.bs-side .bs-sticky-footer { position:fixed; box-sizing:border-box; left:auto; right:24px; bottom:20px; width:min(520px, calc((100vw - 68px) * 0.52)); z-index:60; border-radius:0 0 14px 14px }
-        .bs-venta.bs-side.open { transform:none }
-        /* fav+close: fijos en la esquina del sheet (absolute sobre el sheet
-           fixed), siempre visibles, sin ocupar flujo ni chocar con las tabs. */
-        .bs-venta.bs-side .bs-floating-actions { position:absolute; top:10px; right:12px; z-index:50; background:transparent; padding:0 }
-        /* Contenido acotado a medida de lectura (~640px) centrado — el panel es
-           ancho para el mapa, pero leer el detalle a 710px cansa. La galería
-           queda full-bleed (no lleva este padding). Padding dinámico: crece a
-           los lados cuando el panel es más ancho que 640. */
+        /* ===== MODAL DE PROPIEDAD (desktop, estilo Zillow) =====
+           Ventana grande centrada sobre el feed oscurecido (bs-overlay, z 500).
+           Un solo scroll adentro. La tarjeta de contacto (.bs-sticky-footer)
+           queda FIJA alineada al borde derecho del modal mientras el contenido
+           scrollea; el modal reserva esa franja con padding-right. */
+        .bs-venta.bs-side { position:fixed; inset:auto; top:3vh; bottom:3vh; left:50%; right:auto; transform:translateX(-50%); width:min(1120px, 94vw); max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:16px; border:1px solid rgba(237,232,220,0.1); z-index:501; padding-bottom:32px; padding-right:344px }
+        .bs-venta.bs-side.open { transform:translateX(-50%) }
+        /* Tarjeta de contacto fija (el "Request a tour" de Zillow): precio +
+           chip fiduciario + WhatsApp/Compartir, siempre visible. */
+        .bs-venta.bs-side .bs-sticky-footer { position:fixed; box-sizing:border-box; top:calc(3vh + 20px); bottom:auto; left:calc(50% + (min(1120px, 94vw) / 2) - 324px); right:auto; width:300px; flex-direction:column; align-items:stretch; gap:8px; padding:18px; background:#1a1a1a; border:1px solid rgba(237,232,220,0.14); border-radius:14px; z-index:502 }
+        .bs-card-top { display:flex; flex-direction:column; gap:4px; margin-bottom:6px }
+        .bs-card-price { font-family:'Figtree',sans-serif; font-size:24px; font-weight:600; color:#EDE8DC; font-variant-numeric:tabular-nums }
+        .bs-card-sub { font-size:12.5px; color:#9A8E7A }
+        .bs-card-chip { align-self:flex-start; font-size:12px; color:#7BB389; background:rgba(58,106,72,0.18); border:1px solid rgba(123,179,137,0.25); border-radius:8px; padding:5px 9px; margin-top:4px }
+        .bs-card-chip-bajo { color:#8FCB9D; background:rgba(58,106,72,0.28) }
+        /* fav+close: pegados arriba mientras el modal scrollea */
+        .bs-venta.bs-side .bs-floating-actions { position:sticky; top:10px; z-index:50; display:flex; justify-content:flex-end; background:transparent; padding:0 12px }
+        /* Contenido acotado a medida de lectura (~640px) centrado en la columna
+           izquierda. La galería queda full-bleed (no lleva este padding). */
         .bs-venta.bs-side .bs-dark-header,
         .bs-venta.bs-side .bs-section {
           padding-left:max(24px, calc((100% - 640px) / 2));
           padding-right:max(24px, calc((100% - 640px) / 2));
         }
-        /* Tabs full-width con espacio a la derecha para el botón cerrar */
-        .bs-venta.bs-side .bs-tabs { padding-left:16px; padding-right:56px }
-        /* Precio menos gigante en el side sheet ancho */
+        /* Precio menos gigante (ya está en la tarjeta fija) */
         .bs-venta.bs-side .bs-h-price { font-size:24px }
-        /* Modo compacto del side sheet: menos aire vertical en cada sección
-           para reducir el scroll interno (el contenido base es de mobile,
-           donde el aire ayuda; a 520px de ancho sobra). */
+        /* Galería en MOSAICO (una grande + 2 medianas, repetido) en vez de
+           carrusel — todas las fotos visibles scrolleando, como Zillow. */
+        .bs-venta.bs-side .bsg-scroll { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 20px; overflow:visible; scroll-snap-type:none }
+        .bs-venta.bs-side .bsg-slide { aspect-ratio:16/10; border-radius:10px; overflow:hidden }
+        .bs-venta.bs-side .bsg-slide:nth-child(3n+1) { grid-column:1 / -1; aspect-ratio:16/8 }
+        .bs-venta.bs-side .bsg-arrow, .bs-venta.bs-side .bsg-counter, .bs-venta.bs-side .bsg-dots { display:none }
+        /* Secciones compactas (el contenido base es de mobile) */
         .bs-venta.bs-side .bs-section { padding-top:13px; padding-bottom:13px }
         .bs-venta.bs-side .bs-sl { margin-bottom:8px }
-        .bs-venta.bs-side .bs-grid { gap:8px }
+        .bs-venta.bs-side .bs-grid { gap:8px; grid-template-columns:repeat(4,1fr) }
         .bs-venta.bs-side .bs-feat { flex-direction:row; justify-content:flex-start; gap:9px; padding:9px 12px; border-radius:10px }
         .bs-venta.bs-side .bs-fi { width:16px; height:16px; flex-shrink:0 }
         .bs-venta.bs-side .bs-fv { font-size:13.5px }
@@ -3828,6 +3810,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
            solos. Excepción: parqueo ("1 incl.") necesita su etiqueta. */
         .bs-venta.bs-side .bs-fl { display:none }
         .bs-venta.bs-side .bs-feat.hl .bs-fl { display:block; font-size:11.5px }
+        @media (max-width:1180px) {
+          .bs-venta.bs-side { padding-right:0 }
+          .bs-venta.bs-side .bs-sticky-footer { position:sticky; top:auto; bottom:0; left:auto; width:auto; flex-direction:row; border-radius:0; border:none; border-top:1px solid rgba(237,232,220,0.08) }
+          .bs-venta.bs-side .bs-card-top { display:none }
+        }
         .bs-tabs { position:sticky; top:0; z-index:9; display:flex; gap:2px; background:#141414; border-bottom:1px solid rgba(237,232,220,0.1); padding:0 16px }
         .bs-tab { flex:1; background:none; border:none; border-bottom:2px solid transparent; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:11px 4px; cursor:pointer; transition:color 0.15s }
         .bs-tab:hover { color:#EDE8DC }
@@ -4241,7 +4228,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-toast-success { border-left:4px solid #7BB389; padding-left:14px; text-align:left }
 
         /* ===== BOTTOM SHEET (ventas dark theme — .bs-venta overrides alquileres.css) ===== */
-        .bs-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:500; opacity:0; pointer-events:none; transition:opacity 0.3s }
+        /* 0.78: el fondo tiene superficies claras (mapa OSM) que con 0.5
+           seguían compitiendo con el modal — apagado fuerte estilo Zillow */
+        .bs-overlay { position:fixed; inset:0; background:rgba(10,10,10,0.78); z-index:500; opacity:0; pointer-events:none; transition:opacity 0.3s }
         .bs-overlay.open { opacity:1; pointer-events:auto }
 
         /* Base structure (ventas-specific, not in alquileres.css) */
