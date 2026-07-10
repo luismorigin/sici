@@ -171,7 +171,9 @@ function construirFila(e, v, match) {
   return {
     id: e.id, url: a.url, fuente: e.fuente,
     tipo_operacion: 'venta', tipo_propiedad_original: a.tipo_propiedad_original || 'Departamento',
-    estado_construccion: v.estado_construccion || a.estado_construccion,
+    // El LECTOR manda: null = "el aviso no declara estado". NO heredar el de prod/n8n
+    // (a.estado_construccion) — el `||` perpetuaba el entrega_inmediata inventado por n8n.
+    estado_construccion: v.estado_construccion ?? null,
     // tag "bob" → el crudo (precio_usd) está en BOLIVIANOS; moneda_original lo documenta y la normalización divide vivo.
     precio_usd: v.precio_usd, tipo_cambio_detectado: v.tipo_cambio_detectado,
     moneda_original: v.tipo_cambio_detectado === 'bob' ? 'BOB' : (a.moneda || null),

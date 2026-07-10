@@ -64,6 +64,20 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 >   **NUNCA** guardes `BOB/tasa` (eso es crudo-falso) NI uses `precio_candidato` (BOB/6.96). Si el texto dice 6.96/7 explícito → `oficial_viejo`.
 > - Remax trae precio en USD → usá ese, tag según texto. `precio_usd` = CRUDO en su moneda nativa; el feed normaliza (keyed en el tag).
 >
+> ### Fallback C21 sin precio en el texto — elegir USD-directo vs bob por $/m² (RESUELTO 10-jul)
+> C21 expone SIEMPRE el precio en BOB (`senales.precio_bob_portal`) Y en USD (`senales.precio_candidato =
+> precio_bob_portal / 6.96`), con `senales.moneda='USD'`. Cuando el texto NO trae precio, el `precio_bob_portal`
+> puede ser (a) un precio genuino en bolivianos, o (b) el USD del vendedor × 6.96 (crudo-falso). **NO defaultear a
+> `bob` a ciegas** — elegí por **$/m² coherente** (~$1.500–2.300 Equipetrol; memoria `feedback_clasificacion_tc_por_m2`):
+> - `usd_m2 = precio_candidato / area` · `bob_m2 = (precio_bob_portal / tasa_paralelo) / area`.
+> - `usd_m2` en banda y `bob_m2` muy bajo → **USD directo** (`precio_usd = precio_candidato`, tag `no_especificado`,
+>   `moneda_original='USD'`). El vendedor pensó en dólares; el BOB era USD×6.96.
+> - `bob_m2` en banda y `usd_m2` muy alto → **bob** (`precio_usd = precio_bob_portal`, tag `bob`). Bolivianos genuinos.
+> - Ambos en banda → mirá el tipo de unidad (mono amoblado tolera $/m² más alto → USD). Ninguno → el más cercano a la banda.
+> - Ejemplos reales: Sky Eclipse 3434 → USD $1.643/m² (bob daría $1.085) → **USD**. Maré 3580 → bob $2.104/m²
+>   (USD daría $3.187) → **bob**. Los desarrolladores difieren: Maré cotiza en Bs, Sky Eclipse en USD.
+> - Si el texto SÍ dice 'Bs X' explícito → `bob` (el texto manda). Si dice USD / '6.96' / 'Bs 7' → esas reglas ganan.
+>
 > **PRODUCCIÓN = n8n** (sigue con el régimen VIEJO de abajo, intacto). El de abajo se conserva como **legacy/rollback**.
 
 <hr>
@@ -96,6 +110,8 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 - `0` = **monoambiente** = correcto (el front muestra "Monoambiente"). Conservar 0 si el texto dice "monoambiente".
 - Subir `0→N` solo si el texto dice "N dormitorios/habitaciones" y NO es mono (el `recamaras` del extractor
   devuelve 0 en deptos multi-dorm — 3539 117m² decía "2 habitaciones", recamaras=0).
+- **El texto SIEMPRE pisa la señal estructurada.** Parseá el número aunque venga PEGADO ("2dormitorio",
+  "2dorm.") o en PALABRA ("dos dormitorios", "tres habitaciones"). Ej 3378: título "2dormitorio" → 2, NO 1.
 
 ### BAÑOS
 Cascada de fuentes (en orden), la descripción SIEMPRE pisa:
@@ -110,10 +126,17 @@ Cascada de fuentes (en orden), la descripción SIEMPRE pisa:
    habitación-con-baño.
 5. `null` solo si multi-dorm SIN número, SIN suite, SIN estructurado NI discovery. Honesto: no adivinar.
 
-### AMENIDADES + EQUIPAMIENTO (solo lo CONFIRMADO por el texto — NUNCA inferir/asumir/curar)
-Regla madre (de prod `prompt-ventas.md`): **solo lo que el texto CONFIRME explícitamente. NUNCA inferir**
-Pet Friendly, Sauna, Ascensor, etc. sin mención. Absencia en el texto = en blanco, **nunca "no tiene"** y
-**nunca "sí tiene" inventado**.
+### AMENIDADES + EQUIPAMIENTO (solo lo CONFIRMADO — NUNCA inferir/asumir/curar)
+Regla madre (de prod `prompt-ventas.md`): **solo lo CONFIRMADO. NUNCA inferir** Pet Friendly, Sauna,
+Ascensor, etc. sin evidencia. Ausencia = en blanco, **nunca "no tiene"** y **nunca "sí tiene" inventado**.
+
+> **⚠️ "CONFIRMADO" = texto libre O estructurado del portal — NO solo la descripción.** Los checkboxes que
+> el anunciante marcó en C21 (`caracteristicasJSON.campos` con `valor=true`) y las `features` de Remax son
+> declaraciones EXPLÍCITAS del anunciante, tan válidas como el texto. El cargador ya las usa como fallback
+> (`construirFila`: si el lector no trae amenidades del texto, canoniza el estructurado) — **eso es CORRECTO,
+> NO invención**. Lo ÚNICO prohibido es inventar lo que NO está ni en el texto ni en el estructurado: derivar
+> amenidades del NOMBRE del edificio ("Sky Luxury" → Piscina) o de conocimiento externo del proyecto. Ante
+> duda sin ninguna de las dos fuentes → vacío.
 
 **`amenidades`** — solo DIFERENCIADORES del edificio, mapeados al vocabulario canónico. El vocabulario es
 `AMENIDADES_MERCADO` (`simon-mvp/src/config/amenidades-mercado.ts`), subconjunto **`esEstandar: false`**:
@@ -144,7 +167,11 @@ intenta predecir todo. Se separa en:
 - **"Cocina equipada" = concepto**: mapeá acá cuando el texto diga muebles/cajonería de cocina, cocina
   empotrada/americana equipada, mesón, extractor, hornallas → todo colapsa a `Cocina equipada` (implica
   muebles empotrados + extractor + cocina). Así los ~8 nombres de cocina → 1.
-- Lavadora/lavandería (área de lavandería / espacio para lavadora / lavadora incluida) → `Lavadora` (o `Lavandería`).
+- **Lavadora vs área de lavandería (desambiguar — falla real 3539):**
+  - "**lavadora incluida**" / "con lavadora" / "espacio con lavadora" → `Lavadora` (el electrodoméstico SÍ va).
+  - "**área de lavandería**" / "espacio de lavado" a secas = un AMBIENTE del depto, NO garantiza el
+    electrodoméstico → NO mapear a `Lavadora`. Va a `equipamiento_otros: ["Área de lavandería"]` (o nada).
+  - "área de lavandería **común**" / "lavandería en el piso X" = amenidad del EDIFICIO → `amenidades_extra: ["Lavandería"]`.
 
 **C) `equipamiento_otros`** — todo lo demás CONFIRMADO fuera del canónico, tal cual, **sin predecir**:
 > doble vidrio · mesón de granito · pisos de porcelanato · intercomunicador · iluminación LED · espejos · cortinas
@@ -180,7 +207,11 @@ intenta predecir todo. Se separa en:
 ### ESTADO_CONSTRUCCION + FECHA_ENTREGA (port de prod `prompt-ventas.md`)
 - **preventa**: "precios desde", "entrega [fecha futura]", "en construcción", "obra gruesa", "avance X%", fecha de entrega futura.
 - **entrega_inmediata**: "listo para vivir", "entrega inmediata", "listo para ocupar", "a estrenar", inmueble terminado.
-- Sin evidencia clara → `null`. ⚠️ **"amoblado"/"equipado" SOLOS NO implican entrega_inmediata.**
+- **Sin FRASE EXPLÍCITA de estado → `null`.** ⚠️ NO inferir `entrega_inmediata` de "amoblado", "equipado",
+  "moderno", "exclusivo", "listo para invertir", ni de la mera presencia de amenidades/fotos lindas.
+  **Ejemplo negativo** (falla real, 3456/3540): un aviso que solo dice "Departamento amoblado y equipado"
+  o "entorno moderno y seguro", SIN "a estrenar" / "listo para vivir" / "en construcción" / "entrega [fecha]"
+  → `estado_construccion = null` (NUNCA `entrega_inmediata`). El estado se AFIRMA, no se deduce del ambiente.
 - `fecha_entrega_estimada`: solo si preventa Y el texto la da ("entrega Diciembre 2026", "entrega 2027"). Sino `null`.
 
 ### AMOBLADO vs EQUIPADO (2 flags de decisión, distintos)
