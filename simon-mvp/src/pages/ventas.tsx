@@ -1336,11 +1336,16 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
   const [showGate, setShowGate] = useState(false)
   const [descExpanded, setDescExpanded] = useState(false)
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
+  const [showViewer, setShowViewer] = useState(false)
   const MAX_QS = 3
   // Desktop (sideMode) = modal estilo Zillow: un solo scroll con todas las
   // secciones en orden, sin tabs. Mobile ya era un solo scroll — showTab()
   // queda como marcador de sección por si se reintroducen cortes.
   const showTab = (_t: 'resumen' | 'mercado' | 'compra' | 'similares') => true
+  // Riel derecho del modal: el mapa necesita identidades ESTABLES —
+  // VentaMap reconstruye el mapa entero si cambia properties/onSelect.
+  const railMapProps = useMemo(() => (p ? [p] : []), [p])
+  const railMapNoop = useCallback(() => {}, [])
 
   // Reset state when property changes
   const propId = p?.id
@@ -1348,6 +1353,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
     setDescExpanded(false)
     setShowGate(false)
     setSelectedQs(new Set())
+    setShowViewer(false)
   }, [propId])
 
   const similarProps = useMemo(() => {
@@ -1447,10 +1453,98 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
     setShowGate(false)
   }
 
+  // Bloques que en el modal desktop viven en el RIEL derecho y en mobile
+  // dentro del flujo — extraídos a consts para no duplicar JSX.
+  // Contexto de mercado: solo feed público/broker (en publicShare `properties`
+  // es la shortlist, no el mercado — cálculo inválido). La ausencia se explica
+  // (transparencia fiduciaria), no se disimula.
+  const mercadoSection = !publicShareMode && (marketData ? (
+    <div className="bs-section">
+      <div className="bs-sl"><span className="bs-sl-dot" />Contexto de mercado · {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
+      <div className="bs-mktv">
+        <div className="bs-mktv-this">
+          <span className="bs-mktv-label">Este depto</span>
+          <span className="bs-mktv-value">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>
+        </div>
+        <div className="bs-mktv-zona">
+          Zona ({p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}{marketData.segmento ? ` · ${marketData.segmento}` : ''}): mediana <b>$us {marketData.mediana.toLocaleString('en-US')}/m²</b>
+          <span className="bs-mktv-rango">Rango típico $us {marketData.rangoLow.toLocaleString('en-US')} — {marketData.rangoHigh.toLocaleString('en-US')}/m²</span>
+        </div>
+        {(() => {
+          const lo = Math.min(marketData.rangoLow, p.precio_m2) * 0.94
+          const hi = Math.max(marketData.rangoHigh, p.precio_m2) * 1.06
+          const pos = (v: number) => Math.min(98, Math.max(2, ((v - lo) / (hi - lo)) * 100))
+          return (
+            <div className="bs-mktv-bar-wrap">
+              <div className="bs-mktv-bar">
+                <div className="bs-mktv-band" style={{ left: `${pos(marketData.rangoLow)}%`, width: `${pos(marketData.rangoHigh) - pos(marketData.rangoLow)}%` }} />
+                <div className="bs-mktv-marker" style={{ left: `${pos(p.precio_m2)}%` }} />
+              </div>
+              <div className="bs-mktv-scale">
+                <span style={{ left: `${pos(marketData.rangoLow)}%` }}>{marketData.rangoLow.toLocaleString('en-US')}</span>
+                <span style={{ left: `${pos(marketData.rangoHigh)}%` }}>{marketData.rangoHigh.toLocaleString('en-US')}</span>
+              </div>
+            </div>
+          )
+        })()}
+        <div className="bs-mktv-caveat">{marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye preventa y entrega inmediata. ' : ''}Basado en {marketData.count} deptos comparables activos. El precio por m² varía según acabados, amenidades y desarrollador.</div>
+      </div>
+    </div>
+  ) : (p.precio_m2 > 0 ? (
+    <div className="bs-section">
+      <div className="bs-mktv-empty">Sin suficientes deptos comparables activos para mostrar contexto de mercado.</div>
+    </div>
+  ) : null))
+
+  // Similares: oculto en publicShareMode (cliente solo ve lo curado); en
+  // contactoDirecto (B2C) se muestran, igual que el feed (§6 dec.1)
+  const similaresSection = (!publicShareMode || contactoDirecto) && similarProps.length > 0 ? (
+    <div className="bs-section">
+      <div className="bs-sl"><span className="bs-sl-dot" />También en {displayZona(p.zona)}</div>
+      <div className="bs-sim-scroll">
+        {similarProps.map(sp => (
+          <button key={sp.id} className="bs-sim-card" aria-label={`Ver ${sp.proyecto}`} onClick={() => onSwapProperty?.(sp)}>
+            {sp.fotos_urls?.[0] ? (
+              <img src={sp.fotos_urls[0]}
+                   alt={sp.proyecto} className="bs-sim-thumb" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            ) : (
+              <div className="bs-sim-thumb bs-sim-nophoto" />
+            )}
+            <div className="bs-sim-info">
+              <div className="bs-sim-name">{sp.proyecto}</div>
+              <div className="bs-sim-price">$us {Math.round(sp.precio_usd).toLocaleString('en-US')}</div>
+              <div className="bs-sim-specs">{Math.round(sp.area_m2)}m² · {sp.dormitorios === 0 ? 'Mono' : `${sp.dormitorios} dorm`}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  ) : null
+
   return (
     <>
       <div className={`bs-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />
       <div className={`bs bs-venta ${isOpen ? 'open' : ''} ${sideMode ? 'bs-side' : (isDesktop ? 'bs-desktop' : '')}`}>
+        {/* Nav de anclas del modal desktop: saltan a secciones del MISMO
+            scroll (no ocultan contenido) + acciones fav/cerrar */}
+        {sideMode && (
+          <div className="bsm-nav">
+            {([['bsm-sec-resumen', 'Resumen'], ['bsm-sec-datos', 'Datos'], ['bsm-sec-desc', 'Descripción'], ['bsm-sec-preguntas', 'Preguntas']] as const).map(([id, label]) => (
+              <button key={id} type="button" className="bsm-nav-link"
+                onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{label}</button>
+            ))}
+            <div className="bsm-nav-actions">
+              {onToggleFavorite && (
+                <button className={`bs-fav ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={onToggleFavorite}>
+                  <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                </button>
+              )}
+              <button className="bs-close" aria-label="Cerrar detalles" onClick={onClose}>&times;</button>
+            </div>
+          </div>
+        )}
         {/* Floating close + fav — always visible */}
         <div className="bs-floating-actions">
           {onToggleFavorite && (
@@ -1469,7 +1563,20 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           <button className="bs-close" aria-label="Cerrar detalles" onClick={onClose}>&times;</button>
         </div>
         {/* Header — styled like feed card */}
-        <div className="bs-dark-header">
+        <div className="bs-dark-header" id="bsm-sec-resumen">
+          {sideMode && (
+            <div className="bsm-stats">
+              {p.dormitorios !== null && (
+                <div className="bsm-stat"><b>{p.dormitorios === 0 ? 'Mono' : p.dormitorios}</b><span>{p.dormitorios === 0 ? 'ambiente' : 'dorm'}</span></div>
+              )}
+              {p.area_m2 > 0 && (
+                <div className="bsm-stat"><b>{Math.round(p.area_m2)}</b><span>m²</span></div>
+              )}
+              {p.banos !== null && (
+                <div className="bsm-stat"><b>{p.banos}</b><span>baño{p.banos !== 1 ? 's' : ''}</span></div>
+              )}
+            </div>
+          )}
           <div className="bs-h-name">
             {p.proyecto}
             {p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="bs-h-reciente">Reciente</span>}
@@ -1491,9 +1598,17 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             ].filter(Boolean).join(' · ')}</div>
           </div>
         </div>
-          {/* Galería de fotos horizontal (mobile) / mosaico (modal desktop) */}
+          {/* Galería: carrusel (mobile) / franja acotada + visor (modal desktop) */}
           {showTab('resumen') && p.fotos_urls && p.fotos_urls.length > 0 && (
-            <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
+            <div className="bsm-photos">
+              <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
+              {sideMode && p.fotos_urls.length > 3 && (
+                <button type="button" className="bsm-verfotos" onClick={() => setShowViewer(true)}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                  Ver las {p.fotos_urls.length} fotos
+                </button>
+              )}
+            </div>
           )}
 
           {/* Comentario del broker — solo en publicShareMode */}
@@ -1589,7 +1704,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
 
           {/* Descripción (colapsable) */}
           {showTab('resumen') && p.descripcion && (
-            <div className="bs-section">
+            <div className="bs-section" id="bsm-sec-desc">
               <div className="bs-sl"><span className="bs-sl-dot" />Sobre esta propiedad</div>
               <div className={`bs-desc ${descExpanded ? 'expanded' : ''}`}>{p.descripcion}</div>
               {p.descripcion.length > 150 && !descExpanded && (
@@ -1600,7 +1715,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
 
           {/* Agente info — oculto en publicShareMode (cliente solo contacta al broker);
               en contactoDirecto (B2C) se muestra: el cliente contacta a ese captador */}
-          {showTab('resumen') && (!publicShareMode || contactoDirecto) && p.agente_nombre && (
+          {showTab('resumen') && !sideMode && (!publicShareMode || contactoDirecto) && p.agente_nombre && (
             <div className="bs-section">
               <div className="bs-agent">
                 <span className="bs-agent-name">{p.agente_nombre}</span>
@@ -1608,52 +1723,21 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
               </div>
             </div>
           )}
+          {/* Línea de confianza (modal desktop): antigüedad + captador */}
+          {sideMode && (!publicShareMode || contactoDirecto) && (p.dias_en_mercado !== null || p.agente_nombre) && (
+            <div className="bs-section bsm-trust">
+              {[
+                p.dias_en_mercado !== null ? `${p.dias_en_mercado} día${p.dias_en_mercado !== 1 ? 's' : ''} publicado` : null,
+                p.agente_nombre ? `captado por ${p.agente_nombre}${p.agente_oficina ? ` · ${p.agente_oficina}` : ''}` : null,
+              ].filter(Boolean).join(' · ')}
+            </div>
+          )}
 
-          {/* Contexto de mercado — solo feed público/broker: en publicShare
-              `properties` es la shortlist, no el mercado (cálculo inválido). */}
-          {showTab('mercado') && !publicShareMode && marketData && (
-            <div className="bs-section">
-              <div className="bs-sl"><span className="bs-sl-dot" />Contexto de mercado · {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
-              <div className="bs-mktv">
-                <div className="bs-mktv-this">
-                  <span className="bs-mktv-label">Este depto</span>
-                  <span className="bs-mktv-value">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>
-                </div>
-                <div className="bs-mktv-zona">
-                  Zona ({p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}{marketData.segmento ? ` · ${marketData.segmento}` : ''}): mediana <b>$us {marketData.mediana.toLocaleString('en-US')}/m²</b>
-                  <span className="bs-mktv-rango">Rango típico $us {marketData.rangoLow.toLocaleString('en-US')} — {marketData.rangoHigh.toLocaleString('en-US')}/m²</span>
-                </div>
-                {(() => {
-                  const lo = Math.min(marketData.rangoLow, p.precio_m2) * 0.94
-                  const hi = Math.max(marketData.rangoHigh, p.precio_m2) * 1.06
-                  const pos = (v: number) => Math.min(98, Math.max(2, ((v - lo) / (hi - lo)) * 100))
-                  return (
-                    <div className="bs-mktv-bar-wrap">
-                      <div className="bs-mktv-bar">
-                        <div className="bs-mktv-band" style={{ left: `${pos(marketData.rangoLow)}%`, width: `${pos(marketData.rangoHigh) - pos(marketData.rangoLow)}%` }} />
-                        <div className="bs-mktv-marker" style={{ left: `${pos(p.precio_m2)}%` }} />
-                      </div>
-                      <div className="bs-mktv-scale">
-                        <span style={{ left: `${pos(marketData.rangoLow)}%` }}>{marketData.rangoLow.toLocaleString('en-US')}</span>
-                        <span style={{ left: `${pos(marketData.rangoHigh)}%` }}>{marketData.rangoHigh.toLocaleString('en-US')}</span>
-                      </div>
-                    </div>
-                  )
-                })()}
-                <div className="bs-mktv-caveat">{marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye preventa y entrega inmediata. ' : ''}Basado en {marketData.count} deptos comparables activos. El precio por m² varía según acabados, amenidades y desarrollador.</div>
-              </div>
-            </div>
-          )}
-          {/* Nivel 3 de la cascada: ni ampliando hay 5 comparables — la ausencia
-              se explica (transparencia fiduciaria), no se disimula. */}
-          {showTab('mercado') && !publicShareMode && !marketData && p.precio_m2 > 0 && (
-            <div className="bs-section">
-              <div className="bs-mktv-empty">Sin suficientes deptos comparables activos para mostrar contexto de mercado.</div>
-            </div>
-          )}
+          {/* Contexto de mercado — en el modal desktop vive en el riel derecho */}
+          {!sideMode && mercadoSection}
           {/* Datos de compra — sección del modal desktop */}
           {sideMode && (
-            <div className="bs-section">
+            <div className="bs-section" id="bsm-sec-datos">
               <div className="bs-sl"><span className="bs-sl-dot" />Datos de compra</div>
               <div className="bs-compra-rows">
                 <div className="bs-compra-row"><span>Precio total</span><b>$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span></b></div>
@@ -1672,35 +1756,13 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Propiedades similares — oculto en publicShareMode (cliente solo ve lo curado);
-              en contactoDirecto (B2C) se muestran, igual que el feed (§6 dec.1) */}
-          {showTab('similares') && (!publicShareMode || contactoDirecto) && similarProps.length > 0 && (
-            <div className="bs-section">
-              <div className="bs-sl"><span className="bs-sl-dot" />También en {displayZona(p.zona)}</div>
-              <div className="bs-sim-scroll">
-                {similarProps.map(sp => (
-                  <button key={sp.id} className="bs-sim-card" aria-label={`Ver ${sp.proyecto}`} onClick={() => onSwapProperty?.(sp)}>
-                    {sp.fotos_urls?.[0] ? (
-                      <img src={sp.fotos_urls[0]}
-                           alt={sp.proyecto} className="bs-sim-thumb" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    ) : (
-                      <div className="bs-sim-thumb bs-sim-nophoto" />
-                    )}
-                    <div className="bs-sim-info">
-                      <div className="bs-sim-name">{sp.proyecto}</div>
-                      <div className="bs-sim-price">$us {Math.round(sp.precio_usd).toLocaleString('en-US')}</div>
-                      <div className="bs-sim-specs">{Math.round(sp.area_m2)}m² · {sp.dormitorios === 0 ? 'Mono' : `${sp.dormitorios} dorm`}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Propiedades similares — en el modal desktop viven en el riel derecho */}
+          {!sideMode && similaresSection}
 
           {/* Preguntas para el vendedor — oculto en modo broker (el broker es el que responde)
               y en publicShare; en contactoDirecto (B2C) se muestran (van al captador) */}
           {showTab('compra') && !brokerMode && (!publicShareMode || contactoDirecto) && brokerQuestions.length > 0 && (
-            <div className="bs-section">
+            <div className="bs-section" id="bsm-sec-preguntas">
               <div className="bs-q-header">
                 <div className="bs-sl"><span className="bs-sl-dot" />Preguntas para el vendedor</div>
                 <span className="bs-q-hint">
@@ -1852,7 +1914,25 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                 Compartir
               </button>
             )}
+            {/* Riel derecho del modal desktop: debajo de la tarjeta de contacto
+                bajan mapa, mercado y similares — la columna no queda vacía */}
+            {sideMode && (
+              <div className="bsm-rail">
+                {p.latitud && p.longitud && (
+                  <div className="bsm-rail-map">
+                    <VentaMap properties={railMapProps} onSelectProperty={railMapNoop} selectedId={p.id} />
+                  </div>
+                )}
+                {mercadoSection}
+                {similaresSection}
+              </div>
+            )}
           </div>
+        {/* Visor de fotos a pantalla completa (botón "Ver las N fotos") */}
+        {sideMode && showViewer && p.fotos_urls && p.fotos_urls.length > 0 && (
+          <PhotoViewer photos={p.fotos_urls} initialIndex={0} buildingName={p.proyecto}
+            subtitle={`${displayZona(p.zona)} · #${p.id}`} onClose={() => setShowViewer(false)} />
+        )}
       </div>
     </>
   )
@@ -3767,38 +3847,69 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vd-mkt-num { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; font-variant-numeric:tabular-nums; line-height:1.1 }
         .vd-mkt-label { font-size:11.5px; color:#9A8E7A; line-height:1.35 }
         .vd-mkt-caveat { font-size:11.5px; color:#7A7060; line-height:1.45; border-top:1px solid rgba(237,232,220,0.06); padding-top:10px }
-        /* ===== MODAL DE PROPIEDAD (desktop, estilo Zillow) =====
+        /* ===== MODAL DE PROPIEDAD (desktop, estilo Zillow v3) =====
            Ventana grande centrada sobre el feed oscurecido (bs-overlay, z 500).
-           Un solo scroll adentro. La tarjeta de contacto (.bs-sticky-footer)
-           queda FIJA alineada al borde derecho del modal mientras el contenido
-           scrollea; el modal reserva esa franja con padding-right. */
-        .bs-venta.bs-side { position:fixed; inset:auto; top:3vh; bottom:3vh; left:50%; right:auto; transform:translateX(-50%); width:min(1120px, 94vw); max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:16px; border:1px solid rgba(237,232,220,0.1); z-index:501; padding-bottom:32px; padding-right:344px }
+           Orden visual via flex-order: nav de anclas → franja de fotos →
+           precio+números → secciones. El RIEL derecho (.bs-sticky-footer) es
+           una columna FIJA: tarjeta de contacto + mapa + mercado + similares;
+           el modal reserva esa franja con padding-right. */
+        .bs-venta.bs-side { position:fixed; inset:auto; top:3vh; bottom:3vh; left:50%; right:auto; transform:translateX(-50%); width:min(1120px, 94vw); max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:16px; border:1px solid rgba(237,232,220,0.1); z-index:501; padding-bottom:32px; padding-right:344px; display:flex; flex-direction:column }
         .bs-venta.bs-side.open { transform:translateX(-50%) }
-        /* Tarjeta de contacto fija (el "Request a tour" de Zillow): precio +
-           chip fiduciario + WhatsApp/Compartir, siempre visible. */
-        .bs-venta.bs-side .bs-sticky-footer { position:fixed; box-sizing:border-box; top:calc(3vh + 20px); bottom:auto; left:calc(50% + (min(1120px, 94vw) / 2) - 324px); right:auto; width:300px; flex-direction:column; align-items:stretch; gap:8px; padding:18px; background:#1a1a1a; border:1px solid rgba(237,232,220,0.14); border-radius:14px; z-index:502 }
+        .bs-venta.bs-side > * { order:3; flex-shrink:0 }
+        .bs-venta.bs-side > .bsm-nav { order:0 }
+        .bs-venta.bs-side > .bsm-photos { order:1 }
+        .bs-venta.bs-side > .bs-dark-header { order:2 }
+        /* Nav de anclas sticky */
+        .bsm-nav { position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:4px; background:#141414; border-bottom:1px solid rgba(237,232,220,0.1); padding:8px 20px }
+        .bsm-nav-link { background:none; border:none; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:7px 10px; cursor:pointer; border-radius:8px; transition:color 0.15s }
+        .bsm-nav-link:hover { color:#EDE8DC; background:rgba(237,232,220,0.05) }
+        .bsm-nav-actions { margin-left:auto; display:flex; align-items:center; gap:6px }
+        .bsm-nav-actions .bs-fav, .bsm-nav-actions .bs-close { width:32px; height:32px; border-radius:50%; background:rgba(237,232,220,0.07); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#EDE8DC }
+        .bsm-nav-actions .bs-close { font-size:20px; line-height:1 }
+        .bsm-nav-actions .bs-fav:hover, .bsm-nav-actions .bs-close:hover { background:rgba(237,232,220,0.14) }
+        .bs-venta.bs-side .bs-floating-actions { display:none }
+        /* Franja de fotos acotada: 1 grande + 2 chicas, altura fija. El botón
+           "Ver las N fotos" abre el visor a pantalla completa (PhotoViewer). */
+        .bs-venta.bs-side .bsm-photos { position:relative; padding:14px 20px 6px }
+        .bs-venta.bs-side .bsm-photos .bsg-scroll { display:grid; grid-template-columns:2fr 1fr; grid-template-rows:186px 186px; gap:8px; overflow:visible; scroll-snap-type:none }
+        .bs-venta.bs-side .bsm-photos .bsg-slide { aspect-ratio:auto; height:100%; min-height:0; border-radius:10px; overflow:hidden }
+        .bs-venta.bs-side .bsm-photos .bsg-slide:first-child { grid-row:1 / 3 }
+        .bs-venta.bs-side .bsm-photos .bsg-slide:nth-child(n+4) { display:none }
+        .bs-venta.bs-side .bsm-photos .bsg-arrow, .bs-venta.bs-side .bsm-photos .bsg-counter, .bs-venta.bs-side .bsm-photos .bsg-dots { display:none }
+        .bsm-verfotos { position:absolute; right:32px; bottom:18px; display:inline-flex; align-items:center; gap:7px; background:#141414; color:#EDE8DC; border:1px solid rgba(237,232,220,0.25); padding:8px 14px; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:12.5px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.4) }
+        .bsm-verfotos:hover { background:#1e1e1e }
+        /* Header: precio a la izquierda + números grandes a la derecha */
+        .bs-venta.bs-side .bs-dark-header { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:24px; align-items:center }
+        .bs-venta.bs-side .bsm-stats { grid-column:2; grid-row:1 / span 3; display:flex; gap:26px }
+        .bsm-stat { text-align:center }
+        .bsm-stat b { display:block; font-family:'Figtree',sans-serif; font-size:26px; font-weight:600; color:#EDE8DC; line-height:1.1; font-variant-numeric:tabular-nums }
+        .bsm-stat span { display:block; font-size:11.5px; color:#9A8E7A; margin-top:2px }
+        .bs-venta.bs-side .bs-h-specs { display:none }
+        .bs-venta.bs-side .bs-h-price { font-size:24px }
+        /* Riel derecho fijo: tarjeta de contacto + mapa + mercado + similares.
+           Columna completa con scroll interno si no entra. */
+        .bs-venta.bs-side .bs-sticky-footer { position:fixed; box-sizing:border-box; top:calc(3vh + 16px); bottom:calc(3vh + 16px); left:calc(50% + (min(1120px, 94vw) / 2) - 324px); right:auto; width:300px; flex-direction:column; align-items:stretch; gap:8px; padding:16px; background:#1a1a1a; border:1px solid rgba(237,232,220,0.14); border-radius:14px; z-index:502; overflow-y:auto; scrollbar-width:thin }
         .bs-card-top { display:flex; flex-direction:column; gap:4px; margin-bottom:6px }
         .bs-card-price { font-family:'Figtree',sans-serif; font-size:24px; font-weight:600; color:#EDE8DC; font-variant-numeric:tabular-nums }
         .bs-card-sub { font-size:12.5px; color:#9A8E7A }
         .bs-card-chip { align-self:flex-start; font-size:12px; color:#7BB389; background:rgba(58,106,72,0.18); border:1px solid rgba(123,179,137,0.25); border-radius:8px; padding:5px 9px; margin-top:4px }
         .bs-card-chip-bajo { color:#8FCB9D; background:rgba(58,106,72,0.28) }
-        /* fav+close: pegados arriba mientras el modal scrollea */
-        .bs-venta.bs-side .bs-floating-actions { position:sticky; top:10px; z-index:50; display:flex; justify-content:flex-end; background:transparent; padding:0 12px }
-        /* Contenido acotado a medida de lectura (~640px) centrado en la columna
-           izquierda. La galería queda full-bleed (no lleva este padding). */
+        .bsm-rail { display:flex; flex-direction:column; gap:12px; margin-top:8px; border-top:1px solid rgba(237,232,220,0.08); padding-top:14px }
+        .bsm-rail-map { height:150px; border-radius:10px; overflow:hidden; border:1px solid rgba(237,232,220,0.1); position:relative; isolation:isolate; flex-shrink:0 }
+        .bsm-rail-map .venta-map { position:absolute; inset:0 }
+        /* Secciones dentro del riel: sin fondo propio ni padding de sección */
+        .bs-venta.bs-side .bsm-rail .bs-section { padding:0; background:transparent; border-bottom:none }
+        .bs-venta.bs-side .bsm-rail .bs-mktv { padding:12px }
+        .bs-venta.bs-side .bsm-rail .bs-sim-scroll { display:flex; flex-direction:column; gap:8px; overflow:visible; padding:0 }
+        /* Contenido izquierdo acotado a medida de lectura (~640px) centrado.
+           La franja de fotos queda full-bleed (no lleva este padding). */
         .bs-venta.bs-side .bs-dark-header,
         .bs-venta.bs-side .bs-section {
           padding-left:max(24px, calc((100% - 640px) / 2));
           padding-right:max(24px, calc((100% - 640px) / 2));
         }
-        /* Precio menos gigante (ya está en la tarjeta fija) */
-        .bs-venta.bs-side .bs-h-price { font-size:24px }
-        /* Galería en MOSAICO (una grande + 2 medianas, repetido) en vez de
-           carrusel — todas las fotos visibles scrolleando, como Zillow. */
-        .bs-venta.bs-side .bsg-scroll { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 20px; overflow:visible; scroll-snap-type:none }
-        .bs-venta.bs-side .bsg-slide { aspect-ratio:16/10; border-radius:10px; overflow:hidden }
-        .bs-venta.bs-side .bsg-slide:nth-child(3n+1) { grid-column:1 / -1; aspect-ratio:16/8 }
-        .bs-venta.bs-side .bsg-arrow, .bs-venta.bs-side .bsg-counter, .bs-venta.bs-side .bsg-dots { display:none }
+        .bs-venta.bs-side .bs-section, .bs-venta.bs-side .bs-dark-header { scroll-margin-top:54px }
+        .bs-venta.bs-side .bsm-trust { font-size:12.5px; color:#9A8E7A; font-family:'DM Sans',sans-serif }
         /* Secciones compactas (el contenido base es de mobile) */
         .bs-venta.bs-side .bs-section { padding-top:13px; padding-bottom:13px }
         .bs-venta.bs-side .bs-sl { margin-bottom:8px }
@@ -3812,8 +3923,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta.bs-side .bs-feat.hl .bs-fl { display:block; font-size:11.5px }
         @media (max-width:1180px) {
           .bs-venta.bs-side { padding-right:0 }
-          .bs-venta.bs-side .bs-sticky-footer { position:sticky; top:auto; bottom:0; left:auto; width:auto; flex-direction:row; border-radius:0; border:none; border-top:1px solid rgba(237,232,220,0.08) }
-          .bs-venta.bs-side .bs-card-top { display:none }
+          .bs-venta.bs-side .bs-sticky-footer { position:sticky; top:auto; bottom:0; left:auto; width:auto; flex-direction:row; border-radius:0; border:none; border-top:1px solid rgba(237,232,220,0.08); overflow:visible }
+          .bs-venta.bs-side .bs-card-top, .bs-venta.bs-side .bsm-rail { display:none }
         }
         .bs-tabs { position:sticky; top:0; z-index:9; display:flex; gap:2px; background:#141414; border-bottom:1px solid rgba(237,232,220,0.1); padding:0 16px }
         .bs-tab { flex:1; background:none; border:none; border-bottom:2px solid transparent; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:11px 4px; cursor:pointer; transition:color 0.15s }
