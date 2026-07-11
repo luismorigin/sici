@@ -80,8 +80,12 @@ async function traerLote() {
   const { data, error } = await q; if (error) throw error;
   // Excluir los ya cargados en shadow → los lotes sucesivos AVANZAN sobre deptos nuevos.
   const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('id');
+  // + los multiproyecto YA detectados (van a proyectos_detectados, NO a shadow ni a rechazados) —
+  //   sin esto reaparecen en cada prep y consumen slots del lote. Se excluyen por url.
+  const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', 'equipetrol');
+  const urlsProy = new Set((yaProy || []).map((r) => r.url));
   const cargados = new Set([...(yaEn || []).map((r) => r.id), ...leerRechazados()]);
-  const frescos = data.filter((d) => !cargados.has(d.id));
+  const frescos = data.filter((d) => !cargados.has(d.id) && !urlsProy.has(d.url));
   // N = TOTAL agnóstico a la fuente (NO N-por-portal): si un portal tiene mucho más inventario
   // que el otro (C21 278 vs Remax 124), el cap simétrico dejaba la fuente grande atrás. Así drena parejo.
   return frescos.slice(0, N);

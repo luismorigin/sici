@@ -27,6 +27,63 @@ Estado al cierre de la rama `feat/deptos-hibrido-shadow` (local, sin push):
 *(La sección 15.7 de PLATAFORMA_HIBRIDA_GENERICA quedó desactualizada respecto a este checkpoint:
 sus ítems 1 y 2 ya están hechos.)*
 
+## Lote de 100 → shadow (2026-07-11, en worktree `hybrid-worktree-structure-3b7b53`)
+
+Barrido del método validado (`--prep 100` → 10 subagentes-lectores spec v4 → `--apply`), corrido en el
+worktree (requirió `npm install` local + copiar `output/rechazados.json` del repo principal; `node_modules`
+no viaja con el worktree). **Prep 100/100 sin bloqueo de IP** (tasa_paralelo 10.542). Los subagentes se
+cayeron 1 vez por límite de sesión (reset 2:20pm La Paz) y se relanzaron OK.
+
+- **Resultado apply: 92 escritos a `propiedades_v2_shadow`, 8 multiproyecto → `proyectos_detectados`
+  (7 Spazios Edén replicados + 1 Itaju), 0 rechazados por gate.** El 1325 (Condominio Stanza) lo leí a mano
+  (la tanda 08 escribió 9/10).
+- **Shadow ahora = 280 props** (188 + 92), **254 con match (90,7%)**, feed `v_mercado_venta_shadow` = 256,
+  **mediana $/m² $1.699** (p10 $1.316 / p90 $2.133), **0 precios inflados**, 0 sin precio.
+- **Tags TC del lote:** no_especificado 62, oficial_viejo 17, paralelo 17, bob 4 (1441 Elite "Bs 595.000",
+  1222 Element "990.000 Bs", 3657 Sky Luxury, 3656 Maré — todos crudos en bolivianos, no divididos).
+- **Discriminador unidad-vs-multiproyecto:** el estructurado fabricaba precio (`1600 $ × m²`) en los avisos-
+  proyecto Spazios Edén → multiproyecto; el 1599 (mismo edificio) es UNIDAD real (slug de 1 depto, área única).
+  Verificado a mano: la distinción es genuina.
+- **Sin auto-match (10):** 8 sin-nombre legítimos + 3660 (Condominio Hamburgo, PM_NUEVO) + 1674 (Sky Collection
+  Plaza Italia, fuzzy débil). Al audit.
+- 🔴 **Pendientes menores del lote:** (1) **3660** — slug dice "terreno", área 130m² para 1 dorm → $405/m²
+  (el área es prob. del lote, no del depto); revisar antes de darle PM. (2) **3 deptos con área=1.00**
+  (1728/1730/1731, Domus Tower Deluxe ×2 + sin-nombre) — el discovery no trajo área ni el texto; el feed los
+  excluye (area<20). No es basura, es dato faltante. (3) Alias sugeridos registrados (no escritos a prod).
+
+## Lote de 100 (B) → shadow (2026-07-11, mismo worktree)
+
+Segundo barrido, mismo método (`--prep 100` → 10 subagentes v4 → `--apply`). Prep 100/100 sin bloqueo IP.
+
+- **Solapamiento:** 8 de los 100 eran los multiproyecto del lote A (Spazios Eden 1340-1347 + Itaju 1289) —
+  reaparecen porque van a `proyectos_detectados`, no a shadow ni a `rechazados.json` (bug de flujo, ver abajo).
+  **Excluidos del apply** (ya procesados en A). 92 nuevos reales.
+- **Resultado apply: 92 escritos a shadow, 0 multiproyecto nuevos, 0 rechazados.**
+- **Shadow ahora = 372 props** (280 + 92), **342 con match (91,9%)**, feed `v_mercado_venta_shadow` = 337,
+  **mediana $/m² $1.652** (p10 $1.253 / p90 $2.122), **0 inflados**, 0 sin precio.
+- **Tags TC:** no_especificado 63, paralelo 19, oficial_viejo 16 (un bloque Integra con "Bs.7" explícito),
+  bob 2 (1198 Nomad "Bs 750.000", 1005 Sky Eclipse fallback bob-genuino $2.045/m²).
+- **Consolidación:** reclasifiqué **511 Lofty Island** de multiproyecto → unidad (su gemelo 52 iba como unidad;
+  copy de proyecto Remax pero cada listing con par área/precio coherente = caso Sky Level del spec).
+- **Sin auto-match:** 595 (Bloque La Salle — el fuzzy daba falso pm88; nombre real al matcher/audit) + los
+  sin-nombre del lote. Al audit.
+- **Spec v4: 0 observaciones nuevas** en 200 avisos leídos (lotes A+B). Sigue convergido.
+- 🟢 **Universo prod casi cerrado: quedan 15 props** (1 C21 + 14 Remax) para el próximo mini-lote.
+
+## Mini-lote de cierre (C) → shadow (2026-07-11) — INVENTARIO PROD CERRADO 🟢
+
+Los 10 frescos que quedaban (los "15" del conteo previo eran 10 nuevos + 5 ya en `rechazados.json`).
+Todos Remax: Lofty Island ×5 (unidades, caso Sky Level) + Avanti/Sky Eclipse/Sky Luxia/SÖLO ×5.
+
+- **10 escritos, 0 rechazados, 0 multiproyecto.** TC: casi todos `no_especificado` (Remax sin TC en texto =
+  el bug de los 368; el híbrido NO infla), 1 `paralelo` legítimo (SÖLO "Tc paralelo" declarado solo).
+- **Estado FINAL del shadow: 382 props · 352 con match (92,1%) · feed `v_mercado_venta_shadow` = 343 ·
+  mediana $/m² $1.652 · 0 inflados · 0 sin precio.**
+- **Pendientes reales del universo prod Equipetrol = 0** (query directo: todo lo fresco con teléfono ya está
+  en shadow o en `proyectos_detectados`; el resto es rechazado/basura previa).
+- Total barrido hoy (3 lotes A+B+C): **194 unidades nuevas** a shadow + 9 multiproyecto a `proyectos_detectados`,
+  **spec v4 con 0 observaciones nuevas en ~210 avisos leídos** — sigue convergido.
+
 ## 1ª corrida E2E post-handoff (2026-07-05)
 
 Prueba en vivo "que corre": `--prep 50` detectó **8 diferenciales** (delta correcto — el cargador
