@@ -1,8 +1,31 @@
 # Migración deptos Equipetrol al híbrido — ESTADO y mapa de estrangulamiento
 
-> Actualizado: 2026-07-05. Contexto: Bloque 3 del plan strangler (ver
-> `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md`). Memoria: `project_deptos_equipetrol_al_hibrido`.
-> Contrato técnico: `CONTRATO_FEED.md` · Reglas del lector: `READER_SPEC.md`.
+> Actualizado: 2026-07-10 (checkpoint fin del día, abajo). Contexto: Bloque 3 del plan strangler (ver
+> `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md`, sección 15 = mapa del cutover).
+> Memoria: `project_checkpoint_deptos_hibrido`.
+> Contrato técnico: `CONTRATO_FEED.md` · Reglas del lector: `READER_SPEC.md` (v4).
+
+## ✅ CHECKPOINT 10-jul (fin del día) — leer esto para retomar
+
+Estado al cierre de la rama `feat/deptos-hibrido-shadow` (local, sin push):
+
+- ✅ **Auditoría de candados HECHA** — el Freno 1 era humo: el cutover solo re-aplica 2 matchings
+  (2696/2714); 27/36 diffs son TC → van al Paquete TC.
+- ✅ **Discovery 0.005 VALIDADO** — 464 props en 6 microzonas > 444 de n8n (fix STEP 0.005, `ce1e2fe`).
+- ✅ **Reader validado EXHAUSTIVO → spec v4** — ~193 props (100 ciegas + 93 re-leídas), **convergió**
+  (0 edges nuevos en 10 lotes, 0 alucinaciones). Las 4 reglas v4 están en `READER_SPEC.md`.
+  Método anti-drift que funcionó: congelar spec → material local → subagentes-lectores → loop-until-dry.
+- **Shadow = 188 props TODO en v4**; feed verificado en `localhost:3000/ventas?shadow=1`
+  (158 props, precios sin inflar). 2697 (alquiler colado) fue sacado.
+- **Cuello real = IP**: C21 residencial rate-limita ~2 lotes/100 desde la laptop; en prod el fetch
+  corre desde infra, no laptop.
+- 🔴 **FALTA**: barrer ~271 props restantes (fetch con IP fresca) · fix del cargador
+  `parqueo_incluido` · id definitivo para las nuevas (secuencia en prod) · verificador integrado
+  (incremento 3) · Paquete TC (al cutover los paralelo/bob BAJAN ~34% — esperado, no bug) ·
+  bug C21-BOB-con-moneda-USD ya RESUELTO (regla en `READER_SPEC.md` §"Fallback C21 sin precio").
+
+*(La sección 15.7 de PLATAFORMA_HIBRIDA_GENERICA quedó desactualizada respecto a este checkpoint:
+sus ítems 1 y 2 ya están hechos.)*
 
 ## 1ª corrida E2E post-handoff (2026-07-05)
 
