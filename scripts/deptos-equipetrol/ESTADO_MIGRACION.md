@@ -5,6 +5,28 @@
 > Memoria: `project_checkpoint_deptos_hibrido`.
 > Contrato técnico: `CONTRATO_FEED.md` · Reglas del lector: `READER_SPEC.md` (v4).
 
+## 🎯 CHECKPOINT 11-jul — inventario cerrado + gate del cutover redefinido
+
+**Barrido completo (194 unidades → shadow, inventario prod Equipetrol CERRADO).** Detalle en las secciones
+"Lote 100 (A)/(B)/cierre (C)" abajo. Pendientes clasificados en `WORKLIST_REVISION.md`.
+
+**DECISIÓN (founder, 11-jul): la comparación integral shadow-vs-prod NO es el gate del cutover — DEPRECADA.**
+Motivo: (1) son **dos regímenes de TC distintos** (shadow = régimen nuevo sin pre-descuento; prod = viejo
+n8n con paralelo/oficial ya descontado) → los diffs de $/m² son esperados por diseño, no miden calidad;
+(2) **prod está parcheado** (~85% de candados = correcciones-en-reversa del auditor sobre datos malos de
+n8n) → comparar contra un baseline sucio no valida nada. El comparador fila-a-fila (`buscar_unidades_simple`
+vs `_shadow`) queda como herramienta de diagnóstico, NO como criterio de corte.
+
+**El gate REAL del cutover (ya cumplido en su mayor parte):**
+- ✅ **Validación absoluta contra el ANUNCIO** (fuente de verdad, no prod): ~210 avisos hoy + 193 previos,
+  spec v4, 0 alucinaciones, convergido. El híbrido lee bien DE ORIGEN.
+- ✅ **Feed shadow sano por sí mismo**: mediana $/m² en banda, 0 inflados, 92% match.
+- ✅ **Cobertura total**: inventario prod Equipetrol cerrado (0 pendientes).
+- 🔴 Falta (operativo, NO comparativo): **Paquete TC** (aplicar `TC_NUEVO_DECISION.md`) · enganches
+  (discovery carga `fecha_alta`, verificador integrado, snapshot absorción) · 2 PM nuevos (Hamburgo/La Salle,
+  sin bloqueo GPS) · **red de cobertura** (props que prod muestra y shadow no, por matching — 595/Portobello/
+  Murure; NO comparar precios, solo no perder inventario) · OK del founder para apagar n8n.
+
 ## ✅ CHECKPOINT 10-jul (fin del día) — leer esto para retomar
 
 Estado al cierre de la rama `feat/deptos-hibrido-shadow` (local, sin push):
