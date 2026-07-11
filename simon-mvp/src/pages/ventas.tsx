@@ -1459,7 +1459,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
   // es la shortlist, no el mercado — cálculo inválido). La ausencia se explica
   // (transparencia fiduciaria), no se disimula.
   const mercadoSection = !publicShareMode && (marketData ? (
-    <div className="bs-section">
+    <div className="bs-section" id="bsm-sec-mercado">
       <div className="bs-sl"><span className="bs-sl-dot" />Contexto de mercado · {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
       <div className="bs-mktv">
         <div className="bs-mktv-this">
@@ -1499,7 +1499,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
   // Similares: oculto en publicShareMode (cliente solo ve lo curado); en
   // contactoDirecto (B2C) se muestran, igual que el feed (§6 dec.1)
   const similaresSection = (!publicShareMode || contactoDirecto) && similarProps.length > 0 ? (
-    <div className="bs-section">
+    <div className="bs-section" id="bsm-sec-similares">
       <div className="bs-sl"><span className="bs-sl-dot" />También en {displayZona(p.zona)}</div>
       <div className="bs-sim-scroll">
         {similarProps.map(sp => (
@@ -1529,7 +1529,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             scroll (no ocultan contenido) + acciones fav/cerrar */}
         {sideMode && (
           <div className="bsm-nav">
-            {([['bsm-sec-resumen', 'Resumen'], ['bsm-sec-datos', 'Datos'], ['bsm-sec-desc', 'Descripción'], ['bsm-sec-preguntas', 'Preguntas']] as const).map(([id, label]) => (
+            {([['bsm-sec-resumen', 'Resumen'], ['bsm-sec-datos', 'Datos'], ['bsm-sec-mercado', 'Mercado'], ['bsm-sec-similares', 'Similares']] as const).map(([id, label]) => (
               <button key={id} type="button" className="bsm-nav-link"
                 onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{label}</button>
             ))}
@@ -1611,6 +1611,11 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
+          {/* bsm-body/main/aside: en mobile son display:contents (no cambian
+              nada); en el modal desktop arman las 2 columnas debajo de las
+              fotos — contenido a la izquierda, tarjeta sticky a la derecha */}
+          <div className="bsm-body">
+          <div className="bsm-main">
           {/* Comentario del broker — solo en publicShareMode */}
           {showTab('resumen') && publicShareMode && brokerComment && (
             <div className="bs-section bs-broker-comment-section" id="bs-broker-comment">
@@ -1733,8 +1738,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Contexto de mercado — en el modal desktop vive en el riel derecho */}
-          {!sideMode && mercadoSection}
+          {/* Contexto de mercado */}
+          {mercadoSection}
           {/* Datos de compra — sección del modal desktop */}
           {sideMode && (
             <div className="bs-section" id="bsm-sec-datos">
@@ -1756,8 +1761,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Propiedades similares — en el modal desktop viven en el riel derecho */}
-          {!sideMode && similaresSection}
+          {/* Propiedades similares */}
+          {similaresSection}
 
           {/* Preguntas para el vendedor — oculto en modo broker (el broker es el que responde)
               y en publicShare; en contactoDirecto (B2C) se muestran (van al captador) */}
@@ -1788,6 +1793,16 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           )}
 
           {/* Ubicación Google Maps */}
+          {/* Ubicación con mapa mediano — solo modal desktop (mobile conserva
+              el link a Google Maps de siempre) */}
+          {sideMode && p.latitud && p.longitud && (
+            <div className="bs-section">
+              <div className="bs-sl"><span className="bs-sl-dot" />Ubicación</div>
+              <div className="bsm-flow-map">
+                <VentaMap properties={railMapProps} onSelectProperty={railMapNoop} selectedId={p.id} />
+              </div>
+            </div>
+          )}
           {showTab('resumen') && p.latitud && p.longitud && (
             <div className="bs-section">
               <a href={`https://www.google.com/maps?q=${p.latitud},${p.longitud}`}
@@ -1842,22 +1857,12 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Sticky footer CTA — en el modal desktop es la tarjeta fija derecha */}
+          </div>
+          {/* Tarjeta sticky (desktop) / footer (mobile): SOLO lo esencial,
+              como el "Request a tour" de Zillow — WhatsApp + Compartir.
+              El precio ya vive en el bloque principal, no se repite. */}
+          <div className="bsm-aside">
           <div className="bs-sticky-footer">
-            {sideMode && (
-              <div className="bs-card-top">
-                <div className="bs-card-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span></div>
-                <div className="bs-card-sub">{[
-                  p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : null,
-                  p.estado_construccion === 'preventa' ? 'Preventa' : 'Entrega inmediata',
-                ].filter(Boolean).join(' · ')}</div>
-                {marketData && p.precio_m2 > 0 && (() => {
-                  const pos = p.precio_m2 < marketData.rangoLow ? 'bajo' : p.precio_m2 > marketData.rangoHigh ? 'sobre' : 'dentro'
-                  const label = pos === 'bajo' ? 'Bajo el rango típico' : pos === 'sobre' ? 'Sobre el rango típico' : 'Dentro del rango típico'
-                  return <div className={`bs-card-chip ${pos === 'bajo' ? 'bs-card-chip-bajo' : ''}`}>{label} · {marketData.count} comparables</div>
-                })()}
-              </div>
-            )}
             {publicShareMode && !contactoDirecto && publicShareBroker ? (
               <a href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${firstName(publicShareBroker.nombre)}, me interesa: ${p.proyecto} (${p.dormitorios === 0 ? 'Mono' : p.dormitorios + ' dorm'}, ${Math.round(p.area_m2)}m², $us ${Math.round(p.precio_usd).toLocaleString('en-US')}).`)}`}
                 target="_blank" rel="noopener noreferrer" className="bs-wsp-cta"
@@ -1914,19 +1919,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                 Compartir
               </button>
             )}
-            {/* Riel derecho del modal desktop: debajo de la tarjeta de contacto
-                bajan mapa, mercado y similares — la columna no queda vacía */}
-            {sideMode && (
-              <div className="bsm-rail">
-                {p.latitud && p.longitud && (
-                  <div className="bsm-rail-map">
-                    <VentaMap properties={railMapProps} onSelectProperty={railMapNoop} selectedId={p.id} />
-                  </div>
-                )}
-                {mercadoSection}
-                {similaresSection}
-              </div>
-            )}
+          </div>
+          </div>
           </div>
         {/* Visor de fotos a pantalla completa (botón "Ver las N fotos") */}
         {sideMode && showViewer && p.fotos_urls && p.fotos_urls.length > 0 && (
@@ -3847,18 +3841,25 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vd-mkt-num { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; font-variant-numeric:tabular-nums; line-height:1.1 }
         .vd-mkt-label { font-size:11.5px; color:#9A8E7A; line-height:1.35 }
         .vd-mkt-caveat { font-size:11.5px; color:#7A7060; line-height:1.45; border-top:1px solid rgba(237,232,220,0.06); padding-top:10px }
-        /* ===== MODAL DE PROPIEDAD (desktop, estilo Zillow v3) =====
+        /* ===== MODAL DE PROPIEDAD (desktop, estilo Zillow v4) =====
            Ventana grande centrada sobre el feed oscurecido (bs-overlay, z 500).
-           Orden visual via flex-order: nav de anclas → franja de fotos →
-           precio+números → secciones. El RIEL derecho (.bs-sticky-footer) es
-           una columna FIJA: tarjeta de contacto + mapa + mercado + similares;
-           el modal reserva esa franja con padding-right. */
-        .bs-venta.bs-side { position:fixed; inset:auto; top:3vh; bottom:3vh; left:50%; right:auto; transform:translateX(-50%); width:min(1120px, 94vw); max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:16px; border:1px solid rgba(237,232,220,0.1); z-index:501; padding-bottom:32px; padding-right:344px; display:flex; flex-direction:column }
+           Estructura fiel a Zillow: nav de anclas → FOTOS a todo el ancho
+           (nada las tapa) → precio+números → dos columnas: contenido | tarjeta
+           STICKY con solo lo esencial (WhatsApp + Compartir). Los wrappers
+           bsm-body/main/aside son display:contents en mobile (cero cambio). */
+        .bsm-body, .bsm-main, .bsm-aside { display:contents }
+        .bs-venta.bs-side { position:fixed; inset:auto; top:3vh; bottom:3vh; left:50%; right:auto; transform:translateX(-50%); width:min(1120px, 94vw); max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:16px; border:1px solid rgba(237,232,220,0.1); z-index:501; padding-bottom:32px; display:flex; flex-direction:column }
         .bs-venta.bs-side.open { transform:translateX(-50%) }
         .bs-venta.bs-side > * { order:3; flex-shrink:0 }
         .bs-venta.bs-side > .bsm-nav { order:0 }
         .bs-venta.bs-side > .bsm-photos { order:1 }
         .bs-venta.bs-side > .bs-dark-header { order:2 }
+        /* Dos columnas debajo de las fotos: contenido | tarjeta sticky */
+        .bs-venta.bs-side .bsm-body { display:flex; align-items:flex-start; gap:0 }
+        .bs-venta.bs-side .bsm-main { display:block; flex:1; min-width:0 }
+        /* align-self:stretch: la columna derecha mide lo mismo que el
+           contenido — sin eso la tarjeta sticky no tiene recorrido */
+        .bs-venta.bs-side .bsm-aside { display:block; width:312px; flex-shrink:0; padding:16px 20px 0 0; align-self:stretch }
         /* Nav de anclas sticky */
         .bsm-nav { position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:4px; background:#141414; border-bottom:1px solid rgba(237,232,220,0.1); padding:8px 20px }
         .bsm-nav-link { background:none; border:none; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:7px 10px; cursor:pointer; border-radius:8px; transition:color 0.15s }
@@ -3868,13 +3869,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bsm-nav-actions .bs-close { font-size:20px; line-height:1 }
         .bsm-nav-actions .bs-fav:hover, .bsm-nav-actions .bs-close:hover { background:rgba(237,232,220,0.14) }
         .bs-venta.bs-side .bs-floating-actions { display:none }
-        /* Franja de fotos acotada: 1 grande + 2 chicas, altura fija. El botón
-           "Ver las N fotos" abre el visor a pantalla completa (PhotoViewer). */
+        /* Franja de fotos a TODO el ancho: 1 grande + 4 chicas (como Zillow),
+           altura fija. "Ver las N fotos" abre el visor a pantalla completa. */
         .bs-venta.bs-side .bsm-photos { position:relative; padding:14px 20px 6px }
-        .bs-venta.bs-side .bsm-photos .bsg-scroll { display:grid; grid-template-columns:2fr 1fr; grid-template-rows:186px 186px; gap:8px; overflow:visible; scroll-snap-type:none }
+        .bs-venta.bs-side .bsm-photos .bsg-scroll { display:grid; grid-template-columns:2fr 1fr 1fr; grid-template-rows:183px 183px; gap:8px; overflow:visible; scroll-snap-type:none }
         .bs-venta.bs-side .bsm-photos .bsg-slide { aspect-ratio:auto; height:100%; min-height:0; border-radius:10px; overflow:hidden }
         .bs-venta.bs-side .bsm-photos .bsg-slide:first-child { grid-row:1 / 3 }
-        .bs-venta.bs-side .bsm-photos .bsg-slide:nth-child(n+4) { display:none }
+        .bs-venta.bs-side .bsm-photos .bsg-slide:nth-child(n+6) { display:none }
         .bs-venta.bs-side .bsm-photos .bsg-arrow, .bs-venta.bs-side .bsm-photos .bsg-counter, .bs-venta.bs-side .bsm-photos .bsg-dots { display:none }
         .bsm-verfotos { position:absolute; right:32px; bottom:18px; display:inline-flex; align-items:center; gap:7px; background:#141414; color:#EDE8DC; border:1px solid rgba(237,232,220,0.25); padding:8px 14px; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:12.5px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.4) }
         .bsm-verfotos:hover { background:#1e1e1e }
@@ -3886,21 +3887,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bsm-stat span { display:block; font-size:11.5px; color:#9A8E7A; margin-top:2px }
         .bs-venta.bs-side .bs-h-specs { display:none }
         .bs-venta.bs-side .bs-h-price { font-size:24px }
-        /* Riel derecho fijo: tarjeta de contacto + mapa + mercado + similares.
-           Columna completa con scroll interno si no entra. */
-        .bs-venta.bs-side .bs-sticky-footer { position:fixed; box-sizing:border-box; top:calc(3vh + 16px); bottom:calc(3vh + 16px); left:calc(50% + (min(1120px, 94vw) / 2) - 324px); right:auto; width:300px; flex-direction:column; align-items:stretch; gap:8px; padding:16px; background:#1a1a1a; border:1px solid rgba(237,232,220,0.14); border-radius:14px; z-index:502; overflow-y:auto; scrollbar-width:thin }
-        .bs-card-top { display:flex; flex-direction:column; gap:4px; margin-bottom:6px }
-        .bs-card-price { font-family:'Figtree',sans-serif; font-size:24px; font-weight:600; color:#EDE8DC; font-variant-numeric:tabular-nums }
-        .bs-card-sub { font-size:12.5px; color:#9A8E7A }
-        .bs-card-chip { align-self:flex-start; font-size:12px; color:#7BB389; background:rgba(58,106,72,0.18); border:1px solid rgba(123,179,137,0.25); border-radius:8px; padding:5px 9px; margin-top:4px }
-        .bs-card-chip-bajo { color:#8FCB9D; background:rgba(58,106,72,0.28) }
-        .bsm-rail { display:flex; flex-direction:column; gap:12px; margin-top:8px; border-top:1px solid rgba(237,232,220,0.08); padding-top:14px }
-        .bsm-rail-map { height:150px; border-radius:10px; overflow:hidden; border:1px solid rgba(237,232,220,0.1); position:relative; isolation:isolate; flex-shrink:0 }
-        .bsm-rail-map .venta-map { position:absolute; inset:0 }
-        /* Secciones dentro del riel: sin fondo propio ni padding de sección */
-        .bs-venta.bs-side .bsm-rail .bs-section { padding:0; background:transparent; border-bottom:none }
-        .bs-venta.bs-side .bsm-rail .bs-mktv { padding:12px }
-        .bs-venta.bs-side .bsm-rail .bs-sim-scroll { display:flex; flex-direction:column; gap:8px; overflow:visible; padding:0 }
+        /* Tarjeta sticky (el "Request a tour" de Zillow): arranca DEBAJO de
+           las fotos y se queda pegada al scrollear. Solo WhatsApp+Compartir. */
+        .bs-venta.bs-side .bs-sticky-footer { position:sticky; top:56px; bottom:auto; flex-direction:column; align-items:stretch; gap:8px; padding:16px; background:#1a1a1a; border:1px solid rgba(237,232,220,0.14); border-radius:14px; border-top:1px solid rgba(237,232,220,0.14); z-index:5 }
+        /* Mapa mediano en la sección Ubicación del flujo */
+        .bsm-flow-map { height:230px; border-radius:12px; overflow:hidden; border:1px solid rgba(237,232,220,0.1); position:relative; isolation:isolate }
+        .bsm-flow-map .venta-map { position:absolute; inset:0 }
         /* Contenido izquierdo acotado a medida de lectura (~640px) centrado.
            La franja de fotos queda full-bleed (no lleva este padding). */
         .bs-venta.bs-side .bs-dark-header,
@@ -3922,9 +3914,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta.bs-side .bs-fl { display:none }
         .bs-venta.bs-side .bs-feat.hl .bs-fl { display:block; font-size:11.5px }
         @media (max-width:1180px) {
-          .bs-venta.bs-side { padding-right:0 }
-          .bs-venta.bs-side .bs-sticky-footer { position:sticky; top:auto; bottom:0; left:auto; width:auto; flex-direction:row; border-radius:0; border:none; border-top:1px solid rgba(237,232,220,0.08); overflow:visible }
-          .bs-venta.bs-side .bs-card-top, .bs-venta.bs-side .bsm-rail { display:none }
+          /* Angosto: columnas fuera, la tarjeta vuelve a ser barra inferior */
+          .bs-venta.bs-side .bsm-body, .bs-venta.bs-side .bsm-main, .bs-venta.bs-side .bsm-aside { display:contents }
+          .bs-venta.bs-side .bs-sticky-footer { position:sticky; top:auto; bottom:0; flex-direction:row; border-radius:0; border:none; border-top:1px solid rgba(237,232,220,0.08) }
         }
         .bs-tabs { position:sticky; top:0; z-index:9; display:flex; gap:2px; background:#141414; border-bottom:1px solid rgba(237,232,220,0.1); padding:0 16px }
         .bs-tab { flex:1; background:none; border:none; border-bottom:2px solid transparent; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:11px 4px; cursor:pointer; transition:color 0.15s }
