@@ -23,9 +23,15 @@ vs `_shadow`) queda como herramienta de diagnóstico, NO como criterio de corte.
 - ✅ **Feed shadow sano por sí mismo**: mediana $/m² en banda, 0 inflados, 92% match.
 - ✅ **Cobertura total**: inventario prod Equipetrol cerrado (0 pendientes).
 - 🔴 Falta (operativo, NO comparativo): **Paquete TC** (aplicar `TC_NUEVO_DECISION.md`) · enganches
-  (discovery carga `fecha_alta`, verificador integrado, snapshot absorción) · 2 PM nuevos (Hamburgo/La Salle,
-  sin bloqueo GPS) · **red de cobertura** (props que prod muestra y shadow no, por matching — 595/Portobello/
-  Murure; NO comparar precios, solo no perder inventario) · OK del founder para apagar n8n.
+  (discovery carga `fecha_alta`, verificador integrado, snapshot absorción) · **loop drift→re-lectura**
+  (el híbrido lee la desc 1 sola vez y no re-mira; los anunciantes editan SOLO el texto — rebaja/vendido —
+  sin tocar la cabecera → punto ciego; el drift barato dispara re-lectura del reader solo en las que
+  cambiaron. Ver `AUDITORIAS_POST_CUTOVER.md` §Gap) · 2 PM nuevos (Hamburgo/La Salle, sin bloqueo GPS) ·
+  **red de cobertura** (props que prod muestra y shadow no, por matching — 595/Portobello/Murure; NO
+  comparar precios, solo no perder inventario) · OK del founder para apagar n8n.
+- **Auditorías vs híbrido MAPEADAS** (11-jul): `AUDITORIAS_POST_CUTOVER.md` — ~60% de `/audit-feed-ventas`
+  sobrevive, ~25% reescribir (eje TC + columna desc), ~15% muere; `/audit-cola-matching` muda de tabla
+  (audita los no-match del híbrido). 2 rupturas silenciosas a arreglar: columna de desc + eje TC.
 
 ## ✅ CHECKPOINT 10-jul (fin del día) — leer esto para retomar
 
