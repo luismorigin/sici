@@ -55,6 +55,22 @@
   (Santorini Suites) → aliases cruzados entre 2 edificios.
 - pm73 "Domus Luxury" (Eq Centro) y pm356 "DOMUS LUXURY" (4to anillo) — nombre idéntico, edificios distintos.
 
+## ✅ Sky Level — reclasificados a multiproyecto + fix del discriminador (11-jul, hallazgo founder en el feed)
+- **Síntoma:** el founder vio en el feed que los 4 Sky Level (182/183/184/185, pm16) daban $/m² dispersos
+  ($1.019–2.055) para el mismo edificio en preventa.
+- **Causa:** son un aviso-PROYECTO (brochure repetido, "1D desde 55.000$ y 2D desde 97.350$", precios de
+  lanzamiento inconsistentes ENTRE avisos), NO 4 unidades. El discriminador los trató como unidades porque cada
+  listing traía un área. El precio salió de fuentes distintas: "desde" del texto (subvalúa) en 182/184/185, y
+  estructurado bob/6.96 fabricado ($2.055/m² uniforme = 14.300 Bs/m² × área) en 183.
+- **Acción:** los 4 movidos de `propiedades_v2_shadow` → `proyectos_detectados` (shadow 382→378, feed 346→342).
+- **Fix del spec (`READER_SPEC.md`):** el discriminador ahora dice: **"desde X" = piso de rango de proyecto →
+  multiproyecto** (no unidad), aunque haya área; unidad = precio EXACTO de la unidad ("$159.000"), no "desde".
+  Y estructurado con $/m² uniforme en todas las tipologías = fabricado (no `amount` real). Sky Level dejó de ser
+  el ejemplo de "unidad" y pasó a ser el de "multiproyecto".
+- **Detector aplicado a todo el barrido** (`output/precio-desde-candidatos.json`): 6 candidatos. Solo los 3 Sky
+  Level con "desde" eran el problema; los otros 3 (977 Breeze / 1010 Bamboo / 1412 Uptown Drei) tienen precio USD
+  EXPLÍCITO en el texto ("85.000 $us", "USD 49.500", "$us 159.000") → correctos, el estructurado estaba inflado.
+
 ## ✅ Bug de flujo del cargador — RESUELTO 11-jul
 - **Los multiproyecto REAPARECÍAN en cada `--prep`.** `traerLote()` excluía por `propiedades_v2_shadow` +
   `rechazados.json`, pero los multiproyecto van a `proyectos_detectados` (NO a ninguno de esos dos) → el

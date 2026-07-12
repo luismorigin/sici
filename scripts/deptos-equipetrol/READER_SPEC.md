@@ -117,10 +117,13 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 > comparación shadow-vs-prod. Por ahora el default es `no_especificado`, MISMA lógica que prod.
 5. **Precedencia del precio (fallback estructurado):**
    - (a) **Precio en la descripción** → usá ese, y leé el TC ahí (reglas 1-3). Caso normal.
-   - (b) **La descripción NO trae precio, pero hay precio ESTRUCTURADO por-unidad** (Remax `amount` /
+   - (b) **La descripción NO trae precio, pero hay precio ESTRUCTURADO REAL por-unidad** (Remax `amount` /
      C21 `precioVenta`) con $/m² coherente → **aceptá** con ese precio + `no_especificado` (sin el texto
-     no hay señal de TC → conservador, no infla; el badge `tc_sospechoso` es la red). Ej: preventa Sky Level
-     (5 unidades, copy genérico idéntico, sin precio en texto, pero cada una con `amount` real 132k-150k).
+     no hay señal de TC → conservador, no infla; el badge `tc_sospechoso` es la red). Ej: Remax con `amount`
+     específico distinto por listing. **🔴 OJO (11-jul): NO confundir con estructurado FABRICADO** — si el
+     precio estructurado da el **mismo $/m² en todas las tipologías** (= $/m² × área) o el texto dice "desde",
+     NO es precio de unidad → es aviso-proyecto → **multiproyecto** (ver Discriminador nivel 2-3). Sky Level
+     cayó acá: su C21 bob/6.96 daba $2.055/m² uniforme = fabricado, no `amount` real.
    - (c) **Sin precio en NINGUNA fuente** (solo parqueo/baulera, rango por-m² de proyecto, "cesión sin monto",
      otra operación) → `gate: rechazar` (RETENER).
    El estructurado es FALLBACK, NUNCA le gana al texto: cuando el texto tiene precio, manda el texto (y su TC).
@@ -280,12 +283,20 @@ intenta predecir todo. Se separa en:
   DESVÍA a la tabla `proyectos_detectados` (mig 273): NO entra a `propiedades_v2_shadow` ni al feed. Se guarda
   la **cruda** (activo durable, portable, contable) para el **despliegue diferido** de tipologías.
 - **Discriminador UNIDAD vs MULTIPROYECTO (2 niveles) — el estructurado puede MENTIR:**
-  1. El **TEXTO** da un **PRECIO TOTAL de una unidad** ("$132.750") → es una **UNIDAD**, aunque el copy sea de
-     proyecto (Ej: Sky Level — copy "desde 52-94m²" pero cada fila con precio+área reales → unidades).
-  2. El texto solo da **$/m² / rangos** ("Desde 62m²", "1,2,3 dorms", "1650$/m²") → mirá la **COHERENCIA del par
-     (precio, área)** del estructurado: área realista (≤~400 m²) + $/m² en banda → unidad real; **área ABSURDA**
-     (ej `14431`) o `precio = $/m² × área` → **multiproyecto** (el estructurado fabricó el precio). Ej: Condado VI
-     2731 (área "14431", precio 238.111 = 1650 × 144,31).
+  1. El **TEXTO** da un **PRECIO ESPECÍFICO y EXACTO de una unidad** ("$us 159.000", "USD 49.500", "85.000 $us")
+     → es una **UNIDAD**, aunque el copy sea de proyecto.
+  2. 🔴 **"DESDE X" NO es precio de unidad — es el PISO de un rango de proyecto → MULTIPROYECTO** (corrección
+     11-jul, falla Sky Level 182-185). Señales duras de aviso-proyecto: la palabra **"desde"/"a partir de"** antes
+     del precio; **rangos por tipología** ("1D desde 55.000$ y 2D desde 97.350$"); "precios de lanzamiento";
+     "recibí el brochure"; **el mismo "desde" INCONSISTENTE entre avisos del mismo proyecto** (Sky Level: "2D desde
+     132.750$" en un aviso, "desde 97.350$" en otro). Tener un área por listing NO lo hace unidad si el precio es
+     "desde": sin un monto EXACTO de esa unidad, el precio real es indeterminable → va a `proyectos_detectados`,
+     NO al feed (poner "desde"=subvalúa; poner el estructurado bob/6.96=infla — ambos adivinan).
+  3. El texto solo da **$/m² / rangos sin precio** ("Desde 62m²", "1,2,3 dorms", "1650$/m²") → mirá la **COHERENCIA
+     del par (precio, área)** del estructurado: área realista (≤~400 m²) + $/m² en banda → unidad real; **área ABSURDA**
+     (ej `14431`) o `precio = $/m² × área` (mismo $/m² en todas las tipologías) → **multiproyecto** (el estructurado
+     fabricó el precio). Ej: Condado VI 2731 (área "14431", precio 238.111 = 1650 × 144,31); Sky Level (bob/6.96 da
+     ~$2.055/m² uniforme en las 4 = fabricado).
 - **`tipologias` (dorms/area/precio desde-hasta) NO se captura ahora** — se extrae en una SEGUNDA PASADA sobre la
   cruda guardada (decisión founder 10-jul). Nada se pierde: la cruda está en `proyectos_detectados`.
 - El feed ya filtra área<20 / duplicados / es_multiproyecto — el gate cubre lo que la metadata no ve pero el texto delata.
