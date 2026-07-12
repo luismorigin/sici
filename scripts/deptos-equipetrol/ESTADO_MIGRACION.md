@@ -5,6 +5,15 @@
 > Memoria: `project_checkpoint_deptos_hibrido`.
 > Contrato técnico: `CONTRATO_FEED.md` · Reglas del lector: `READER_SPEC.md` (v4).
 
+## 📺 Frontend del shadow (nota, 12-jul) — para no confundirse
+El feed shadow se ve en `localhost:3000/ventas?shadow=1`. El 12-jul se **mergeó main al worktree** para
+traer el frontend de PRODUCCIÓN (rediseño desktop fase 1, PR #19 `0177826`) — antes el worktree tenía el
+`/ventas` viejo (pre-8jul). **OJO:** lo que se ve es la **fase 1 (prod actual)**, NO el rediseño **fase 2 en
+proceso** (MODAL ZILLOW v4, en rama `feat/desktop-fase-2`, sin merge — ver memoria `project_frontend_desktop_feeds`).
+Si el shadow "se ve distinto" al diseño más nuevo, es por eso: la fase 2 avanza en paralelo y NO está acá. El
+shadow refleja el diseño de prod HOY, que es lo correcto para validar los DATOS del híbrido.
+Choque de numeración de migración 268 (híbrido vs main) anotado en `docs/migrations/MIGRATION_INDEX.md`.
+
 ## 🎯 CHECKPOINT 11-jul — inventario cerrado + gate del cutover redefinido
 
 **Barrido completo (194 unidades → shadow, inventario prod Equipetrol CERRADO).** Detalle en las secciones
