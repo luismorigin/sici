@@ -13,7 +13,8 @@ const C21_HEADERS = () => ({
   'cookie': `PHPSESSID=sici_sonda_${Math.random().toString(36).slice(2, 12)}`,
 });
 
-export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {}, step = STEP } = {}) {
+export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {}, step = STEP, operacion = 'venta' } = {}) {
+  // operacion: token de la URL C21 — 'venta' (default, backward compat) | 'renta' (alquiler).
   // step: tamaño del cuadrante. C21 corta a ~100 props/request → cuadrante grande PIERDE inventario.
   // Default 0.02 (casas). Deptos pasa 0.005: Equipetrol es ULTRA-denso y con 0.01 los cuadrantes del core
   // TOPABAN a 100 (perdía ~44% del inventario C21, verificado 10-jul: 1 cuadrante 0.01=100 → 4 sub 0.005=137).
@@ -28,7 +29,7 @@ export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {},
   for (const [idx, c] of cuadrantes.entries()) {
     if (circuit.tripped) { log(`    🛑 C21 ${zonaKey}/${tipo}: circuit breaker (${circuit.fails} fallos seguidos) — corte temprano, IP probablemente bloqueada`); break; }
     const coord = `coordenadas_${c.N.toFixed(6)},${c.E.toFixed(6)},${c.S.toFixed(6)},${c.O.toFixed(6)}`;
-    const url = `https://c21.com.bo/v/resultados/tipo_${tipo}/operacion_venta/layout_mapa/${coord},15?json=true`;
+    const url = `https://c21.com.bo/v/resultados/tipo_${tipo}/operacion_${operacion}/layout_mapa/${coord},15?json=true`;
     const j = await fetchRetry(url, { json: true, headers: C21_HEADERS() });
     let props = [];
     if (Array.isArray(j)) props = j; else if (j?.results) props = j.results; else if (j?.datas?.results) props = j.datas.results;
@@ -75,7 +76,7 @@ export async function c21Detalle(url) {
 
 // ---------------- REMAX ----------------
 // Trae TODO Santa Cruz por tipo (el filtro por zona se aplica afuera con GPS).
-export async function remaxListadoSC(tipo, { rateMs = 1200, maxPages = 60, log = () => {} } = {}) {
+export async function remaxListadoSC(tipo, { rateMs = 1200, maxPages = 60, log = () => {}, operacion = 'venta' } = {}) {
   const out = [];
   for (let page = 1; page <= maxPages; page++) {
     if (circuit.tripped) { log(`    🛑 Remax ${tipo}: circuit breaker (${circuit.fails} fallos seguidos) — corte temprano, IP probablemente bloqueada`); break; }
@@ -84,7 +85,9 @@ export async function remaxListadoSC(tipo, { rateMs = 1200, maxPages = 60, log =
     if (!data.length) { log(`    Remax ${tipo}: fin en pág ${page} (${out.length} props SC)`); break; }
     for (const p of data) {
       const op = (p.transaction_type?.name || '').toLowerCase();
-      if (!op.includes('venta')) continue;
+      // operacion: 'venta' (default) | 'alquiler' (alquiler/arriendo/renta, EXCLUYE anticrético — como el n8n de alquiler).
+      const okOp = operacion === 'alquiler' ? (/alquiler|arriendo|renta/.test(op) && !/anticr/.test(op)) : op.includes('venta');
+      if (!okOp) continue;
       const lat = parseFloat(p.location?.latitude), lon = parseFloat(p.location?.longitude);
       const cur = p.price?.currency_id;
       const li = p.listing_information || {};
