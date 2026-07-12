@@ -1,6 +1,19 @@
 # Deuda Técnica — SICI
 
-> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 24 Jun 2026.
+> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 7 Jul 2026.
+
+## SEO de las superficies públicas nuevas — sitemap + robots (7 Jul 2026)
+
+**Contexto:** el switch del 7-jul (`main` `ebad62f`) hizo `/` la Home nueva y sacó de `noindex` a `/`, `/sobre-simon` y `/whatsapp` (ahora indexables). Falta cerrar el lado SEO para que Google las descubra rápido y bien.
+
+**Pendiente (media):**
+- **`sitemap.xml`** (`pages/sitemap.xml.tsx` es dinámico, `λ`): agregar `/`, `/sobre-simon`, `/whatsapp`. Verificar que NO liste `/home` (redirige 301 a `/`) ni las rutas dark launch (`/zona-norte/*`, `/ventas/casas`).
+- **`robots.txt`** (`public/robots.txt`): confirmar que no bloquea las 3 superficies y que apunta al sitemap.
+- **Metadatos sociales**: las 3 páginas tienen `<title>`/`description` pero les falta **og:image / og:title / twitter:card** (compartir en WhatsApp/redes muestra tarjeta pobre). El brief de casas ZN también tenía "og:image pendiente" — mismo patrón.
+- **Canonical**: agregar `<link rel="canonical">` a `/` en la Home por si Google indexa variantes con query params del buscador.
+- Tras deploy: revisar Search Console que las 3 entren al índice y no haya "duplicate content" entre `/` y `/landing-v2`.
+
+Archivos: `pages/index.tsx`, `pages/sobre-simon.tsx`, `pages/whatsapp.tsx`, `pages/sitemap.xml.tsx`, `public/robots.txt`. Memoria: `project_superficies_publicas_branch`.
 
 ## VentaMap se re-dibuja y resetea el zoom al seleccionar un pin (24 Jun 2026)
 
@@ -178,7 +191,7 @@ El LLM ya está cableado para usarlo: `Build Prompt v4.0` (flujo_enrichment_llm_
 | # | Ítem | Dónde | Severidad | Cuándo resolver |
 |---|---|---|---|---|
 | 1 | `plan_pagos_cuotas: unknown \| null` en `RawUnidadSimpleRow` y `UnidadVenta` — debería ser `Record<string, unknown>[] \| null` | `types/db-responses.ts`, `lib/supabase.ts` | Baja | Cuando se use en UI |
-| 2 | `LIMIT 500` en `buscar_unidades_simple()` — si el catálogo supera 500 props activas, corta sin aviso | `sql/functions/query_layer/buscar_unidades_simple.sql` | Media | Cuando ventas pase ~400 props |
+| 2 | `LIMIT 500` en `buscar_unidades_simple()` — si el catálogo supera 500 props activas, corta sin aviso. Nota 5-jul-2026 (`8f945b9`): el SSG de `/ventas` ahora baja solo 24, pero el fetch completo del cliente (`/api/ventas`) sigue pidiendo hasta 500 → la deuda sigue viva | `sql/functions/query_layer/buscar_unidades_simple.sql` | Media | Cuando ventas pase ~400 props |
 | 3 | Spotlight en `api/ventas.ts` hace query completa (`limite: 500`) para buscar un solo ID — ineficiente | `pages/api/ventas.ts` | Baja | Bloque 5 (compartir/spotlight) |
 | 4 | `CardPlaceholder` ya tiene foto, precio, specs y badges funcionales — en Bloque 3 iterar sobre esta base, no reescribir desde cero | `pages/ventas.tsx` | Info | Bloque 3 |
 | 5 | `fotos_count` badge se renderiza fuera de la imagen + `object-fit` no adapta bien fotos de distintos portales (collages, watermarks, aspect ratios verticales) | `pages/ventas.tsx` | Media | Bloque 3 |

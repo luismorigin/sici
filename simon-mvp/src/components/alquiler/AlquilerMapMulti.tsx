@@ -26,6 +26,18 @@ interface AlquilerMapMultiProps {
   selectedId?: number | null
 }
 
+// Teardown seguro: si el mapa muere en plena animación (rebuild por cambio de
+// properties, unmount por toggle de vista), Leaflet puede disparar
+// _onZoomTransitionEnd sobre un pane ya removido → "_leaflet_pos undefined".
+// stop() corta animaciones en curso y el try/catch traga cualquier resto.
+function safeRemoveMap(map: L.Map | null) {
+  if (!map) return
+  try { map.stop() } catch { /* ya detenido */ }
+  try { map.remove() } catch { /* ya removido */ }
+}
+
+const TILES_CALLE = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+
 export default function AlquilerMapMulti({ properties, onSelectProperty, selectedId }: AlquilerMapMultiProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
@@ -60,7 +72,7 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
     if (!mapRef.current) return
 
     if (mapInstance.current) {
-      mapInstance.current.remove()
+      safeRemoveMap(mapInstance.current)
       mapInstance.current = null
     }
     markersRef.current.clear()
@@ -75,9 +87,14 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
     const map = L.map(mapRef.current, {
       zoomControl: true,
       attributionControl: false,
+      // Sin animación CSS de zoom: elimina la clase entera de crashes
+      // _onZoomTransitionEnd/_leaflet_pos cuando el mapa se reconstruye o
+      // desmonta en medio de un zoom (feed re-renderiza seguido).
+      zoomAnimation: false,
+      markerZoomAnimation: false,
     }).setView([centerLat, centerLng], 15)
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+    L.tileLayer(TILES_CALLE).addTo(map)
 
     const clusterGroup = L.markerClusterGroup({
       maxClusterRadius: 45,
@@ -153,7 +170,7 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
     return () => {
       clearTimeout(timer)
       if (mapInstance.current) {
-        mapInstance.current.remove()
+        safeRemoveMap(mapInstance.current)
         mapInstance.current = null
       }
     }

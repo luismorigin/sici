@@ -44,6 +44,19 @@
   color: #141414; line-height: 1; display: block; font-variant-numeric: tabular-nums;
 }
 .desktop-count-label { font-size: 13px; color: #7A7060; }
+/* Buscador inteligente en el sidebar desktop (tema claro) */
+.dsk-search { padding: 0 0 18px; margin-bottom: 8px; border-bottom: 1px solid #D8D0BC; flex-shrink: 0; }
+.dsk-search-box { display: flex; align-items: center; gap: 8px; background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 10px; padding: 0 12px; height: 40px; }
+.dsk-search-box:focus-within { border-color: #3A6A48; }
+.dsk-search-ico { color: #9A8E7A; flex: 0 0 auto; }
+.dsk-search-input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: #141414; font-family: 'DM Sans', sans-serif; font-size: 13px; -webkit-appearance: none; appearance: none; }
+.dsk-search-input::placeholder { color: #9A8E7A; }
+.dsk-search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.dsk-search-clear { background: none; border: none; color: #9A8E7A; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 2px; }
+.dsk-search-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.dsk-search-chips .mfh-chip { color: #3A6A48; background: rgba(58,106,72,0.1); border: 1px solid rgba(58,106,72,0.25); }
+.dsk-search-aviso { display: block; font-size: 12px; color: #7A7060; margin-top: 8px; font-family: 'DM Sans', sans-serif; text-decoration: none; }
+.dsk-search-link { color: #3A6A48; font-weight: 500; }
 .desktop-fav-summary {
   flex-shrink: 0; padding-top: 20px; border-top: 1px solid #D8D0BC;
   display: flex; align-items: center; justify-content: space-between;
@@ -165,9 +178,12 @@
 }
 .map-fav-compare:hover { opacity: 0.85; }
 
-/* Mobile Feed */
+/* Mobile Feed — rediseño: header fijo (mfh) empuja el feed hacia abajo.
+   --mfh-h = alto del header (2 filas + safe-area). */
 .alq-feed {
-  height: 100vh; height: 100dvh;
+  --mfh-h: calc(104px + env(safe-area-inset-top));
+  height: calc(100dvh - var(--mfh-h));
+  margin-top: var(--mfh-h);
   overflow-y: scroll; scroll-snap-type: y mandatory;
   -webkit-overflow-scrolling: touch; scrollbar-width: none;
 }
@@ -355,6 +371,16 @@
 .afo-title{font-family:'Figtree',sans-serif;font-size:18px;font-weight:500;color:#141414;}
 .afo-count{font-family:'DM Sans',sans-serif;font-size:13px;color:#7A7060;}
 .afo-body{flex:1;overflow-y:auto;padding:20px;}
+/* Búsqueda en lenguaje natural (bna-*) */
+.bna-group{margin-bottom:22px;}
+.bna-input{width:100%;padding:13px 16px;border-radius:12px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-size:15px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;box-sizing:border-box;}
+.bna-input::placeholder{color:#9A8E7A;}
+.bna-input:focus{border-color:#3A6A48;}
+.bna-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px;}
+.bna-chips-label{font-size:12px;color:#9A8E7A;font-family:'DM Sans',sans-serif;}
+.bna-chip{font-size:12px;font-weight:500;color:#3A6A48;background:rgba(58,106,72,0.1);border:1px solid rgba(58,106,72,0.25);padding:3px 10px;border-radius:100px;font-family:'DM Sans',sans-serif;}
+.bna-aviso{font-size:12px;color:#7A7060;margin-top:8px;font-family:'DM Sans',sans-serif;}
+.bna-cross{display:inline-block;font-size:13px;color:#3A6A48;margin-top:8px;text-decoration:none;font-weight:500;font-family:'DM Sans',sans-serif;}
 .afo-footer{padding:16px 20px;padding-bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px));border-top:1px solid #D8D0BC;display:flex;gap:10px;}
 .afo-reset{flex:0 0 auto;padding:14px 20px;background:transparent;border:1px solid #D8D0BC;border-radius:10px;color:#7A7060;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;}
 .afo-apply{flex:1;padding:14px;background:#141414;border:none;border-radius:10px;color:#EDE8DC;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;}
@@ -584,12 +610,15 @@
 }
 
 /* Mobile Property Card (mc-*) */
-.alq-card { height: 100vh; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #EDE8DC; }
-.alq-card.alq-card-first { height: 88dvh; }
-.amc-content { flex: 0 0 auto; padding: 0 24px 8px; padding-bottom: max(8px, calc(env(safe-area-inset-bottom) + 4px)); display: flex; flex-direction: column; }
-.amc-name { font-family: 'Figtree', sans-serif; font-size: 24px; font-weight: 500; color: #141414; line-height: 1.1; margin-bottom: 2px; padding-top: 12px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.amc-reciente { font-size: 11px; font-weight: 500; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; }
-.amc-zona { font-size: 13px; color: #7A7060; letter-spacing: 0.3px; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
+/* Card ocupa el viewport menos el header fijo (--mfh-h heredado del feed). */
+.alq-card { --mfh-h: calc(104px + env(safe-area-inset-top)); height: calc(100dvh - var(--mfh-h)); scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #EDE8DC; }
+.alq-card.alq-card-first { height: calc(100dvh - var(--mfh-h)); }
+.amc-content { flex: 1 1 auto; min-height: 0; padding: 16px 24px 8px; padding-bottom: calc(72px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.amc-name { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 500; color: #141414; line-height: 1.3; margin: 0; padding: 0; max-height: 2.6em; overflow: hidden; flex-shrink: 0; }
+.amc-meta-row, .amc-price-block { flex-shrink: 0; }
+.amc-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 5px 0 12px; }
+.amc-reciente { font-size: 11px; font-weight: 600; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; background: rgba(58,106,72,0.12); padding: 2px 8px; border-radius: 4px; }
+.amc-zona { font-size: 13px; color: #7A7060; letter-spacing: 0.3px; margin-bottom: 0; font-family: 'DM Sans', sans-serif; }
 .amc-id { color: #7A7060; font-size: 12px; margin-left: 4px; letter-spacing: 0; }
 .amc-price-block { border-left: 3px solid #3A6A48; padding-left: 14px; margin-bottom: 8px; }
 .amc-price { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
@@ -624,7 +653,7 @@
 }
 
 /* Photo Carousel (pc-*) */
-.pc-zone { flex: 1 1 60%; min-height: 0; position: relative; overflow: hidden; }
+.pc-zone { flex: 0 0 58%; min-height: 0; position: relative; overflow: hidden; }
 .pc-zone::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 70px; background: linear-gradient(rgba(0,0,0,0.3), transparent); pointer-events: none; z-index: 2; }
 .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: linear-gradient(transparent, #EDE8DC); pointer-events: none; z-index: 2; }
 .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -725,6 +754,21 @@
 .bs-mkt-badge.below{color:#3A6A48;background:rgba(58,106,72,0.1);}
 .bs-mkt-badge.above{color:#7A7060;background:rgba(122,112,96,0.1);}
 .bs-mkt-count{font-size:12px;color:#9A8E7A;font-family:'DM Sans',sans-serif;margin-top:2px;}
+/* Contexto de mercado v2 — barra sin veredicto (unificado con ventas, tema claro) */
+.bs-mkta-this{display:flex;align-items:baseline;gap:10px;}
+.bs-mkta-label{font-size:13px;color:#7A7060;font-family:'DM Sans',sans-serif;}
+.bs-mkta-value{font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;color:#141414;}
+.bs-mkta-zona{font-size:13px;color:#7A7060;line-height:1.5;font-family:'DM Sans',sans-serif;}
+.bs-mkta-zona b{color:#141414;font-weight:600;}
+.bs-mkta-rango{display:block;margin-top:2px;}
+.bs-mkta-bar-wrap{margin:4px 0 2px;}
+.bs-mkta-bar{position:relative;height:8px;background:#DDD5C4;border-radius:4px;}
+.bs-mkta-band{position:absolute;top:0;bottom:0;background:#3A6A48;opacity:0.45;border-radius:4px;}
+.bs-mkta-marker{position:absolute;top:-4px;width:3px;height:16px;background:#141414;border-radius:2px;transform:translateX(-50%);}
+.bs-mkta-scale{position:relative;height:16px;margin-top:4px;}
+.bs-mkta-scale span{position:absolute;transform:translateX(-50%);font-size:11px;color:#9A8E7A;white-space:nowrap;font-family:'DM Sans',sans-serif;}
+.bs-mkta-caveat{font-size:12px;color:#7A7060;line-height:1.5;border-top:1px solid rgba(20,20,20,0.08);padding-top:10px;font-family:'DM Sans',sans-serif;}
+.bs-mkta-empty{font-size:13px;color:#9A8E7A;font-style:italic;font-family:'DM Sans',sans-serif;}
 
 /* Bottom Sheet — Similar Properties (bs-sim-*) */
 .bs-sim-scroll{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none;}
@@ -891,3 +935,247 @@
 .bs-broker-comment-text{font-size:14px;line-height:1.55;color:#141414;font-style:italic;white-space:pre-wrap;word-wrap:break-word;}
 .bs-broker-comment-author{font-size:12px;color:#5a5a5a;margin-top:8px;font-weight:500;font-style:normal;}
 .amc-comentario-author{font-size:10px;color:#5a5a5a;margin-top:3px;font-weight:500;font-style:normal;}
+
+/* ============================================================
+   REDISEÑO MOBILE — header sticky, drawers, barra fija, corazón en foto
+   Espejo de ventas.tsx (styled-jsx) adaptado al feed de alquileres.
+   Chrome oscuro (#141414) sobre feed de cards claro (#EDE8DC).
+   ============================================================ */
+
+/* Placeholder de virtualización — mismo alto que la card visible */
+.amc-placeholder { --mfh-h: calc(104px + env(safe-area-inset-top)); height: calc(100dvh - var(--mfh-h)); scroll-snap-align: start; background: #EDE8DC; }
+
+/* Corazón dentro de la foto (top-right). La card es position:relative. */
+.amc-heart { position: absolute; top: 14px; right: 14px; z-index: 6; width: 44px; height: 44px; border-radius: 50%; background: rgba(20,20,20,0.35); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.amc-heart.active { background: rgba(58,106,72,0.22); }
+.amc-heart.amc-heart-broker.active { background: rgba(242,180,65,0.22); }
+.amc-heart:active { transform: scale(0.9); }
+
+/* ===== Header rediseño mobile (mfh-*) ===== */
+.mfh { position: fixed; top: 0; left: 0; right: 0; z-index: 60; background: #141414; border-bottom: 1px solid rgba(237,232,220,0.08); padding-top: env(safe-area-inset-top); }
+.mfh-top { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 4px; }
+.mfh-brand { display: flex; align-items: center; gap: 8px; text-decoration: none; }
+.mfh-logo { width: 22px; height: 22px; border-radius: 50%; background: #EDE8DC; position: relative; flex: 0 0 auto; }
+.mfh-logo::after { content: ''; position: absolute; top: 4px; left: 4px; width: 8px; height: 8px; border-radius: 50%; background: #3A6A48; }
+.mfh-brand-text { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #EDE8DC; letter-spacing: 0.2px; }
+.mfh-icons { display: flex; align-items: center; gap: 2px; }
+.mfh-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: none; border: none; color: #EDE8DC; cursor: pointer; border-radius: 50%; -webkit-tap-highlight-color: transparent; }
+.mfh-icon:active { background: rgba(237,232,220,0.1); }
+.mfh-search-row { display: flex; align-items: center; gap: 8px; padding: 2px 14px 12px; }
+.mfh-search { flex: 1; display: flex; align-items: center; gap: 8px; background: rgba(237,232,220,0.08); border: 1px solid rgba(237,232,220,0.14); border-radius: 100px; padding: 0 14px; height: 42px; min-width: 0; }
+.mfh-search:focus-within { border-color: #7BB389; }
+.mfh-search-ico { color: #9A8E7A; flex: 0 0 auto; }
+.mfh-search-input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: #EDE8DC; font-family: 'DM Sans', sans-serif; font-size: 14px; -webkit-appearance: none; appearance: none; }
+.mfh-search-input::placeholder { color: #7A7060; }
+.mfh-search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.mfh-search-clear { background: none; border: none; color: #9A8E7A; font-size: 22px; line-height: 1; cursor: pointer; padding: 0 2px; flex: 0 0 auto; }
+.mfh-filter-btn { position: relative; flex: 0 0 auto; width: 42px; height: 42px; border-radius: 12px; background: rgba(237,232,220,0.08); border: 1px solid rgba(237,232,220,0.14); color: #EDE8DC; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.mfh-filter-badge { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 100px; background: #3A6A48; color: #EDE8DC; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: 'DM Sans', sans-serif; }
+.mfh-under { padding: 0 14px 10px; display: flex; flex-direction: column; gap: 6px; }
+.mfh-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.mfh-chips-label { font-size: 12px; color: #7A7060; font-family: 'DM Sans', sans-serif; }
+.mfh-chip { font-size: 12px; font-weight: 500; color: #7BB389; background: rgba(58,106,72,0.18); border: 1px solid rgba(123,179,137,0.3); padding: 3px 10px; border-radius: 100px; font-family: 'DM Sans', sans-serif; }
+.mfh-aviso { font-size: 12px; color: #B8AD9E; font-family: 'DM Sans', sans-serif; text-decoration: none; }
+.mfh-aviso-link { color: #7BB389; font-weight: 500; }
+
+/* ===== Drawers menú/perfil (mfd-*, mfp-*) ===== */
+.mfd-scrim { position: fixed; inset: 0; z-index: 120; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); animation: mfdFade 0.2s ease-out; }
+@keyframes mfdFade { from { opacity: 0; } to { opacity: 1; } }
+.mfd { position: absolute; top: 0; right: 0; bottom: 0; width: min(84vw, 340px); background: #1a1a1a; border-left: 1px solid rgba(237,232,220,0.08); display: flex; flex-direction: column; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); animation: mfdSlide 0.25s ease-out; overflow-y: auto; }
+@keyframes mfdSlide { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.mfd-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 10px; }
+.mfd-title { font-family: 'Figtree', sans-serif; font-size: 18px; font-weight: 500; color: #EDE8DC; }
+.mfd-close { background: none; border: none; color: #B8AD9E; font-size: 26px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.mfd-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; padding: 13px 20px; background: none; border: none; color: #EDE8DC; font-family: 'DM Sans', sans-serif; font-size: 16px; cursor: pointer; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.mfd-item:active { background: rgba(237,232,220,0.06); }
+.mfd-item-active { color: #7BB389; font-weight: 600; cursor: default; }
+.mfd-item-wa { color: #7BB389; }
+.mfd-sec { padding: 14px 20px 4px; font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase; color: #7A7060; font-family: 'DM Sans', sans-serif; font-weight: 600; }
+.mfd-sub { padding-left: 20px; font-size: 15px; color: #D8D0BC; }
+.mfd-soon { color: #7A7060; cursor: default; }
+.mfd-badge-soon { font-size: 10px; font-weight: 600; color: #9A8E7A; background: rgba(237,232,220,0.06); border: 1px solid rgba(237,232,220,0.12); padding: 2px 7px; border-radius: 100px; letter-spacing: 0.2px; }
+.mfd-divider { height: 1px; background: rgba(237,232,220,0.08); margin: 8px 20px; }
+.mfp { position: absolute; top: 0; right: 0; bottom: 0; width: min(84vw, 340px); background: #1a1a1a; border-left: 1px solid rgba(237,232,220,0.08); display: flex; flex-direction: column; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); animation: mfdSlide 0.25s ease-out; }
+.mfp-body { padding: 20px 24px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
+.mfp-ico { width: 64px; height: 64px; border-radius: 50%; background: rgba(237,232,220,0.06); color: #B8AD9E; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+.mfp-msg { font-family: 'DM Sans', sans-serif; font-size: 15px; color: #EDE8DC; line-height: 1.5; margin: 0; }
+.mfp-sub { font-family: 'DM Sans', sans-serif; font-size: 13px; color: #9A8E7A; margin: 0; }
+.mfp-cta { margin-top: 12px; background: #3A6A48; color: #EDE8DC; border: none; border-radius: 100px; padding: 12px 22px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+/* ===== Barra fija inferior (mt-bottombar) ===== */
+.mt-bottombar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 70; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; padding-bottom: max(10px, calc(env(safe-area-inset-bottom) + 6px)); background: #141414; border-top: 1px solid rgba(237,232,220,0.1); }
+.mt-bb-map { display: inline-flex; align-items: center; gap: 8px; background: rgba(237,232,220,0.08); border: 1px solid rgba(237,232,220,0.16); color: #EDE8DC; border-radius: 100px; padding: 10px 18px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mt-bb-map:disabled { opacity: 0.4; cursor: default; }
+.mt-bb-map:not(:disabled):active { transform: scale(0.97); }
+.mt-bb-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mt-bb-clear { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; background: rgba(237,232,220,0.08); border: 1px solid rgba(237,232,220,0.16); color: rgba(237,232,220,0.7); font-size: 20px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+.mt-bb-clear:active { transform: scale(0.94); }
+.mt-bb-hint { display: inline-flex; align-items: center; gap: 7px; color: rgba(237,232,220,0.55); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.mt-bb-hint-active { color: #C8C0B0; }
+.mt-bb-cmp { display: inline-flex; align-items: center; gap: 7px; background: #3A6A48; color: #EDE8DC; border: none; border-radius: 100px; padding: 11px 20px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mt-bb-cmp:active { transform: scale(0.97); }
+
+/* ===== LAYOUT SPLIT DESKTOP (nav + lista densa + panel derecho) — rediseño desktop feeds ===== */
+/* La nav superior (FeedDesktopNav, 56px fija) desplaza sidebar y main hacia abajo */
+.desktop-layout-split .desktop-sidebar { height: calc(100vh - 56px); margin-top: 56px; }
+.desktop-layout-split .desktop-main { height: calc(100vh - 56px); margin-top: 56px; }
+/* El padding-top del scroll container corre el anclaje del sticky (quedaba a
+   88px en vez de 56). Se pasa el aire superior del container al contenido:
+   así .ad-sticky top:0 se pega justo bajo el nav. */
+.desktop-layout-split .desktop-main { padding-top: 0; }
+.desktop-layout-split .ad-cols { padding-top: 24px; }
+/* Pills sugeridas bajo el buscador (módulo guiado sin búsqueda activa) */
+.dsk-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.dsk-pill { background: #FAFAF8; border: 1px solid #D8D0BC; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; padding: 5px 12px; border-radius: 100px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+.dsk-pill:hover { color: #141414; border-color: #3A6A48; }
+/* Mixto rebalanceado: mapa más ancho (~52%) — es el diferenciador de decisión.
+   Lista ~48%, mínimo 440px el panel. */
+.ad-cols { display: grid; grid-template-columns: minmax(0, 48fr) minmax(440px, 52fr); gap: 20px; align-items: start; }
+.ad-left { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+/* Barra sticky: pills + toggle + contador pegados al tope del scroll (el
+   scroll vive en .desktop-main, por eso top:0). Fondo arena sólido para
+   tapar las cards que scrollean por detrás; z alto sobre las cards, los
+   popovers de las pills (z-80, hijos) siguen abriendo sobre todo. */
+.ad-sticky { position: sticky; top: 0; z-index: 40; display: flex; flex-direction: column; gap: 12px; background: #EDE8DC; padding: 12px 0; border-bottom: 1px solid #D8D0BC; }
+.ad-search { padding: 0; border-bottom: none; margin-bottom: 0; }
+.ad-search .dsk-search-box { height: 46px; border-radius: 12px; }
+.ad-count-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #7A7060; }
+.ad-count-row b { color: #141414; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ad-h1 { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 500; color: #141414; margin: 0; line-height: 1.2; margin-right: auto; }
+.ad-count-num2 { white-space: nowrap; }
+/* Toggle lista | mixto | mapa */
+.ad-count-row { align-items: center; }
+.ad-viewtoggle { display: inline-flex; gap: 2px; background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 10px; padding: 3px; flex-shrink: 0; }
+.ad-vt-btn { width: 32px; height: 26px; display: flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 7px; color: #9A8E7A; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.ad-vt-btn:hover { color: #141414; }
+.ad-vt-btn.active { background: #141414; color: #EDE8DC; }
+/* Modo solo lista: sin panel, lista a 2 columnas (densidad máxima).
+   Doble clase: gana en especificidad a .ad-cols sin depender del orden. */
+.ad-cols.ad-cols-solo { grid-template-columns: 1fr; }
+.ad-cols-solo .ad-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.ad-cols-solo .ad-list > .desktop-loading, .ad-cols-solo .ad-spotlight, .ad-cols-solo .alq-pet-divider { grid-column: 1 / -1; }
+/* Botón de retorno del mapa completo (en split no existe el toggle clásico) */
+.ad-back-to-grid { position: absolute; top: 14px; left: 14px; z-index: 1100; display: inline-flex; align-items: center; gap: 6px; background: #141414; color: #EDE8DC; border: none; padding: 10px 16px; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.3px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+.ad-back-to-grid:active { transform: scale(0.97); }
+/* Chip fiduciario en card */
+.alc-mkt { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; font-size: 12px; color: #7A7060; }
+.alc-mkt::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #B8AD9E; flex-shrink: 0; }
+.alc-mkt-bajo { color: #3A6A48; }
+.alc-mkt-bajo::before { background: #3A6A48; }
+/* Fila de pills de filtros (tema claro) */
+.afp { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: 'DM Sans', sans-serif; }
+.afp-feed { display: inline-flex; align-items: center; gap: 6px; background: #3A6A48; color: #EDE8DC; font-size: 13px; font-weight: 600; padding: 8px 15px; border-radius: 100px; letter-spacing: 0.2px; }
+.afp-item { position: relative; }
+.afp-pill { display: inline-flex; align-items: center; gap: 6px; background: #FAFAF8; border: 1px solid #D8D0BC; color: #7A7060; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 14px; border-radius: 100px; cursor: pointer; transition: color 0.15s, border-color 0.15s; white-space: nowrap; }
+.afp-pill:hover { color: #141414; border-color: #9A8E7A; }
+.afp-pill.open { color: #141414; border-color: #3A6A48; }
+.afp-on { color: #3A6A48; border-color: rgba(58,106,72,0.45); background: rgba(58,106,72,0.08); font-weight: 600; }
+.afp-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 80; min-width: 250px; background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; padding: 14px; box-shadow: 0 12px 34px rgba(58,53,48,0.18); }
+.afp-pop-precio { min-width: 300px; }
+.afp-pop-mas { min-width: 300px; }
+.afp-pop-right { left: auto; right: 0; }
+.afp-pop .df-label { margin-bottom: 8px; }
+.afp-reset { background: none; border: none; color: #7A7060; font-family: 'DM Sans', sans-serif; font-size: 12.5px; text-decoration: underline; cursor: pointer; padding: 8px 6px; white-space: nowrap; }
+.afp-reset:hover { color: #141414; }
+.afp-orden { margin-left: auto; }
+.afp-orden .afp-pill { background: transparent; border-color: transparent; }
+.afp-orden .afp-pill:hover { border-color: #D8D0BC; }
+.afp-orden-label { color: #9A8E7A; font-size: 12px; }
+.ad-list { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ad-spotlight { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+/* Card de lista densa (tema claro alquileres) */
+.alc { display: flex; background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; overflow: hidden; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; min-height: 172px; }
+.alc:hover { border-color: #9A8E7A; box-shadow: 0 4px 14px rgba(58,53,48,0.08); }
+.alc-active { border-color: #3A6A48; box-shadow: 0 0 0 1px #3A6A48; }
+.alc-photo { width: 230px; min-width: 230px; background-size: cover; background-position: center; background-color: #E2DCCB; position: relative; }
+.alc-nofoto { display: flex; align-items: center; justify-content: center; height: 100%; color: #9A8E7A; font-size: 12px; font-family: 'DM Sans', sans-serif; }
+.alc-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: rgba(20,20,20,0.65); border: none; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 3; color: #EDE8DC; }
+.alc:hover .alc-nav { display: flex; }
+.alc-nav svg { width: 14px; height: 14px; }
+.alc-nav-prev { left: 6px; }
+.alc-nav-next { right: 6px; }
+.alc-count { position: absolute; bottom: 6px; left: 6px; background: rgba(20,20,20,0.75); color: rgba(255,255,255,0.85); font-size: 10px; padding: 2px 7px; border-radius: 100px; font-family: 'DM Sans', sans-serif; }
+.alc-body { flex: 1; min-width: 0; padding: 14px 18px; display: flex; flex-direction: column; font-family: 'DM Sans', sans-serif; }
+.alc-toprow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.alc-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.alc-chips em { font-style: normal; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: #3A6A48; background: rgba(58,106,72,0.1); border: 1px solid rgba(58,106,72,0.25); padding: 2px 9px; border-radius: 100px; white-space: nowrap; }
+.alc-chips .alc-chip-muted { color: #7A7060; background: rgba(20,20,20,0.04); border-color: #D8D0BC; }
+.alc-fav { width: 32px; height: 32px; min-width: 32px; border-radius: 50%; background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #9A8E7A; }
+.alc-fav:hover { color: #141414; }
+.alc-name { font-family: 'Figtree', sans-serif; font-size: 19px; font-weight: 500; color: #141414; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alc-zona { font-size: 12.5px; color: #7A7060; letter-spacing: 0.3px; margin: 3px 0 8px; }
+.alc-id { color: #B8AD9E; }
+.alc-specs { font-size: 14px; color: #3A3530; font-weight: 300; }
+/* Precio + expensas juntos a la izquierda (sin hueco central) — card compacta */
+.alc-bottomrow { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 8px; }
+.alc-exp { font-size: 12.5px; color: #7A7060; font-variant-numeric: tabular-nums; }
+.alc-price { font-size: 20px; font-weight: 600; color: #141414; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.alc-mes { font-size: 12px; font-weight: 400; color: #7A7060; }
+/* Panel derecho: sticky dentro del scroll de .desktop-main */
+.ad-panel { position: sticky; top: 0; height: calc(100vh - 56px - 64px); display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* El bloque mapa+resumen se OCULTA (no se desmonta) cuando el side sheet está
+   abierto — desmontar Leaflet en plena animación de zoom crashea. */
+.ad-panel-home { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+/* visibility (no display:none): el contenedor conserva su tamaño y Leaflet
+   no queda en 0x0 si se reconstruye mientras está oculto */
+.ad-panel-hidden { visibility: hidden; position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.ad-map { flex: 1; min-height: 260px; border-radius: 14px; overflow: hidden; border: 1px solid #D8D0BC; position: relative; background: #FAFAF8; }
+.ad-map > div { position: absolute; inset: 0; }
+.ad-map-full { position: absolute; top: 12px; right: 12px; z-index: 1100; display: inline-flex; align-items: center; gap: 6px; background: #141414; color: #EDE8DC; border: none; padding: 8px 14px; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+.ad-map-full:hover { background: #3A3530; }
+/* Resumen de mercado (tema claro) */
+.ad-mkt { flex: 0 0 auto; background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; padding: 18px 20px; font-family: 'DM Sans', sans-serif; }
+.ad-mkt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.ad-mkt-title { font-family: 'Figtree', sans-serif; font-size: 19px; font-weight: 500; color: #141414; }
+.ad-mkt-sub { font-size: 12px; color: #7A7060; margin-top: 2px; }
+.ad-mkt-link { font-size: 12px; color: #3A6A48; text-decoration: none; font-weight: 500; white-space: nowrap; }
+.ad-mkt-link:hover { text-decoration: underline; }
+.ad-mkt-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 12px; }
+.ad-mkt-stat { display: flex; flex-direction: column; gap: 3px; border-left: 2px solid rgba(58,106,72,0.5); padding-left: 12px; }
+.ad-mkt-num { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ad-mkt-label { font-size: 11.5px; color: #7A7060; line-height: 1.35; }
+.ad-mkt-caveat { font-size: 11.5px; color: #9A8E7A; line-height: 1.45; border-top: 1px solid rgba(216,208,188,0.6); padding-top: 10px; }
+/* Side sheet embebido (variant del bottom sheet .bs) */
+/* Side sheet ANCLADO al viewport (fixed): entre el nav (56 + 24 de aire) y el
+   borde inferior. El sheet nunca excede la pantalla → el footer sticky bottom:0
+   queda SIEMPRE visible. El .ad-panel mantiene su height → la columna no
+   colapsa. Ancho = columna derecha del grid (~52%); padding lateral del main
+   es 32, por eso el calc y el right difieren de ventas. */
+.bs.bs-side-alq { position: fixed; inset: auto; left: auto; top: 80px; right: 32px; bottom: 32px; width: calc((100vw - 84px) * 0.52); max-height: none; overflow-y: auto; overflow-x: hidden; transform: none; max-width: none; border-radius: 14px; border: 1px solid #D8D0BC; z-index: 40; padding-bottom: 84px; }
+/* Footer WhatsApp/Compartir FIJO a la pantalla (misma columna que el sheet),
+   siempre abajo sin depender del scroll interno. El sheet reserva 84px. */
+.bs-side-alq .bs-sticky-footer { position: fixed; box-sizing: border-box; left: auto; right: 32px; bottom: 32px; width: calc((100vw - 84px) * 0.52); z-index: 60; border-radius: 0 0 14px 14px; }
+.bs.bs-side-alq.open { transform: none; }
+/* fav+close: fijos en la esquina del sheet (absolute sobre el sheet fixed),
+   siempre visibles, sin ocupar flujo ni chocar con las tabs. */
+.bs-side-alq .bs-sticky-top { position: absolute; top: 10px; right: 12px; z-index: 50; background: transparent; padding: 0; pointer-events: none; }
+.bs-side-alq .bs-sticky-top > * { pointer-events: auto; }
+/* Contenido acotado a medida de lectura (~640px) centrado — la galería queda
+   full-bleed (no lleva este padding). Padding dinámico crece a los lados. */
+.bs-side-alq .bs-header-redesign,
+.bs-side-alq .bs-section {
+  padding-left: max(24px, calc((100% - 640px) / 2));
+  padding-right: max(24px, calc((100% - 640px) / 2));
+}
+/* Tabs full-width con espacio a la derecha para el botón cerrar */
+.bs-side-alq .bs-tabs-alq { padding-left: 16px; padding-right: 56px; }
+/* Precio menos gigante en el side sheet ancho */
+.bs-side-alq .bs-hr-price { font-size: 24px; }
+.bs-tabs-alq { position: sticky; top: 0; z-index: 9; display: flex; gap: 2px; background: #141414; border-bottom: 1px solid rgba(237,232,220,0.12); padding: 0 16px; }
+.bs-tab-alq { flex: 1; background: none; border: none; border-bottom: 2px solid transparent; color: #9A8E7A; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 11px 4px; cursor: pointer; transition: color 0.15s; }
+.bs-tab-alq:hover { color: #EDE8DC; }
+.bs-tab-alq.active { color: #7BB389; border-bottom-color: #7BB389; font-weight: 600; }
+/* Tab Costos (secciones arena) */
+.bs-costos-rows { display: flex; flex-direction: column; }
+.bs-costos-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 1px solid rgba(216,208,188,0.7); font-family: 'DM Sans', sans-serif; }
+.bs-costos-row span { font-size: 13px; color: #7A7060; }
+.bs-costos-row b { font-size: 13.5px; color: #141414; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+.bs-costos-total b { font-weight: 700; color: #3A6A48; }
+.bs-costos-sub { font-size: 11.5px; color: #7A7060; font-weight: 400; }
+.bs-costos-caveat { font-size: 11.5px; color: #9A8E7A; margin-top: 12px; line-height: 1.45; }
+/* Bandeja comparar en split: anclada a la columna de lista, con thumbnails */
+.alq-tray-split { left: 32px; transform: none; animation: alqBannerInSplit 0.3s ease-out; }
+@keyframes alqBannerInSplit { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.alq-tray-thumbs { display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; }
+.alq-tray-thumb { position: relative; width: 30px; height: 30px; border-radius: 8px; background-size: cover; background-position: center; background-color: #3A3530; border: 1px solid rgba(237,232,220,0.25); display: inline-flex; align-items: flex-end; justify-content: flex-start; }
+.alq-tray-thumb em { font-style: normal; font-size: 8px; font-weight: 700; color: #EDE8DC; background: rgba(20,20,20,0.8); border-radius: 4px 0 0 0; padding: 1px 4px; line-height: 1; }

@@ -858,7 +858,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
             </a>
           )}
         </div>
-        <a href="/landing-v2" className="mc-branding">simonbo.com</a>
+        <a href="/" className="mc-branding">simonbo.com</a>
       </div>
     </div>
   )
@@ -2610,7 +2610,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           {!publicShareMode && !(brokerMode && !isDesktop) && (
             <aside className="ventas-sidebar">
               <div className="ventas-sidebar-header">
-                <Link href="/landing-v2" className="ventas-logo">Simon</Link>
+                <Link href="/" className="ventas-logo">Simon</Link>
                 <div className="ventas-label">VENTAS</div>
               </div>
               <div className="ventas-sidebar-count">
