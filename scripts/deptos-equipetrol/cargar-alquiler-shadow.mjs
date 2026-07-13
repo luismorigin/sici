@@ -265,7 +265,7 @@ function construirFila(e, v, match) {
     monto_expensas_bob: v.expensas_bob ?? null,
     deposito_meses: v.deposito_meses ?? null,
     contrato_minimo_meses: v.contrato_minimo_meses ?? null,
-    amoblado: v.amoblado ?? 'no',                 // default "no" (validado 94%, READER_SPEC_ALQUILER)
+    amoblado: v.amoblado ?? null,                 // v3.1: null cuando el texto calla (no default "no"); alineado con venta + equipado/mascotas
     // v2: el veredicto manda; fallback al checkbox del portal (mascotas_portal) si el lector no trajo señal
     acepta_mascotas: v.acepta_mascotas ?? (typeof a.mascotas_portal === 'boolean' ? a.mascotas_portal : null),
     servicios_incluidos: Array.isArray(v.servicios_incluidos) ? v.servicios_incluidos : [],

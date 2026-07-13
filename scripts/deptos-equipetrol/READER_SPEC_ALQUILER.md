@@ -30,6 +30,10 @@
 > palabra → `null` (los ítems van a `equipamiento_canonico` igual). ⑩ **`acepta_mascotas`: el checkbox `false` del
 > portal = ruido** → tratar como `null` (asimetría igual que `expensas_incluidas`); solo `true` del portal o el
 > texto explícito cuentan.
+>
+> **v3.1 (13-jul-2026)** — ⑪ **`amoblado`: silencio → `null`, NO default "no"**. "no" SOLO si el texto confirma sin
+> muebles ("sin amoblar"). Motivo: auditoría mostró que de 73 "no", solo 2 eran confirmados y 48 puro silencio → el
+> default escondía "no sé". Ahora consistente con venta + equipado/mascotas (null = sin info). El filtro no cambia.
 
 ## Por qué el precio de alquiler cambia (contexto TC)
 Hasta hoy, en producción, como el oficial ≈ paralelo NO tenía brecha relevante, el pipeline de alquiler tomaba
@@ -68,7 +72,7 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
   "expensas_incluidas": false,       // true si el texto dice "expensas incluidas" / "sin gastos comunes extra". null si no hay señal.
   "deposito_meses": 1,               // garantía/depósito en meses (0-6). null si no se menciona.
   "contrato_minimo_meses": 12,       // permanencia mínima (1-60). null si no se menciona.
-  "amoblado": "no",                  // "si" | "no" | "semi" — muebles SUELTOS (camas/sofás/mesas). Ver regla. Default "no" (validado 94%).
+  "amoblado": null,                  // "si" | "no" | "semi" | null — muebles SUELTOS. v3.1: "no" SOLO si el texto confirma sin muebles; silencio → null (no default "no").
   "equipado": null,                  // v3: FLAG separado. true SOLO si el texto usa la PALABRA "equipado" a nivel unidad; enumerar electrodomésticos SIN la palabra → null (los ítems van a equipamiento_canonico igual). → datos_json.
   "acepta_mascotas": null,           // v2: true/false del TEXTO **o del checkbox del portal** (senales.mascotas_portal). null si ninguna fuente. (feed incluye NULL, excluye solo false)
   "uso_inmueble": "residencial",     // v2: "residencial" | "mixto" — "mixto" si el aviso ofrece también uso oficina/consultorio/comercial. FILTRO, no exclusión. → datos_json.
@@ -201,11 +205,15 @@ En el feed de alquiler, la basura a rechazar es lo que NO es **alquiler mensual 
 
 ### AMOBLADO + EQUIPADO (v2 — dos flags SEPARADOS, distintos)
 Muchos avisos de alquiler dicen "equipado" (electrodomésticos) SIN muebles sueltos. Por eso separamos:
-- **`amoblado`** (`"si"`/`"no"`/`"semi"`) = **muebles SUELTOS** (camas, sofás, mesas, sillas, escritorios).
-  - `"si"` si el texto dice amoblado/amueblado/con muebles/furnished. `"semi"` si semi-amoblado.
-  - **`"no"` si el texto NO menciona muebles** — default validado (auditoría 35 props → 94% no amoblados). Único
-    campo con default ≠ null, por evidencia.
-  - **NO cuentan como amoblado** (son fijos, no muebles sueltos): roperos empotrados, cocina equipada, AC, heladera.
+- **`amoblado`** (`"si"`/`"no"`/`"semi"`/`null`) = **muebles SUELTOS** (camas, sofás, mesas, sillas, escritorios).
+  - `"si"` si el texto dice amoblado/amueblado/con muebles/amoblamiento/furnished, o enumera muebles sueltos de la unidad. `"semi"` si semi-amoblado.
+  - **v3.1 (13-jul) — `"no"` SOLO si el texto CONFIRMA sin muebles** ("sin amoblar", "no incluye muebles", "se entrega
+    vacío"). **Si el texto CALLA sobre muebles → `null`** (no sabemos), NO `"no"`. Alineado con venta y con equipado/
+    mascotas (null = sin info). El default viejo "no" mezclaba confirmado con asumido (auditoría 13-jul: de 73 "no",
+    solo 2 confirmados, 48 puro silencio) → esconde la incertidumbre. El filtro "solo amoblados" no cambia (null tampoco
+    muestra como amoblado); lo que gana es honestidad (confirmado ≠ desconocido).
+  - **NO cuentan como amoblado** (son fijos, no muebles sueltos): roperos empotrados, cocina equipada, AC, heladera,
+    "baño con muebles" (mueble de baño = fijo del ambiente). Mencionar un fijo NO confirma "no" → sigue siendo `null`.
 - **`equipado`** (`true`/`null`) = **electrodomésticos/cocina** (heladera, cocina, microondas, lavadora, AC).
   **v3 (13-jul, alineado con venta v4) — SOLO la PALABRA a nivel UNIDAD dispara el flag:** `true` únicamente si el
   texto usa "equipado"/"totalmente equipado"/"entrega equipada"/"departamento equipado". Si el aviso solo **ENUMERA**
