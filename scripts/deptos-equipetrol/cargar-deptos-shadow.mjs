@@ -268,6 +268,9 @@ function construirFila(e, v, match) {
       fecha_entrega: v.fecha_entrega_estimada ?? null,
       amoblado: v.amoblado ?? null, equipado: v.equipado ?? null,   // ← flags de decisión
       expensas: a.expensas,
+      // 🔎 CRUDO del portal (provenance para auditoría $0): lo que dijo el portal en bruto, ANTES del juicio del
+      // lector → cada prop se vuelve auto-auditable sin depender de los materiales de prep (efímeros).
+      senales_portal: e.senales ?? null,
       trazabilidad: { scraper_version: SCRAPER_VERSION, fuente_precio: 'lector', fuente_amenidades: usaLector ? 'lector' : 'structured', metodo_match: match.metodo },
     },
   };

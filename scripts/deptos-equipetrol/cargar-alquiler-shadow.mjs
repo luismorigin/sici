@@ -293,6 +293,10 @@ function construirFila(e, v, match) {
       expensas_incluidas: v.expensas_incluidas ?? null,
       equipado: v.equipado ?? null,                          // v2: flag electrodomésticos (separado de amoblado)
       uso_inmueble: v.uso_inmueble ?? 'residencial',         // v2: residencial | mixto (filtro, no exclusión)
+      // 🔎 CRUDO del portal (provenance para auditoría $0): lo que dijo el portal en bruto, ANTES del juicio del
+      // lector. Guardar el checkbox/estructurado al lado del texto → cada prop se vuelve auto-auditable sin depender
+      // de los materiales de prep (efímeros). Ej: comparar acepta_mascotas vs senales_portal.mascotas_portal.
+      senales_portal: e.senales ?? null,
       trazabilidad: { scraper_version: SCRAPER_VERSION, fuente_precio: 'lector', fuente_amenidades: usaLector ? 'lector' : 'structured', metodo_match: match.metodo },
     },
   };
