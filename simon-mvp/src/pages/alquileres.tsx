@@ -4136,11 +4136,26 @@ function BottomSheet({
           </div>
         </div>
       )}
-      {/* Body blanco — características, amenidades, ubicación, anuncio */}
-      {showTab('resumen') && (
+      {/* Body blanco — características. Mobile: grilla completa (intacto). */}
+      {showTab('resumen') && !sideMode && (
       <div className="bs-section">
         <div className="bs-sl"><span className="bs-sl-dot" />Caracteristicas</div>
         <div className="bs-grid">
+          {features.map((f, i) => (
+            <div key={i} className={`bs-feat ${f.highlight ? 'hl' : ''}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="bs-fi" dangerouslySetInnerHTML={{ __html: icons[f.icon] || '' }} />
+              <div className="bs-fv">{f.value}</div>
+              <div className="bs-fl">{f.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      )}
+      {/* VARIANTE B: modal desktop → grilla completa con iconos grandes/limpios */}
+      {showTab('resumen') && sideMode && (
+      <div className="bs-section">
+        <div className="bs-sl"><span className="bs-sl-dot" />Caracteristicas</div>
+        <div className="bs-grid bs-grid-modal">
           {features.map((f, i) => (
             <div key={i} className={`bs-feat ${f.highlight ? 'hl' : ''}`}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="bs-fi" dangerouslySetInnerHTML={{ __html: icons[f.icon] || '' }} />

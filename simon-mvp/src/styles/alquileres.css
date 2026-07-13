@@ -714,6 +714,12 @@
 .bs-hr-specs{font-size:15px;font-weight:300;color:#9A8E7A;font-family:'DM Sans',sans-serif;}
 /* Línea de contexto bajo el precio (modal): Bs/m² · estado amoblado */
 .bs-hr-permetro{font-size:13px;color:#7A7060;font-family:'DM Sans',sans-serif;margin-top:4px;font-variant-numeric:tabular-nums;}
+/* Características del modal: grilla con iconos más grandes y tiles limpios */
+.bs-grid-modal{grid-template-columns:repeat(3,1fr);gap:10px;}
+.bs-grid-modal .bs-feat{flex-direction:row;align-items:center;justify-content:flex-start;gap:11px;padding:12px 14px;background:#FFFFFF;border:1px solid #E7E1D3;}
+.bs-grid-modal .bs-fi{width:22px;height:22px;color:#3A6A48;flex-shrink:0;}
+.bs-grid-modal .bs-fv{font-size:14px;font-weight:600;color:#141414;}
+.bs-grid-modal .bs-fl{font-size:11.5px;color:#7A7060;}
 .bs-sticky-footer{position:sticky;bottom:0;background:#EDE8DC;border-top:1px solid #D8D0BC;padding:12px 24px;padding-bottom:max(12px,calc(env(safe-area-inset-bottom) + 4px));display:flex;gap:10px;z-index:10;}
 .bs-footer-wsp{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:#1EA952;border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;text-decoration:none;min-height:44px;transition:opacity 0.2s;}
 .bs-footer-wsp:active{opacity:0.85;}
