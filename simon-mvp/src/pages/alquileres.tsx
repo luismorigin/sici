@@ -4008,6 +4008,33 @@ function BottomSheet({
   const displayName = nombreAlquiler(p)
   const hasGPS = p.latitud && p.longitud
 
+  // Header extraído a const: en mobile va ANTES de las fotos; en el modal
+  // desktop se mete DENTRO de bsm-main (después de las fotos) para alinear con
+  // las secciones y dejar la tarjeta WhatsApp sticky del aside a su derecha.
+  const headerBlock = (
+    <div className="bs-header-redesign" id="bsa-resumen">
+      <div className="bs-hr-name">{displayName}</div>
+      <div className="bs-hr-sub">{displayZona(p.zona)} <span className="bs-hr-id">#{p.id}</span>
+        {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
+          <> · {p.dias_en_mercado === 0 ? 'Publicado hoy' : p.dias_en_mercado === 1 ? 'Hace 1 día' : `Hace ${p.dias_en_mercado} días`}</>
+        )}
+      </div>
+      <div className="bs-hr-price-block">
+        <div className="bs-hr-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
+      </div>
+      <div className="bs-hr-specs">
+        {[dormLabel(p.dormitorios), `${Math.round(p.area_m2)}m²`, p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null, p.piso ? `Piso ${p.piso}` : null].filter(Boolean).join(' · ')}
+      </div>
+      {publicShareMode && priceSnapshot && priceSnapshot.bobSnapshot != null && priceSnapshot.bobActual != null && priceSnapshot.bobSnapshot > 0 && Math.abs((priceSnapshot.bobActual - priceSnapshot.bobSnapshot) / priceSnapshot.bobSnapshot) >= 0.01 && (
+        <div className={`bs-hr-price-change ${priceSnapshot.bobActual < priceSnapshot.bobSnapshot ? 'down' : 'up'}`}>
+          {priceSnapshot.bobActual < priceSnapshot.bobSnapshot
+            ? `↓ Bajó de ${formatPrice(priceSnapshot.bobSnapshot)} a ${formatPrice(priceSnapshot.bobActual)}/mes`
+            : `↑ Antes ${formatPrice(priceSnapshot.bobSnapshot)} · ahora ${formatPrice(priceSnapshot.bobActual)}/mes`}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <div className={`bs ${open ? 'open' : ''} ${sideMode ? 'bs-side-alq' : (isDesktop ? 'bs-desktop' : '')}`} ref={sheetRef}
       onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
@@ -4054,28 +4081,9 @@ function BottomSheet({
         )}
         <button className="bs-sticky-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
       </div>
-      {/* Header — building name, zone, price with accent, specs */}
-      <div className="bs-header-redesign" id="bsa-resumen">
-        <div className="bs-hr-name">{displayName}</div>
-        <div className="bs-hr-sub">{displayZona(p.zona)} <span className="bs-hr-id">#{p.id}</span>
-          {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
-            <> · {p.dias_en_mercado === 0 ? 'Publicado hoy' : p.dias_en_mercado === 1 ? 'Hace 1 día' : `Hace ${p.dias_en_mercado} días`}</>
-          )}
-        </div>
-        <div className="bs-hr-price-block">
-          <div className="bs-hr-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
-        </div>
-        <div className="bs-hr-specs">
-          {[dormLabel(p.dormitorios), `${Math.round(p.area_m2)}m²`, p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null, p.piso ? `Piso ${p.piso}` : null].filter(Boolean).join(' · ')}
-        </div>
-        {publicShareMode && priceSnapshot && priceSnapshot.bobSnapshot != null && priceSnapshot.bobActual != null && priceSnapshot.bobSnapshot > 0 && Math.abs((priceSnapshot.bobActual - priceSnapshot.bobSnapshot) / priceSnapshot.bobSnapshot) >= 0.01 && (
-          <div className={`bs-hr-price-change ${priceSnapshot.bobActual < priceSnapshot.bobSnapshot ? 'down' : 'up'}`}>
-            {priceSnapshot.bobActual < priceSnapshot.bobSnapshot
-              ? `↓ Bajó de ${formatPrice(priceSnapshot.bobSnapshot)} a ${formatPrice(priceSnapshot.bobActual)}/mes`
-              : `↑ Antes ${formatPrice(priceSnapshot.bobSnapshot)} · ahora ${formatPrice(priceSnapshot.bobActual)}/mes`}
-          </div>
-        )}
-      </div>
+      {/* Header — en mobile antes de las fotos; en el modal desktop va dentro
+          de bsm-main (más abajo) para alinear con la tarjeta WhatsApp del aside */}
+      {!sideMode && headerBlock}
       {/* Galería de fotos: carrusel (mobile) / grilla 1+4 + visor (modal desktop) */}
       {showTab('resumen') && p.fotos_urls && p.fotos_urls.length > 0 && (
         sideMode ? (
@@ -4097,6 +4105,12 @@ function BottomSheet({
           subtitle={`${displayZona(p.zona)} · ${formatPrice(p.precio_mensual_bob)}/mes`}
           onClose={() => setShowViewer(false)} />
       )}
+      {/* bsm-body/main/aside: display:contents en mobile (transparente, no cambia
+          nada); en el modal desktop arman 2 columnas — contenido a la izquierda,
+          tarjeta WhatsApp sticky a la derecha. */}
+      <div className="bsm-body">
+      <div className="bsm-main">
+      {sideMode && headerBlock}
       {/* Comentario del broker — solo en publicShareMode (link compartido /b/[hash]) */}
       {showTab('resumen') && publicShareMode && brokerComment && (
         <div className="bs-section bs-broker-comment-section" id="bs-broker-comment">
@@ -4424,7 +4438,10 @@ function BottomSheet({
           </a>
         </div>
       )}
-      {/* Sticky footer: WSP + Compartir */}
+      </div>{/* /bsm-main */}
+      <div className="bsm-aside">
+      {/* Footer WSP + Compartir. En el modal desktop = tarjeta sticky del aside;
+          en mobile = barra fija abajo (bsm-aside es display:contents → transparente). */}
       <div className="bs-sticky-footer">
         {publicShareMode && !contactoDirecto && publicShareBroker ? (
           <a
@@ -4482,6 +4499,8 @@ function BottomSheet({
           </button>
         )}
       </div>
+      </div>{/* /bsm-aside */}
+      </div>{/* /bsm-body */}
     </div>
   )
 }

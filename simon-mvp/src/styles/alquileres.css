@@ -1179,10 +1179,17 @@
    es 32, por eso el calc y el right difieren de ventas. */
 /* Modal claro (espejo del de ventas): centrado, más ancho, scroll único con
    nav de anclas. Todo scopeado a .bs-side-alq → el sheet mobile queda intacto. */
-.bs.bs-side-alq { position: fixed; inset: auto; left: 50%; right: auto; top: 3vh; bottom: 3vh; transform: translateX(-50%); width: min(900px, 94vw); max-height: none; overflow-y: auto; overflow-x: hidden; max-width: none; border-radius: 16px; border: 1px solid #E0DACB; box-shadow: 0 24px 80px rgba(20,20,20,0.30); z-index: 501; padding-bottom: 0; }
+.bs.bs-side-alq { position: fixed; inset: auto; left: 50%; right: auto; top: 3vh; bottom: 3vh; transform: translateX(-50%); width: min(900px, 94vw); max-height: none; overflow-y: auto; overflow-x: hidden; max-width: none; background: #FBFAF7; color: #3D3A33; border-radius: 16px; border: 1px solid #E0DACB; box-shadow: 0 24px 80px rgba(20,20,20,0.30); z-index: 501; padding-bottom: 0; }
 /* Footer WhatsApp/Compartir FIJO a la pantalla (misma columna que el sheet),
    siempre abajo sin depender del scroll interno. El sheet reserva 84px. */
-.bs-side-alq .bs-sticky-footer { position: sticky; box-sizing: border-box; left: auto; right: auto; bottom: 0; width: auto; z-index: 60; border-radius: 0; margin-top: 8px; background: #FBFAF7; border-top: 1px solid #E7E1D3; padding: 14px 20px calc(14px + env(safe-area-inset-bottom)); }
+/* Dos columnas del modal: contenido (main) + tarjeta WhatsApp sticky (aside).
+   display:contents por defecto → en mobile los wrappers son transparentes. */
+.bsm-body, .bsm-main, .bsm-aside { display: contents; }
+.bs-side-alq .bsm-body { display: flex; align-items: flex-start; gap: 0; }
+.bs-side-alq .bsm-main { display: block; flex: 1; min-width: 0; }
+.bs-side-alq .bsm-aside { display: block; width: 300px; flex-shrink: 0; padding: 16px 20px 0 0; align-self: stretch; }
+/* Footer = tarjeta sticky del aside (columna derecha) en el modal desktop */
+.bs-side-alq .bs-sticky-footer { position: sticky; box-sizing: border-box; top: 60px; bottom: auto; left: auto; right: auto; width: auto; z-index: 5; flex-direction: column; align-items: stretch; gap: 8px; background: #FBFAF7; border: 1px solid #E7E1D3; border-radius: 14px; margin-top: 0; padding: 16px; }
 .bs.bs-side-alq.open { transform: translateX(-50%); }
 /* Header claro (modal): fondo arena, texto oscuro. Mobile queda oscuro. */
 .bs-side-alq .bs-header-redesign { background: #FBFAF7; padding-top: 8px; }
