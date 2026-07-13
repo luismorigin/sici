@@ -1386,6 +1386,9 @@ export default function AlquileresPage({
           mini-card del mapa). Es position:fixed (bs-side-alq), su lugar en el DOM
           no afecta el layout. */}
       {splitDesktop && sheetOpen && sheetProperty && (
+        <div className="bsa-overlay" onClick={() => setSheetOpen(false)} />
+      )}
+      {splitDesktop && sheetOpen && sheetProperty && (
         <BottomSheet
           open sideMode
           property={sheetProperty}
@@ -3832,8 +3835,8 @@ function BottomSheet({
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
   // Tabs del side sheet desktop. En mobile (sideMode=false) no aplican:
   // showTab() devuelve true siempre y el sheet scrollea completo como hoy.
-  const [sideTab, setSideTab] = useState<'resumen' | 'mercado' | 'costos' | 'similares'>('resumen')
-  const showTab = (t: 'resumen' | 'mercado' | 'costos' | 'similares') => !sideMode || sideTab === t
+  // Modal claro: scroll único (sin tabs). showTab siempre true; el nav son anclas.
+  const showTab = (_t: 'resumen' | 'mercado' | 'costos' | 'similares') => true
 
   // Gesture dismiss (swipe down)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -3887,7 +3890,6 @@ function BottomSheet({
   const propId = property?.id
   useEffect(() => {
     setShowGate(false); setDescExpanded(false); setSelectedQs(new Set())
-    setSideTab('resumen')
     sheetRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }, [propId])
 
@@ -4008,6 +4010,26 @@ function BottomSheet({
     <div className={`bs ${open ? 'open' : ''} ${sideMode ? 'bs-side-alq' : (isDesktop ? 'bs-desktop' : '')}`} ref={sheetRef}
       onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       <div className="bs-handle" />
+      {/* Modal claro (desktop): nav de anclas sticky arriba de todo — scroll único,
+          no oculta contenido; lleva fav + cerrar (reemplaza las tabs y el sticky-top). */}
+      {sideMode && (
+        <div className="bsa-nav">
+          {([['bsa-resumen', 'Resumen'], ['bsa-mercado', 'Mercado'], ['bsa-costos', 'Costos'], ['bsa-similares', 'Similares']] as const).map(([id, label]) => (
+            <button key={id} type="button" className="bsa-nav-link"
+              onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{label}</button>
+          ))}
+          <div className="bsa-nav-actions">
+            {onToggleFavorite && (
+              <button className={`bsa-nav-btn ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={onToggleFavorite}>
+                <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              </button>
+            )}
+            <button className="bsa-nav-btn bsa-nav-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
+          </div>
+        </div>
+      )}
       {/* Sticky close + fav bar */}
       <div className="bs-sticky-top">
         {onToggleFavorite && (
@@ -4031,7 +4053,7 @@ function BottomSheet({
         <button className="bs-sticky-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
       </div>
       {/* Header — building name, zone, price with accent, specs */}
-      <div className="bs-header-redesign">
+      <div className="bs-header-redesign" id="bsa-resumen">
         <div className="bs-hr-name">{displayName}</div>
         <div className="bs-hr-sub">{displayZona(p.zona)} <span className="bs-hr-id">#{p.id}</span>
           {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
@@ -4052,16 +4074,6 @@ function BottomSheet({
           </div>
         )}
       </div>
-      {/* Tabs del side sheet — solo desktop split layout */}
-      {sideMode && (
-        <div className="bs-tabs-alq" role="tablist" aria-label="Secciones del detalle">
-          {([['resumen', 'Resumen'], ['mercado', 'Mercado'], ['costos', 'Costos'], ['similares', 'Similares']] as const).map(([key, label]) => (
-            <button key={key} role="tab" aria-selected={sideTab === key}
-              className={`bs-tab-alq ${sideTab === key ? 'active' : ''}`}
-              onClick={() => setSideTab(key)}>{label}</button>
-          ))}
-        </div>
-      )}
       {/* Galería de fotos horizontal */}
       {showTab('resumen') && p.fotos_urls && p.fotos_urls.length > 0 && (
         <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
@@ -4184,7 +4196,7 @@ function BottomSheet({
       {/* --- Mini Market Study — formato barra sin veredicto (unificado con
           ventas). Oculto en publicShare: `properties` ahí es la shortlist. --- */}
       {showTab('mercado') && !publicShareBroker && marketData && (
-        <div className="bs-section">
+        <div className="bs-section" id="bsa-mercado">
           <div className="bs-sl"><span className="bs-sl-dot" />Mercado en {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
           <div className="bs-mkt">
             <div className="bs-mkta-this">
@@ -4222,9 +4234,9 @@ function BottomSheet({
           <div className="bs-mkta-empty">Sin suficientes deptos comparables activos para mostrar contexto de mercado.</div>
         </div>
       )}
-      {/* Tab Costos — costo real mensual + entrada (solo side sheet desktop) */}
-      {sideMode && sideTab === 'costos' && (
-        <div className="bs-section">
+      {/* Costos — costo real mensual + entrada (solo modal desktop, sección propia) */}
+      {sideMode && (
+        <div className="bs-section" id="bsa-costos">
           <div className="bs-sl"><span className="bs-sl-dot" />Costo real mensual</div>
           <div className="bs-costos-rows">
             <div className="bs-costos-row"><span>Alquiler</span><b>{formatPrice(p.precio_mensual_bob)}/mes</b></div>
@@ -4246,7 +4258,7 @@ function BottomSheet({
       )}
       {/* --- Similar Properties --- */}
       {showTab('similares') && similarProps.length > 0 && (
-        <div className="bs-section">
+        <div className="bs-section" id="bsa-similares">
           <div className="bs-sl"><span className="bs-sl-dot" />Tambien en {displayZona(p.zona)}</div>
           <div className="bs-sim-scroll">
             {similarProps.map(sp => {
@@ -4270,8 +4282,8 @@ function BottomSheet({
           </div>
         </div>
       )}
-      {/* Tab Similares vacío — la ausencia se explica, no se disimula */}
-      {sideMode && sideTab === 'similares' && similarProps.length === 0 && (
+      {/* Similares vacío — la ausencia se explica, no se disimula */}
+      {sideMode && similarProps.length === 0 && (
         <div className="bs-section">
           <div className="bs-mkta-empty">No hay alquileres similares activos en {displayZona(p.zona)} con esta tipología.</div>
         </div>

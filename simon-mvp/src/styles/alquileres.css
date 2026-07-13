@@ -1177,11 +1177,36 @@
    queda SIEMPRE visible. El .ad-panel mantiene su height → la columna no
    colapsa. Ancho = columna derecha del grid (~52%); padding lateral del main
    es 32, por eso el calc y el right difieren de ventas. */
-.bs.bs-side-alq { position: fixed; inset: auto; left: auto; top: 80px; right: 32px; bottom: 32px; width: min(520px, calc((100vw - 84px) * 0.52)); max-height: none; overflow-y: auto; overflow-x: hidden; transform: none; max-width: none; border-radius: 14px; border: 1px solid #D8D0BC; z-index: 40; padding-bottom: 84px; }
+/* Modal claro (espejo del de ventas): centrado, más ancho, scroll único con
+   nav de anclas. Todo scopeado a .bs-side-alq → el sheet mobile queda intacto. */
+.bs.bs-side-alq { position: fixed; inset: auto; left: 50%; right: auto; top: 3vh; bottom: 3vh; transform: translateX(-50%); width: min(900px, 94vw); max-height: none; overflow-y: auto; overflow-x: hidden; max-width: none; border-radius: 16px; border: 1px solid #E0DACB; box-shadow: 0 24px 80px rgba(20,20,20,0.30); z-index: 501; padding-bottom: 0; }
 /* Footer WhatsApp/Compartir FIJO a la pantalla (misma columna que el sheet),
    siempre abajo sin depender del scroll interno. El sheet reserva 84px. */
-.bs-side-alq .bs-sticky-footer { position: fixed; box-sizing: border-box; left: auto; right: 32px; bottom: 32px; width: min(520px, calc((100vw - 84px) * 0.52)); z-index: 60; border-radius: 0 0 14px 14px; }
-.bs.bs-side-alq.open { transform: none; }
+.bs-side-alq .bs-sticky-footer { position: sticky; box-sizing: border-box; left: auto; right: auto; bottom: 0; width: auto; z-index: 60; border-radius: 0; margin-top: 8px; background: #FBFAF7; border-top: 1px solid #E7E1D3; padding: 14px 20px calc(14px + env(safe-area-inset-bottom)); }
+.bs.bs-side-alq.open { transform: translateX(-50%); }
+/* Header claro (modal): fondo arena, texto oscuro. Mobile queda oscuro. */
+.bs-side-alq .bs-header-redesign { background: #FBFAF7; padding-top: 8px; }
+.bs-side-alq .bs-hr-name { color: #141414; }
+.bs-side-alq .bs-hr-sub { color: #7A7060; }
+.bs-side-alq .bs-hr-price { color: #141414; }
+.bs-side-alq .bs-hr-price span { color: #7A7060; }
+.bs-side-alq .bs-hr-specs { color: #55524A; }
+/* El sticky-top viejo (fav/close flotante) lo reemplaza el nav */
+.bs-side-alq .bs-sticky-top { display: none; }
+.bs-side-alq .bs-handle { display: none; }
+/* Backdrop del modal centrado (oscurece el feed detrás; click afuera cierra) */
+.bsa-overlay { position: fixed; inset: 0; background: rgba(20,20,20,0.55); z-index: 500; animation: bsaFade 0.18s ease-out; }
+@keyframes bsaFade { from { opacity: 0; } to { opacity: 1; } }
+/* Nav de anclas sticky arriba de todo (claro) */
+.bsa-nav { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 4px; background: #FBFAF7; border-bottom: 1px solid #E7E1D3; padding: 8px 20px; }
+.bsa-nav-link { background: none; border: none; color: #6B6862; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 7px 10px; cursor: pointer; border-radius: 8px; transition: color 0.15s, background 0.15s; }
+.bsa-nav-link:hover { color: #141414; background: rgba(20,20,20,0.05); }
+.bsa-nav-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.bsa-nav-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(20,20,20,0.05); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #55524A; }
+.bsa-nav-btn:hover { background: rgba(20,20,20,0.10); }
+.bsa-nav-close { font-size: 22px; line-height: 1; }
+/* Anclas: dejar aire bajo el nav sticky al saltar a una sección */
+.bs-side-alq .bs-header-redesign, .bs-side-alq .bs-section { scroll-margin-top: 54px; }
 /* fav+close: fijos en la esquina del sheet (absolute sobre el sheet fixed),
    siempre visibles, sin ocupar flujo ni chocar con las tabs. */
 .bs-side-alq .bs-sticky-top { position: absolute; top: 10px; right: 12px; z-index: 50; background: transparent; padding: 0; pointer-events: none; }
