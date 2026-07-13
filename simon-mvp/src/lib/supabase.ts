@@ -82,6 +82,11 @@ export interface UnidadReal {
   amenities_por_verificar: string[]  // Confianza baja o por_confirmar
   // v2.10: Equipamiento detectado en descripción
   equipamiento_detectado: string[]   // Items mencionados en publicación (A/C, Cocina equipada, etc.)
+  // "Cola larga" no canónica (reader híbrido, mig 271 → buscar_extras). Vacío en
+  // prod hasta el cutover shadow→prod; se llena solo cuando el reader escribe
+  // datos_json->amenities->{extra,equipamiento_otros}. Alimenta "Lo que la hace especial".
+  amenidades_extra?: string[]        // amenidades de EDIFICIO confirmadas no canónicas
+  equipamiento_otros?: string[]      // equipamiento de UNIDAD confirmado no canónico
   // v2.12: Descripción del anunciante
   descripcion: string | null
   // v2.13: Posición de mercado (comparación vs promedio zona)
@@ -245,6 +250,9 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       amenities_por_verificar: p.amenities_por_verificar || [],
       // v2.10: Equipamiento detectado
       equipamiento_detectado: p.equipamiento_detectado || [],
+      // Cola larga no canónica (se mergea vía buscar_extras; default [])
+      amenidades_extra: p.amenidades_extra || [],
+      equipamiento_otros: p.equipamiento_otros || [],
       // v2.12: Descripción del anunciante
       descripcion: p.descripcion || null,
       // v2.13: Posición de mercado

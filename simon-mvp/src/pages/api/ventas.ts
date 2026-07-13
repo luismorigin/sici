@@ -69,6 +69,8 @@ function mapRow(p: RawUnidadSimpleRow) {
     amenities_confirmados: p.amenities_confirmados || [],
     amenities_por_verificar: p.amenities_por_verificar || [],
     equipamiento_detectado: p.equipamiento_detectado || [],
+    amenidades_extra: (p as any).amenidades_extra || [],
+    equipamiento_otros: (p as any).equipamiento_otros || [],
     descripcion: p.descripcion || null,
     latitud: p.latitud ? parseFloat(String(p.latitud)) : null,
     longitud: p.longitud ? parseFloat(String(p.longitud)) : null,
@@ -107,7 +109,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { filtros = {}, spotlightId } = req.body || {}
+    const { filtros = {}, spotlightId, shadow = false } = req.body || {}
+    // Feed shadow (preview pre-cutover): RPCs del reader híbrido con el split limpio
+    const rpcName = shadow ? 'buscar_unidades_simple_shadow' : 'buscar_unidades_simple'
+    const extrasRpc = shadow ? 'buscar_extras_shadow' : 'buscar_extras'
 
     // Build RPC params
     const rpcFiltros: Record<string, any> = {
@@ -125,7 +130,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (filtros.estado_entrega) rpcFiltros.estado_entrega = filtros.estado_entrega
     if (filtros.proyecto?.trim()) rpcFiltros.proyecto = filtros.proyecto.trim()
 
-    const dataResult = await supabase.rpc('buscar_unidades_simple', { p_filtros: rpcFiltros })
+    const dataResult = await supabase.rpc(rpcName, { p_filtros: rpcFiltros })
 
     if (dataResult.error) {
       console.error('RPC error:', dataResult.error)
@@ -134,11 +139,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const data = (dataResult.data || []).map((r: RawUnidadSimpleRow) => mapRow(r))
 
+    // Merge cola larga no canónica (buscar_extras, mig 271). Graceful: si el SQL
+    // no está aplicado o no hay data (prod pre-cutover), los campos quedan [].
+    if (data.length) {
+      try {
+        const ids = data.map((d: any) => d.id)
+        const extras = await supabase.rpc(extrasRpc, { p_ids: ids })
+        if (!extras.error && Array.isArray(extras.data)) {
+          const byId = new Map(extras.data.map((e: any) => [e.id, e]))
+          for (const d of data as any[]) {
+            const e: any = byId.get(d.id)
+            if (e) {
+              d.amenidades_extra = e.amenidades_extra || []
+              d.equipamiento_otros = e.equipamiento_otros || []
+            }
+          }
+        }
+      } catch { /* helper opcional: no rompe el feed si no existe aún */ }
+    }
+
     // Spotlight: fetch a specific property by ID if not in current results
     let spotlight = null
     if (spotlightId && typeof spotlightId === 'number' && !data.find((d: any) => d.id === spotlightId)) {
       try {
-        const spotResult = await supabase.rpc('buscar_unidades_simple', {
+        const spotResult = await supabase.rpc(rpcName, {
           p_filtros: { limite: 500, solo_con_fotos: false, zonas_permitidas: ZONAS_EQUIPETROL_DB }
         })
         const found = spotResult.data?.find((d: any) => d.id === spotlightId)
