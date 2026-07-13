@@ -712,6 +712,8 @@
 .bs-hr-price{font-family:'DM Sans',sans-serif;font-size:28px;font-weight:500;color:#EDE8DC;line-height:1;font-variant-numeric:tabular-nums;}
 .bs-hr-price span{font-size:14px;color:#9A8E7A;font-weight:400;}
 .bs-hr-specs{font-size:15px;font-weight:300;color:#9A8E7A;font-family:'DM Sans',sans-serif;}
+/* Línea de contexto bajo el precio (modal): Bs/m² · estado amoblado */
+.bs-hr-permetro{font-size:13px;color:#7A7060;font-family:'DM Sans',sans-serif;margin-top:4px;font-variant-numeric:tabular-nums;}
 .bs-sticky-footer{position:sticky;bottom:0;background:#EDE8DC;border-top:1px solid #D8D0BC;padding:12px 24px;padding-bottom:max(12px,calc(env(safe-area-inset-bottom) + 4px));display:flex;gap:10px;z-index:10;}
 .bs-footer-wsp{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:#1EA952;border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;text-decoration:none;min-height:44px;transition:opacity 0.2s;}
 .bs-footer-wsp:active{opacity:0.85;}

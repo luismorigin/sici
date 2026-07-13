@@ -4029,6 +4029,12 @@ function BottomSheet({
       </div>
       <div className="bs-hr-price-block">
         <div className="bs-hr-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
+        {sideMode && (
+          <div className="bs-hr-permetro">{[
+            p.area_m2 > 0 ? `Bs ${Math.round(p.precio_mensual_bob / p.area_m2).toLocaleString('es-BO')}/m²` : null,
+            p.amoblado === 'si' ? 'Amoblado' : p.amoblado === 'semi' ? 'Semi-amoblado' : p.amoblado === 'no' ? 'Sin amoblar' : null,
+          ].filter(Boolean).join(' · ')}</div>
+        )}
       </div>
       <div className="bs-hr-specs">
         {[dormLabel(p.dormitorios), `${Math.round(p.area_m2)}m²`, p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null, p.piso ? `Piso ${p.piso}` : null].filter(Boolean).join(' · ')}
