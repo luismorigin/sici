@@ -57,7 +57,11 @@ async function chequear(url, fuente) {
 }
 
 // --- Señal 1: desaparecidas del discovery-deptos de hoy (las calcula y guarda el discovery) ---
-const discFile = readdirSync(OUT).filter(x => x.startsWith('discovery-deptos')).sort().pop();
+// Preferir el diff SHADOW-AWARE (desaparecidas vs shadow, no vs prod): evita el disyuntor
+// falso-positivo (el crudo cuenta ~221 desaparecidas vs prod; contra shadow son ~19 reales).
+// OJO: `.sort().pop()` agarraba el crudo porque "-shadowaware.json" ordena ANTES de ".json" (ASCII "-" < ".").
+const discFiles = readdirSync(OUT).filter(x => x.startsWith('discovery-deptos') && x.endsWith('.json'));
+const discFile = discFiles.filter(x => x.includes('-shadowaware')).sort().pop() || discFiles.sort().pop();
 if (!discFile) { console.error('No hay output de discovery-deptos. Corré discovery-deptos.mjs primero (el verificador usa su lista de desaparecidas).'); process.exit(1); }
 const disc = JSON.parse(readFileSync(join(OUT, discFile), 'utf8'));
 const desap = disc.desaparecidas || [];
