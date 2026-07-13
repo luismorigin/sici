@@ -55,6 +55,7 @@ function formatFechaCortaSEO(dateStr: string): string {
 const MapComponent = dynamic(() => import('@/components/alquiler/AlquilerMap'), { ssr: false })
 const MapMultiComponent = dynamic(() => import('@/components/alquiler/AlquilerMapMulti'), { ssr: false })
 const CompareSheet = dynamic(() => import('@/components/alquiler/CompareSheet'), { ssr: false })
+const PhotoViewer = dynamic(() => import('@/components/alquiler/PhotoViewer'), { ssr: false })
 const SimonChatWidget = dynamic(() => import('@/components/simon-chat/SimonChatWidget'), { ssr: false })
 
 // ===== CONSTANTS =====
@@ -3833,6 +3834,7 @@ function BottomSheet({
   const [gateEmail, setGateEmail] = useState('')
   const [descExpanded, setDescExpanded] = useState(false)
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
+  const [showViewer, setShowViewer] = useState(false)
   // Tabs del side sheet desktop. En mobile (sideMode=false) no aplican:
   // showTab() devuelve true siempre y el sheet scrollea completo como hoy.
   // Modal claro: scroll único (sin tabs). showTab siempre true; el nav son anclas.
@@ -4074,9 +4076,26 @@ function BottomSheet({
           </div>
         )}
       </div>
-      {/* Galería de fotos horizontal */}
+      {/* Galería de fotos: carrusel (mobile) / grilla 1+4 + visor (modal desktop) */}
       {showTab('resumen') && p.fotos_urls && p.fotos_urls.length > 0 && (
-        <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
+        sideMode ? (
+          <div className={`bsm-photos bsm-photos-n${Math.min(p.fotos_urls.length, 5)}`}>
+            <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
+            {p.fotos_urls.length > 3 && (
+              <button type="button" className="bsm-verfotos" onClick={() => setShowViewer(true)}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                Ver las {p.fotos_urls.length} fotos
+              </button>
+            )}
+          </div>
+        ) : (
+          <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
+        )
+      )}
+      {showViewer && p.fotos_urls && p.fotos_urls.length > 0 && (
+        <PhotoViewer photos={p.fotos_urls} initialIndex={0} buildingName={displayName}
+          subtitle={`${displayZona(p.zona)} · ${formatPrice(p.precio_mensual_bob)}/mes`}
+          onClose={() => setShowViewer(false)} />
       )}
       {/* Comentario del broker — solo en publicShareMode (link compartido /b/[hash]) */}
       {showTab('resumen') && publicShareMode && brokerComment && (
