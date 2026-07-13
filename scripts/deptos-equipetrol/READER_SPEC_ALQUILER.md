@@ -24,6 +24,12 @@
 > **`uso_inmueble`** (residencial/mixto) = FILTRO, no exclusión (como casas ZN); ⑦ nombre canónico SIEMPRE
 > arábigo + sin prefijo "Condominio/Edificio"; ⑧ `expensas_incluidas`: solo el TEXTO afirma (el `false` del portal
 > es un default, ruido).
+>
+> **v3 (13-jul-2026)** — 2 cortes tras auditar las 11 nuevas (`equipado` daba true en ~10/11 = no discriminaba):
+> ⑨ **`equipado` = SOLO la PALABRA a nivel unidad** (alineado con venta v4); enumerar electrodomésticos sin la
+> palabra → `null` (los ítems van a `equipamiento_canonico` igual). ⑩ **`acepta_mascotas`: el checkbox `false` del
+> portal = ruido** → tratar como `null` (asimetría igual que `expensas_incluidas`); solo `true` del portal o el
+> texto explícito cuentan.
 
 ## Por qué el precio de alquiler cambia (contexto TC)
 Hasta hoy, en producción, como el oficial ≈ paralelo NO tenía brecha relevante, el pipeline de alquiler tomaba
@@ -63,7 +69,7 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
   "deposito_meses": 1,               // garantía/depósito en meses (0-6). null si no se menciona.
   "contrato_minimo_meses": 12,       // permanencia mínima (1-60). null si no se menciona.
   "amoblado": "no",                  // "si" | "no" | "semi" — muebles SUELTOS (camas/sofás/mesas). Ver regla. Default "no" (validado 94%).
-  "equipado": null,                  // v2: FLAG separado. true si el texto dice "equipado" / enumera electrodomésticos (heladera/cocina/AC). null si no. → datos_json.
+  "equipado": null,                  // v3: FLAG separado. true SOLO si el texto usa la PALABRA "equipado" a nivel unidad; enumerar electrodomésticos SIN la palabra → null (los ítems van a equipamiento_canonico igual). → datos_json.
   "acepta_mascotas": null,           // v2: true/false del TEXTO **o del checkbox del portal** (senales.mascotas_portal). null si ninguna fuente. (feed incluye NULL, excluye solo false)
   "uso_inmueble": "residencial",     // v2: "residencial" | "mixto" — "mixto" si el aviso ofrece también uso oficina/consultorio/comercial. FILTRO, no exclusión. → datos_json.
   "servicios_incluidos": [],         // ["agua","luz","internet","gas"] confirmados INCLUIDOS en el alquiler (no "el depto tiene gas"). Va a datos_json.
@@ -182,9 +188,11 @@ En el feed de alquiler, la basura a rechazar es lo que NO es **alquiler mensual 
   en `false`. (Puede coexistir un monto `expensas_bob` con `expensas_incluidas: true` — el monto es informativo.)
 - **`deposito_meses`**: garantía en meses (0-6). "un mes de garantía" → 1; "dos meses de depósito" → 2. null si calla.
 - **`contrato_minimo_meses`**: permanencia mínima (1-60). "contrato mínimo 1 año" → 12. null si calla.
-- **`acepta_mascotas`** (v2): `true`/`false` del TEXTO **o del checkbox del portal** (`senales.mascotas_portal`) —
-  el checkbox estructurado es fuente válida (como en venta). `null` si ninguna fuente lo dice. ⚠️ "pet zone" /
-  "pet wash" es una AMENIDAD del edificio, NO política de contrato → no dispara `acepta_mascotas`.
+- **`acepta_mascotas`** (v2): `true`/`false` del TEXTO **o del checkbox del portal** (`senales.mascotas_portal`).
+  **v3 (13-jul) — asimetría del checkbox (igual que `expensas_incluidas`):** un `mascotas_portal = true` CUENTA
+  (afirmación explícita), pero un `mascotas_portal = false` es DEFAULT/ruido → **trátalo como `null`**, NO como
+  "no acepta" (salvo que el TEXTO diga explícito "no mascotas"). `null` si ninguna fuente afirmativa lo dice.
+  ⚠️ "pet zone" / "pet wash" es una AMENIDAD del edificio, NO política de contrato → no dispara `acepta_mascotas`.
 - **`servicios_incluidos`**: array de servicios CONFIRMADOS **incluidos en el alquiler** ("agua","luz","internet",
   "gas"). ⚠️ "el depto TIENE gas domiciliario" ≠ "gas incluido en la renta" → eso NO va acá. `[]` si no se menciona.
 - **`uso_inmueble`** (v2): `"residencial"` (default) | `"mixto"` — `"mixto"` si el aviso ofrece también uso
@@ -198,11 +206,16 @@ Muchos avisos de alquiler dicen "equipado" (electrodomésticos) SIN muebles suel
   - **`"no"` si el texto NO menciona muebles** — default validado (auditoría 35 props → 94% no amoblados). Único
     campo con default ≠ null, por evidencia.
   - **NO cuentan como amoblado** (son fijos, no muebles sueltos): roperos empotrados, cocina equipada, AC, heladera.
-- **`equipado`** (`true`/`null`) = **electrodomésticos/cocina** (heladera, cocina, microondas, lavadora, AC). v2:
-  `true` si el texto dice "equipado"/"totalmente equipado" **o** enumera electrodomésticos. `null` si no menciona.
+- **`equipado`** (`true`/`null`) = **electrodomésticos/cocina** (heladera, cocina, microondas, lavadora, AC).
+  **v3 (13-jul, alineado con venta v4) — SOLO la PALABRA a nivel UNIDAD dispara el flag:** `true` únicamente si el
+  texto usa "equipado"/"totalmente equipado"/"entrega equipada"/"departamento equipado". Si el aviso solo **ENUMERA**
+  electrodomésticos (heladera, cocina, AC) SIN la palabra → `null` (no lo inferimos), PERO esos ítems SÍ van a
+  `equipamiento_canonico` (el filtro por-ítem sigue vivo). ⚠️ **"cocina equipada" NO dispara el flag** (describe un
+  ambiente, no la unidad) — igual va a `equipamiento_canonico`. Motivo del cambio: con la regla vieja ("o enumera")
+  el flag daba `true` en ~10/11 avisos = no discriminaba nada; casi toda renta lista electrodomésticos.
 - Un monoambiente puede ser **`equipado: true` + `amoblado: "no"`** (electrodomésticos sí, muebles sueltos no) —
-  es el caso MÁS común en alquiler (fue la zona gris sistémica del lote de 50). Los ítems concretos van igual a
-  `equipamiento_canonico`; el flag `equipado` es la señal de decisión de alto nivel (filtrable).
+  común en alquiler. Los ítems concretos van igual a `equipamiento_canonico`; el flag `equipado` es la señal de
+  decisión de alto nivel (filtrable), y solo se prende cuando el broker lo AFIRMA con la palabra.
 
 ### DORMITORIOS — igual que venta (v2: la suite cuenta)
 - `0` = monoambiente/studio/loft = correcto (el front muestra "Monoambiente"). Conservar 0 si el texto lo dice.
