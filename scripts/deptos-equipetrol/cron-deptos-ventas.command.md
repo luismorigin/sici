@@ -1,4 +1,4 @@
-# /cron-deptos-ventas — Captura híbrida de deptos Equipetrol → SHADOW (bajo Max, $0)
+# /cron-deptos-ventas — Captura híbrida de deptos Equipetrol → SHADOW (bajo Max, gratis)
 
 > **Fuente de verdad** de este comando. Copiar a `.claude/commands/cron-deptos-ventas.md` para usarlo
 > como `/cron-deptos-ventas` (las skills viven gitignored en `.claude/commands/`; el repo guarda el `.command.md`).
@@ -7,7 +7,7 @@
 > discovery propio → lectura (MOAT) → apply → feed — contra el **entorno SHADOW aislado**
 > (`propiedades_v2_shadow`). **PROD (n8n) queda intacto.** El único paso que necesita "modelo"
 > (el MOAT = leer el anuncio y dictar precio/TC/dorms/nombre/gate) lo hacen **subagentes-lectores en
-> paralelo** (patrón `/audit-cola-matching`) → **$0, bajo Max, sin API, sin servidor**.
+> paralelo** (patrón `/audit-cola-matching`) → **gratis, bajo Max, sin API, sin servidor**.
 >
 > **Opción A (corrido con cola al final):** el comando encadena los pasos de una y termina imprimiendo
 > la cola de excepciones (PM_NUEVO, ambiguos, sin-match). NO se aprueba depto por depto: el juez
@@ -38,17 +38,17 @@ microzonas, y diffea contra `propiedades_v2`. Mirá el resumen: **NUEVAS**, **ex
 - Si el circuit breaker (🛑) se dispara → **no insistas**, la IP está bloqueada, esperá unas horas.
 - Cooldown de 20 min entre corridas (`--force` para saltarlo, con criterio).
 
-### 2. Prep — material de lectura de las EXISTENTES (read-only, $0)
+### 2. Prep — material de lectura de las EXISTENTES (read-only, gratis)
 ```
 node cargar-deptos-shadow.mjs --prep 40
 ```
-Fetchea el detalle ($0) de hasta N existentes **frescas** (excluye las ya en shadow + las rechazadas)
+Fetchea el detalle (gratis) de hasta N existentes **frescas** (excluye las ya en shadow + las rechazadas)
 y arma `output/material-<ts>.json` con `veredicto: null` por depto. N agnóstico a la fuente (drena
 C21 y Remax parejo). Para re-leer ids puntuales: `--prep --ids 3521,3540,...`.
 - El material trae: slug, título, descripción, señales estructuradas (precio/TC/dorms/baños/piso/área),
   la lectura de n8n para contrastar, `tasa_paralelo` del lote (Binance) y candidatos de matching.
 
-### 2b. Prep NUEVAS — capturar inventario que NO está en prod (read-only, $0)
+### 2b. Prep NUEVAS — capturar inventario que NO está en prod (read-only, gratis)
 ```
 node cargar-deptos-shadow.mjs --nuevas output/discovery-deptos-<ts>.json 40
 ```
@@ -104,7 +104,7 @@ npm run dev --prefix ../../simon-mvp        # o preview_start simon-mvp-dev
 ```
 Verificá con **Playwright** (mejor que el preview Chrome headless para este feed): precios del régimen
 nuevo (paralelo a valor de cara, `oficial_viejo` descontado, `bob` live), equipamiento canónico + extra,
-amoblado/equipado. Alternativa $0 sin browser: comparar por SQL `buscar_unidades_simple_shadow` vs prod.
+amoblado/equipado. Alternativa gratis sin browser: comparar por SQL `buscar_unidades_simple_shadow` vs prod.
 
 ### 7. Reportar + log
 Reportá al usuario: cuántos escritos/rechazados/retenidos, las correcciones notables vs n8n (precio
@@ -117,7 +117,7 @@ ambiguos, sin-match). Registrá una línea en `output/cron-deptos-ventas-log.md`
   SELECT + RPC read-only (`buscar_proyecto_fuzzy`). Los alias sugeridos se REGISTRAN, no se escriben a
   `proyectos_master`. **El cutover a prod (híbrido escribe `propiedades_v2` real / n8n se apaga) es una
   decisión APARTE, irreversible, SIEMPRE con OK explícito del founder** — este comando no lo hace.
-- **$0 bajo Max.** El MOAT son subagentes en la sesión, sin API. `reader-api.mjs` (stub) es el camino
+- **gratis bajo Max.** El MOAT son subagentes en la sesión, sin API. `reader-api.mjs` (stub) es el camino
   futuro para automatizarlo por API (mismo `READER_SPEC.md` como system-prompt).
 - **El juez manda, no el script.** El `.mjs` filtra/fetchea/matchea; el VEREDICTO (precio/TC/gate) lo
   dan los subagentes-lectores. NUNCA dejar que el estructurado decida solo — ahí está el valor.

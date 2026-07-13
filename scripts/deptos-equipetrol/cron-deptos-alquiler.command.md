@@ -1,4 +1,4 @@
-# /cron-deptos-alquiler — Captura híbrida de deptos ALQUILER Equipetrol → SHADOW (bajo Max, $0)
+# /cron-deptos-alquiler — Captura híbrida de deptos ALQUILER Equipetrol → SHADOW (bajo Max, gratis)
 
 > **Fuente de verdad** de este comando. Copiar a `.claude/commands/cron-deptos-alquiler.md` para usarlo
 > como `/cron-deptos-alquiler` (las skills viven gitignored en `.claude/commands/`; el repo guarda el `.command.md`).
@@ -7,7 +7,7 @@
 > discovery propio → lectura (MOAT) → apply → **verificador** → feed — contra el **entorno SHADOW aislado**
 > (`propiedades_v2_shadow`, `tipo_operacion='alquiler'`). **PROD (n8n) queda intacto.** El MOAT (leer el
 > anuncio y dictar precio/TC/dorms/nombre/gate/condiciones) lo hacen **subagentes-lectores en paralelo**
-> (patrón `/audit-cola-matching`) → **$0, bajo Max, sin API, sin servidor**.
+> (patrón `/audit-cola-matching`) → **gratis, bajo Max, sin API, sin servidor**.
 >
 > **Gemelo:** `/cron-deptos` (venta). **Este comando lo MEJORA:** incluye el paso **verificador** (baja de
 > desaparecidos) que a `/cron-deptos` le falta (su Incremento 3). El `verificador-alquiler.mjs` es el molde
@@ -31,11 +31,11 @@ Sale a C21 (operacion=renta) + Remax (operacion=alquiler, EXCLUYE anticrético),
 **existentes**, **desaparecidas**. Escribe `output/discovery-alquiler-<ts>.json`.
 - Circuit breaker (🛑) → **no insistas**, IP bloqueada, esperá unas horas. Cooldown 20 min (`--force` con criterio).
 
-### 2. Prep — material de lectura de las EXISTENTES (read-only, $0)
+### 2. Prep — material de lectura de las EXISTENTES (read-only, gratis)
 ```
 node cargar-alquiler-shadow.mjs --prep 50
 ```
-Fetchea el detalle ($0) de hasta N existentes frescas (excluye las ya en shadow + rechazadas) → `output/material-alq-<ts>.json`
+Fetchea el detalle (gratis) de hasta N existentes frescas (excluye las ya en shadow + rechazadas) → `output/material-alq-<ts>.json`
 con `veredicto: null`. Para re-leer ids puntuales: `--prep --ids 3521,3540,...`. **Precio crudo de alquiler:**
 el detalle C21 da el USD DERIVADO (bob/6.96, crudo-falso) → el crudo BOB sale de la columna de su moneda / del
 discovery (`precios.contrato`); Remax del detalle sí trae crudo. `precioCrudoAlquiler()` ya lo maneja.
@@ -79,7 +79,7 @@ nada). Status-code-only (inmune a placeholders/bloqueos). Escribe solo shadow, f
 
 ### 6. Verificar el feed shadow
 ```
-node verificar-shadow-alquiler.mjs       # $0, sin browser: conteo + anti-doble-norm + matching + mediana + pendientes
+node verificar-shadow-alquiler.mjs       # gratis, sin browser: conteo + anti-doble-norm + matching + mediana + pendientes
 ```
 O el feed real: `npm run dev --prefix ../../simon-mvp` → `localhost:3000/alquileres?shadow=1` (Playwright, no el
 preview headless). Chequeá: precio Bs display + USD normalizado (Binance vivo, no ÷6.96), condiciones, amenidades.
@@ -92,7 +92,7 @@ match recuperado), y la cola de excepciones (PM_NUEVO, ambiguos, sin-match). Log
 - **SHADOW, prod intacto.** `--apply` y el verificador solo mutan `propiedades_v2_shadow`. A prod: solo SELECT
   + RPC read-only. **El cutover (híbrido escribe prod / n8n se apaga) es decisión APARTE, irreversible, con OK
   explícito del founder.**
-- **$0 bajo Max.** El MOAT son subagentes en sesión. `reader-api.mjs` (stub) = camino futuro por API.
+- **gratis bajo Max.** El MOAT son subagentes en sesión. `reader-api.mjs` (stub) = camino futuro por API.
 - **El juez manda, no el script.** El `.mjs` filtra/fetchea/matchea; el VEREDICTO lo dan los lectores.
 - **Anti-doble-normalización** (READER_SPEC_ALQUILER §Regla madre): crudo en la columna de su moneda, la otra
   NULL; la ÚNICA conversión vive en `precio_normalizado_alquiler()` al leer. NUNCA guardar un derivado.
