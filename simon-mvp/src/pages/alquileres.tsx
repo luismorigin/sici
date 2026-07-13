@@ -4021,7 +4021,9 @@ function BottomSheet({
   // las secciones y dejar la tarjeta WhatsApp sticky del aside a su derecha.
   const headerBlock = (
     <div className="bs-header-redesign" id="bsa-resumen">
-      <div className="bs-hr-name">{displayName}</div>
+      <div className="bs-hr-name">{displayName}
+        {sideMode && p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="bs-hr-reciente">Reciente</span>}
+      </div>
       <div className="bs-hr-sub">{displayZona(p.zona)} <span className="bs-hr-id">#{p.id}</span>
         {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
           <> · {p.dias_en_mercado === 0 ? 'Publicado hoy' : p.dias_en_mercado === 1 ? 'Hace 1 día' : `Hace ${p.dias_en_mercado} días`}</>
@@ -4151,19 +4153,48 @@ function BottomSheet({
         </div>
       </div>
       )}
-      {/* VARIANTE B: modal desktop → grilla completa con iconos grandes/limpios */}
+      {/* Modal desktop → 3-4 stats grandes (como ventas) + fila de chips de
+          inclusión (parqueo/baulera/mascotas). Amoblado va en la línea del
+          precio; depósito/contrato en la pestaña Costos. */}
       {showTab('resumen') && sideMode && (
       <div className="bs-section">
-        <div className="bs-sl"><span className="bs-sl-dot" />Caracteristicas</div>
-        <div className="bs-grid bs-grid-modal">
-          {features.map((f, i) => (
-            <div key={i} className={`bs-feat ${f.highlight ? 'hl' : ''}`}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="bs-fi" dangerouslySetInnerHTML={{ __html: icons[f.icon] || '' }} />
-              <div className="bs-fv">{f.value}</div>
-              <div className="bs-fl">{f.label}</div>
+        <div className="bsm-stats-alq">
+          <div className="bsm-stat">
+            <svg className="bsm-stat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 012 2v10"/><path d="M2 17h20"/><path d="M6 8v3"/></svg>
+            <div className="bsm-stat-txt"><b>{p.dormitorios === 0 ? 'Mono' : p.dormitorios}</b><span>{p.dormitorios === 0 ? 'ambiente' : 'dorm'}</span></div>
+          </div>
+          {p.area_m2 > 0 && (
+            <div className="bsm-stat">
+              <svg className="bsm-stat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg>
+              <div className="bsm-stat-txt"><b>{Math.round(p.area_m2)}</b><span>m²</span></div>
             </div>
-          ))}
+          )}
+          {p.banos !== null && p.banos > 0 && (
+            <div className="bsm-stat">
+              <svg className="bsm-stat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 12h16a1 1 0 011 1v3a4 4 0 01-4 4H7a4 4 0 01-4-4v-3a1 1 0 011-1z"/><path d="M6 12V5a2 2 0 012-2h3v2.25"/></svg>
+              <div className="bsm-stat-txt"><b>{p.banos}</b><span>baño{p.banos !== 1 ? 's' : ''}</span></div>
+            </div>
+          )}
+          {p.piso !== null && (
+            <div className="bsm-stat">
+              <svg className="bsm-stat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/></svg>
+              <div className="bsm-stat-txt"><b>{p.piso === 0 ? 'PB' : p.piso}</b><span>piso</span></div>
+            </div>
+          )}
         </div>
+        {(() => {
+          const conParqueo = p.estacionamientos != null && p.estacionamientos > 0
+          const conBaulera = p.baulera === true
+          const conMascotas = p.acepta_mascotas === true
+          if (!conParqueo && !conBaulera && !conMascotas) return null
+          return (
+            <div className="bsm-incl-chips">
+              {conParqueo && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>{p.estacionamientos! > 1 ? `${p.estacionamientos} parqueos` : 'Parqueo'}</span>}
+              {conBaulera && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Baulera</span>}
+              {conMascotas && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10c-2 0-4 2-4 4 0 2 1 3 3 3 1 0 2-1 3-1s2 1 3 1c2 0 3-1 3-3 0-2-2-4-4-4-1 0-1.5.5-2.5.5S10 10 9 10z"/></svg>Acepta mascotas</span>}
+            </div>
+          )
+        })()}
       </div>
       )}
       {/* Mobile: amenidades simples (intacto). */}
@@ -4519,21 +4550,21 @@ function BottomSheet({
             WA al agente
           </a>
         )}
-        {onShare && !publicShareMode && (
-          <button className="bs-footer-share" onClick={onShare}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
-              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg>
-            Compartir
-          </button>
-        )}
-        {/* Comparar — solo modal desktop: agrega a favoritos y abre el comparador */}
+        {/* Orden alineado con ventas: WhatsApp · Comparar · Compartir */}
         {sideMode && onCompare && !brokerMode && (
           <button className="bs-footer-compare" onClick={onCompare}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" style={{ width: 16, height: 16 }}>
               <rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/>
             </svg>
             Comparar
+          </button>
+        )}
+        {onShare && !publicShareMode && (
+          <button className="bs-footer-share" onClick={onShare}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            Compartir
           </button>
         )}
       </div>
