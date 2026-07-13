@@ -1,7 +1,7 @@
-# /cron-deptos — Captura híbrida de deptos Equipetrol → SHADOW (bajo Max, $0)
+# /cron-deptos-ventas — Captura híbrida de deptos Equipetrol → SHADOW (bajo Max, $0)
 
-> **Fuente de verdad** de este comando. Copiar a `.claude/commands/cron-deptos.md` para usarlo
-> como `/cron-deptos` (las skills viven gitignored en `.claude/commands/`; el repo guarda el `.command.md`).
+> **Fuente de verdad** de este comando. Copiar a `.claude/commands/cron-deptos-ventas.md` para usarlo
+> como `/cron-deptos-ventas` (las skills viven gitignored en `.claude/commands/`; el repo guarda el `.command.md`).
 >
 > **Qué es:** corre el ciclo híbrido de deptos-venta Equipetrol COMPLETO dentro de la sesión —
 > discovery propio → lectura (MOAT) → apply → feed — contra el **entorno SHADOW aislado**
@@ -48,6 +48,15 @@ C21 y Remax parejo). Para re-leer ids puntuales: `--prep --ids 3521,3540,...`.
 - El material trae: slug, título, descripción, señales estructuradas (precio/TC/dorms/baños/piso/área),
   la lectura de n8n para contrastar, `tasa_paralelo` del lote (Binance) y candidatos de matching.
 
+### 2b. Prep NUEVAS — capturar inventario que NO está en prod (read-only, $0)
+```
+node cargar-deptos-shadow.mjs --nuevas output/discovery-deptos-<ts>.json 40
+```
+Fetchea el detalle (por URL, no por id) de las **NUEVAS** que el discovery vio en el portal pero que no
+están en prod, y les asigna un **id reservado shadow** (rango 8M; el id real lo da prod al cutover). Van
+al MISMO flujo MOAT + apply (pasos 3-4). Es lo que hace que el comando CAPTURE inventario nuevo, no solo
+re-lea las existentes. (Opcional si el discovery reportó 0 nuevas.)
+
 ### 3. MOAT — lectura por subagentes-lectores (el juez; lo hacés VOS con subagentes)
 Dividí las entradas del `material-<ts>.json` en chunks de ~10 y lanzá **N subagentes en paralelo**
 (patrón `/audit-cola-matching`). Cada subagente recibe su chunk + lee **`READER_SPEC.md`** y devuelve
@@ -78,7 +87,17 @@ score≥0.95+zona → AUTO; ambiguo/débil → sin match, lo levanta el audit; n
 Imprime: **X escritos**, rechazados por gate, reporte por depto (precio/TC/dorms/pm), **alias sugeridos**
 y **con-nombre-sin-auto-match** (= la cola de excepciones).
 
-### 5. Verificar el feed shadow (que la data rica renderice)
+### 5. Verificador — baja de desaparecidos (status-code-only + 2 señales)
+```
+node verificador-deptos.mjs           # DRY-RUN: reporta candidatos + HTTP
+node verificador-deptos.mjs --apply    # aplica contador / baja confirmada
+```
+Lee las `desaparecidas` del discovery (paso 1), cruza con las que están en shadow (venta), y confirma
+bajas SOLO con **2 señales** (ausencia del crawl + HTTP 404/redirect) sostenidas >2d. Gracia 2d (sigue
+en feed mientras corre el contador), disyuntor 40% (crawl parcial → no baja nada), status-code-only
+(inmune a placeholders/bloqueos). Escribe solo shadow, filtrado a venta. Gemelo: `verificador-alquiler.mjs`.
+
+### 6. Verificar el feed shadow (que la data rica renderice)
 Levantá el dev y mirá `localhost:3000/ventas?shadow=1` (hard-reload si ves prod por el SSG):
 ```
 npm run dev --prefix ../../simon-mvp        # o preview_start simon-mvp-dev
@@ -87,10 +106,10 @@ Verificá con **Playwright** (mejor que el preview Chrome headless para este fee
 nuevo (paralelo a valor de cara, `oficial_viejo` descontado, `bob` live), equipamiento canónico + extra,
 amoblado/equipado. Alternativa $0 sin browser: comparar por SQL `buscar_unidades_simple_shadow` vs prod.
 
-### 6. Reportar + log
+### 7. Reportar + log
 Reportá al usuario: cuántos escritos/rechazados/retenidos, las correcciones notables vs n8n (precio
 corrupto cazado, TC re-clasificado, match recuperado), y **la cola de excepciones** (PM_NUEVO a crear,
-ambiguos, sin-match). Registrá una línea en `output/cron-deptos-log.md` (fecha + números).
+ambiguos, sin-match). Registrá una línea en `output/cron-deptos-ventas-log.md` (fecha + números).
 
 ## Reglas
 
@@ -111,14 +130,8 @@ ambiguos, sin-match). Registrá una línea en `output/cron-deptos-log.md` (fecha
 
 ## Pendientes / incrementos futuros
 
-- **🔴 Incremento 2 — empalme de NUEVAS.** Las nuevas del discovery (portal, no en prod) necesitan:
-  (a) fetchear su detalle desde la URL del portal (como `cron-casas-zn.mjs`, NO por id de prod);
-  (b) **asignar `id` en shadow** (hoy shadow usa el id real de prod, que las nuevas no tienen — decidir:
-  secuencia propia negativa/alta, o id real al cutover). Extiende `cargar-deptos-shadow.mjs` con
-  `--nuevas <discovery-json>`. Es lo que hace que el comando CAPTURE inventario nuevo, no solo re-lea.
-- **🔴 Incremento 3 — verificador integrado.** Correr un verificador (modelo `../casas-zn/verificador-casas.mjs`,
-  adaptado a `propiedades_v2_shadow` + las `desaparecidas` del discovery) → confirmar bajas por HTTP
-  (C21 4xx / Remax redirect) con gracia 2d y disyuntor >40%.
+- ✅ **Incremento 2 — empalme de NUEVAS: HECHO** (paso 2b, `--nuevas` en `cargar-deptos-shadow.mjs`).
+- ✅ **Incremento 3 — verificador: HECHO** (paso 5, `verificador-deptos.mjs`, gemelo del de alquiler).
 - **Candados** (solo para comparación shadow-vs-prod limpia): sembrar `campos_bloqueados` prod→shadow.
   Para solo cargar/enriquecer NO hace falta. Ver `ESTADO_MIGRACION.md` §Frenos.
 - **Repoblar el inventario COMPLETO** con el lector nuevo (los ~19 en shadow son muestra; el discovery
