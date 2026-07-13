@@ -13,6 +13,7 @@ import { useWhatsAppCapture, triggerWhatsAppCapture, setDemoModeForCapture, setB
 import { buildAlquilerWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
+import { AmenityIcon, SparkleIcon, hasCanonicalIcon } from '@/lib/amenity-icons'
 import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerShortlists'
 import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
 import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
@@ -4021,12 +4022,71 @@ function BottomSheet({
         </div>
       </div>
       )}
-      {showTab('resumen') && p.amenities_lista && p.amenities_lista.length > 0 && (
+      {/* Mobile: amenidades simples (intacto). */}
+      {showTab('resumen') && !sideMode && p.amenities_lista && p.amenities_lista.length > 0 && (
         <div className="bs-section">
           <div className="bs-sl"><span className="bs-sl-dot" />Amenidades</div>
           <div className="bs-aw">{p.amenities_lista.map((a, i) => <span key={i} className="bs-at">{a}</span>)}</div>
         </div>
       )}
+      {/* Side sheet desktop: modelo "What's special". Split CLIENT-SIDE con
+          hasCanonicalIcon (alquiler NO trae amenidades_extra/equipamiento_otros
+          del pipeline como ventas — solo amenities_lista + equipamiento_lista):
+           · especial = amenities de EDIFICIO no canónicas → chispita
+           · En el edificio = amenities canónicas → icono del catálogo
+           · En el departamento = equipamiento_lista → icono/chispita */}
+      {showTab('resumen') && sideMode && (() => {
+        const edificioRaw = p.amenities_lista || []
+        const especial = edificioRaw.filter(a => !hasCanonicalIcon(a))
+        const seen = new Set<string>()
+        const edificioCanon = edificioRaw.filter(a => {
+          if (!hasCanonicalIcon(a)) return false
+          const k = a.trim().toLowerCase()
+          if (seen.has(k)) return false
+          seen.add(k); return true
+        })
+        const deptoAll = p.equipamiento_lista || []
+        if (especial.length === 0 && edificioCanon.length === 0 && deptoAll.length === 0) return null
+        return (
+          <>
+            {especial.length > 0 && (
+              <div className="bs-section">
+                <div className="bs-sl"><span className="bs-sl-dot" />Lo que la hace especial</div>
+                <div className="bs-especial">
+                  {especial.map((x, i) => (
+                    <span key={i} className="bs-especial-pill"><SparkleIcon className="bs-especial-ico" />{x}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(edificioCanon.length > 0 || deptoAll.length > 0) && (
+              <div className="bs-section">
+                <div className="bs-sl"><span className="bs-sl-dot" />Todas las comodidades</div>
+                {edificioCanon.length > 0 && (
+                  <div className="bs-comod-group">
+                    <div className="bs-comod-cat">En el edificio</div>
+                    <div className="bs-comod-grid">
+                      {edificioCanon.map((a, i) => (
+                        <div key={i} className="bs-comod-item"><AmenityIcon name={a} className="bs-comod-ico" />{a}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {deptoAll.length > 0 && (
+                  <div className="bs-comod-group">
+                    <div className="bs-comod-cat">En el departamento</div>
+                    <div className="bs-comod-grid">
+                      {deptoAll.map((e, i) => (
+                        <div key={i} className="bs-comod-item"><AmenityIcon name={e} className="bs-comod-ico" />{e}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )
+      })()}
       {showTab('resumen') && p.descripcion && (
         <div className="bs-section">
           <div className="bs-sl"><span className="bs-sl-dot" />Sobre esta propiedad</div>

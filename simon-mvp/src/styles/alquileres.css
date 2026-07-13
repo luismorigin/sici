@@ -731,6 +731,16 @@
 .bs-feat.hl .bs-fv{color:#141414;font-weight:600;}
 .bs-aw{display:flex;flex-wrap:wrap;gap:6px;}
 .bs-at{font-size:14px;font-weight:300;padding:5px 12px;border-radius:10px;background:#FAFAF8;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;}
+/* Comodidades modelo "What's special" (solo side sheet desktop) — split
+   client-side con hasCanonicalIcon. Espejo de ventas (bsm-especial/bsm-comod). */
+.bs-especial{display:flex;flex-wrap:wrap;gap:10px;}
+.bs-especial-pill{display:inline-flex;align-items:center;gap:8px;background:#FFFFFF;border:0.5px solid #D7CDB8;border-radius:12px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:#141414;}
+.bs-especial-ico{width:17px;height:17px;color:#3A6A48;flex-shrink:0;}
+.bs-comod-group + .bs-comod-group{margin-top:16px;}
+.bs-comod-cat{font-size:13px;color:#3D3A33;margin-bottom:12px;font-family:'DM Sans',sans-serif;}
+.bs-comod-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 18px;}
+.bs-comod-item{display:flex;align-items:center;gap:11px;font-family:'DM Sans',sans-serif;font-size:14px;color:#141414;}
+.bs-comod-ico{width:20px;height:20px;color:#3A6A48;flex-shrink:0;}
 .bs-ver-anuncio{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:transparent;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;border-radius:10px;transition:background 0.2s;cursor:pointer;}
 .bs-ver-anuncio:hover{background:rgba(58,106,72,0.12);}
 .bs-gate{display:flex;flex-direction:column;gap:12px}
