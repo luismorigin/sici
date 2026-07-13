@@ -469,6 +469,8 @@ export default function AlquileresPage({
   // Filtro de comodidades (client-side, solo diferenciadores de edificio)
   const [amenSel, setAmenSel] = useState<Set<string>>(new Set())
   const toggleAmen = useCallback((a: string) => setAmenSel(prev => { const n = new Set(prev); if (n.has(a)) n.delete(a); else n.add(a); return n }), [])
+  // Hover en una card (split desktop) → resalta el pin en el mapa del panel
+  const [hoveredId, setHoveredId] = useState<number | null>(null)
   // Incrementa solo cuando deep-link aplica filtros via URL, para forzar remount de DesktopFilters/FilterOverlay con sus initializers leyendo currentFilters. Interacciones manuales del user NO incrementan esto.
   const [filterComponentVersion, setFilterComponentVersion] = useState(0)
   const [totalCount, setTotalCount] = useState(seo.totalUnidades || initialProperties.length)
@@ -1730,7 +1732,7 @@ export default function AlquileresPage({
                             <AlquilerListCard property={p} isFavorite={favorites.has(p.id)}
                               isActive={sheetOpen && sheetProperty?.id === p.id}
                               marketChip={cardChips?.get(p.id) ?? null}
-                              onToggleFavorite={toggleFavorite} onOpen={openDetail} />
+                              onToggleFavorite={toggleFavorite} onOpen={openDetail} onHover={setHoveredId} />
                           </Fragment>
                         )
                       })}
@@ -1747,7 +1749,7 @@ export default function AlquileresPage({
                           <div className="ad-map">
                             <MapMultiComponent properties={mapProperties}
                               onSelectProperty={onPanelMapSelect}
-                              selectedId={null} />
+                              selectedId={hoveredId} />
                             <button className="ad-map-full" onClick={() => { setViewMode('map'); trackEvent('switch_view', { view_mode: 'map', source: 'panel' }) }}>
                               Ver mapa completo
                               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -3652,11 +3654,13 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { 
 // ===== Desktop lista densa: AlquilerListCard =====
 // Card horizontal compacta para el layout desktop split (lista | mapa/side sheet).
 // Tap abre el side sheet; lo transaccional vive en el sheet — acá solo corazón.
-const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorite, isActive, onToggleFavorite, onOpen, marketChip = null }: {
+const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorite, isActive, onToggleFavorite, onOpen, marketChip = null, onHover }: {
   property: UnidadAlquiler; isFavorite: boolean; isActive: boolean
   onToggleFavorite: (id: number) => void; onOpen: (p: UnidadAlquiler) => void
   // Posición fiduciaria vs rango típico de su tipología (null = sin base suficiente)
   marketChip?: { pos: 'bajo' | 'dentro' | 'sobre'; count: number } | null
+  // Hover → ubica el pin en el mapa del panel (split desktop)
+  onHover?: (id: number | null) => void
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
@@ -3685,7 +3689,8 @@ const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorit
 
   return (
     <div className={`alc ${isActive ? 'alc-active' : ''}`} ref={cardRef} onClick={() => onOpen(p)} role="button" tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter') onOpen(p) }}>
+      onKeyDown={(e) => { if (e.key === 'Enter') onOpen(p) }}
+      onMouseEnter={() => onHover?.(p.id)} onMouseLeave={() => onHover?.(null)}>
       <div className="alc-photo" style={hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
         {esNueva && <span className="alc-nueva">Nuevo</span>}
         {!hasPhotos && <div className="alc-nofoto">Sin fotos</div>}
