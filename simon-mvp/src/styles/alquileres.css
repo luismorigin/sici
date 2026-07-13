@@ -1067,11 +1067,12 @@
 /* Botón de retorno del mapa completo (en split no existe el toggle clásico) */
 .ad-back-to-grid { position: absolute; top: 14px; left: 14px; z-index: 1100; display: inline-flex; align-items: center; gap: 6px; background: #141414; color: #EDE8DC; border: none; padding: 10px 16px; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.3px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
 .ad-back-to-grid:active { transform: scale(0.97); }
-/* Chip fiduciario en card */
-.alc-mkt { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; font-size: 12px; color: #7A7060; }
-.alc-mkt::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #B8AD9E; flex-shrink: 0; }
-.alc-mkt-bajo { color: #3A6A48; }
-.alc-mkt-bajo::before { background: #3A6A48; }
+/* Chip fiduciario en card (rediseño): "vs. similares", un color = un significado.
+   bajo/en línea = salvia; más caro = neutro (no penaliza visualmente). */
+.alc-signals { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: auto; padding-top: 10px; }
+.alc-mkt2 { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: #3A6A48; background: rgba(58,106,72,0.1); padding: 4px 11px; border-radius: 100px; }
+.alc-mkt2 svg { width: 14px; height: 14px; flex-shrink: 0; }
+.alc-mkt2-sobre { color: #7A7060; background: rgba(20,20,20,0.05); }
 /* Fila de pills de filtros (tema claro) */
 .afp { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: 'DM Sans', sans-serif; }
 .afp-feed { display: inline-flex; align-items: center; gap: 6px; background: #3A6A48; color: #EDE8DC; font-size: 13px; font-weight: 600; padding: 8px 15px; border-radius: 100px; letter-spacing: 0.2px; }
@@ -1106,21 +1107,26 @@
 .alc-nav-next { right: 6px; }
 .alc-count { position: absolute; bottom: 6px; left: 6px; background: rgba(20,20,20,0.75); color: rgba(255,255,255,0.85); font-size: 10px; padding: 2px 7px; border-radius: 100px; font-family: 'DM Sans', sans-serif; }
 .alc-body { flex: 1; min-width: 0; padding: 14px 18px; display: flex; flex-direction: column; font-family: 'DM Sans', sans-serif; }
-.alc-toprow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-.alc-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
-.alc-chips em { font-style: normal; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: #3A6A48; background: rgba(58,106,72,0.1); border: 1px solid rgba(58,106,72,0.25); padding: 2px 9px; border-radius: 100px; white-space: nowrap; }
-.alc-chips .alc-chip-muted { color: #7A7060; background: rgba(20,20,20,0.04); border-color: #D8D0BC; }
+/* Precio héroe (Bs) + favorito */
+.alc-toprow { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.alc-priceblock { min-width: 0; }
+.alc-price { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 600; color: #141414; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
+.alc-mes { font-size: 12px; font-weight: 400; color: #7A7060; }
+.alc-pricesub { font-size: 12.5px; color: #7A7060; margin-top: 3px; font-variant-numeric: tabular-nums; }
 .alc-fav { width: 32px; height: 32px; min-width: 32px; border-radius: 50%; background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #9A8E7A; }
 .alc-fav:hover { color: #141414; }
-.alc-name { font-family: 'Figtree', sans-serif; font-size: 19px; font-weight: 500; color: #141414; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.alc-zona { font-size: 12.5px; color: #7A7060; letter-spacing: 0.3px; margin: 3px 0 8px; }
+/* Specs core con iconos */
+.alc-specs2 { display: flex; gap: 16px; margin-top: 12px; font-size: 13.5px; color: #3A3530; }
+.alc-spec { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+.alc-spec svg { width: 16px; height: 16px; color: #9A8E7A; flex-shrink: 0; }
+/* Inclusiones muteadas */
+.alc-incl { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 12px; color: #7A7060; }
+.alc-incl-item { display: inline-flex; align-items: center; gap: 5px; }
+.alc-incl-item svg { width: 15px; height: 15px; color: #3A6A48; flex-shrink: 0; }
+/* Nombre · zona · #id (secundario — el precio es el ancla) */
+.alc-name2 { font-family: 'Figtree', sans-serif; font-size: 15px; font-weight: 500; color: #141414; line-height: 1.3; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alc-zona2 { font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 400; color: #7A7060; }
 .alc-id { color: #B8AD9E; }
-.alc-specs { font-size: 14px; color: #3A3530; font-weight: 300; }
-/* Precio + expensas juntos a la izquierda (sin hueco central) — card compacta */
-.alc-bottomrow { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 8px; }
-.alc-exp { font-size: 12.5px; color: #7A7060; font-variant-numeric: tabular-nums; }
-.alc-price { font-size: 20px; font-weight: 600; color: #141414; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.alc-mes { font-size: 12px; font-weight: 400; color: #7A7060; }
 /* Panel derecho: sticky dentro del scroll de .desktop-main */
 .ad-panel { position: sticky; top: 0; height: calc(100vh - 56px - 64px); display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 /* El bloque mapa+resumen se OCULTA (no se desmonta) cuando el side sheet está

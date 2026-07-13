@@ -3617,16 +3617,20 @@ const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorit
     return () => obs.disconnect()
   }, [])
 
-  const chips: string[] = []
-  if (p.amoblado === 'si') chips.push('Amoblado')
-  else if (p.amoblado === 'semi') chips.push('Semi-amoblado')
-  if (p.acepta_mascotas) chips.push('Mascotas')
-  if (p.estacionamientos && p.estacionamientos > 0) chips.push('Parqueo')
+  const esNueva = p.dias_en_mercado !== null && p.dias_en_mercado <= 60
+  // Inclusiones muteadas (icono + label, solo si están). Amoblado gana sobre Semi.
+  const amobladoFull = p.amoblado === 'si'
+  const amobladoSemi = p.amoblado === 'semi'
+  const conParqueo = p.estacionamientos != null && p.estacionamientos > 0
+  const conBaulera = p.baulera === true
+  const conMascotas = p.acepta_mascotas === true
+  const hayIncl = amobladoFull || amobladoSemi || conParqueo || conBaulera || conMascotas
 
   return (
     <div className={`alc ${isActive ? 'alc-active' : ''}`} ref={cardRef} onClick={() => onOpen(p)} role="button" tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter') onOpen(p) }}>
       <div className="alc-photo" style={hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
+        {esNueva && <span className="alc-nueva">Nuevo</span>}
         {!hasPhotos && <div className="alc-nofoto">Sin fotos</div>}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="alc-nav alc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}>
@@ -3639,31 +3643,44 @@ const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorit
         </>)}
       </div>
       <div className="alc-body">
+        {/* Precio héroe (Bs) + favorito */}
         <div className="alc-toprow">
-          <span className="alc-chips">{chips.length > 0 ? chips.map(c => <em key={c}>{c}</em>) : <em className="alc-chip-muted">{dormLabel(p.dormitorios)}</em>}</span>
+          <div className="alc-priceblock">
+            <div className="alc-price">{formatPrice(p.precio_mensual_bob)}<span className="alc-mes">/mes</span></div>
+            {p.monto_expensas_bob ? <div className="alc-pricesub">+ Bs {p.monto_expensas_bob.toLocaleString('es-BO')} expensas</div> : null}
+          </div>
           <button className={`alc-fav ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={e => { e.stopPropagation(); onToggleFavorite(p.id) }}>
             <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
         </div>
-        <div className="alc-name">{nombreAlquiler(p)}</div>
-        <div className="alc-zona">{displayZona(p.zona)} <span className="alc-id">#{p.id}</span></div>
-        <div className="alc-specs">{[
-          dormLabel(p.dormitorios),
-          p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
-          p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null,
-        ].filter(Boolean).join(' · ')}</div>
-        {/* Chip fiduciario: posición vs rango típico — sin veredicto, con base contable */}
-        {marketChip && (
-          <div className={`alc-mkt ${marketChip.pos === 'bajo' ? 'alc-mkt-bajo' : ''}`}>
-            {marketChip.pos === 'bajo' ? 'Bajo el rango típico' : marketChip.pos === 'sobre' ? 'Sobre el rango típico' : 'Dentro del rango típico'} de su tipología · {marketChip.count} comparables
+        {/* Specs core con iconos */}
+        <div className="alc-specs2">
+          <span className="alc-spec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 012 2v10"/><path d="M2 17h20"/><path d="M6 8v3"/></svg>{p.dormitorios === 0 ? 'Mono' : p.dormitorios}</span>
+          {p.area_m2 > 0 && <span className="alc-spec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg>{Math.round(p.area_m2)} m²</span>}
+          {p.banos !== null && p.banos > 0 && <span className="alc-spec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 12h16a1 1 0 011 1v3a4 4 0 01-4 4H7a4 4 0 01-4-4v-3a1 1 0 011-1z"/><path d="M6 12V5a2 2 0 012-2h3v2.25"/></svg>{p.banos}</span>}
+        </div>
+        {/* Inclusiones muteadas (solo si están) */}
+        {hayIncl && (
+          <div className="alc-incl">
+            {(amobladoFull || amobladoSemi) && <span className="alc-incl-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 11V7a2 2 0 012-2h12a2 2 0 012 2v4"/><path d="M2 13a2 2 0 012-2h16a2 2 0 012 2v4H2z"/><path d="M4 17v2M20 17v2"/></svg>{amobladoFull ? 'Amoblado' : 'Semi-amoblado'}</span>}
+            {conParqueo && <span className="alc-incl-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>Parqueo</span>}
+            {conBaulera && <span className="alc-incl-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Baulera</span>}
+            {conMascotas && <span className="alc-incl-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10c-2 0-4 2-4 4 0 2 1 3 3 3 1 0 2-1 3-1s2 1 3 1c2 0 3-1 3-3 0-2-2-4-4-4-1 0-1.5.5-2.5.5S10 10 9 10z"/></svg>Mascotas</span>}
           </div>
         )}
-        <div className="alc-bottomrow">
-          <span className="alc-price">{formatPrice(p.precio_mensual_bob)}<span className="alc-mes">/mes</span></span>
-          {p.monto_expensas_bob ? <span className="alc-exp">+ Bs {p.monto_expensas_bob.toLocaleString('es-BO')} expensas</span> : null}
-        </div>
+        {/* Nombre · zona · #id chiquito */}
+        <div className="alc-name2">{nombreAlquiler(p)} <span className="alc-zona2">· {displayZona(p.zona)} · <span className="alc-id">#{p.id}</span></span></div>
+        {/* Señal fiduciaria: posición vs. similares (sin veredicto) */}
+        {marketChip && (
+          <div className="alc-signals">
+            <span className={`alc-mkt2 ${marketChip.pos === 'sobre' ? 'alc-mkt2-sobre' : ''}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/></svg>
+              {marketChip.pos === 'bajo' ? 'Más barato que similares' : marketChip.pos === 'sobre' ? 'Más caro que similares' : 'En línea con similares'}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )
