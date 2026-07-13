@@ -40,6 +40,16 @@ con `veredicto: null`. Para re-leer ids puntuales: `--prep --ids 3521,3540,...`.
 el detalle C21 da el USD DERIVADO (bob/6.96, crudo-falso) → el crudo BOB sale de la columna de su moneda / del
 discovery (`precios.contrato`); Remax del detalle sí trae crudo. `precioCrudoAlquiler()` ya lo maneja.
 
+### 2b. Prep NUEVAS — capturar inventario que NO está en prod (read-only, gratis)
+```
+node cargar-alquiler-shadow.mjs --nuevas output/discovery-alquiler-<ts>.json 40
+```
+Fetchea el detalle (por URL, no por id) de las **NUEVAS** que el discovery vio en el portal pero no están en prod, y
+les asigna un **id reservado shadow** (rango 8M; el id real lo da prod al cutover). Van al MISMO flujo MOAT + apply
+(pasos 3-4). **Crudo de alquiler:** el discovery expone `precio_raw`+`moneda` del listado — alquiler NUNCA usa el
+`precio_usd` derivado (bob/6.96 = crudo-falso). Escribe `output/material-alq-nuevas-<ts>.json`. (Opcional si el
+discovery reportó 0 nuevas.)
+
 ### 3. MOAT — lectura por subagentes-lectores (el juez; lo hacés VOS con subagentes)
 ```
 node partir-lectura.mjs output/material-alq-<ts>.json 10     # → lectura-chunk-1..N.json (livianos)
@@ -99,9 +109,8 @@ match recuperado), y la cola de excepciones (PM_NUEVO, ambiguos, sin-match). Log
 - **Anti-bloqueo IP** (`fetcher.mjs`): cooldown 20min + circuit breaker (5 fallos) + jitter/backoff. 🛑 → esperá.
 
 ## Pendientes / incrementos futuros
-- **🔴 Empalme de NUEVAS.** Extender `cargar-alquiler-shadow.mjs` con `--nuevas <discovery-json>`: fetchea el
-  detalle de las nuevas del discovery (por URL, no por id), id reservado shadow (rango 8M). Crudo de nuevas C21 =
-  `precio_raw`+`moneda` del listado (el discovery output hoy guarda solo `precio_usd` derivado → ajustar output).
+- ✅ **Empalme de NUEVAS: HECHO** (13-jul) — paso 2b, `--nuevas` en `cargar-alquiler-shadow.mjs` (`prepNuevas`, id 8M);
+  `discovery-alquiler.mjs` expone `precio_raw`+`moneda` del listado (alquiler NUNCA usa el `precio_usd` derivado).
 - **Empaquetar el orquestador** (`cron-deptos-alquiler.mjs`) que encadene los pasos determinísticos (discovery+prep+
   verificador) en un `.mjs` — hoy este `.command.md` es el orquestador (el agente ejecuta).
 - **Bien Inmuebles** = capítulo aparte (3ª fuente; estudiar su página, sirve para venta+alquiler).
