@@ -40,10 +40,11 @@ const TS = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
 // ---- args ----
 const argv = process.argv.slice(2);
-const MODE = argv.includes('--prep') ? 'prep' : argv.includes('--apply') ? 'apply' : null;
+const MODE = argv.includes('--prep') ? 'prep' : argv.includes('--apply') ? 'apply' : argv.includes('--nuevas') ? 'nuevas' : null;
 const idsArg = (() => { const i = argv.indexOf('--ids'); return i >= 0 ? (argv[i + 1] || '').split(',').map((x) => Number(x.trim())).filter(Boolean) : null; })();
 const N = Number(argv.find((a) => /^\d+$/.test(a))) || 4;
 const applyFile = MODE === 'apply' ? argv[argv.indexOf('--apply') + 1] : null;
+const nuevasFile = MODE === 'nuevas' ? argv[argv.indexOf('--nuevas') + 1] : null;
 
 // ---- amenidades canónicas (idéntico a venta; cero drift de vocabulario) ----
 const CANON = [
@@ -176,6 +177,65 @@ async function prep() {
 }
 
 // ===========================================================================
+// FASE 1b — PREP NUEVAS: deptos del DISCOVERY que NO están en prod (id reservado shadow 8M).
+// No hay fila de prod → detalle desde la URL (no por id). Crudo de precio = del LISTADO del
+// discovery (precio_raw + moneda), NO del detalle (C21 detalle da el USD derivado = crudo-falso).
+// ===========================================================================
+async function prepNuevas(discoveryFile, n) {
+  const disc = JSON.parse(readFileSync(discoveryFile, 'utf8'));
+  const nuevas = (disc.nuevas || []).slice(0, n);
+  const { data: tcRow } = await sb.from('config_global').select('valor').eq('clave', 'tipo_cambio_paralelo').single();
+  const tasaParalelo = tcRow?.valor != null ? Number(tcRow.valor) : null;
+  console.log(`\n🌱 PREP NUEVAS ALQUILER — ${nuevas.length} deptos del discovery (no en prod). tasa_paralelo=${tasaParalelo}. NO escribe a la BD.\n`);
+  const entradas = [];
+  let i = 0;
+  for (const nv of nuevas) {
+    i++;
+    if (circuit.tripped) { console.log('🛑 circuit breaker.'); break; }
+    let h = null, err = null;
+    try { h = await fetchDetalleDepto(nv.fuente, nv.url); } catch (e) { err = String(e.message); }
+    if (!h) { console.log(`   ✗ fetch ${nv.url.slice(0, 55)}: ${err || ''}`); await pace(400); continue; }
+    const id = 8_000_000 + i;                               // id reservado shadow (TEMPORAL; al cutover lo da prod)
+    const area = h.area_const_m2 ?? h.area_texto ?? null;
+    const moneda = (nv.moneda || '').toUpperCase() || null; // crudo del LISTADO (no del detalle)
+    const crudo = num(nv.precio_raw);
+    entradas.push({
+      id, fuente: nv.fuente, zona: nv.zona || null, slug: slugDe(nv.url),
+      titulo: null, subtitulo: null, descripcion: h.descripcion || null,
+      senales: {
+        precio_mensual_crudo: crudo, moneda_original: moneda,
+        precio_contrato_discovery: crudo != null ? { precio: crudo, moneda } : null,
+        tasa_paralelo: tasaParalelo,
+        expensas: h.expensas ?? null, expensas_incluidas: h.expensas_incluidas ?? null,
+        mascotas_portal: null,
+        recamaras: h.dormitorios, banos: h.banos, piso: h.piso, estacionamientos: h.estacionamientos,
+        area, n8n: null,                                    // NUEVA: sin referencia n8n (no la trajo el pipeline viejo)
+      },
+      nombre_guess: null, match_candidatos: [],             // el lector da el nombre; el matcher lo resuelve en --apply
+      _apply: {
+        url: nv.url, tipo_propiedad_original: 'departamento',
+        latitud: nv.lat ?? null, longitud: nv.lon ?? null, microzona: null,
+        fecha_publicacion: h.fecha_publicacion ?? fechaDia(nv.fecha_alta),
+        score_calidad_dato: null,
+        es_multiproyecto: false, duplicado_de: null, baulera: null,
+        area, banos: h.banos, piso: h.piso, estacionamientos: h.estacionamientos,
+        agente: { nombre: h.agente_nombre, telefono: h.agente_telefono, oficina_nombre: h.oficina_nombre },
+        fotos_urls: h.fotos_urls || [], cantidad_fotos: h.cantidad_fotos || 0,
+        amenities: canonizar(h.amenities), parqueo_incluido: !!h.parqueo_incluido,
+        expensas: h.expensas ?? null,
+        mascotas_portal: null,
+      },
+      veredicto: null,
+    });
+    console.log(`   ${id} ${nv.fuente} nueva  crudo=${crudo} ${moneda || '?'}  slug:${(slugDe(nv.url) || '').slice(0, 44)}`);
+    await pace(500);
+  }
+  const file = join(OUT, `material-alq-nuevas-${TS}.json`);
+  writeFileSync(file, JSON.stringify({ generado: TS, spec: 'READER_SPEC_ALQUILER.md', origen: 'discovery-nuevas', total: entradas.length, entradas }, null, 2));
+  console.log(`\n💾 ${file}\n   → LÉELO y llená "veredicto" (READER_SPEC_ALQUILER.md), después: node cargar-alquiler-shadow.mjs --apply ${file}\n`);
+}
+
+// ===========================================================================
 // FASE 3 — APPLY: fila correcta + match name-first
 // ===========================================================================
 function construirFila(e, v, match) {
@@ -295,5 +355,6 @@ async function apply(file) {
 
 // ---------------------------------------------------------------------------
 if (MODE === 'prep') await prep();
+else if (MODE === 'nuevas') { if (!nuevasFile) { console.error('Falta la ruta: --nuevas <discovery-alquiler-*.json> [N]'); process.exit(1); } await prepNuevas(nuevasFile, N); }
 else if (MODE === 'apply') { if (!applyFile) { console.error('Falta la ruta: --apply <material-alq-*.json>'); process.exit(1); } await apply(applyFile); }
-else console.error('Uso: --prep [N | --ids a,b,c]   |   --apply <output/material-alq-*.json>');
+else console.error('Uso: --prep [N | --ids a,b,c]   |   --nuevas <discovery-alquiler-*.json> [N]   |   --apply <output/material-alq-*.json>');
