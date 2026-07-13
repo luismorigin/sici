@@ -67,6 +67,21 @@ const ORDEN_OPTIONS: Array<{ value: FiltrosAlquiler['orden']; label: string }> =
 
 const MAX_SLIDER_PRICE = 18000
 
+// Filtro de comodidades (client-side, fiduciario). Solo diferenciadores de
+// EDIFICIO — Amoblado/Parqueo/Mascotas ya se filtran server-side en "Más filtros".
+// No oculta a los que no la listan (la aclaración lo dice). Vocabulario = canónico
+// (config/amenidades-mercado.ts), matcheado contra amenities_lista.
+const AMEN_ALQ_DIFERENCIADORES = ['Piscina', 'Churrasquera', 'Gimnasio', 'Co-working', 'Salón de Eventos', 'Sauna/Jacuzzi']
+const _DIACR_AMEN_ALQ = new RegExp('[\\u0300-\\u036f]', 'g')
+const _normAmenAlq = (s: string) => s.toLowerCase().normalize('NFD').replace(_DIACR_AMEN_ALQ, '').trim()
+function propMatchesAmenAlq(p: UnidadAlquiler, sel: Set<string>): boolean {
+  for (const a of sel) {
+    const na = _normAmenAlq(a)
+    if (!(p.amenities_lista || []).some(x => _normAmenAlq(x) === na)) return false
+  }
+  return true
+}
+
 const MAX_FAVORITES = 3
 
 // WhatsApp de Simón (asistente). Usado en el menú hamburguesa del header mobile.
@@ -450,6 +465,9 @@ export default function AlquileresPage({
     solo_con_fotos: true,
   })
   const [isFiltered, setIsFiltered] = useState(false)
+  // Filtro de comodidades (client-side, solo diferenciadores de edificio)
+  const [amenSel, setAmenSel] = useState<Set<string>>(new Set())
+  const toggleAmen = useCallback((a: string) => setAmenSel(prev => { const n = new Set(prev); if (n.has(a)) n.delete(a); else n.add(a); return n }), [])
   // Incrementa solo cuando deep-link aplica filtros via URL, para forzar remount de DesktopFilters/FilterOverlay con sus initializers leyendo currentFilters. Interacciones manuales del user NO incrementan esto.
   const [filterComponentVersion, setFilterComponentVersion] = useState(0)
   const [totalCount, setTotalCount] = useState(seo.totalUnidades || initialProperties.length)
@@ -1216,6 +1234,16 @@ export default function AlquileresPage({
     return list
   }, [properties, spotlightProperty, spotlightId, brokerMode, fuentesPermitidas, onlySelectedFilter, favorites, areaFiltroActivo, areaMin, areaMax, precioMinFiltroActivo, precioMinAlq])
 
+  // Filtro de comodidades (client-side): parte la lista en "confirmados" (el
+  // aviso lista la amenidad). No es exclusión dura — la nota lo aclara.
+  const amenActivo = amenSel.size > 0
+  const confirmados = useMemo(() => (
+    amenActivo ? gridProperties.filter(p => propMatchesAmenAlq(p, amenSel)) : gridProperties
+  ), [gridProperties, amenSel, amenActivo])
+  const mapProperties = useMemo(() => (
+    amenActivo ? displayedProperties.filter(p => propMatchesAmenAlq(p, amenSel)) : displayedProperties
+  ), [displayedProperties, amenSel, amenActivo])
+
   // Pinned first card: first available ID wins, rest stay in natural order
   const PINNED_FIRST_IDS = [1350, 1349, 1333]
 
@@ -1647,11 +1675,12 @@ export default function AlquileresPage({
                       <div className="ad-sticky">
                       {/* Fila de pills de filtros */}
                       <FilterPillsAlquiler key={`fp-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered}
-                        onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
+                        onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
+                        amenSel={amenSel} onAmenToggle={toggleAmen} />
                       {/* Título + contador + toggle lista|mixto|mapa */}
                       <div className="ad-count-row">
                         <h1 className="ad-h1">Departamentos en alquiler en {filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(id => ZONAS_ALQUILER_UI.find(z => z.id === id)?.label || id).join(', ') : 'Equipetrol'}</h1>
-                        <span className="ad-count-num2"><b>{displayedProperties.length}</b> {isFiltered ? `de ${totalCount}` : 'activos'}</span>
+                        <span className="ad-count-num2"><b>{amenActivo ? confirmados.length : displayedProperties.length}</b> {amenActivo ? `de ${displayedProperties.length}` : isFiltered ? `de ${totalCount}` : 'activos'}</span>
                         <div className="ad-viewtoggle" role="tablist" aria-label="Modo de vista">
                           <button type="button" title="Solo lista" aria-selected={listOnly} className={`ad-vt-btn ${listOnly ? 'active' : ''}`}
                             onClick={() => { setListOnly(true); trackEvent('switch_view', { view_mode: 'lista' }) }}>
@@ -1683,8 +1712,14 @@ export default function AlquileresPage({
                             onToggleFavorite={toggleFavorite} onOpen={openDetail} />
                         </div>
                       )}
-                      {(spotlightProperty ? gridProperties.filter(p => p.id !== spotlightId) : gridProperties).map((p, idx) => {
-                        const showDivider = filters.acepta_mascotas && idx > 0 && gridProperties[idx - 1]?.acepta_mascotas === true && p.acepta_mascotas !== true
+                      {amenActivo && (
+                        <div className="ad-amen-note">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+                          <span>Mostramos los {confirmados.length} que {confirmados.length === 1 ? 'confirma' : 'confirman'} <b>{[...amenSel].join(' · ')}</b> en el aviso. Algún depto podría tenerla sin listarla.</span>
+                        </div>
+                      )}
+                      {confirmados.map((p, idx) => {
+                        const showDivider = filters.acepta_mascotas && idx > 0 && confirmados[idx - 1]?.acepta_mascotas === true && p.acepta_mascotas !== true
                         return (
                           <Fragment key={p.id}>
                             {showDivider && <div className="alq-pet-divider">🐾 También podrían aceptar mascotas · consultar con el anunciante</div>}
@@ -1706,7 +1741,7 @@ export default function AlquileresPage({
                           CSS): desmontar Leaflet en plena animación de zoom crashea. */}
                       <div className={`ad-panel-home ${sheetOpen && sheetProperty ? 'ad-panel-hidden' : ''}`}>
                           <div className="ad-map">
-                            <MapMultiComponent properties={displayedProperties}
+                            <MapMultiComponent properties={mapProperties}
                               onSelectProperty={onPanelMapSelect}
                               selectedId={null} />
                             <button className="ad-map-full" onClick={() => { setViewMode('map'); trackEvent('switch_view', { view_mode: 'map', source: 'panel' }) }}>
@@ -1803,7 +1838,7 @@ export default function AlquileresPage({
                 )}
                 <div style={{ position: 'absolute', inset: 0, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', zIndex: 0 }}>
                   <MapMultiComponent
-                    properties={displayedProperties}
+                    properties={mapProperties}
                     onSelectProperty={handleMapSelect}
                     selectedId={mapSelectedId}
                   />
@@ -2534,9 +2569,10 @@ function AreaInputsAlq({ areaMin, areaMax, onAreaMin, onAreaMax }: {
 // [Más filtros ▾] ... [Ordenar ▾]. MISMO motor que DesktopFilters (estado local
 // inicializado de currentFilters al montar + autoApply con debounce + remount
 // vía key={filterComponentVersion} cuando el filtro cambia desde afuera).
-function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, proyectoNames }: {
+function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, proyectoNames, amenSel, onAmenToggle }: {
   currentFilters: FiltrosAlquiler; isFiltered: boolean
   onApply: (f: FiltrosAlquiler) => void; onReset: () => void; proyectoNames?: string[]
+  amenSel: Set<string>; onAmenToggle: (a: string) => void
 }) {
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set(currentFilters.dormitorios_lista || []))
@@ -2546,7 +2582,7 @@ function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, pro
   const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
   const [orden, setOrden] = useState<FiltrosAlquiler['orden']>(currentFilters.orden || 'recientes')
   const [proyecto, setProyecto] = useState(currentFilters.proyecto || '')
-  const [openPill, setOpenPill] = useState<null | 'zonas' | 'precio' | 'dorms' | 'mas' | 'orden'>(null)
+  const [openPill, setOpenPill] = useState<null | 'zonas' | 'precio' | 'dorms' | 'amen' | 'mas' | 'orden'>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -2640,6 +2676,23 @@ function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, pro
                 <button key={d} className={`df-dorm-btn ${selectedDorms.has(d) ? 'active' : ''}`}
                   onClick={() => toggleDorm(d)}>{d === 0 ? 'Mono' : d === 3 ? '3+' : d}</button>
               ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="afp-item">
+        <button type="button" className={`afp-pill ${amenSel.size > 0 ? 'afp-on' : ''} ${openPill === 'amen' ? 'open' : ''}`} onClick={() => toggle('amen')} aria-expanded={openPill === 'amen'}>{amenSel.size > 0 ? `Comodidades · ${amenSel.size}` : 'Comodidades'} {caret}</button>
+        {openPill === 'amen' && (
+          <div className="afp-pop afp-pop-amen">
+            <div className="df-label"><span className="df-dot" />DEL EDIFICIO</div>
+            <div className="afp-amen-wrap">
+              {AMEN_ALQ_DIFERENCIADORES.map(a => (
+                <button key={a} type="button" className={`afp-amen-chip ${amenSel.has(a) ? 'active' : ''}`} onClick={() => onAmenToggle(a)}>{a}</button>
+              ))}
+            </div>
+            <div className="afp-amen-note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+              <span>Filtramos por lo que el anuncio <b>confirma</b>. Algún depto podría tenerla sin haberla listado.</span>
             </div>
           </div>
         )}

@@ -1084,8 +1084,23 @@
 .afp-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 80; min-width: 250px; background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; padding: 14px; box-shadow: 0 12px 34px rgba(58,53,48,0.18); }
 .afp-pop-precio { min-width: 300px; }
 .afp-pop-mas { min-width: 300px; }
+.afp-pop-amen { min-width: 320px; max-width: 360px; }
 .afp-pop-right { left: auto; right: 0; }
 .afp-pop .df-label { margin-bottom: 8px; }
+/* Filtro de comodidades (tema claro, chips como df-zona-btn) */
+.afp-amen-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+.afp-amen-chip { padding: 7px 13px; border-radius: 100px; border: 1px solid #D8D0BC; background: #FAFAF8; color: #3A3530; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+.afp-amen-chip:hover { border-color: #9A8E7A; color: #141414; }
+.afp-amen-chip.active { background: #3A6A48; border-color: #3A6A48; color: #EDE8DC; font-weight: 600; }
+.afp-amen-note { display: flex; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #E4DDCB; color: #7A7060; }
+.afp-amen-note svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; }
+.afp-amen-note span { font-size: 11.5px; line-height: 1.5; }
+.afp-amen-note b { font-weight: 600; color: #3A3530; }
+/* Nota fiduciaria sobre la lista cuando el filtro de comodidades está activo */
+.ad-amen-note { display: flex; align-items: flex-start; gap: 8px; padding: 11px 14px; background: rgba(58,106,72,0.06); border: 1px solid rgba(58,106,72,0.18); border-radius: 12px; color: #4A5F50; font-family: 'DM Sans', sans-serif; margin-bottom: 4px; }
+.ad-amen-note svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; }
+.ad-amen-note span { font-size: 12.5px; line-height: 1.5; }
+.ad-amen-note b { font-weight: 600; color: #3A6A48; }
 .afp-reset { background: none; border: none; color: #7A7060; font-family: 'DM Sans', sans-serif; font-size: 12.5px; text-decoration: underline; cursor: pointer; padding: 8px 6px; white-space: nowrap; }
 .afp-reset:hover { color: #141414; }
 .afp-orden { margin-left: auto; }
