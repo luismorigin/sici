@@ -8,6 +8,12 @@
 > **v4 (10-jul-2026)** — cerró 4 zonas grises que destapó la validación ciega de 100 (spec v3 congelado):
 > ② `equipado` solo con la PALABRA · ④ TC "oficial/paralelo" sin número = directo · ⑤ dos precios = el bajo ·
 > 🚨 gate-renta distingue OFERTA de PITCH. El reader lee bien; estos son cortes de ambigüedad del TEXTO, no fixes.
+>
+> **v4.1 (13-jul-2026)** — 2 refuerzos al Discriminador UNIDAD vs MULTIPROYECTO (Nivel 3), validados 19/19 en
+> test ciego tras la divergencia Speranto/Grigia: **A)** el área de unidad puede venir del TEXTO (`conts`), no solo
+> del estructurado — pero SOLO la específica de la unidad (no "desde"/rango/terraza/total); sin área específica en
+> ninguna fuente = multiproyecto. **B)** precio REDONDO = real (unidad) vs decimal crudo `.5` = `$/m²×área` fabricado
+> (multiproyecto); el "$/m² uniforme" a secas NO prueba fabricación. Ver detalle en Nivel 3.
 
 ## Entrada (lo que el lector LEE)
 Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente, sin regex):
@@ -297,6 +303,24 @@ intenta predecir todo. Se separa en:
      (ej `14431`) o `precio = $/m² × área` (mismo $/m² en todas las tipologías) → **multiproyecto** (el estructurado
      fabricó el precio). Ej: Condado VI 2731 (área "14431", precio 238.111 = 1650 × 144,31); Sky Level (bob/6.96 da
      ~$2.055/m² uniforme en las 4 = fabricado).
+  - **v4.1 (13-jul) — de qué fuente y CUÁL área (validado 19/19 en test ciego, falla Speranto/Grigia):** el área del
+    Nivel 3 viene del ESTRUCTURADO (`senales.area`) **O del TEXTO** — el texto pisa (como todo en el spec). PERO solo
+    cuenta el área **ESPECÍFICA DE LA UNIDAD** (misma desambiguación que el PISO):
+    · ✅ **TOMAR** — construida atada a UNA tipología: *"Departamento de 1 dormitorio mt2. conts: 39,44"*, *"Monoambiente
+      31,83 m²"*, *"superficie del depto 63 m²"*. Es EL m² de ESE depto (aunque `senales.area` venga null).
+    · ❌ **NO como área de unidad** — *"DESDE X m²"* / **rango** (*"de 39 a 120 m²"*): piso de rango de proyecto (Nivel 2)
+      → área indeterminable → **multiproyecto**.
+    · ❌ **IGNORAR** — amenidad (*"piscina 200 m²"*), **total** del edificio/terreno, y **terraza/balcón** (adicional →
+      usar la construida `conts`, no la terraza; trampa real: Speranto 8000012 terraza 40,19 ≈ conts 41,09).
+    · ❌ **Aviso que LISTA múltiples tipologías** (*"Tipologías: monoambientes, 1, 2 y 3 dorms"*) SIN un `conts` de una
+      unidad → brochure de proyecto → **multiproyecto** (así se separa Domus Onix, que enumera todas + precio `.5`, de
+      Speranto/Grigia, que dan `conts` por listing + precio redondo).
+    · Sin área específica de unidad en NINGUNA fuente **y** sin precio exacto en el texto → indeterminable → multiproyecto.
+  - **v4.1 — REDONDO vs FABRICADO (el tell, NO el "$/m² uniforme" a secas):** el $/m² parecido entre listings de un
+    mismo edificio es NORMAL (misma lista de precios del desarrollador) y NO prueba fabricación. La fabricación se delata
+    por el PRECIO: **redondo** (52.500, 57.000, 72.500 — múltiplos de 500/1.000) = lo fijó una persona → precio REAL de
+    tipología → con área = **UNIDAD**; **decimal crudo** (`.5`/`.25` — 67.787,5 / 46.327,5) = es el producto `$/m² × área`
+    que calculó el sistema → **FABRICADO** → multiproyecto. El corte de fabricación es **decimal crudo o área absurda**.
 - **`tipologias` (dorms/area/precio desde-hasta) NO se captura ahora** — se extrae en una SEGUNDA PASADA sobre la
   cruda guardada (decisión founder 10-jul). Nada se pierde: la cruda está en `proyectos_detectados`.
 - El feed ya filtra área<20 / duplicados / es_multiproyecto — el gate cubre lo que la metadata no ve pero el texto delata.
