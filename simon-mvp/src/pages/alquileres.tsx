@@ -1352,6 +1352,26 @@ export default function AlquileresPage({
         brokerComment={sheetProperty && itemCommentsMap ? itemCommentsMap[sheetProperty.id] || null : null}
       />}
 
+      {/* Side sheet del feed público desktop. Fuera del gate de viewMode: se abre
+          igual desde la lista, el mixto o el mapa completo ("Ver detalles" de la
+          mini-card del mapa). Es position:fixed (bs-side-alq), su lugar en el DOM
+          no afecta el layout. */}
+      {splitDesktop && sheetOpen && sheetProperty && (
+        <BottomSheet
+          open sideMode
+          property={sheetProperty}
+          onClose={() => setSheetOpen(false)}
+          isDesktop
+          gateCompleted={gateCompleted}
+          onGate={handleGate}
+          petFilterActive={filters.acepta_mascotas}
+          isFavorite={favorites.has(sheetProperty.id)}
+          onToggleFavorite={() => toggleFavorite(sheetProperty.id)}
+          onShare={() => { trackShareClick(sheetProperty); window.open(buildShareWhatsAppUrl(sheetProperty), '_blank') }}
+          properties={properties}
+          onSwapProperty={(sp) => setSheetProperty(sp)} />
+      )}
+
       {/* Banner inferior flotante brokerMode — visible en mobile Y desktop,
           el broker siempre tiene CTA "Enviar shortlist" + × para limpiar
           la selección sin depender del sidebar. */}
@@ -1676,27 +1696,13 @@ export default function AlquileresPage({
                       })}
                     </div>
                     </div>
-                    {(!listOnly || (sheetOpen && sheetProperty)) && (
+                    {!listOnly && (
                     <div className="ad-panel">
-                      {/* Estado con propiedad seleccionada: side sheet scrolleable.
-                          El bloque mapa+resumen NO se desmonta (se oculta con CSS):
-                          desmontar Leaflet en plena animación de zoom crashea. */}
-                      {sheetOpen && sheetProperty && (
-                        <BottomSheet
-                          open sideMode
-                          property={sheetProperty}
-                          onClose={() => setSheetOpen(false)}
-                          isDesktop
-                          gateCompleted={gateCompleted}
-                          onGate={handleGate}
-                          petFilterActive={filters.acepta_mascotas}
-                          isFavorite={favorites.has(sheetProperty.id)}
-                          onToggleFavorite={() => toggleFavorite(sheetProperty.id)}
-                          onShare={() => { trackShareClick(sheetProperty); window.open(buildShareWhatsAppUrl(sheetProperty), '_blank') }}
-                          properties={properties}
-                          onSwapProperty={(sp) => setSheetProperty(sp)} />
-                      )}
-                      {/* Estado sin selección: mapa + resumen de mercado del filtro actual */}
+                      {/* Mapa + resumen de mercado del filtro actual. El detalle de
+                          propiedad ya NO vive en esta columna: es el side sheet
+                          (bs-side-alq) position:fixed renderizado aparte, fuera del
+                          gate de viewMode. El mapa NO se desmonta (se oculta con
+                          CSS): desmontar Leaflet en plena animación de zoom crashea. */}
                       <div className={`ad-panel-home ${sheetOpen && sheetProperty ? 'ad-panel-hidden' : ''}`}>
                           <div className="ad-map">
                             <MapMultiComponent properties={displayedProperties}
