@@ -92,29 +92,41 @@ const zonaDe = await clasificarZonas(portalBbox);
 const portal = portalBbox.filter((p) => ZONAS_EQ.has(zonaDe.get(p.url)));
 log(`   → ${portal.length} deptos en las 6 microzonas (${portalBbox.length - portal.length} descartados)\n`);
 
-// ---------- 3. DIFF vs propiedades_v2 (SELECT-only, SOLO alquiler) ----------
-log('3) Diff vs propiedades_v2 (deptos ALQUILER Equipetrol)…');
+// ---------- 3. DIFF (SELECT-only, SOLO alquiler) — SHADOW-AWARE ----------
+// El híbrido vive en SHADOW: NUEVAS excluyen lo ya cargado en shadow (sin esto se reprocesan cada
+// corrida); DESAPARECIDAS se miden contra SHADOW, no contra prod (prod acumula stale → ruido).
+log('3) Diff SHADOW-AWARE alquiler (prod clasifica nuevas/existentes; shadow filtra ya-cargadas + mide desaparecidas)…');
 const dbRows = [];
 for (let from = 0; ; from += 1000) {
   const { data, error } = await sb.from('propiedades_v2')
-    .select('id, url, status, es_activa, latitud, longitud, zona')
-    .eq('tipo_operacion', 'alquiler')                       // ← clave: solo alquiler (venta tiene otras URLs)
+    .select('url, es_activa').eq('tipo_operacion', 'alquiler')
     .ilike('tipo_propiedad_original', 'departamento')
-    .in('zona', [...ZONAS_EQ])
-    .range(from, from + 999);
-  if (error) { console.error('   ERROR leyendo BD:', error.message); process.exit(1); }
+    .in('zona', [...ZONAS_EQ]).range(from, from + 999);
+  if (error) { console.error('   ERROR leyendo prod:', error.message); process.exit(1); }
   dbRows.push(...data);
   if (data.length < 1000) break;
 }
-const dbByUrl = new Map(dbRows.map((r) => [r.url, r]));
+// SHADOW (alquiler): lo que el híbrido YA cargó (existentes migradas + nuevas con id 8M)
+const shadowRows = [];
+for (let from = 0; ; from += 1000) {
+  const { data, error } = await sb.from('propiedades_v2_shadow')
+    .select('id, url, es_activa, zona').eq('tipo_operacion', 'alquiler').range(from, from + 999);
+  if (error) { console.error('   ERROR leyendo shadow:', error.message); process.exit(1); }
+  shadowRows.push(...data);
+  if (data.length < 1000) break;
+}
+const dbUrls = new Set(dbRows.map((r) => r.url));
+const shadowUrls = new Set(shadowRows.map((r) => r.url));
 const portalUrls = new Set(portal.map((p) => p.url));
-const nuevas = portal.filter((p) => !dbByUrl.has(p.url));
-const existentes = portal.filter((p) => dbByUrl.has(p.url));
-const desaparecidas = dbRows.filter((r) => r.es_activa && !portalUrls.has(r.url));
-log(`   → en BD (alquiler Eq): ${dbRows.length} (${dbRows.filter((r) => r.es_activa).length} activas)`);
-log(`   → NUEVAS (portal, no en BD): ${nuevas.length}`);
-log(`   → existentes (en ambas): ${existentes.length}`);
-log(`   → desaparecidas (activas en BD, no vistas → verificar): ${desaparecidas.length}\n`);
+const nuevas = portal.filter((p) => !dbUrls.has(p.url) && !shadowUrls.has(p.url));   // ni prod ni shadow
+const existentes = portal.filter((p) => dbUrls.has(p.url));
+const desaparecidas = shadowRows.filter((r) => r.es_activa && !portalUrls.has(r.url)); // activas en SHADOW
+const dbActivas = dbRows.filter((r) => r.es_activa).length;
+const shadowActivas = shadowRows.filter((r) => r.es_activa).length;
+log(`   → prod (alquiler Eq): ${dbRows.length} (${dbActivas} activas) · shadow alquiler: ${shadowRows.length} (${shadowActivas} activas)`);
+log(`   → NUEVAS (portal, ni prod ni shadow): ${nuevas.length}`);
+log(`   → existentes (en prod): ${existentes.length}`);
+log(`   → desaparecidas (activas en SHADOW, no vistas → verificar): ${desaparecidas.length}\n`);
 
 // ---------- 4. SALIDA ----------
 const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -123,7 +135,7 @@ writeFileSync(outPath, JSON.stringify({
   generado: new Date().toISOString(), modo: 'DRY-RUN', tipo: TIPO, operacion: 'alquiler',
   resumen: {
     portal_bbox: portalBbox.length, portal_zona: portal.length,
-    bd: dbRows.length, bd_activas: dbRows.filter((r) => r.es_activa).length,
+    prod: dbRows.length, prod_activas: dbActivas, shadow: shadowRows.length, shadow_activas: shadowActivas,
     nuevas: nuevas.length, existentes: existentes.length, desaparecidas: desaparecidas.length,
     por_fuente: {
       c21: portal.filter((p) => p.fuente === 'century21').length,
@@ -133,11 +145,11 @@ writeFileSync(outPath, JSON.stringify({
   // precio_raw + moneda = el CRUDO del listado (para el cargador --nuevas: alquiler NUNCA usa el precio_usd derivado)
   nuevas: nuevas.map((p) => ({ url: p.url, fuente: p.fuente, lat: p.lat, lon: p.lon, zona: zonaDe.get(p.url), precio_raw: p.precio_raw, moneda: p.moneda, precio_usd: p.precio_usd, dorms: p.dorms, fecha_alta: p.fecha_alta ?? null })),
   existentes_urls: existentes.map((p) => p.url),
-  desaparecidas: desaparecidas.map((r) => ({ id: r.id, url: r.url, status: r.status, zona: r.zona })),
+  desaparecidas: desaparecidas.map((r) => ({ id: r.id, url: r.url, zona: r.zona })),
 }, null, 2), 'utf8');
 
 log('='.repeat(64));
 log(`  DRY-RUN listo. NO se escribió nada a la BD.`);
-log(`  Portal: ${portal.length} (6 microzonas) · BD alquiler activas: ${dbRows.filter((r) => r.es_activa).length}`);
-log(`  Nuevas: ${nuevas.length} · Desaparecidas a verificar: ${desaparecidas.length}`);
+log(`  Portal: ${portal.length} (6 microzonas) · shadow alquiler activas: ${shadowActivas}`);
+log(`  Nuevas (ni prod ni shadow): ${nuevas.length} · Desaparecidas del híbrido a verificar: ${desaparecidas.length}`);
 log(`  💾 ${outPath}\n`);
