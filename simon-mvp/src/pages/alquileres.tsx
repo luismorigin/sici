@@ -1403,6 +1403,7 @@ export default function AlquileresPage({
           isFavorite={favorites.has(sheetProperty.id)}
           onToggleFavorite={() => toggleFavorite(sheetProperty.id)}
           onShare={() => { trackShareClick(sheetProperty); window.open(buildShareWhatsAppUrl(sheetProperty), '_blank') }}
+          onCompare={() => { setFavorites(prev => { const n = new Set(prev); n.add(sheetProperty.id); return n }); openCompare() }}
           properties={properties}
           onSwapProperty={(sp) => setSheetProperty(sp)} />
       )}
@@ -3812,12 +3813,14 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 // split) — sin overlay, sin position:fixed, sin swipe-to-dismiss, scroll
 // interno y tabs Resumen | Mercado | Costos | Similares. Mobile intacto.
 function BottomSheet({
-  open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite, onShare, properties, onSwapProperty,
+  open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite, onShare, onCompare, properties, onSwapProperty,
   brokerMode = false, publicShareBroker = null, contactoDirecto = false, priceSnapshot = null, brokerComment = null, sideMode = false,
 }: {
   open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; petFilterActive?: boolean
   isFavorite?: boolean; onToggleFavorite?: () => void; onShare?: () => void
+  // onCompare: agrega esta propiedad a favoritos y abre el comparador (modal desktop)
+  onCompare?: () => void
   properties?: UnidadAlquiler[]; onSwapProperty?: (p: UnidadAlquiler) => void
   brokerMode?: boolean
   publicShareBroker?: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null
@@ -4501,6 +4504,15 @@ function BottomSheet({
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
             </svg>
             Compartir
+          </button>
+        )}
+        {/* Comparar — solo modal desktop: agrega a favoritos y abre el comparador */}
+        {sideMode && onCompare && !brokerMode && (
+          <button className="bs-footer-compare" onClick={onCompare}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" style={{ width: 16, height: 16 }}>
+              <rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/>
+            </svg>
+            Comparar
           </button>
         )}
       </div>

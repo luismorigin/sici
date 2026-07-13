@@ -717,6 +717,9 @@
 .bs-footer-wsp:active{opacity:0.85;}
 .bs-footer-share{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;background:transparent;border:1px solid #D8D0BC;border-radius:10px;color:#7A7060;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity 0.2s;}
 .bs-footer-share:active{opacity:0.7;}
+/* Comparar — mismo estilo secundario que Compartir (solo tarjeta del modal) */
+.bs-footer-compare{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;background:transparent;border:1px solid #D8D0BC;border-radius:10px;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background 0.2s;}
+.bs-footer-compare:hover{background:rgba(58,106,72,0.08);}
 .bs-section{padding:18px 24px;border-bottom:1px solid rgba(216,208,188,0.5);background:#EDE8DC;}
 .bs-section:last-child{border-bottom:none;}
 .bs-sl{font-size:12px;font-weight:600;color:#7A7060;letter-spacing:0.5px;margin-bottom:12px;font-family:'DM Sans',sans-serif;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
