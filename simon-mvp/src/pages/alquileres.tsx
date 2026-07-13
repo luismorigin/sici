@@ -4214,8 +4214,60 @@ function BottomSheet({
       )}
       {/* --- Mini Market Study — formato barra sin veredicto (unificado con
           ventas). Oculto en publicShare: `properties` ahí es la shortlist. --- */}
-      {showTab('mercado') && !publicShareBroker && marketData && (
-        <div className="bs-section" id="bsa-mercado">
+      {/* Mercado v2 — modal desktop: lenguaje llano + medidor accesible→premium.
+          Mobile conserva el formato barra (bs-mkta). */}
+      {showTab('mercado') && !publicShareBroker && marketData && sideMode && (() => {
+        const precio = p.precio_mensual_bob
+        const pos3 = precio < marketData.rangoLow ? 'bajo' : precio > marketData.rangoHigh ? 'sobre' : 'dentro'
+        const vtxt = pos3 === 'bajo' ? 'Más barato que similares' : pos3 === 'sobre' ? 'Más caro que similares' : 'En línea con similares'
+        const dormTxt = p.dormitorios === 0 ? 'monoambientes' : `${p.dormitorios} dorm`
+        const lo = Math.min(marketData.rangoLow, precio) * 0.94
+        const hi = Math.max(marketData.rangoHigh, precio) * 1.06
+        const pos = (v: number) => Math.min(97, Math.max(3, ((v - lo) / (hi - lo)) * 100))
+        const bl = pos(marketData.rangoLow), bh = pos(marketData.rangoHigh), me = pos(precio)
+        return (
+          <div className="bs-section" id="bsa-mercado">
+            <div className="bs-sl"><span className="bs-sl-dot" />Cómo está el precio · {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
+            <div className="bs-mkt2">
+              <div className="bs-mkt2-verdict">
+                <span className="bs-mkt2-vico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/></svg></span>
+                <div>
+                  <div className="bs-mkt2-vtitle">{vtxt}</div>
+                  <div className="bs-mkt2-vsub">para {dormTxt}{marketData.segmento ? ` · ${marketData.segmento}` : ''} en la zona</div>
+                </div>
+              </div>
+              <div className="bs-mkt2-gauge">
+                <div className="bs-mkt2-ends"><span>más accesible</span><span>más premium</span></div>
+                <div className="bs-mkt2-track">
+                  <div className="bs-mkt2-band" style={{ left: `${bl}%`, width: `${bh - bl}%` }} />
+                  <div className="bs-mkt2-pin" style={{ left: `${me}%` }}>
+                    <svg viewBox="0 0 32 42" width="15" height="20"><path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 26 16 26s16-15 16-26C32 7.2 24.8 0 16 0z" fill="#141414" /><circle cx="16" cy="16" r="5.5" fill="#FBFAF7" /></svg>
+                  </div>
+                  <div className="bs-mkt2-here" style={{ left: `${me}%` }}>Este depto</div>
+                  <div className="bs-mkt2-tick" style={{ left: `${bl}%` }}>{formatPrice(marketData.rangoLow)}</div>
+                  <div className="bs-mkt2-tick" style={{ left: `${bh}%` }}>{formatPrice(marketData.rangoHigh)}</div>
+                </div>
+              </div>
+              <div className="bs-mkt2-compare">
+                <div className="bs-mkt2-crow"><span>Este departamento</span><b>{formatPrice(precio)} <em>/mes</em></b></div>
+                <div className="bs-mkt2-crow"><span>Deptos similares ({dormTxt})</span><b>{formatPrice(marketData.rangoLow)} – {formatPrice(marketData.rangoHigh)} <em>/mes</em></b></div>
+              </div>
+              <div className="bs-mkt2-note">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>
+                <span>Comparamos el <b>alquiler mensual</b> de deptos de la misma tipología ({dormTxt}{marketData.segmento ? `, ${marketData.segmento}` : ''}). {marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye amoblados y sin amoblar. ' : ''}Basado en {marketData.count} deptos similares en alquiler.</span>
+              </div>
+              {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
+                <div className="bs-mktv-summary">
+                  <div className="bs-mktv-sitem"><b>{p.dias_en_mercado} día{p.dias_en_mercado !== 1 ? 's' : ''}</b><span>publicado</span></div>
+                  <div className="bs-mktv-sitem"><b>{p.amoblado === 'si' ? 'Amoblado' : p.amoblado === 'semi' ? 'Semi-amoblado' : 'Sin amoblar'}</b><span>estado</span></div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+      {showTab('mercado') && !publicShareBroker && marketData && !sideMode && (
+        <div className="bs-section">
           <div className="bs-sl"><span className="bs-sl-dot" />Mercado en {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
           <div className="bs-mkt">
             <div className="bs-mkta-this">

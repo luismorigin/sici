@@ -1225,6 +1225,35 @@
 .bs-side-alq .bsm-photos .bsg-arrow, .bs-side-alq .bsm-photos .bsg-counter, .bs-side-alq .bsm-photos .bsg-dots { display: none; }
 .bsm-verfotos { position: absolute; right: 32px; bottom: 18px; display: inline-flex; align-items: center; gap: 7px; background: #FBFAF7; color: #141414; border: 1px solid #D8D0BC; padding: 8px 14px; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(20,20,20,0.18); }
 .bsm-verfotos:hover { background: #fff; }
+/* Mercado v2 (modal): veredicto llano + medidor accesible→premium. Espejo de ventas. */
+.bs-mkt2 { font-family: 'DM Sans', sans-serif; }
+.bs-mkt2-verdict { display: flex; align-items: center; gap: 11px; margin-bottom: 4px; }
+.bs-mkt2-vico { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #EAF0EC; color: #3A6A48; flex-shrink: 0; }
+.bs-mkt2-vico svg { width: 16px; height: 16px; }
+.bs-mkt2-vtitle { font-family: 'Figtree', sans-serif; font-size: 18px; font-weight: 500; color: #141414; line-height: 1.2; }
+.bs-mkt2-vsub { font-size: 13px; color: #6B6862; margin-top: 2px; }
+.bs-mkt2-gauge { margin: 22px 0 4px; }
+.bs-mkt2-ends { display: flex; justify-content: space-between; font-size: 11px; color: #9A9384; margin-bottom: 7px; }
+.bs-mkt2-track { position: relative; height: 52px; }
+.bs-mkt2-track::before { content: ''; position: absolute; top: 20px; left: 0; right: 0; height: 8px; background: #E7E1D3; border-radius: 5px; }
+.bs-mkt2-band { position: absolute; top: 20px; height: 8px; background: #BFD3C6; border-radius: 5px; }
+.bs-mkt2-pin { position: absolute; top: 0; transform: translateX(-50%); line-height: 0; }
+.bs-mkt2-here { position: absolute; top: 22px; transform: translateX(-50%); font-size: 12px; font-weight: 500; color: #141414; white-space: nowrap; }
+.bs-mkt2-tick { position: absolute; top: 38px; transform: translateX(-50%); font-size: 11px; color: #9A9384; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bs-mkt2-compare { background: #F4F1E9; border-radius: 10px; padding: 12px 14px; margin-top: 14px; }
+.bs-mkt2-crow { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 4px 0; }
+.bs-mkt2-crow + .bs-mkt2-crow { border-top: 0.5px solid #E7E1D3; margin-top: 5px; padding-top: 9px; }
+.bs-mkt2-crow span { font-size: 13px; color: #6B6862; }
+.bs-mkt2-crow b { font-size: 15px; font-weight: 500; color: #141414; text-align: right; font-variant-numeric: tabular-nums; }
+.bs-mkt2-crow em { font-style: normal; font-size: 12px; font-weight: 400; color: #6B6862; }
+.bs-mkt2-note { display: flex; gap: 8px; margin-top: 14px; color: #9A9384; }
+.bs-mkt2-note svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; }
+.bs-mkt2-note span { font-size: 12px; line-height: 1.55; }
+.bs-mkt2-note b { font-weight: 500; color: #6B6862; }
+.bs-mkt2 .bs-mktv-summary { display: flex; gap: 26px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #E7E1D3; }
+.bs-mkt2 .bs-mktv-sitem { display: flex; flex-direction: column; gap: 2px; }
+.bs-mkt2 .bs-mktv-sitem b { font-family: 'Figtree', sans-serif; font-size: 15px; font-weight: 500; color: #141414; }
+.bs-mkt2 .bs-mktv-sitem span { font-size: 11.5px; color: #7A7060; }
 /* fav+close: fijos en la esquina del sheet (absolute sobre el sheet fixed),
    siempre visibles, sin ocupar flujo ni chocar con las tabs. */
 .bs-side-alq .bs-sticky-top { position: absolute; top: 10px; right: 12px; z-index: 50; background: transparent; padding: 0; pointer-events: none; }
