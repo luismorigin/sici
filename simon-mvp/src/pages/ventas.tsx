@@ -3241,6 +3241,21 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         brokerInfo={brokerInfoProp}
         brokerComment={sheetProperty && itemCommentsMap ? itemCommentsMap[sheetProperty.id] || null : null} />}
 
+      {/* Modal de propiedad (estilo Zillow) para el feed público desktop.
+          Fuera del gate de viewMode: se abre igual desde la lista, el mixto
+          o el mapa completo ("Ver detalles" de la mini-card del mapa). Es
+          position:fixed, así que su lugar en el DOM no importa. */}
+      {splitDesktop && sheetOpen && sheetProperty && (
+        <BottomSheet property={sheetProperty} isOpen sideMode
+          onClose={() => { setSheetOpen(false); setSheetProperty(null) }}
+          onShare={() => shareProperty(sheetProperty)}
+          onCompare={() => { setFavorites(prev => { const n = new Set(prev); n.add(sheetProperty.id); return n }); openCompare() }}
+          isFavorite={favorites.has(sheetProperty.id)}
+          onToggleFavorite={() => toggleFavorite(sheetProperty.id)}
+          gateCompleted={gateCompleted} onGate={handleGate} isDesktop
+          properties={properties} onSwapProperty={(sp) => setSheetProperty(sp)} />
+      )}
+
       {/* Banner inferior — modo broker: Enviar shortlist (1+) | público: Comparar (2+) */}
       {brokerMode && broker && favorites.size >= 1 && (
         <div className="vt-compare-banner-wrap vt-shortlist-banner-wrap">
@@ -3759,18 +3774,6 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                       )}
                   </div>
                 </div>
-                )}
-                {/* Modal de propiedad (estilo Zillow): centrado sobre el feed
-                    oscurecido, un solo scroll + tarjeta de contacto fija */}
-                {sheetOpen && sheetProperty && (
-                  <BottomSheet property={sheetProperty} isOpen sideMode
-                    onClose={() => { setSheetOpen(false); setSheetProperty(null) }}
-                    onShare={() => shareProperty(sheetProperty)}
-                    onCompare={() => { setFavorites(prev => { const n = new Set(prev); n.add(sheetProperty.id); return n }); openCompare() }}
-                    isFavorite={favorites.has(sheetProperty.id)}
-                    onToggleFavorite={() => toggleFavorite(sheetProperty.id)}
-                    gateCompleted={gateCompleted} onGate={handleGate} isDesktop
-                    properties={properties} onSwapProperty={(sp) => setSheetProperty(sp)} />
                 )}
               </div>
             )}

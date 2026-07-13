@@ -81,10 +81,16 @@
   **anillo salvia en el punto exacto** (por encima de clusters) + pan suave SOLO
   si está fuera de vista. Sin rebuild.
 - Pin clásico de gota para el mapa de 1 propiedad (modal), centrado tras `invalidateSize`.
+- **"Ver detalles" de la mini-card del mapa completo abre el mismo modal Zillow**
+  (13-jul). Antes el `BottomSheet sideMode` se renderizaba DENTRO del bloque
+  `splitDesktop && viewMode === 'grid'` → en mapa completo (`viewMode === 'map'`)
+  ese bloque se desmonta y el clic no mostraba nada. Fix: el modal se renderiza
+  fuera del gate de `viewMode` (junto al `!splitDesktop`), gateado solo por
+  `splitDesktop && sheetOpen && sheetProperty`. Es `position:fixed`, el lugar en
+  el DOM no importa. Abre igual desde lista, mixto y mapa completo. Verificado
+  con Playwright (1440, `?shadow=1`).
 
 ## Pendiente (para la próxima sesión)
-- 🔴 **Bug "mapa raro al abrir"**: no se pudo reproducir (sin errores/flash). Falta
-  que el founder describa qué hace raro exactamente.
 - 🔴 **Espejo en `/alquileres`**: replicar TODO el patrón (modal + comodidades +
   mercado v2 + card + filtros + comparativo), reusando `lib/amenity-icons.tsx`.
   Distinto: tema/tab Costos, `AlquilerMapMulti`, precios `precio_mensual_bob` (Bs).
