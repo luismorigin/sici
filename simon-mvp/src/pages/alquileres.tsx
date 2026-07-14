@@ -991,31 +991,33 @@ export default function AlquileresPage({
   const onPanelMapSelect = useCallback((id: number) => openDetailFromMapRef.current(id), [])
 
   // Resumen de mercado del filtro actual — panel derecho del layout split
-  // (estado sin propiedad seleccionada). Client-side sobre la lista visible;
-  // lenguaje fiduciario: mediana + rango observado + base declarada.
+  // (estado sin propiedad seleccionada). Client-side sobre la MISMA lista que se
+  // muestra (aplica el filtro client-side de Comodidades, igual que ventas usa
+  // `confirmados`), para que el panel no cuente más de lo que hay en la lista.
+  // Mascotas es un filtro SOFT (el RPC devuelve confirmadas + no confirmadas):
+  // `petConfirmados` = las que confirman en el aviso, para titular honesto + disclaimer.
+  const petFilterActive = filters.acepta_mascotas === true
   const panelMarketSummary = useMemo(() => {
     if (!splitDesktop) return null
-    const precios = displayedProperties.filter(q => q.precio_mensual_bob > 0).map(q => q.precio_mensual_bob).sort((a, b) => a - b)
-    if (precios.length < 5) return { count: displayedProperties.length, mediana: null, rangoLow: null, rangoHigh: null, amobladoPct: null }
+    const base = amenSel.size > 0 ? displayedProperties.filter(p => propMatchesAmenAlq(p, amenSel)) : displayedProperties
+    const petConfirmados = filters.acepta_mascotas === true ? base.filter(p => p.acepta_mascotas === true).length : 0
+    const precios = base.filter(q => q.precio_mensual_bob > 0).map(q => q.precio_mensual_bob).sort((a, b) => a - b)
+    if (precios.length < 5) return { count: base.length, petConfirmados, mediana: null, rangoLow: null, rangoHigh: null, amobladoPct: null }
     const pctl = (pct: number) => {
       const idx = (precios.length - 1) * pct
       const lo = Math.floor(idx), hi = Math.ceil(idx)
       return lo === hi ? precios[lo] : Math.round(precios[lo] * (hi - idx) + precios[hi] * (idx - lo))
     }
-    const amoblados = displayedProperties.filter(q => q.amoblado === 'si' || q.amoblado === 'semi').length
+    const amoblados = base.filter(q => q.amoblado === 'si' || q.amoblado === 'semi').length
     return {
-      count: displayedProperties.length,
+      count: base.length,
+      petConfirmados,
       mediana: pctl(0.5),
       rangoLow: pctl(0.25),
       rangoHigh: pctl(0.75),
-      amobladoPct: displayedProperties.length > 0 ? Math.round((amoblados / displayedProperties.length) * 100) : null,
+      amobladoPct: base.length > 0 ? Math.round((amoblados / base.length) * 100) : null,
     }
-  }, [splitDesktop, displayedProperties])
-  // Mascotas es un filtro SOFT: el RPC devuelve confirmadas (acepta_mascotas===true)
-  // + no confirmadas (podrían aceptar). El panel de mercado debe titular con las
-  // CONFIRMADAS y aclarar que el resto aparece sin confirmar (disclaimer).
-  const petFilterActive = filters.acepta_mascotas === true
-  const petConfirmados = petFilterActive ? displayedProperties.filter(p => p.acepta_mascotas === true).length : 0
+  }, [splitDesktop, displayedProperties, amenSel, filters.acepta_mascotas])
   function markAllVisible() {
     if (visibleNotMarked.length === 0) return
     trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug, tipo_operacion: 'alquiler' })
@@ -1790,7 +1792,7 @@ export default function AlquileresPage({
                               </div>
                               <div className="ad-mkt-stats">
                                 <div className="ad-mkt-stat">
-                                  <span className="ad-mkt-num">{petFilterActive ? petConfirmados : panelMarketSummary.count}</span>
+                                  <span className="ad-mkt-num">{petFilterActive ? panelMarketSummary.petConfirmados : panelMarketSummary.count}</span>
                                   <span className="ad-mkt-label">{petFilterActive ? 'confirman mascotas en el aviso' : 'alquileres activos con este filtro'}</span>
                                 </div>
                                 {panelMarketSummary.mediana !== null && (
@@ -1806,8 +1808,8 @@ export default function AlquileresPage({
                                   </div>
                                 )}
                               </div>
-                              {petFilterActive && panelMarketSummary.count > petConfirmados && (
-                                <div className="ad-mkt-petnote">🐾 Otras {panelMarketSummary.count - petConfirmados} publicaciones podrían aceptar mascotas aunque no lo confirmen en el aviso — aparecen abajo del separador. Consultá con el anunciante.</div>
+                              {petFilterActive && panelMarketSummary.count > panelMarketSummary.petConfirmados && (
+                                <div className="ad-mkt-petnote">🐾 Otras {panelMarketSummary.count - panelMarketSummary.petConfirmados} publicaciones podrían aceptar mascotas aunque no lo confirmen en el aviso — aparecen abajo del separador. Consultá con el anunciante.</div>
                               )}
                               <div className="ad-mkt-caveat">
                                 {panelMarketSummary.mediana === null
