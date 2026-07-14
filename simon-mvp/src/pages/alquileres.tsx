@@ -14,6 +14,7 @@ import { buildAlquilerWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefL
 import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
 import { AmenityIcon, SparkleIcon, hasCanonicalIcon } from '@/lib/amenity-icons'
+import { AMENIDADES_FILTRABLES } from '@/config/amenidades-mercado'
 import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerShortlists'
 import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
 import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
@@ -75,7 +76,8 @@ const MAX_SLIDER_PRICE = 18000
 // mascotas en acepta_mascotas, server-side; pet_friendly queda solo como chip de
 // card). No oculta a los que no la listan (la aclaración lo dice). Vocabulario =
 // canónico (config/amenidades-mercado.ts), matcheado contra amenities_lista.
-const AMEN_ALQ_DIFERENCIADORES = ['Piscina', 'Churrasquera', 'Gimnasio', 'Co-working', 'Salón de Eventos', 'Sauna/Jacuzzi']
+// Fuente de verdad única: config/amenidades-mercado.ts (flag `filtrable`). No hardcodear.
+const AMEN_ALQ_DIFERENCIADORES = AMENIDADES_FILTRABLES
 const AMEN_ALQ_ATRIBUTOS = ['Equipado', 'Baulera']
 const _DIACR_AMEN_ALQ = new RegExp('[\\u0300-\\u036f]', 'g')
 const _normAmenAlq = (s: string) => s.toLowerCase().normalize('NFD').replace(_DIACR_AMEN_ALQ, '').trim()

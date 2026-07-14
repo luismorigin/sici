@@ -21,6 +21,7 @@ import { buildAtribucionWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRe
 import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
 import { AmenityIcon, SparkleIcon, hasCanonicalIcon } from '@/lib/amenity-icons'
+import { AMENIDADES_FILTRABLES } from '@/config/amenidades-mercado'
 import FeedDesktopNav from '@/components/feed/FeedDesktopNav'
 // WhatsApp oficial de Simon (negocio) — NO el personal del fundador.
 const SIMON_WHATSAPP = '59177066308'
@@ -188,7 +189,8 @@ function buildFilters(
 // y "no listados" (podrían tenerla sin mencionarla) — ver partición en la página.
 // Solo los diferenciadores BIEN listados en la data (≥29% confirman). Descartados
 // por dato: Estac. Visitas/Parque Infantil (raros), Pet Friendly (1.6%, subreportado), Jardín (0%).
-const AMEN_DIFERENCIADORES = ['Piscina', 'Churrasquera', 'Gimnasio', 'Co-working', 'Salón de Eventos', 'Sauna/Jacuzzi']
+// Fuente de verdad única: config/amenidades-mercado.ts (flag `filtrable`). No hardcodear.
+const AMEN_DIFERENCIADORES = AMENIDADES_FILTRABLES
 const AMEN_ATRIBUTOS = ['Amoblado', 'Equipado', 'Parqueo', 'Baulera']
 const _DIACR_AMEN = new RegExp('[\\u0300-\\u036f]', 'g')
 const _normAmen = (s: string) => s.toLowerCase().normalize('NFD').replace(_DIACR_AMEN, '').trim()
