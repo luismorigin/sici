@@ -89,6 +89,17 @@ GRANTs solo `service_role`+`claude_readonly` → invisibles al Data API público
 | 278 | `proyectos_master.pet_friendly` (columna + derivación) |
 | 279/280 | las 2 RPCs exponen `pet_friendly` + sacan "Pet Friendly" de amenidades |
 
+## ⚠️ `buscar_extras_shadow` (mig 271) — REDUNDANTE, se puede dropear
+El feed shadow de venta (`ventas-shadow.ts`) llama aparte a `buscar_extras_shadow` para mergear
+`amenidades_extra, equipamiento_otros, amoblado, equipado`. **Ya NO hace falta:** las migs 277/280
+devuelven esos campos en el RPC principal. Lee la misma data canonicalizada (consistente), no toca
+`amenities_lista` (no le afecta el sacar "Pet Friendly"). → El front puede **usar una sola fuente** (el RPC
+principal) y sacar la llamada extra. No está roto, solo duplicado.
+
+## Baños — regla ≤1 dorm (venta + alquiler, alineados desde mig c78aaad)
+`banos`: **≤1 dorm (mono o 1 dorm) → 1** (definicional); **2+ dorm sin info → `null`** (no "1" — sería
+engañoso). El front puede confiar: un `null` en baños solo aparece en 2+ dorm sin dato.
+
 ## También en la base (NO expuesto por la RPC hoy — pedir si se necesita)
 - `datos_json.senales_portal` = crudo del portal (checkbox mascotas, etc.) — provenance para auditoría, no display.
 - `amoblado_confianza`, y otros flags de `datos_json` — se agregan a la RPC si el front los pide.
