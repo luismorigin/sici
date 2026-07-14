@@ -57,17 +57,25 @@ a 390px en cada pieza; `display:contents` en los wrappers).
     solo el positivo cuando `expensas_incluidas===true`; el costo mensual estimado
     NUNCA sube por suposición — solo suma expensas si el aviso confirma explícito
     que van aparte (`false`); `null`≠aparte. Ver [[project_expensas_fiduciario]].
+12. **`pet_friendly` (2fb173e) + `piso` en cards + filtro Pet Friendly** (9c4879b,
+    58c53d6): el chip de mascotas pasa de `acepta_mascotas` (unidad, inflado) a
+    **`pet_friendly`** (política del edificio, derivada en el cron); `piso` en los
+    specs de las cards de ambos feeds; filtro "Pet Friendly" en el pill Comodidades
+    (ventas+alquileres). **`pet_friendly` NO es más limpio** — hereda la inflación
+    del reader y la esparce por el OR a nivel edificio (68/161 vs 31 acepta). Se
+    auto-limpia cuando se arregle el reader + corran los crons.
 
-### Cableado del feed a la SHADOW (d8d1815) — clave
-`/alquileres?shadow=1` ahora lee el **RPC `buscar_unidades_alquiler_shadow`** (que
-Lucho amplió para exponer el split como ventas). Vía `/api/alquileres` (server,
-service_role — el flag va en el body). Columnas NUEVAS del RPC shadow:
-`amenities_extra` (cola larga / "lo que la hace especial"), `equipamiento_otros`,
-`equipado`, `uso_inmueble`, `expensas_incluidas`. El modal usa el split del
-PIPELINE (fallback client-side en prod). Mapeadas en `UnidadAlquiler` +
-`mapRawToUnidad`. **El RPC de PROD (`buscar_unidades_alquiler`) sigue con el bug
-`equipamiento_lista=null`** — solo el shadow lo trae bien (por eso "En el
-departamento" aparece con `?shadow=1`).
+### Cableado del feed a la SHADOW (d8d1815) — clave. **Contrato: `scripts/deptos-equipetrol/CONTRATO_FRONTEND_SHADOW.md`** (del worktree `hybrid-worktree-structure-3b7b53`, migs 274-280) = fuente de verdad de qué devuelve cada RPC shadow campo por campo.
+`/alquileres?shadow=1` lee el **RPC `buscar_unidades_alquiler_shadow`** vía
+`/api/alquileres` (server, service_role — el flag va en el body). `/ventas?shadow=1`
+= `buscar_unidades_simple_shadow` vía `/api/ventas` (**el fetch cliente mapea con
+`mapRow`, NO el mapper de getStaticProps** — agregar campos nuevos ahí). Columnas
+NUEVAS del RPC shadow: `amenities_extra` (cola larga / "lo que la hace especial"),
+`equipamiento_otros`, `equipado`, `uso_inmueble`, `expensas_incluidas`,
+**`pet_friendly`** (chip del edificio; "Pet Friendly" ya sale de `amenities_lista`).
+Mapeadas en `UnidadAlquiler`/`UnidadVenta`. El modal usa el split del PIPELINE
+(fallback client-side en prod). **Los RPC de PROD siguen con el bug
+`equipamiento_lista=null` / sin pet_friendly** — solo el shadow los trae bien.
 
 ## TC — MARCO NUEVO (aprendido esta sesión, CRÍTICO)
 El shadow usa un marco de TC NUEVO (`precio_normalizado_shadow_v2`):
@@ -90,12 +98,17 @@ El shadow usa un marco de TC NUEVO (`precio_normalizado_shadow_v2`):
 - 🔴 **Cutover shadow→prod** (decisión founder): hoy la data limpia solo se ve con
   `?shadow=1`. Para prod: o parchar los RPC de prod, o apuntar el front a shadow.
 - 🔴 Mascotas over-flag (prompt + spec + limpieza).
+- ❓ **Dos filtros de mascotas en alquiler**: quedó el toggle viejo "Mascotas" en
+  "Más filtros" (server, `acepta_mascotas` de la unidad) + el nuevo "Pet Friendly"
+  en Comodidades (client, `pet_friendly` del edificio). Decidir si consolidar.
+- Cablear `uso_inmueble` como filtro (no exclusión) cuando se escale a casas/mixto.
 - Pasada de contraste global al feed oscuro (fuera de la card).
-- Review del founder + commit/push.
+- Review del founder + commit/push (~31 commits locales).
 
 ## Archivos tocados (esta sesión)
 - `simon-mvp/src/pages/alquileres.tsx` (grande) · `pages/ventas.tsx` ·
-  `pages/api/alquileres.ts` · `lib/supabase.ts` · `lib/format-utils.ts` ·
-  `components/alquiler/AlquilerMapMulti.tsx` · `styles/alquileres.css`
+  `pages/api/alquileres.ts` · `pages/api/ventas.ts` · `lib/supabase.ts` ·
+  `lib/format-utils.ts` · `components/alquiler/AlquilerMapMulti.tsx` ·
+  `styles/alquileres.css`
 - Memoria: `project_frontend_desktop_feeds`, `project_tc_marco_nuevo_shadow`,
   `project_bug_acepta_mascotas_llm`, `project_expensas_fiduciario`.
