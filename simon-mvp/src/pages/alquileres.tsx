@@ -4404,17 +4404,19 @@ function BottomSheet({
         <div className="bs-section" id="bsa-costos">
           <div className="bs-sl"><span className="bs-sl-dot" />Costo real mensual</div>
           {(() => {
-            // Expensas incluidas (detectado true) → no se suman al costo. Si no
-            // se detectó (null/false), NO se afirma que no incluyan: se muestra el
-            // monto si está, o "No reporta" (honesto). Nunca "no incluye".
+            // "Incluidas" = el alquiler ya lo cubre, el costo NO sube.
+            // El costo solo sube si el aviso confirma EXPLÍCITAMENTE que van aparte
+            // (expensas_incluidas === false). null = desconocido → NO se asume aparte
+            // (no se infla el costo). Nunca se afirma "no incluye".
             const expInc = p.expensas_incluidas === true
-            const extraExp = expInc ? 0 : (p.monto_expensas_bob || 0)
+            const expAparte = p.expensas_incluidas === false
+            const extraExp = expAparte ? (p.monto_expensas_bob || 0) : 0
             const costoMensual = p.precio_mensual_bob + extraExp
             return (<>
           <div className="bs-costos-rows">
             <div className="bs-costos-row"><span>Alquiler</span><b>{formatPrice(p.precio_mensual_bob)}/mes</b></div>
-            <div className="bs-costos-row"><span>Expensas</span><b>{expInc ? 'Incluidas' : p.monto_expensas_bob ? `${formatPrice(p.monto_expensas_bob)}/mes` : 'No reporta'}</b></div>
-            <div className="bs-costos-row bs-costos-total"><span>Costo mensual estimado</span><b>{formatPrice(costoMensual)}/mes{expInc ? ' ' : ''}{expInc && <span className="bs-costos-sub">(expensas incluidas)</span>}</b></div>
+            <div className="bs-costos-row"><span>Expensas</span><b>{expInc ? 'Incluidas' : p.monto_expensas_bob ? `${formatPrice(p.monto_expensas_bob)}/mes${expAparte ? ' (aparte)' : ''}` : 'A confirmar'}</b></div>
+            <div className="bs-costos-row bs-costos-total"><span>Costo mensual estimado</span><b>{formatPrice(costoMensual)}/mes {<span className="bs-costos-sub">{expInc ? '(expensas incluidas)' : expAparte && extraExp > 0 ? '(alquiler + expensas)' : '(expensas a confirmar)'}</span>}</b></div>
             <div className="bs-costos-row"><span>Depósito de entrada</span><b>{formatPrice(p.precio_mensual_bob * (p.deposito_meses || 1))} <span className="bs-costos-sub">({p.deposito_meses || 1} mes{(p.deposito_meses || 1) > 1 ? 'es' : ''})</span></b></div>
             {p.contrato_minimo_meses ? <div className="bs-costos-row"><span>Contrato mínimo</span><b>{p.contrato_minimo_meses} meses</b></div> : null}
             {p.servicios_incluidos && p.servicios_incluidos.length > 0 && (
