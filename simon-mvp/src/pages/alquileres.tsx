@@ -4040,11 +4040,8 @@ function BottomSheet({
       </div>
       <div className="bs-hr-price-block">
         <div className="bs-hr-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
-        {sideMode && (
-          <div className="bs-hr-permetro">{[
-            p.area_m2 > 0 ? `Bs ${Math.round(p.precio_mensual_bob / p.area_m2).toLocaleString('es-BO')}/m²` : null,
-            p.amoblado === 'si' ? 'Amoblado' : p.amoblado === 'semi' ? 'Semi-amoblado' : p.amoblado === 'no' ? 'Sin amoblar' : null,
-          ].filter(Boolean).join(' · ')}</div>
+        {sideMode && p.area_m2 > 0 && (
+          <div className="bs-hr-permetro">Bs {Math.round(p.precio_mensual_bob / p.area_m2).toLocaleString('es-BO')}/m²</div>
         )}
       </div>
       <div className="bs-hr-specs">
@@ -4192,12 +4189,16 @@ function BottomSheet({
           )}
         </div>
         {(() => {
+          const amoblado = p.amoblado === 'si' ? 'Amoblado' : p.amoblado === 'semi' ? 'Semi-amoblado' : p.amoblado === 'no' ? 'Sin amoblar' : null
+          const conEquipado = (p.equipado === true || (p.equipamiento_lista != null && p.equipamiento_lista.length > 0)) && p.amoblado !== 'si' && p.amoblado !== 'semi'
           const conParqueo = p.estacionamientos != null && p.estacionamientos > 0
           const conBaulera = p.baulera === true
           const conMascotas = p.acepta_mascotas === true
-          if (!conParqueo && !conBaulera && !conMascotas) return null
+          if (!amoblado && !conEquipado && !conParqueo && !conBaulera && !conMascotas) return null
           return (
             <div className="bsm-incl-chips">
+              {amoblado && <span className={`bsm-incl-chip ${p.amoblado === 'no' ? 'bsm-incl-chip-mute' : ''}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 11V7a2 2 0 012-2h12a2 2 0 012 2v4"/><path d="M2 13a2 2 0 012-2h16a2 2 0 012 2v4H2z"/><path d="M4 17v2M20 17v2"/></svg>{amoblado}</span>}
+              {conEquipado && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M15 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7z"/><path d="M14 2v4a2 2 0 002 2h4"/></svg>Equipado</span>}
               {conParqueo && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>{p.estacionamientos! > 1 ? `${p.estacionamientos} parqueos` : 'Parqueo'}</span>}
               {conBaulera && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Baulera</span>}
               {conMascotas && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10c-2 0-4 2-4 4 0 2 1 3 3 3 1 0 2-1 3-1s2 1 3 1c2 0 3-1 3-3 0-2-2-4-4-4-1 0-1.5.5-2.5.5S10 10 9 10z"/></svg>Acepta mascotas</span>}

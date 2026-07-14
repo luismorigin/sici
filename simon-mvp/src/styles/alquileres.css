@@ -728,6 +728,9 @@
 .bsm-incl-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
 .bsm-incl-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:100px;background:rgba(58,106,72,0.08);color:#3A5F49;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;}
 .bsm-incl-chip svg{width:16px;height:16px;color:#3A6A48;flex-shrink:0;}
+/* "Sin amoblar" = chip neutro/muteado (no es un beneficio, pero es info útil) */
+.bsm-incl-chip-mute{background:rgba(20,20,20,0.05);color:#7A7060;}
+.bsm-incl-chip-mute svg{color:#9A8E7A;}
 .bs-sticky-footer{position:sticky;bottom:0;background:#EDE8DC;border-top:1px solid #D8D0BC;padding:12px 24px;padding-bottom:max(12px,calc(env(safe-area-inset-bottom) + 4px));display:flex;gap:10px;z-index:10;}
 .bs-footer-wsp{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:#1EA952;border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;text-decoration:none;min-height:44px;transition:opacity 0.2s;}
 .bs-footer-wsp:active{opacity:0.85;}
