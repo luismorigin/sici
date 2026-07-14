@@ -4194,7 +4194,8 @@ function BottomSheet({
           const conParqueo = p.estacionamientos != null && p.estacionamientos > 0
           const conBaulera = p.baulera === true
           const conMascotas = p.acepta_mascotas === true
-          if (!amoblado && !conEquipado && !conParqueo && !conBaulera && !conMascotas) return null
+          const conExpInc = p.expensas_incluidas === true
+          if (!amoblado && !conEquipado && !conParqueo && !conBaulera && !conMascotas && !conExpInc) return null
           return (
             <div className="bsm-incl-chips">
               {amoblado && <span className={`bsm-incl-chip ${p.amoblado === 'no' ? 'bsm-incl-chip-mute' : ''}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 11V7a2 2 0 012-2h12a2 2 0 012 2v4"/><path d="M2 13a2 2 0 012-2h16a2 2 0 012 2v4H2z"/><path d="M4 17v2M20 17v2"/></svg>{amoblado}</span>}
@@ -4202,6 +4203,7 @@ function BottomSheet({
               {conParqueo && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>{p.estacionamientos! > 1 ? `${p.estacionamientos} parqueos` : 'Parqueo'}</span>}
               {conBaulera && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Baulera</span>}
               {conMascotas && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10c-2 0-4 2-4 4 0 2 1 3 3 3 1 0 2-1 3-1s2 1 3 1c2 0 3-1 3-3 0-2-2-4-4-4-1 0-1.5.5-2.5.5S10 10 9 10z"/></svg>Acepta mascotas</span>}
+              {conExpInc && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>Expensas incluidas</span>}
             </div>
           )
         })()}
@@ -4401,10 +4403,18 @@ function BottomSheet({
       {sideMode && (
         <div className="bs-section" id="bsa-costos">
           <div className="bs-sl"><span className="bs-sl-dot" />Costo real mensual</div>
+          {(() => {
+            // Expensas incluidas (detectado true) → no se suman al costo. Si no
+            // se detectó (null/false), NO se afirma que no incluyan: se muestra el
+            // monto si está, o "No reporta" (honesto). Nunca "no incluye".
+            const expInc = p.expensas_incluidas === true
+            const extraExp = expInc ? 0 : (p.monto_expensas_bob || 0)
+            const costoMensual = p.precio_mensual_bob + extraExp
+            return (<>
           <div className="bs-costos-rows">
             <div className="bs-costos-row"><span>Alquiler</span><b>{formatPrice(p.precio_mensual_bob)}/mes</b></div>
-            <div className="bs-costos-row"><span>Expensas</span><b>{p.monto_expensas_bob ? `${formatPrice(p.monto_expensas_bob)}/mes` : 'No reporta'}</b></div>
-            <div className="bs-costos-row bs-costos-total"><span>Costo mensual estimado</span><b>{formatPrice(p.precio_mensual_bob + (p.monto_expensas_bob || 0))}/mes</b></div>
+            <div className="bs-costos-row"><span>Expensas</span><b>{expInc ? 'Incluidas' : p.monto_expensas_bob ? `${formatPrice(p.monto_expensas_bob)}/mes` : 'No reporta'}</b></div>
+            <div className="bs-costos-row bs-costos-total"><span>Costo mensual estimado</span><b>{formatPrice(costoMensual)}/mes{expInc ? ' ' : ''}{expInc && <span className="bs-costos-sub">(expensas incluidas)</span>}</b></div>
             <div className="bs-costos-row"><span>Depósito de entrada</span><b>{formatPrice(p.precio_mensual_bob * (p.deposito_meses || 1))} <span className="bs-costos-sub">({p.deposito_meses || 1} mes{(p.deposito_meses || 1) > 1 ? 'es' : ''})</span></b></div>
             {p.contrato_minimo_meses ? <div className="bs-costos-row"><span>Contrato mínimo</span><b>{p.contrato_minimo_meses} meses</b></div> : null}
             {p.servicios_incluidos && p.servicios_incluidos.length > 0 && (
@@ -4413,9 +4423,11 @@ function BottomSheet({
           </div>
           <div className="bs-sl" style={{ marginTop: 18 }}><span className="bs-sl-dot" />Ingreso sugerido</div>
           <div className="bs-costos-rows">
-            <div className="bs-costos-row"><span>Regla 2.5x del costo mensual</span><b>{formatPrice(Math.round((p.precio_mensual_bob + (p.monto_expensas_bob || 0)) * 2.5))}/mes</b></div>
-            <div className="bs-costos-row"><span>Regla 3x del costo mensual</span><b>{formatPrice((p.precio_mensual_bob + (p.monto_expensas_bob || 0)) * 3)}/mes</b></div>
+            <div className="bs-costos-row"><span>Regla 2.5x del costo mensual</span><b>{formatPrice(Math.round(costoMensual * 2.5))}/mes</b></div>
+            <div className="bs-costos-row"><span>Regla 3x del costo mensual</span><b>{formatPrice(costoMensual * 3)}/mes</b></div>
           </div>
+            </>)
+          })()}
           <div className="bs-costos-caveat">Referencia general del mercado de alquileres — cada propietario define sus propias condiciones. Expensas y depósito se confirman con el anunciante.</div>
         </div>
       )}
