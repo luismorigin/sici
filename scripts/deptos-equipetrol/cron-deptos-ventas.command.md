@@ -97,6 +97,15 @@ bajas SOLO con **2 señales** (ausencia del crawl + HTTP 404/redirect) sostenida
 en feed mientras corre el contador), disyuntor 40% (crawl parcial → no baja nada), status-code-only
 (inmune a placeholders/bloqueos). Escribe solo shadow, filtrado a venta. Gemelo: `verificador-alquiler.mjs`.
 
+### 5b. Refrescar `pet_friendly` del edificio (chip, mig 278)
+```
+node derivar-pet-friendly.mjs
+```
+Recalcula `proyectos_master.pet_friendly` desde las unidades shadow (venta+alquiler juntos): `true` si el edificio
+tiene alguna unidad con `acepta_mascotas=true` o amenidad "Pet Friendly" (solo señal positiva). Idempotente/
+determinístico → mantiene el chip al día cuando entran props nuevas. Escribe SOLO esa columna (prod la ignora; no es
+juicio → se automatiza). Las RPCs shadow (migs 279/280) la exponen como chip y sacan "Pet Friendly" de las amenidades.
+
 ### 6. Verificar el feed shadow (que la data rica renderice)
 Levantá el dev y mirá `localhost:3000/ventas?shadow=1` (hard-reload si ves prod por el SSG):
 ```

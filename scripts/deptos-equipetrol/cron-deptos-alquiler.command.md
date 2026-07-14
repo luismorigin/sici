@@ -87,6 +87,15 @@ Lee las `desaparecidas` del discovery (paso 1), cruza con las que están en shad
 **2 señales** (ausencia del crawl + HTTP 404/redirect) sostenidas >2d. Disyuntor 40% (crawl parcial → no baja
 nada). Status-code-only (inmune a placeholders/bloqueos). Escribe solo shadow, filtrado a alquiler.
 
+### 5b. Refrescar `pet_friendly` del edificio (chip, mig 278)
+```
+node derivar-pet-friendly.mjs
+```
+Recalcula `proyectos_master.pet_friendly` desde las unidades shadow (venta+alquiler juntos): `true` si el edificio
+tiene alguna unidad con `acepta_mascotas=true` o amenidad "Pet Friendly" (solo señal positiva). Idempotente/
+determinístico → mantiene el chip al día cuando entran props nuevas. Escribe SOLO esa columna (prod la ignora; no es
+juicio → se automatiza). Las RPCs shadow (migs 279/280) la exponen como chip y sacan "Pet Friendly" de las amenidades.
+
 ### 6. Verificar el feed shadow
 ```
 node verificar-shadow-alquiler.mjs       # gratis, sin browser: conteo + anti-doble-norm + matching + mediana + pendientes
