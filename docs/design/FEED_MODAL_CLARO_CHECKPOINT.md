@@ -121,6 +121,17 @@ El shadow usa un marco de TC NUEVO (`precio_normalizado_shadow_v2`):
     (RPC `FiltrosAlquiler`); equipado/pet_friendly son client (`amenSel`). El chip
     de display sigue usando `pet_friendly` (edificio); el FILTRO de mascotas usa
     `acepta_mascotas`.
+- 🔴 **Categorización de amenidades ESTÁNDAR (resolver que escale).** Hay 3 tiers:
+  (a) **diferenciadores** (filtrables, argumento de venta): Piscina, Gimnasio, etc.
+  (b) **estándar** (canónicas pero COMUNES): **Ascensor, Seguridad 24/7**, Área
+  Social, Terraza, Recepción — casi todos los edificios las tienen. (c) **cola
+  larga** (no canónicas): "Lo que la hace especial". Problema: las **estándar** NO
+  pueden ir a "especial" (no distinguen) NI ser filtrables (inútil filtrar por algo
+  que todos tienen) — solo deben aparecer en "En el edificio". `config/amenidades-mercado.ts`
+  YA tiene `esEstandar:true` para ellas; falta definir la FUENTE DE VERDAD única de
+  esa clasificación (config del front vs READER_SPEC del híbrido) para que el split
+  del pipeline (amenities_lista canónico vs amenities_extra cola) SIEMPRE mande las
+  estándar a canónico y nunca a la cola ni al filtro, y que escale al agregar nuevas.
 - Cablear `uso_inmueble` como filtro (no exclusión) cuando se escale a casas/mixto.
 - Pasada de contraste global al feed oscuro (fuera de la card).
 - Review del founder + commit/push (~31 commits locales).
