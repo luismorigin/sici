@@ -28,6 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { pace, circuit } from '../sonda-suelo/lib/fetcher.mjs';
 import { fetchDetalleDepto, num, numOrZero } from './lib/detalle-deptos.mjs';
 import { matchearPorNombre } from './lib/matcher.mjs';
+import { reBucket } from './lib/canonicalizar.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -242,8 +243,10 @@ function construirFila(e, v, match) {
   const a = e._apply;
   const usaLector = Array.isArray(v.amenidades) && v.amenidades.length > 0;
   const amenLista = usaLector ? v.amenidades : (a.amenities || []);
+  // canonicalizar + re-bucketear (determinístico: colapsa variantes/acentos al canónico, no depende del string del lector)
+  const nb = reBucket({ amen: amenLista, amenExtra: v.amenidades_extra || [], eq: v.equipamiento_canonico || [], eqOtros: v.equipamiento_otros || [] });
   const estado_amenities = {};
-  for (const k of amenLista) estado_amenities[k] = { valor: true, fuente: usaLector ? 'lector' : 'structured', confianza: 'alta' };
+  for (const k of nb.amen) estado_amenities[k] = { valor: true, fuente: usaLector ? 'lector' : 'structured', confianza: 'alta' };
   const estac = v.estacionamientos_incluidos ?? a.estacionamientos ?? null;
   const parqueoIncl = v.parqueo_precio_adicional_bob != null ? false : estac == null ? null : estac > 0;
   const bauleraIncl = v.baulera_precio_adicional_bob != null ? false : (v.baulera_incluida ?? a.baulera ?? null);
@@ -285,8 +288,8 @@ function construirFila(e, v, match) {
       agente: a.agente,
       contenido: { fotos_urls: a.fotos_urls, descripcion: e.descripcion || '', cantidad_fotos: a.cantidad_fotos },
       amenities: {
-        lista: amenLista, estado_amenities, extra: v.amenidades_extra || [],
-        equipamiento: v.equipamiento_canonico || [], equipamiento_otros: v.equipamiento_otros || [],
+        lista: nb.amen, estado_amenities, extra: nb.amenExtra,
+        equipamiento: nb.eq, equipamiento_otros: nb.eqOtros,
       },
       parqueo_incluido: parqueoIncl, parqueo_precio_adicional: v.parqueo_precio_adicional_bob ?? null,
       baulera_incluido: bauleraIncl, baulera_precio_adicional: v.baulera_precio_adicional_bob ?? null,

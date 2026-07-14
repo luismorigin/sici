@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { pace, circuit } from '../sonda-suelo/lib/fetcher.mjs';
 import { fetchDetalleDepto } from './lib/detalle-deptos.mjs';
 import { matchearPorNombre } from './lib/matcher.mjs';
+import { reBucket } from './lib/canonicalizar.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -223,8 +224,10 @@ function construirFila(e, v, match) {
   // estructurado (canonizar) SOLO si el lector no trajo lista.
   const usaLector = Array.isArray(v.amenidades) && v.amenidades.length > 0;
   const amenLista = usaLector ? v.amenidades : (a.amenities || []);
+  // canonicalizar + re-bucketear (determinístico: colapsa variantes/acentos al canónico, no depende del string del lector)
+  const nb = reBucket({ amen: amenLista, amenExtra: v.amenidades_extra || [], eq: v.equipamiento_canonico || v.equipamiento_unidad || [], eqOtros: v.equipamiento_otros || [] });
   const estado_amenities = {};
-  for (const k of amenLista) estado_amenities[k] = { valor: true, fuente: usaLector ? 'lector' : 'structured', confianza: 'alta' };
+  for (const k of nb.amen) estado_amenities[k] = { valor: true, fuente: usaLector ? 'lector' : 'structured', confianza: 'alta' };
   // parqueo/baulera: el TEXTO (veredicto) manda. v4 — APARTE ⟺ NO incluido; el flag estructurado del portal
   // (a.parqueo_incluido) MIENTE (contradictorio entre duplicados, true cuando el texto dice "aparte") → NO usarlo.
   const estac = v.estacionamientos_incluidos ?? a.estacionamientos ?? null;
@@ -259,9 +262,9 @@ function construirFila(e, v, match) {
       contenido: { fotos_urls: a.fotos_urls, descripcion: e.descripcion || '', cantidad_fotos: a.cantidad_fotos },
       // amenities: lista (diferenciadores) + estado + extra (no-canónicas) + equipamiento (canónico + otros)
       amenities: {
-        lista: amenLista, estado_amenities, extra: v.amenidades_extra || [],
-        equipamiento: v.equipamiento_canonico || v.equipamiento_unidad || [],   // canónico filtrable (fallback al viejo)
-        equipamiento_otros: v.equipamiento_otros || [],                          // cola larga (mostrar, no filtrar)
+        lista: nb.amen, estado_amenities, extra: nb.amenExtra,
+        equipamiento: nb.eq,                     // canónico filtrable (canonicalizado)
+        equipamiento_otros: nb.eqOtros,          // cola larga (mostrar, no filtrar)
       },
       parqueo_incluido: parqueoIncl, parqueo_precio_adicional: v.parqueo_precio_adicional_usd ?? null,
       baulera_incluido: bauleraIncl, baulera_precio_adicional: v.baulera_precio_adicional_usd ?? null,

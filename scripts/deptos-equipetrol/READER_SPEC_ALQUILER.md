@@ -247,9 +247,9 @@ Regla madre: **solo lo CONFIRMADO** (texto libre O estructurado del portal), NUN
   NO son canónicas (NO extraer, ausencia no significa nada): Seguridad 24/7, Ascensor, Recepción, Área Social,
   Terraza, Lavandería. Si el texto las menciona explícitas → van a `amenidades_extra`, nunca a `amenidades`.
 - **`amenidades_extra`** = amenidad de edificio CONFIRMADA fuera del vocabulario (ej "Cine", "Rooftop", "Sala de TV").
-- **`equipamiento_canonico`** = features de UNIDAD, claves fijas (mapeá sinónimos):
-  > Cocina equipada · Heladera · Lavadora · Secadora · Termotanque/Calefón · Aire acondicionado · Roperos/Closets ·
-  > Vestidor · Balcón · Terraza propia · Cuarto de servicio · Box de baño · Chapa digital · Domótica · Video portero
+- **`equipamiento_canonico`** = features de UNIDAD, claves fijas (mapeá sinónimos; el loader canonicaliza igual con `lib/canonicalizar.mjs`):
+  > Cocina equipada · Heladera · Lavadora · Secadora · Termotanque/Calefón · Aire acondicionado · **Microondas** · **TV/Smart TV** ·
+  > Roperos/Closets · Vestidor · Balcón · Terraza propia · Cuarto de servicio · Box de baño · Chapa digital · Domótica · Video portero
 - **`equipamiento_otros`** = todo lo demás CONFIRMADO fuera del canónico (doble vidrio, porcelanato, espejos…), tal cual.
 En alquiler el AC y la cocina equipada pesan → capturarlos bien. El flag de alto nivel `equipado` (ver §AMOBLADO+EQUIPADO)
 es SEPARADO de esta lista: acá van los ítems concretos, allá la señal filtrable.

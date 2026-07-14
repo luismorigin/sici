@@ -196,7 +196,7 @@ intenta predecir todo. Se separa en:
     "equipad*" a nivel unidad → `null` (es enumeración, no la afirmación).
 
 **B) `equipamiento_canonico`** — vocabulario FIJO, filtrable (mapeá sinónimos a estas claves):
-> **Electrodomésticos**: Cocina equipada · Heladera · Lavadora · Secadora · Termotanque/Calefón · Aire acondicionado
+> **Electrodomésticos**: Cocina equipada · Heladera · Lavadora · Secadora · Termotanque/Calefón · Aire acondicionado · Microondas · TV/Smart TV
 > **Almacenamiento**: Roperos/Closets · Vestidor
 > **Espacios**: Balcón · Terraza propia · Cuarto de servicio · Box de baño
 > **Seguridad/smart**: Chapa digital · Domótica · Video portero
