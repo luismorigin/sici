@@ -146,13 +146,15 @@ Cascada de fuentes (en orden), la descripción SIEMPRE pisa:
 1. **Base = `banos` del DISCOVERY/listado** (`c21Listado`/`remaxListadoSC` lo traen del search API del portal —
    suele estar poblado aunque el detalle venga null). Segundo respaldo: `banos` del detalle.
 2. **Texto CORRIGE** si dice un número ("2 baños") o "baño completo con box" (=1).
-3. **Monoambiente (dorms=0) → 1 baño** (definicional: un mono ES 1 ambiente + 1 baño; NO es asumir, es su
-   definición). Aplica cuando 1-2 no dieron señal.
+3. **≤1 dorm (monoambiente O 1 dormitorio) → 1 baño** (v4.2, alineado con alquiler v2: una unidad habitable de
+   ≤1 dorm tiene ≥1 baño — definicional, NO es asumir). Aplica cuando 1-2 no dieron señal. (Antes solo mono=0 →
+   dejaba los 1-dorm en null; ahora 1-dorm sin señal = 1, como el mono.)
 4. **Señal "en suite"** — "N dormitorios, M en suite" significa M dormitorios CON baño privado. Cuenta como
    ≥ M baños; si hay dormitorios NO-suite (o el aviso menciona baño social) → +1 social. Ej "2 dorm, 1 en
    suite" → **2 baños** (1 privado del suite + 1 social). "en suite" NO es equipamiento — es referencia de
    habitación-con-baño.
-5. `null` solo si multi-dorm SIN número, SIN suite, SIN estructurado NI discovery. Honesto: no adivinar.
+5. `null` solo si **multi-dorm (≥2)** SIN número, SIN suite, SIN estructurado NI discovery. Honesto: no adivinar
+   (poner "1" en un 2+ dorm haría creer que hay uno solo cuando es "no sé").
 
 ### AMENIDADES + EQUIPAMIENTO (solo lo CONFIRMADO — NUNCA inferir/asumir/curar)
 Regla madre (de prod `prompt-ventas.md`): **solo lo CONFIRMADO. NUNCA inferir** Pet Friendly, Sauna,

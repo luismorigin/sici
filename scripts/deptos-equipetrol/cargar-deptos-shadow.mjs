@@ -246,7 +246,7 @@ function construirFila(e, v, match) {
     precio_usd: v.precio_usd, tipo_cambio_detectado: v.tipo_cambio_detectado,
     moneda_original: v.tipo_cambio_detectado === 'bob' ? 'BOB' : (a.moneda || null),
     area_total_m2: a.area, dormitorios: v.dormitorios,
-    banos: v.banos ?? a.banos ?? null,                                          // ← veredicto manda
+    banos: v.banos ?? a.banos ?? (v.dormitorios != null && v.dormitorios <= 1 ? 1 : null),  // ← veredicto manda; red: ≤1 dorm sin señal → 1 (definicional); 2+ → null (honesto)
     piso: v.piso != null ? Number(v.piso)
           : (a.piso != null && /^\d+$/.test(String(a.piso)) ? Number(a.piso) : null),   // ← veredicto manda
     estacionamientos: estac,                                                    // ← veredicto manda
