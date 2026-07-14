@@ -1,5 +1,8 @@
 # Contrato del feed `/ventas` para DEPTOS — qué debe escribir el híbrido
 
+> 🔗 **Contrato de LECTURA (RPC → frontend):** ver `CONTRATO_FRONTEND_SHADOW.md` — qué DEVUELVEN las RPCs
+> shadow al front (campos nuevos, chip pet_friendly, null semantics, canónicos vs colas). Este doc es el de ESCRITURA.
+
 > Fuente de verdad: `sql/functions/query_layer/buscar_unidades_simple.sql` (la RPC que sirve
 > `/ventas` vía `pages/api/ventas.ts`). Este doc mapea, campo por campo, lo que la RPC LEE →
 > lo que el híbrido debe PRODUCIR para que un depto salga idéntico a como lo carga n8n, sin
