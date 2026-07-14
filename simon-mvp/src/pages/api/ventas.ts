@@ -91,6 +91,7 @@ function mapRow(p: RawUnidadSimpleRow) {
     plan_pagos_texto: p.plan_pagos_texto || null,
     fuente: p.fuente || '',
     tc_sospechoso: p.tc_sospechoso ?? false,
+    pet_friendly: (p as any).pet_friendly ?? null,
   }
 }
 

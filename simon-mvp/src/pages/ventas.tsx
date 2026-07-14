@@ -185,12 +185,13 @@ function buildFilters(
 // Solo los diferenciadores BIEN listados en la data (≥29% confirman) — los que
 // se listan cuando existen. Descartados por dato: Estac. Visitas/Parque Infantil
 // (raros), Pet Friendly (1.6%, subreportado), Jardín (0%).
-const AMEN_DIFERENCIADORES = ['Piscina', 'Churrasquera', 'Gimnasio', 'Co-working', 'Salón de Eventos', 'Sauna/Jacuzzi']
+const AMEN_DIFERENCIADORES = ['Piscina', 'Churrasquera', 'Gimnasio', 'Co-working', 'Salón de Eventos', 'Sauna/Jacuzzi', 'Pet Friendly']
 const AMEN_INCLUSIONES = ['Equipado', 'Parqueo', 'Baulera']
 const _DIACR_AMEN = new RegExp('[\\u0300-\\u036f]', 'g')
 const _normAmen = (s: string) => s.toLowerCase().normalize('NFD').replace(_DIACR_AMEN, '').trim()
 function propMatchesAmen(p: UnidadVenta, sel: Set<string>): boolean {
   for (const a of sel) {
+    if (a === 'Pet Friendly') { if (p.pet_friendly !== true) return false; continue }
     if (a === 'Equipado') { if (!((p.equipamiento_detectado || []).length > 0)) return false; continue }
     if (a === 'Parqueo') { if (!(p.parqueo_incluido === true || (p.estacionamientos != null && p.estacionamientos > 0))) return false; continue }
     if (a === 'Baulera') { if (p.baulera !== true) return false; continue }
@@ -5231,6 +5232,7 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
         equipamiento_detectado: p.equipamiento_detectado || [],
         amenidades_extra: p.amenidades_extra || [],
         equipamiento_otros: p.equipamiento_otros || [],
+        pet_friendly: p.pet_friendly ?? null,
         // Solo un EXTRACTO viaja en el payload SSG (la card muestra ~110 chars);
         // el texto completo llega con el fetch diferido del cliente.
         descripcion: p.descripcion ? String(p.descripcion).slice(0, 160) : null,

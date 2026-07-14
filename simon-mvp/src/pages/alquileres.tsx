@@ -72,11 +72,13 @@ const MAX_SLIDER_PRICE = 18000
 // EDIFICIO — Amoblado/Parqueo/Mascotas ya se filtran server-side en "Más filtros".
 // No oculta a los que no la listan (la aclaración lo dice). Vocabulario = canónico
 // (config/amenidades-mercado.ts), matcheado contra amenities_lista.
-const AMEN_ALQ_DIFERENCIADORES = ['Piscina', 'Churrasquera', 'Gimnasio', 'Co-working', 'Salón de Eventos', 'Sauna/Jacuzzi']
+const AMEN_ALQ_DIFERENCIADORES = ['Piscina', 'Churrasquera', 'Gimnasio', 'Co-working', 'Salón de Eventos', 'Sauna/Jacuzzi', 'Pet Friendly']
 const _DIACR_AMEN_ALQ = new RegExp('[\\u0300-\\u036f]', 'g')
 const _normAmenAlq = (s: string) => s.toLowerCase().normalize('NFD').replace(_DIACR_AMEN_ALQ, '').trim()
 function propMatchesAmenAlq(p: UnidadAlquiler, sel: Set<string>): boolean {
   for (const a of sel) {
+    // Pet Friendly = política del edificio (pet_friendly derivado en cron), no una amenidad
+    if (a === 'Pet Friendly') { if (p.pet_friendly !== true) return false; continue }
     const na = _normAmenAlq(a)
     if (!(p.amenities_lista || []).some(x => _normAmenAlq(x) === na)) return false
   }

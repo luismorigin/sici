@@ -2023,4 +2023,7 @@ export interface UnidadVenta {
   plan_pagos_texto: string | null
   fuente: string
   tc_sospechoso: boolean
+  // pet_friendly = política del EDIFICIO (proyectos_master, derivado en cron).
+  // Solo RPC shadow. Ver CONTRATO_FRONTEND_SHADOW.md.
+  pet_friendly?: boolean | null
 }
