@@ -201,7 +201,7 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
       {/* Header */}
       <div className="cs-header">
         <div className="cs-header-left">
-          <div className="cs-title">Comparativo Express</div>
+          <div className="cs-title">Comparar favoritos</div>
           <div className="cs-subtitle">{props.length} favoritos seleccionados</div>
         </div>
         <button className="cs-close" aria-label="Cerrar comparativo" onClick={onClose}>&times;</button>

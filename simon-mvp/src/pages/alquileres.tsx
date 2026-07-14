@@ -1011,6 +1011,11 @@ export default function AlquileresPage({
       amobladoPct: displayedProperties.length > 0 ? Math.round((amoblados / displayedProperties.length) * 100) : null,
     }
   }, [splitDesktop, displayedProperties])
+  // Mascotas es un filtro SOFT: el RPC devuelve confirmadas (acepta_mascotas===true)
+  // + no confirmadas (podrían aceptar). El panel de mercado debe titular con las
+  // CONFIRMADAS y aclarar que el resto aparece sin confirmar (disclaimer).
+  const petFilterActive = filters.acepta_mascotas === true
+  const petConfirmados = petFilterActive ? displayedProperties.filter(p => p.acepta_mascotas === true).length : 0
   function markAllVisible() {
     if (visibleNotMarked.length === 0) return
     trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug, tipo_operacion: 'alquiler' })
@@ -1785,8 +1790,8 @@ export default function AlquileresPage({
                               </div>
                               <div className="ad-mkt-stats">
                                 <div className="ad-mkt-stat">
-                                  <span className="ad-mkt-num">{panelMarketSummary.count}</span>
-                                  <span className="ad-mkt-label">alquileres activos con este filtro</span>
+                                  <span className="ad-mkt-num">{petFilterActive ? petConfirmados : panelMarketSummary.count}</span>
+                                  <span className="ad-mkt-label">{petFilterActive ? 'confirman mascotas en el aviso' : 'alquileres activos con este filtro'}</span>
                                 </div>
                                 {panelMarketSummary.mediana !== null && (
                                   <div className="ad-mkt-stat">
@@ -1801,10 +1806,13 @@ export default function AlquileresPage({
                                   </div>
                                 )}
                               </div>
+                              {petFilterActive && panelMarketSummary.count > petConfirmados && (
+                                <div className="ad-mkt-petnote">🐾 Otras {panelMarketSummary.count - petConfirmados} publicaciones podrían aceptar mascotas aunque no lo confirmen en el aviso — aparecen abajo del separador. Consultá con el anunciante.</div>
+                              )}
                               <div className="ad-mkt-caveat">
                                 {panelMarketSummary.mediana === null
                                   ? 'Pocas publicaciones con este filtro para calcular mediana y rango.'
-                                  : `Análisis basado en ${panelMarketSummary.count} publicaciones activas de alquiler. El precio varía según amoblado, acabados y seriedad del edificio.`}
+                                  : `Análisis de precio sobre las ${panelMarketSummary.count} publicaciones del resultado. El precio varía según amoblado, acabados y seriedad del edificio.`}
                               </div>
                             </div>
                           )}
