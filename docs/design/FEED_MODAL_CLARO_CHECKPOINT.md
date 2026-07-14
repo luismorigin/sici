@@ -89,10 +89,16 @@ El shadow usa un marco de TC NUEVO (`precio_normalizado_shadow_v2`):
   = el nuevo oficial), no hay que tocarlo. Ver [[project_tc_marco_nuevo_shadow]].
 
 ## Calidad de datos alquiler (pendiente, en manos del founder)
-- 🔴 **Mascotas over-flag:** ~65% de `acepta_mascotas=true` son inventados por el
-  LLM (sin evidencia en el crudo). 100% Century21. Tasa real ~7%. Fix = regla
-  estricta en el prompt n8n + READER_SPEC del híbrido + limpieza SQL. Ver
-  [[project_bug_acepta_mascotas_llm]]. (Lucho dijo que ya lo está trabajando.)
+- 🔴 **Mascotas over-flag — TODAVÍA NO resuelto en el shadow (verificado 14-jul).**
+  En `buscar_unidades_alquiler_shadow`: 31/161 `acepta_mascotas=true` (19%), y
+  **28 de 31 sin ninguna mención en el crudo**. Los trues están **heredados de
+  prod** (n8n LLM inflado): shadow=true, prod=true, `prod.llm_output.acepta_mascotas="true"`,
+  mientras el `llm_output` del reader HÍBRIDO es `null` y `senales_portal` es `null`
+  → sin evidencia. **`pet_friendly` (derivado) también sigue inflado (68/161=42%).**
+  El fix del reader (prompt+spec) solo toma efecto cuando esas props se
+  **RE-ENRIQUECEN** (re-correr el reader) — hoy siguen con el valor viejo de prod.
+  El frontend está bien cableado; se limpia solo cuando el reader re-corra + crons.
+  Ver [[project_bug_acepta_mascotas_llm]].
 
 ## Pendiente
 - 🔴 **Cutover shadow→prod** (decisión founder): hoy la data limpia solo se ve con
