@@ -511,6 +511,10 @@ export interface UnidadAlquiler {
   expensas_incluidas?: boolean | null
   uso_inmueble?: string | null
   equipado?: boolean | null
+  // pet_friendly = política del EDIFICIO (proyectos_master, derivado en el cron
+  // de acepta_mascotas de cualquier unidad). Chip dedicado. Distinto de
+  // acepta_mascotas (preferencia de la unidad). Ver CONTRATO_FRONTEND_SHADOW.md.
+  pet_friendly?: boolean | null
 }
 
 export interface FiltrosAlquiler {

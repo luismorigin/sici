@@ -184,6 +184,7 @@ function mapRawToUnidad(p: any): UnidadAlquiler {
     expensas_incluidas: p.expensas_incluidas ?? null,
     uso_inmueble: p.uso_inmueble || null,
     equipado: p.equipado ?? null,
+    pet_friendly: p.pet_friendly ?? null,
   }
 }
 
@@ -4193,7 +4194,9 @@ function BottomSheet({
           const conEquipado = (p.equipado === true || (p.equipamiento_lista != null && p.equipamiento_lista.length > 0)) && p.amoblado !== 'si' && p.amoblado !== 'semi'
           const conParqueo = p.estacionamientos != null && p.estacionamientos > 0
           const conBaulera = p.baulera === true
-          const conMascotas = p.acepta_mascotas === true
+          // Chip de mascotas = pet_friendly (edificio, derivado en cron). Solo
+          // positivo; null≠"no admite". Ver CONTRATO_FRONTEND_SHADOW.md.
+          const conMascotas = p.pet_friendly === true
           const conExpInc = p.expensas_incluidas === true
           if (!amoblado && !conEquipado && !conParqueo && !conBaulera && !conMascotas && !conExpInc) return null
           return (
@@ -4202,7 +4205,7 @@ function BottomSheet({
               {conEquipado && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M15 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7z"/><path d="M14 2v4a2 2 0 002 2h4"/></svg>Equipado</span>}
               {conParqueo && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>{p.estacionamientos! > 1 ? `${p.estacionamientos} parqueos` : 'Parqueo'}</span>}
               {conBaulera && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Baulera</span>}
-              {conMascotas && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10c-2 0-4 2-4 4 0 2 1 3 3 3 1 0 2-1 3-1s2 1 3 1c2 0 3-1 3-3 0-2-2-4-4-4-1 0-1.5.5-2.5.5S10 10 9 10z"/></svg>Acepta mascotas</span>}
+              {conMascotas && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10c-2 0-4 2-4 4 0 2 1 3 3 3 1 0 2-1 3-1s2 1 3 1c2 0 3-1 3-3 0-2-2-4-4-4-1 0-1.5.5-2.5.5S10 10 9 10z"/></svg>Pet friendly</span>}
               {conExpInc && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>Expensas incluidas</span>}
             </div>
           )
