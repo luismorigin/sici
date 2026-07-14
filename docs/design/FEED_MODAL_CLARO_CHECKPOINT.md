@@ -77,11 +77,8 @@ El shadow usa un marco de TC NUEVO (`precio_normalizado_shadow_v2`):
 - paralelo / oficial-nuevo / no_especificado → USD real DIRECTO (no toca).
 - Ej: Santorini "$53.000 (TC 7)" → muestra **$35.239** (correcto). Klug id 818
   en shadow = $93.084 (en prod = $140.805 con la normalización vieja).
-- 🔴 **PENDIENTE display:** el frontend muestra un `(T.C. oficial)` HARDCODEADO en
-  4 lugares (`ventas.tsx` ~772/931/1090/1686) — es la "forma vieja". En el marco
-  nuevo confunde. El RPC shadow no expone `tipo_cambio_detectado` al front, así
-  que para etiquetar por-prop habría que exponerlo, o simplemente sacar el label.
-  Ver [[project_tc_marco_nuevo_shadow]].
+- El label `(T.C. oficial)` del front es **correcto** en el marco nuevo (paralelo
+  = el nuevo oficial), no hay que tocarlo. Ver [[project_tc_marco_nuevo_shadow]].
 
 ## Calidad de datos alquiler (pendiente, en manos del founder)
 - 🔴 **Mascotas over-flag:** ~65% de `acepta_mascotas=true` son inventados por el
@@ -92,10 +89,9 @@ El shadow usa un marco de TC NUEVO (`precio_normalizado_shadow_v2`):
 ## Pendiente
 - 🔴 **Cutover shadow→prod** (decisión founder): hoy la data limpia solo se ve con
   `?shadow=1`. Para prod: o parchar los RPC de prod, o apuntar el front a shadow.
-- 🔴 Display del TC en el marco nuevo (sacar/rehacer el `(T.C. oficial)` fijo).
 - 🔴 Mascotas over-flag (prompt + spec + limpieza).
 - Pasada de contraste global al feed oscuro (fuera de la card).
-- Review del founder + commit/push (24 commits locales sin push).
+- Review del founder + commit/push.
 
 ## Archivos tocados (esta sesión)
 - `simon-mvp/src/pages/alquileres.tsx` (grande) · `pages/ventas.tsx` ·
