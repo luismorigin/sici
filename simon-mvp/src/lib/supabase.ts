@@ -504,6 +504,13 @@ export interface UnidadAlquiler {
   amenities_lista: string[] | null
   equipamiento_lista: string[] | null
   descripcion: string | null
+  // Split del pipeline (solo RPC shadow, espejo de ventas): cola larga de
+  // amenidades de edificio + equipamiento de unidad no canónico + flags.
+  amenities_extra?: string[] | null
+  equipamiento_otros?: string[] | null
+  expensas_incluidas?: boolean | null
+  uso_inmueble?: string | null
+  equipado?: boolean | null
 }
 
 export interface FiltrosAlquiler {

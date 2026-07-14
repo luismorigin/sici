@@ -178,12 +178,21 @@ function mapRawToUnidad(p: any): UnidadAlquiler {
     amenities_lista: p.amenities_lista || null,
     equipamiento_lista: p.equipamiento_lista || null,
     descripcion: p.descripcion || null,
+    // Campos del RPC shadow (undefined en prod hasta el cutover)
+    amenities_extra: p.amenities_extra || null,
+    equipamiento_otros: p.equipamiento_otros || null,
+    expensas_incluidas: p.expensas_incluidas ?? null,
+    uso_inmueble: p.uso_inmueble || null,
+    equipado: p.equipado ?? null,
   }
 }
 
 async function fetchFromAPI(filtros: FiltrosAlquiler & { offset?: number }, spotlightId?: number): Promise<{ data: UnidadAlquiler[]; total: number; spotlight?: UnidadAlquiler | null }> {
   try {
-    const body: Record<string, any> = { filtros }
+    // ?shadow=1 → lee el feed shadow (buscar_unidades_alquiler_shadow, reader
+    // híbrido con el split de amenidades y equipamiento poblado). Preview pre-cutover.
+    const shadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
+    const body: Record<string, any> = { filtros, shadow }
     if (spotlightId) body.spotlightId = spotlightId
     const res = await fetch('/api/alquileres', {
       method: 'POST',
@@ -4204,23 +4213,31 @@ function BottomSheet({
           <div className="bs-aw">{p.amenities_lista.map((a, i) => <span key={i} className="bs-at">{a}</span>)}</div>
         </div>
       )}
-      {/* Side sheet desktop: modelo "What's special". Split CLIENT-SIDE con
-          hasCanonicalIcon (alquiler NO trae amenidades_extra/equipamiento_otros
-          del pipeline como ventas — solo amenities_lista + equipamiento_lista):
-           · especial = amenities de EDIFICIO no canónicas → chispita
-           · En el edificio = amenities canónicas → icono del catálogo
-           · En el departamento = equipamiento_lista → icono/chispita */}
+      {/* Side sheet desktop: modelo "What's special", espejo de ventas.
+          SHADOW: el split lo hace el PIPELINE (amenities_extra = cola larga /
+          "lo que la hace especial"; equipamiento_lista + equipamiento_otros = depto).
+          PROD (sin amenities_extra): fallback al split client-side con hasCanonicalIcon. */}
       {showTab('resumen') && sideMode && (() => {
-        const edificioRaw = p.amenities_lista || []
-        const especial = edificioRaw.filter(a => !hasCanonicalIcon(a))
         const seen = new Set<string>()
-        const edificioCanon = edificioRaw.filter(a => {
+        const dedupCanon = (arr: string[]) => arr.filter(a => {
           if (!hasCanonicalIcon(a)) return false
           const k = a.trim().toLowerCase()
           if (seen.has(k)) return false
           seen.add(k); return true
         })
-        const deptoAll = p.equipamiento_lista || []
+        let especial: string[]
+        let edificioCanon: string[]
+        if (p.amenities_extra != null) {
+          // shadow: cola larga ya separada por el pipeline
+          especial = p.amenities_extra.filter(a => !hasCanonicalIcon(a))
+          edificioCanon = dedupCanon([...(p.amenities_lista || []), ...p.amenities_extra.filter(a => hasCanonicalIcon(a))])
+        } else {
+          // prod: derivar del amenities_lista
+          const edificioRaw = p.amenities_lista || []
+          especial = edificioRaw.filter(a => !hasCanonicalIcon(a))
+          edificioCanon = dedupCanon(edificioRaw)
+        }
+        const deptoAll = [...(p.equipamiento_lista || []), ...(p.equipamiento_otros || [])]
         if (especial.length === 0 && edificioCanon.length === 0 && deptoAll.length === 0) return null
         return (
           <>
