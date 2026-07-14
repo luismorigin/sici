@@ -104,9 +104,23 @@ El shadow usa un marco de TC NUEVO (`precio_normalizado_shadow_v2`):
 - 🔴 **Cutover shadow→prod** (decisión founder): hoy la data limpia solo se ve con
   `?shadow=1`. Para prod: o parchar los RPC de prod, o apuntar el front a shadow.
 - 🔴 Mascotas over-flag (prompt + spec + limpieza).
-- ❓ **Dos filtros de mascotas en alquiler**: quedó el toggle viejo "Mascotas" en
-  "Más filtros" (server, `acepta_mascotas` de la unidad) + el nuevo "Pet Friendly"
-  en Comodidades (client, `pet_friendly` del edificio). Decidir si consolidar.
+- 🔴 **Alinear filtros ventas↔alquileres (tarea dedicada, hacer con contexto).**
+  Objetivo — **misma estructura en los dos feeds**:
+  - **"Más filtros"** = ATRIBUTOS de la propiedad: Amoblado · Equipado · Parqueo ·
+    Baulera · **Mascotas** (`acepta_mascotas`, decisión de Lucho: consolidar a
+    este, NO `pet_friendly`, NO dos).
+  - **"Comodidades"** = SOLO amenidades del edificio: Piscina · Churrasquera ·
+    Gimnasio · Co-working · Salón · Sauna. **Pet Friendly y Equipado NO son
+    comodidades** → van a Más filtros.
+  - Estado actual a corregir: (a) alquileres tiene "Pet Friendly" en Comodidades
+    (commit 58c53d6) — sacarlo; agregar Equipado a Más filtros. (b) VENTAS **no
+    tiene pill "Más filtros"** (se eliminó) y su Comodidades tiene sección "DEL
+    DEPARTAMENTO" (Equipado/Parqueo/Baulera) — hay que **crear el pill Más filtros**
+    en ventas y mover ahí esos + dejar Comodidades solo con amenidades.
+  - Ojo mezcla server/client: en alquiler amoblado/mascotas/parqueo son server
+    (RPC `FiltrosAlquiler`); equipado/pet_friendly son client (`amenSel`). El chip
+    de display sigue usando `pet_friendly` (edificio); el FILTRO de mascotas usa
+    `acepta_mascotas`.
 - Cablear `uso_inmueble` como filtro (no exclusión) cuando se escale a casas/mixto.
 - Pasada de contraste global al feed oscuro (fuera de la card).
 - Review del founder + commit/push (~31 commits locales).
