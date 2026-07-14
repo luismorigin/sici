@@ -88,24 +88,26 @@ El shadow usa un marco de TC NUEVO (`precio_normalizado_shadow_v2`):
 - El label `(T.C. oficial)` del front es **correcto** en el marco nuevo (paralelo
   = el nuevo oficial), no hay que tocarlo. Ver [[project_tc_marco_nuevo_shadow]].
 
-## Calidad de datos alquiler (pendiente, en manos del founder)
-- 🔴 **Mascotas over-flag — TODAVÍA NO resuelto en el shadow (verificado 14-jul).**
-  En `buscar_unidades_alquiler_shadow`: 31/161 `acepta_mascotas=true` (19%), y
-  **28 de 31 sin ninguna mención en el crudo**. Los trues están **heredados de
-  prod** (n8n LLM inflado): shadow=true, prod=true, `prod.llm_output.acepta_mascotas="true"`,
-  mientras el `llm_output` del reader HÍBRIDO es `null` y `senales_portal` es `null`
-  → sin evidencia. **`pet_friendly` (derivado) también sigue inflado (68/161=42%).**
-  El fix del reader (prompt+spec) solo toma efecto cuando esas props se
-  **RE-ENRIQUECEN** (re-correr el reader) — hoy siguen con el valor viejo de prod.
-  El frontend está bien cableado; se limpia solo cuando el reader re-corra + crons.
-  Ver [[project_bug_acepta_mascotas_llm]].
+## Calidad de datos alquiler
+- ✅ **Mascotas — revisado y OK (Lucho, 14-jul).** `acepta_mascotas` quedó validado;
+  ya no es pendiente. El filtro de mascotas se consolidó en `acepta_mascotas`
+  (server-side, alquiler); `pet_friendly` queda solo como chip de card. Ver
+  [[project_bug_acepta_mascotas_llm]].
 
 ## Pendiente
 - 🔴 **Cutover shadow→prod** (decisión founder): hoy la data limpia solo se ve con
   `?shadow=1`. Para prod: o parchar los RPC de prod, o apuntar el front a shadow.
-- 🔴 Mascotas over-flag (prompt + spec + limpieza).
-- 🔴 **Alinear filtros ventas↔alquileres (tarea dedicada, hacer con contexto).**
-  Objetivo — **misma estructura en los dos feeds**:
+- ✅ **Alinear filtros ventas↔alquileres — HECHO (14-jul, verificado Playwright 1440px).**
+  Ambos feeds ahora tienen la misma estructura: **Comodidades** = solo amenidades
+  diferenciadoras de EDIFICIO (Piscina · Churrasquera · Gimnasio · Co-working ·
+  Salón · Sauna); **Más filtros** = ATRIBUTOS de la unidad. Ventas: `AMEN_ATRIBUTOS`
+  = Amoblado · Equipado · Parqueo · Baulera (sin Mascotas — venta no tiene
+  `acepta_mascotas` y no es criterio de compra); pill "Más filtros" nuevo, se sacó
+  la sección "DEL DEPARTAMENTO" y "Pet Friendly" de Comodidades. Alquileres:
+  `AMEN_ALQ_ATRIBUTOS` = Equipado · Baulera (client-side, vía `amenSel`) sumados a
+  Amoblado/Parqueo/Mascotas (server) en "Más filtros"; "Pet Friendly" fuera de
+  Comodidades. Los badges cuentan por separado (`comodCount` vs `atribCount`+server).
+  Objetivo original — **misma estructura en los dos feeds**:
   - **"Más filtros"** = ATRIBUTOS de la propiedad: Amoblado · Equipado · Parqueo ·
     Baulera · **Mascotas** (`acepta_mascotas`, decisión de Lucho: consolidar a
     este, NO `pet_friendly`, NO dos).

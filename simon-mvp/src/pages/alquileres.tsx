@@ -69,16 +69,20 @@ const ORDEN_OPTIONS: Array<{ value: FiltrosAlquiler['orden']; label: string }> =
 const MAX_SLIDER_PRICE = 18000
 
 // Filtro de comodidades (client-side, fiduciario). Solo diferenciadores de
-// EDIFICIO — Amoblado/Parqueo/Mascotas ya se filtran server-side en "Más filtros".
-// No oculta a los que no la listan (la aclaración lo dice). Vocabulario = canónico
-// (config/amenidades-mercado.ts), matcheado contra amenities_lista.
-const AMEN_ALQ_DIFERENCIADORES = ['Piscina', 'Churrasquera', 'Gimnasio', 'Co-working', 'Salón de Eventos', 'Sauna/Jacuzzi', 'Pet Friendly']
+// EDIFICIO. Amoblado/Mascotas/Parqueo se filtran server-side en "Más filtros";
+// Equipado/Baulera son ATRIBUTOS de la unidad, client-side (también en "Más
+// filtros", comparten el Set amenSel). Pet Friendly YA NO es filtro (se consolidó
+// mascotas en acepta_mascotas, server-side; pet_friendly queda solo como chip de
+// card). No oculta a los que no la listan (la aclaración lo dice). Vocabulario =
+// canónico (config/amenidades-mercado.ts), matcheado contra amenities_lista.
+const AMEN_ALQ_DIFERENCIADORES = ['Piscina', 'Churrasquera', 'Gimnasio', 'Co-working', 'Salón de Eventos', 'Sauna/Jacuzzi']
+const AMEN_ALQ_ATRIBUTOS = ['Equipado', 'Baulera']
 const _DIACR_AMEN_ALQ = new RegExp('[\\u0300-\\u036f]', 'g')
 const _normAmenAlq = (s: string) => s.toLowerCase().normalize('NFD').replace(_DIACR_AMEN_ALQ, '').trim()
 function propMatchesAmenAlq(p: UnidadAlquiler, sel: Set<string>): boolean {
   for (const a of sel) {
-    // Pet Friendly = política del edificio (pet_friendly derivado en cron), no una amenidad
-    if (a === 'Pet Friendly') { if (p.pet_friendly !== true) return false; continue }
+    if (a === 'Equipado') { if (!(p.equipado === true || (p.equipamiento_lista || []).length > 0)) return false; continue }
+    if (a === 'Baulera') { if (p.baulera !== true) return false; continue }
     const na = _normAmenAlq(a)
     if (!(p.amenities_lista || []).some(x => _normAmenAlq(x) === na)) return false
   }
@@ -2650,7 +2654,11 @@ function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, pro
   const precioActivo = maxPrice < MAX_SLIDER_PRICE
   const precioLabel = precioActivo ? `Hasta Bs ${maxPrice.toLocaleString('es-BO')}` : 'Precio'
   const dormsLabel = selectedDorms.size === 0 ? 'Dorms' : [...selectedDorms].sort((a, b) => a - b).map(d => d === 0 ? 'Mono' : d === 3 ? '3+' : `${d}d`).join(', ')
-  const masCount = (amoblado ? 1 : 0) + (mascotas ? 1 : 0) + (conParqueo ? 1 : 0) + (proyecto.trim() ? 1 : 0)
+  // amenSel mezcla comodidades (edificio) y atributos (Equipado/Baulera, unidad);
+  // cada pill cuenta solo lo suyo. Los atributos client-side suman al badge de "Más filtros".
+  const comodCount = [...amenSel].filter(a => !AMEN_ALQ_ATRIBUTOS.includes(a)).length
+  const atribCount = [...amenSel].filter(a => AMEN_ALQ_ATRIBUTOS.includes(a)).length
+  const masCount = (amoblado ? 1 : 0) + (mascotas ? 1 : 0) + (conParqueo ? 1 : 0) + atribCount + (proyecto.trim() ? 1 : 0)
   const ordenLabel = ORDEN_OPTIONS.find(o => o.value === orden)?.label || 'Recientes'
 
   const toggle = (p: typeof openPill) => setOpenPill(prev => prev === p ? null : p)
@@ -2700,7 +2708,7 @@ function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, pro
         )}
       </div>
       <div className="afp-item">
-        <button type="button" className={`afp-pill ${amenSel.size > 0 ? 'afp-on' : ''} ${openPill === 'amen' ? 'open' : ''}`} onClick={() => toggle('amen')} aria-expanded={openPill === 'amen'}>{amenSel.size > 0 ? `Comodidades · ${amenSel.size}` : 'Comodidades'} {caret}</button>
+        <button type="button" className={`afp-pill ${comodCount > 0 ? 'afp-on' : ''} ${openPill === 'amen' ? 'open' : ''}`} onClick={() => toggle('amen')} aria-expanded={openPill === 'amen'}>{comodCount > 0 ? `Comodidades · ${comodCount}` : 'Comodidades'} {caret}</button>
         {openPill === 'amen' && (
           <div className="afp-pop afp-pop-amen">
             <div className="df-label"><span className="df-dot" />DEL EDIFICIO</div>
@@ -2725,8 +2733,10 @@ function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, pro
           <div className="afp-pop afp-pop-mas">
             <div className="df-dorm-btns" style={{ marginBottom: 14 }}>
               <button className={`df-dorm-btn df-amoblado ${amoblado ? 'active' : ''}`} onClick={handleAmoblado}>Amoblado</button>
-              <button className={`df-dorm-btn df-mascotas ${mascotas ? 'active' : ''}`} onClick={handleMascotas}>Mascotas</button>
+              <button className={`df-dorm-btn ${amenSel.has('Equipado') ? 'active' : ''}`} onClick={() => onAmenToggle('Equipado')}>Equipado</button>
               <button className={`df-dorm-btn ${conParqueo ? 'active' : ''}`} onClick={handleParqueo}>Parqueo</button>
+              <button className={`df-dorm-btn ${amenSel.has('Baulera') ? 'active' : ''}`} onClick={() => onAmenToggle('Baulera')}>Baulera</button>
+              <button className={`df-dorm-btn df-mascotas ${mascotas ? 'active' : ''}`} onClick={handleMascotas}>Mascotas</button>
             </div>
             <div className="df-label"><span className="df-dot" />EDIFICIO</div>
             <input type="text" className="df-search" placeholder="Buscar edificio..." value={proyecto}

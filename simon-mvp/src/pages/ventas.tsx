@@ -178,20 +178,23 @@ function buildFilters(
 }
 
 // ===== Filtro de amenidades (client-side, fiduciario) =====
-// Solo DIFERENCIADORES canónicos (esEstandar:false) + inclusiones. Nunca los
-// estándar (Terraza, Ascensor…) ni la cola larga. El filtro no oculta a los que
-// no la listan: parte los resultados en "confirmados" y "no listados" (podrían
-// tenerla sin mencionarla) — ver partición en la página.
-// Solo los diferenciadores BIEN listados en la data (≥29% confirman) — los que
-// se listan cuando existen. Descartados por dato: Estac. Visitas/Parque Infantil
-// (raros), Pet Friendly (1.6%, subreportado), Jardín (0%).
-const AMEN_DIFERENCIADORES = ['Piscina', 'Churrasquera', 'Gimnasio', 'Co-working', 'Salón de Eventos', 'Sauna/Jacuzzi', 'Pet Friendly']
-const AMEN_INCLUSIONES = ['Equipado', 'Parqueo', 'Baulera']
+// Se parte en DOS pills alineadas con /alquileres:
+//  · Comodidades = SOLO amenidades diferenciadoras de EDIFICIO (esEstandar:false).
+//    Nunca las estándar (Ascensor, Seguridad, Terraza…) ni la cola larga.
+//  · Más filtros = ATRIBUTOS de la propiedad (Amoblado/Equipado/Parqueo/Baulera).
+//    Ventas NO tiene acepta_mascotas (dato de alquiler) y mascotas no es criterio
+//    de compra → sin filtro de mascotas (pet_friendly queda solo como chip de card).
+// El filtro no oculta a los que no la listan: parte los resultados en "confirmados"
+// y "no listados" (podrían tenerla sin mencionarla) — ver partición en la página.
+// Solo los diferenciadores BIEN listados en la data (≥29% confirman). Descartados
+// por dato: Estac. Visitas/Parque Infantil (raros), Pet Friendly (1.6%, subreportado), Jardín (0%).
+const AMEN_DIFERENCIADORES = ['Piscina', 'Churrasquera', 'Gimnasio', 'Co-working', 'Salón de Eventos', 'Sauna/Jacuzzi']
+const AMEN_ATRIBUTOS = ['Amoblado', 'Equipado', 'Parqueo', 'Baulera']
 const _DIACR_AMEN = new RegExp('[\\u0300-\\u036f]', 'g')
 const _normAmen = (s: string) => s.toLowerCase().normalize('NFD').replace(_DIACR_AMEN, '').trim()
 function propMatchesAmen(p: UnidadVenta, sel: Set<string>): boolean {
   for (const a of sel) {
-    if (a === 'Pet Friendly') { if (p.pet_friendly !== true) return false; continue }
+    if (a === 'Amoblado') { if (!((p.equipamiento_detectado || []).some(e => /amoblad/i.test(e)))) return false; continue }
     if (a === 'Equipado') { if (!((p.equipamiento_detectado || []).length > 0)) return false; continue }
     if (a === 'Parqueo') { if (!(p.parqueo_incluido === true || (p.estacionamientos != null && p.estacionamientos > 0))) return false; continue }
     if (a === 'Baulera') { if (p.baulera !== true) return false; continue }
@@ -488,7 +491,11 @@ function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proye
   const [entrega, setEntrega] = useState(currentFilters.estado_entrega || '')
   const [orden, setOrden] = useState<FiltrosVentaSimple['orden']>(currentFilters.orden || 'recientes')
   const [proyecto, setProyecto] = useState(currentFilters.proyecto || '')
-  const [openPill, setOpenPill] = useState<null | 'zonas' | 'precio' | 'dorms' | 'estado' | 'amen' | 'edificio' | 'orden'>(null)
+  const [openPill, setOpenPill] = useState<null | 'zonas' | 'precio' | 'dorms' | 'estado' | 'amen' | 'mas' | 'edificio' | 'orden'>(null)
+  // amenSel mezcla comodidades (edificio) y atributos (depto) en un solo Set;
+  // cada pill cuenta solo lo suyo para su badge.
+  const comodCount = [...amenSel].filter(a => !AMEN_ATRIBUTOS.includes(a)).length
+  const atribCount = [...amenSel].filter(a => AMEN_ATRIBUTOS.includes(a)).length
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -592,7 +599,7 @@ function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proye
         )}
       </div>
       <div className="vfp-item">
-        <button type="button" className={`vfp-pill ${amenSel.size > 0 ? 'vfp-on' : ''} ${openPill === 'amen' ? 'open' : ''}`} onClick={() => toggle('amen')} aria-expanded={openPill === 'amen'}>{amenSel.size > 0 ? `Comodidades · ${amenSel.size}` : 'Comodidades'} {caret}</button>
+        <button type="button" className={`vfp-pill ${comodCount > 0 ? 'vfp-on' : ''} ${openPill === 'amen' ? 'open' : ''}`} onClick={() => toggle('amen')} aria-expanded={openPill === 'amen'}>{comodCount > 0 ? `Comodidades · ${comodCount}` : 'Comodidades'} {caret}</button>
         {openPill === 'amen' && (
           <div className="vfp-pop vfp-pop-amen">
             <div className="vf-label">DEL EDIFICIO</div>
@@ -601,15 +608,29 @@ function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proye
                 <button key={a} type="button" className={`vfp-amen-chip ${amenSel.has(a) ? 'active' : ''}`} onClick={() => onAmenToggle(a)}>{a}</button>
               ))}
             </div>
-            <div className="vf-label" style={{ marginTop: 16 }}>DEL DEPARTAMENTO</div>
+            <div className="vfp-amen-note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+              <span>Filtramos por lo que el anuncio <b>confirma</b>. Algún depto podría tenerla sin haberla listado.</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="vfp-item">
+        <button type="button" className={`vfp-pill ${atribCount > 0 ? 'vfp-on' : ''} ${openPill === 'mas' ? 'open' : ''}`} onClick={() => toggle('mas')} aria-expanded={openPill === 'mas'}>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+          Más filtros{atribCount > 0 ? ` · ${atribCount}` : ''} {caret}
+        </button>
+        {openPill === 'mas' && (
+          <div className="vfp-pop vfp-pop-amen">
+            <div className="vf-label">ATRIBUTOS DEL DEPARTAMENTO</div>
             <div className="vfp-amen-wrap">
-              {AMEN_INCLUSIONES.map(a => (
+              {AMEN_ATRIBUTOS.map(a => (
                 <button key={a} type="button" className={`vfp-amen-chip ${amenSel.has(a) ? 'active' : ''}`} onClick={() => onAmenToggle(a)}>{a}</button>
               ))}
             </div>
             <div className="vfp-amen-note">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
-              <span>Filtramos por lo que el anuncio <b>confirma</b>. Algún depto podría tenerla sin haberla listado.</span>
+              <span>Filtramos por lo que el anuncio <b>confirma</b>. Algún depto podría tenerlo sin haberlo listado.</span>
             </div>
           </div>
         )}
