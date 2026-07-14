@@ -1718,6 +1718,12 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
               <div className="bsm-stat-txt"><b>{p.banos}</b><span>baño{p.banos !== 1 ? 's' : ''}</span></div>
             </div>
           )}
+          {p.piso != null && (
+            <div className="bsm-stat">
+              <svg className="bsm-stat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/></svg>
+              <div className="bsm-stat-txt"><b>{p.piso === 0 ? 'PB' : p.piso}</b><span>piso</span></div>
+            </div>
+          )}
         </div>
       )}
       {/* Inclusiones (modal desktop): lo INCLUIDO en el precio como chips
