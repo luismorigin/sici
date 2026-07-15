@@ -3057,6 +3057,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   return (
     <div className="afo-overlay">
       <div className="afo-header">
+        <span className="afo-logo" aria-hidden="true" />
         <span className="afo-hcount">{displayCount} resultados</span>
         <button className="afo-close" onClick={onClose}>&times;</button>
       </div>

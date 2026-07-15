@@ -1306,6 +1306,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   return (
     <div className="fo-overlay">
       <div className="fo-header">
+        <span className="fo-logo" aria-hidden="true" />
         <span className="fo-hcount">{displayCount} resultados</span>
         <button className="fo-close" aria-label="Cerrar filtros" onClick={onClose}>&times;</button>
       </div>
@@ -4666,6 +4667,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         @keyframes foSlideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
         .fo-header { position:relative; display:flex; align-items:center; justify-content:center; padding:16px 20px; padding-top:max(16px, calc(env(safe-area-inset-top) + 8px)); border-bottom:1px solid rgba(237,232,220,0.08) }
         .fo-hcount { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; font-variant-numeric:tabular-nums }
+        .fo-logo { position:absolute; left:20px; top:50%; transform:translateY(-50%); width:24px; height:24px; border-radius:50%; background:#EDE8DC }
+        .fo-logo::after { content:''; position:absolute; top:5px; left:5px; width:9px; height:9px; border-radius:50%; background:#3A6A48 }
         .fo-close { position:absolute; right:16px; top:50%; transform:translateY(-50%); width:38px; height:38px; border-radius:50%; border:none; background:rgba(237,232,220,0.08); color:#B8AD9E; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer }
         .fo-body { flex:1; overflow-y:auto; padding:20px }
         /* Búsqueda en lenguaje natural (bnv-*) */
