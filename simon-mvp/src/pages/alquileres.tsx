@@ -13,6 +13,7 @@ import { useWhatsAppCapture, triggerWhatsAppCapture, setDemoModeForCapture, setB
 import { buildAlquilerWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
+import { useTypewriterPlaceholder } from '@/lib/useTypewriterPlaceholder'
 import { AmenityIcon, SparkleIcon, hasCanonicalIcon } from '@/lib/amenity-icons'
 import { AMENIDADES_FILTRABLES } from '@/config/amenidades-mercado'
 import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerShortlists'
@@ -95,6 +96,15 @@ const MAX_FAVORITES = 3
 
 // WhatsApp de Simón (asistente). Usado en el menú hamburguesa del header mobile.
 const SIMON_WHATSAPP = '59177066308'
+
+// Ejemplos reales para el placeholder typewriter del buscador natural (alquiler, Bs).
+const SEARCH_EXAMPLES_ALQ = [
+  '2 dorm amoblado hasta 4.200 bs',
+  '1 dorm en Sirari',
+  'pet friendly con parqueo',
+  'monoambiente hasta 3 mil bs',
+  'depto sin amoblar en Eq. Norte',
+]
 
 // Filtro de fuentes (modo broker). Permite al broker mostrar solo el inventario
 // de las franquicias con las que opera. Aplica solo en /broker/[slug]/alquileres.
@@ -472,6 +482,11 @@ export default function AlquileresPage({
   const [natQuery, setNatQuery] = useState('')
   const [natChips, setNatChips] = useState<string[]>([])
   const [natAviso, setNatAviso] = useState<'venta' | 'moneda' | null>(null)
+  // Placeholder typewriter del buscador (mobile + desktop), escribe por ref.
+  const mSearchRef = useRef<HTMLInputElement>(null)
+  const dSearchRef = useRef<HTMLInputElement>(null)
+  useTypewriterPlaceholder(mSearchRef, SEARCH_EXAMPLES_ALQ, 'Buscá "', '"')
+  useTypewriterPlaceholder(dSearchRef, SEARCH_EXAMPLES_ALQ, 'Buscá "', '"')
   const [menuOpen, setMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   // Modal "Reportar dato incorrecto" — solo broker mode (migración 240).
@@ -1691,8 +1706,7 @@ export default function AlquileresPage({
                       <div className="dsk-search ad-search">
                         <form className="dsk-search-box" onSubmit={(e) => { e.preventDefault(); handleNaturalSearch(natQuery, true); (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.blur() }}>
                           <svg className="dsk-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                          <input className="dsk-search-input" type="search" enterKeyHint="search" value={natQuery}
-                            placeholder={'Buscá "1 dorm en Sirari hasta Bs 4.500"'}
+                          <input className="dsk-search-input" type="search" enterKeyHint="search" value={natQuery} ref={dSearchRef}
                             onChange={(e) => handleNaturalSearch(e.target.value, false)} />
                           {natQuery && <button type="button" className="dsk-search-clear" aria-label="Limpiar" onClick={() => { setNatQuery(''); setNatChips([]); setNatAviso(null) }}>&times;</button>}
                         </form>
@@ -1961,8 +1975,7 @@ export default function AlquileresPage({
             <div className="mfh-search-row">
               <form className="mfh-search" onSubmit={(e) => { e.preventDefault(); handleNaturalSearch(natQuery, true); (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.blur() }}>
                 <svg className="mfh-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input className="mfh-search-input" type="search" enterKeyHint="search" value={natQuery}
-                  placeholder={'Buscá "2 dorm amoblado hasta 4.200 bs"'}
+                <input className="mfh-search-input" type="search" enterKeyHint="search" value={natQuery} ref={mSearchRef}
                   onChange={(e) => handleNaturalSearch(e.target.value, false)} />
                 {natQuery && <button type="button" className="mfh-search-clear" aria-label="Limpiar búsqueda" onClick={() => { setNatQuery(''); setNatChips([]); setNatAviso(null) }}>&times;</button>}
               </form>
