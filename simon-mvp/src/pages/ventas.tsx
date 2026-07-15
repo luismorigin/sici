@@ -3170,7 +3170,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   //   ya filtró (disparó su propio fetch), el diferido no lo pisa.
   useEffect(() => {
     if (publicShareMode) return
-    if (initialProperties.length === 0 || spotlightId) { fetchProperties(); return }
+    // ?shadow=1: la data SSG es PROD (el build no conoce el query param). Forzar
+    // el fetch shadow INMEDIATO para no mostrar precios prod en el preview shadow
+    // (ej. #3580 = $275k prod vs $180k shadow). Sin esto, el refetch shadow se
+    // difería a idle y el sheet quedaba con el snapshot prod.
+    const isShadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
+    if (initialProperties.length === 0 || spotlightId || isShadow) { fetchProperties(); return }
     const idle = typeof window.requestIdleCallback === 'function'
       ? (cb: () => void) => window.requestIdleCallback(cb, { timeout: 3000 })
       : (cb: () => void) => window.setTimeout(cb, 1500)

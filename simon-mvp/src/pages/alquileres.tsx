@@ -674,6 +674,11 @@ export default function AlquileresPage({
         setTimeout(() => { programmaticScrollRef.current = false }, 100)
       })
     }
+    // ?shadow=1: la data ISR es PROD (el build no conoce el query param). Forzar
+    // el fetch shadow INMEDIATO (no diferido) para no mostrar precios prod en el
+    // preview shadow — mismo motivo que en ventas.tsx (#3580 $275k vs $180k).
+    const isShadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
+    if (isShadow) { doFetch(); return }
     if (typeof requestIdleCallback !== 'undefined') {
       const id = requestIdleCallback(doFetch, { timeout: 3000 })
       return () => cancelIdleCallback(id)
