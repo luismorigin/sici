@@ -954,7 +954,7 @@ export default function AlquileresPage({
   // zona+tipología+amoblado (≥6) → Equipetrol+tipología+amoblado → mixta.
   // SIN veredicto: solo posición declarada + base contable.
   const cardChips = useMemo(() => {
-    if (!splitDesktop) return null
+    // Se computa también en mobile (la card mobile ahora muestra el chip fiduciario).
     const bucket = (v: string | null | undefined) => v === 'si' || v === 'semi' ? 'amob' : v === 'no' ? 'noamob' : null
     const pools = new Map<string, number[]>()
     const push = (k: string, v: number) => { const a = pools.get(k); if (a) a.push(v); else pools.set(k, [v]) }
@@ -2059,6 +2059,7 @@ export default function AlquileresPage({
                     isDestacada={itemsDestacadaMap ? itemsDestacadaMap[item.data.id] === true : false}
                     onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(item.data) : undefined}
                     isReported={reportedIds.has(item.data.id)}
+                    marketChip={cardChips?.get(item.data.id) ?? null}
                   />
                 )
               })
@@ -3493,9 +3494,11 @@ const DesktopCard = memo(function DesktopCard({
 const MobilePropertyCard = memo(function MobilePropertyCard({
   property: p, isFirst, showHint, isFavorite, favoritesCount, isSpotlight, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
   brokerMode = false, onAddToShortlist, publicShareMode = false, publicShareBroker = null, contactoDirecto = false, priceSnapshot = null,
-  brokerComment = null, isDestacada = false, onReport, isReported = false,
+  brokerComment = null, isDestacada = false, onReport, isReported = false, marketChip = null,
 }: {
   property: UnidadAlquiler; isFirst: boolean; showHint?: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean; petFilterActive?: boolean
+  // Chip fiduciario "vs. similares" (mismo dato que AlquilerListCard). null = sin base ≥6.
+  marketChip?: { pos: 'bajo' | 'dentro' | 'sobre'; count: number } | null
   onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void
   brokerMode?: boolean; onAddToShortlist?: () => void
   publicShareMode?: boolean
@@ -3563,7 +3566,12 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
         </div>
         <div className="amc-price-block">
           <div className="amc-price">{formatPrice(p.precio_mensual_bob)}/mes</div>
-          <div className="amc-specs">{[`${Math.round(p.area_m2)}m²`, dormLabel(p.dormitorios), p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null, p.piso ? `Piso ${p.piso}` : null].filter(Boolean).join(' · ')}</div>
+          <div className="amc-specs">
+            <span className="amc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 12V7a1 1 0 011-1h16a1 1 0 011 1v5M3 12h18M3 12v6M21 12v6M6 12V9h5v3"/></svg>{dormLabel(p.dormitorios)}</span>
+            {p.area_m2 > 0 && <span className="amc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>{Math.round(p.area_m2)} m²</span>}
+            {p.banos ? <span className="amc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 12V6a2 2 0 012-2 2 2 0 012 2M4 12h17v2a4 4 0 01-4 4H8a4 4 0 01-4-4zM6 18v2M18 18v2"/></svg>{p.banos} baño{p.banos > 1 ? 's' : ''}</span> : null}
+            {p.piso ? <span className="amc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="6" y="3" width="12" height="18" rx="1"/><circle cx="14.5" cy="12" r="1"/></svg>Piso {p.piso}</span> : null}
+          </div>
         </div>
         <div className="amc-specs-2">
           {(p.amoblado === 'si' || p.amoblado === 'semi') && <span className="amc-highlight gold">{p.amoblado === 'si' ? 'Amoblado' : 'Semi-amoblado'}</span>}
@@ -3574,6 +3582,12 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
             p.monto_expensas_bob && p.monto_expensas_bob > 0 ? `Expensas Bs ${p.monto_expensas_bob}` : null,
           ].filter(Boolean).map((t, i) => <span key={i}>{i > 0 || p.amoblado || p.acepta_mascotas ? '  ·  ' : ''}{t}</span>)}
         </div>
+        {marketChip && (
+          <div className="amc-fidrow"><span className={`amc-fid ${marketChip.pos === 'sobre' ? 'amc-fid-sobre' : ''}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 21h18"/><rect x="5" y="12" width="3" height="6"/><rect x="10.5" y="8" width="3" height="10"/><rect x="16" y="4" width="3" height="14"/></svg>
+            {marketChip.pos === 'bajo' ? 'Más barato que similares' : marketChip.pos === 'sobre' ? 'Más caro que similares' : 'En línea con similares'}
+          </span></div>
+        )}
       </div>
       {isFirst && <div className="amc-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="#141414" strokeWidth="1.5" style={{width:18,height:18}}><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>}
 

@@ -622,7 +622,13 @@
 .amc-id { color: #7A7060; font-size: 12px; margin-left: 4px; letter-spacing: 0; }
 .amc-price-block { border-left: 3px solid #3A6A48; padding-left: 14px; margin-bottom: 8px; }
 .amc-price { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
-.amc-specs { font-size: 15px; font-weight: 300; color: #3A3530; font-family: 'DM Sans', sans-serif; }
+.amc-specs { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 15px; font-weight: 300; color: #3A3530; font-family: 'DM Sans', sans-serif; }
+.amc-sp { display: inline-flex; align-items: center; gap: 6px; }
+.amc-sp svg { width: 16px; height: 16px; color: #9A8E7A; flex-shrink: 0; }
+.amc-fidrow { margin-top: 10px; }
+.amc-fid { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 9px; background: rgba(58,106,72,0.10); color: #3A6A48; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; }
+.amc-fid svg { width: 15px; height: 15px; flex-shrink: 0; }
+.amc-fid.amc-fid-sobre { background: rgba(216,138,90,0.14); color: #B4622F; }
 .amc-specs-2 { font-size: 15px; font-weight: 300; color: #7A7060; font-family: 'DM Sans', sans-serif; margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 0; }
 .amc-highlight { font-weight: 500; color: #3A3530; margin-right: 4px; }
 .amc-highlight::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }

@@ -996,7 +996,7 @@ const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isA
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
 // memo + handlers estables — mismo patrón que VentaCard desktop.
-const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, onMap, isSpotlight, isFirst, showSwipeHint = false, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
+const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, onMap, isSpotlight, isFirst, showSwipeHint = false, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false, marketChip = null }: {
   property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
   onMap?: (p: UnidadVenta) => void
   // Hint "Desliza para más fotos" — se pasa true en las primeras posiciones del
@@ -1013,6 +1013,8 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
   isDestacada?: boolean
   onReport?: (p: UnidadVenta) => void
   isReported?: boolean
+  // Chip fiduciario "vs. similares" (mismo dato que VentaListCard). null = sin base ≥6.
+  marketChip?: { pos: 'bajo' | 'dentro' | 'sobre'; count: number } | null
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -1114,12 +1116,12 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
         <div className="mc-price-block">
           <div className="mc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="mc-tc">(T.C. oficial)</span></div>
           {(() => { const b = priceChangeBadge(priceSnapshot, p.precio_usd); return b ? <div className={`mc-price-change mc-price-change-${b.kind}`}>{b.label}</div> : null })()}
-          <div className="mc-specs">{[
-            p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
-            p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
-            p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
-            p.piso ? `Piso ${p.piso}` : null,
-          ].filter(Boolean).join(' · ')}</div>
+          <div className="mc-specs">
+            {p.dormitorios !== null && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 12V7a1 1 0 011-1h16a1 1 0 011 1v5M3 12h18M3 12v6M21 12v6M6 12V9h5v3"/></svg>{p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`}</span>}
+            {p.area_m2 > 0 && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>{Math.round(p.area_m2)} m²</span>}
+            {p.banos !== null && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 12V6a2 2 0 012-2 2 2 0 012 2M4 12h17v2a4 4 0 01-4 4H8a4 4 0 01-4-4zM6 18v2M18 18v2"/></svg>{p.banos} baño{p.banos !== 1 ? 's' : ''}</span>}
+            {p.piso && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="6" y="3" width="12" height="18" rx="1"/><circle cx="14.5" cy="12" r="1"/></svg>Piso {p.piso}</span>}
+          </div>
         </div>
         <div className="mc-specs-2">{[
           p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : null,
@@ -1129,6 +1131,12 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
+        {marketChip && (
+          <div className="mc-fidrow"><span className={`mc-fid ${marketChip.pos === 'sobre' ? 'mc-fid-sobre' : ''}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 21h18"/><rect x="5" y="12" width="3" height="6"/><rect x="10.5" y="8" width="3" height="10"/><rect x="16" y="4" width="3" height="14"/></svg>
+            {marketChip.pos === 'bajo' ? 'Más barato que similares' : marketChip.pos === 'sobre' ? 'Más caro que similares' : 'En línea con similares'}
+          </span></div>
+        )}
       </div>
     </div>
   )
@@ -3941,7 +3949,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
                 isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false}
                 onReport={brokerMode && !publicShareMode && brokerSlug ? onCardReport : undefined}
-                isReported={reportedIds.has(p.id)} />
+                isReported={reportedIds.has(p.id)} marketChip={cardChips?.get(p.id) ?? null} />
             })}
           </div>
 
@@ -4742,8 +4750,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-price-block { border-left:3px solid #3A6A48; padding-left:14px; margin-bottom:8px; flex-shrink:0 }
         .mc-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
         .mc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
-        .mc-specs { font-size:15px; color:#C8C0B0; font-family:'DM Sans',sans-serif; font-weight:400; line-height:1.4 }
+        .mc-specs { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:15px; color:#C8C0B0; font-family:'DM Sans',sans-serif; font-weight:400; line-height:1.4 }
+        .mc-sp { display:inline-flex; align-items:center; gap:6px }
+        .mc-sp svg { width:16px; height:16px; color:#8B8272; flex-shrink:0 }
         .mc-specs-2 { font-size:15px; color:#EDE8DC; font-family:'DM Sans',sans-serif; margin-bottom:auto; font-weight:300 }
+        .mc-fidrow { margin-top:10px }
+        .mc-fid { display:inline-flex; align-items:center; gap:7px; padding:7px 12px; border-radius:9px; background:rgba(58,106,72,0.18); color:#7BB389; font-size:13px; font-weight:600; font-family:'DM Sans',sans-serif }
+        .mc-fid svg { width:15px; height:15px; flex-shrink:0 }
+        .mc-fid.mc-fid-sobre { background:rgba(216,138,90,0.16); color:#E79A6A }
         .mc-wsp-inline { display:flex; align-items:center; gap:5px; text-decoration:none; color:#fff; font-size:12px; font-weight:600; background:#1EA952; border-radius:10px; padding:8px 14px }
         .mc-actions { display:flex; align-items:center; justify-content:space-between; padding-top:8px; border-top:1px solid rgba(237,232,220,0.1); margin-top:auto; min-height:36px }
         .mc-branding { display:block; text-align:center; font-family:'DM Sans',sans-serif; font-size:11px; color:rgba(237,232,220,0.25); text-decoration:none; padding-top:6px; letter-spacing:0.3px }
