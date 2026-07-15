@@ -20,11 +20,19 @@ import { firstName } from '@/lib/format-utils'
 import { buildAtribucionWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
+import { useTcParalelo } from '@/lib/useTcParalelo'
 import { AmenityIcon, SparkleIcon, hasCanonicalIcon } from '@/lib/amenity-icons'
 import { AMENIDADES_FILTRABLES } from '@/config/amenidades-mercado'
 import FeedDesktopNav from '@/components/feed/FeedDesktopNav'
 // WhatsApp oficial de Simon (negocio) — NO el personal del fundador.
 const SIMON_WHATSAPP = '59177066308'
+
+// Nota de TC en el filtro de presupuesto: muestra el TC paralelo DEL DÍA
+// (config_global, vía /api/tc-actual) en vez del 6.96 oficial muerto hardcodeado.
+function TcNote() {
+  const tc = useTcParalelo()
+  return <div className="vf-tc-note">Precios en USD · TC Bs {tc.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+}
 
 // --- SEO types ---
 interface VentasSEO {
@@ -382,7 +390,7 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
           <input type="range" className="vf-slider vf-slider-max" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
             value={maxPrice} aria-label="Precio máximo" onChange={e => onMaxPrice(parseInt(e.target.value))} />
         </div>
-        <div className="vf-tc-note">Precios en USD oficial · TC Bs 6.96</div>
+        <TcNote />
       </div>
       {brokerMode && onAreaMin && onAreaMax && (
         <div className="vf-group"><div className="vf-label">SUPERFICIE (m²)</div>
@@ -584,7 +592,7 @@ function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proye
               <input type="range" className="vf-slider vf-slider-max" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
                 value={maxPrice} aria-label="Precio máximo" onChange={e => handleMaxPrice(parseInt(e.target.value))} />
             </div>
-            <div className="vf-tc-note">Precios en USD oficial · TC Bs 6.96</div>
+            <TcNote />
           </div>
         )}
       </div>
