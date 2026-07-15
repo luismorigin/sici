@@ -133,6 +133,31 @@ captura** del "ver anuncio original".)
 
 ---
 
+## 🗺️ MAPA DEL CÓDIGO PARA P3b (del análisis de agentes — guardado para no re-mapear)
+- **El sheet NO es un componente compartido**: hay dos `function BottomSheet` inline —
+  ventas `pages/ventas.tsx` (~L1417, prop `isOpen`, raíz `bs bs-venta … bs-side`) y alquileres
+  `pages/alquileres.tsx` (~L3850, prop `open`, raíz `bs … bs-side-alq`). (Line numbers ~ aprox,
+  corridos por los commits P1-P3a.)
+- **`sideMode` NO es mobile-vs-desktop**: `sideMode` = side sheet / modal claro DESKTOP-split.
+  Mobile = siempre `sideMode=false`. La variable página que decide split es `splitDesktop`.
+  El sheet recibe `isDesktop` (lo usa en la clase raíz: `sideMode ? 'bs-side' : (isDesktop ? 'bs-desktop' : '')`).
+- **Para traer las ricas a mobile SIN tocar broker/publicShare-desktop-no-split** (que usan la rama
+  `!sideMode` con `isDesktop=true` → clase `bs-desktop`): gatear **viejas** `{!sideMode && isDesktop && …}`
+  y **ricas** `{(sideMode || !isDesktop) && …}`. Así real-mobile (`isDesktop=false`) recibe las ricas y no las viejas.
+- **Secciones VIEJAS mobile a reemplazar**: Características = tiles `bs-grid`/`bs-feat`; Amenidades =
+  chips planos `bs-aw`/`bs-at` (ventas 2 bloques Edificio/Departamento; alquileres 1 bloque); Mercado =
+  `bs-mktv` (ventas) / `bs-mkta` (alquileres).
+- **Secciones RICAS gateadas `sideMode`** (existen, hay que des-gatear+tematizar): stats `bsm-stats`(v)/`bsm-stats-alq`(a)
+  + inclusiones `bsm-incl`/`bsm-incl-chips`; split amenidades `bsm-comod-*`/`bsm-especial`(v) · `bs-comod-*`/`bs-especial`(a)
+  con `hasCanonicalIcon`; mercado v2 `bs-mkt2-*` (verdict/gauge/compare/note); **Costos `bs-costos-*` + Ingreso sugerido (SOLO alquiler)**.
+- **CSS a re-tematizar**: hoy scopeado a `.bs-venta.bs-side` (ventas.tsx styled-jsx) y `.bs-side-alq`
+  (alquileres.css) con colores CLAROS hardcodeados (`.bsm-especial-pill{background:#FFF;color:#141414}`,
+  `.bsm-comod-item{color:#141414}`, `.bs-mkt2-track::before{background:#E7E1D3}`). Mobile ventas raíz =
+  `.bs.bs-venta` (sin bs-side/bs-desktop) → escribir overrides oscuros con selector `.bs-venta:not(.bs-side):not(.bs-desktop) …`.
+  Alquileres mobile raíz = `.bs` (sin bs-side-alq) → arena, reusa más el estilo claro (menos overrides).
+- **Preguntas YA son checkboxes** que se suman al WhatsApp (`bs-q-item` toggle, ambos feeds). **"Ver anuncio original"**
+  YA existe con lead-gate `bs-gate` (el "modal de captura" del mockup = ese gate, queda TBD refinarlo).
+
 ## COMPONENTES A REUSAR (bajan el riesgo técnico)
 - **`BottomSheet`** (compartido; prop `sideMode` = desktop). El sheet mobile = el mismo
   componente sin `sideMode`. Casi todas las secciones ya existen ahí (por eso el sheet es
