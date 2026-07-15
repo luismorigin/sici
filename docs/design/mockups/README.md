@@ -16,17 +16,31 @@ total) → **Ingreso sugerido** → Similares (scroll) → **Preguntas (checkbox
 original** → sticky compacto ([WhatsApp + "N preguntas"] · Comparar · Compartir universal).
 
 ### El sheet de VENTAS = misma estructura en OSCURO
-No se guardó HTML aparte (evitar duplicar ~400 líneas). Es **idéntico al de alquileres** salvo:
+No se guardó HTML aparte a propósito: la versión de ventas que se mockeó era ANTERIOR a los
+refinamientos finales (checkboxes, ver-original, sticky compacto) que se decidieron iterando el
+de alquileres — guardarla mostraría cosas viejas. La referencia correcta de ESTRUCTURA es el
+`mobile-alquileres-sheet.html`; la de CONTENIDO ventas-específico es el **modal claro desktop de
+ventas ya vivo** (`/ventas?shadow=1`, ≥1200px, click card → `.bs-side`). **P3b re-tematiza código
+existente**, no reconstruye: todo lo de ventas ya está renderizado hoy en ese modal desktop.
+
+**Diferencias de VENTAS vs. el sheet de alquileres (COMPLETO):**
 - **Tema oscuro** (paleta abajo) en vez de arena.
-- Moneda **$us** (precio total + $us/m²), no Bs/mes.
-- Estado = **preventa/entrega inmediata** (preventa con fecha, ámbar), no amoblado.
-- **SIN** las secciones "Costo real mensual" ni "Ingreso sugerido" (son solo de alquiler).
-- Nav de anclas: Resumen · Mercado · Similares (sin "Costos").
-- Nombre del edificio en **blanco puro** (ancla); "Reciente" texto verde.
+- Moneda **$us**: precio total + `$us N/m²` (no Bs/mes ni Bs/m²).
+- **Nombre del edificio en blanco puro** (`#FFFFFF`, ancla); "Reciente" texto verde plano.
+- Estado (en la fila días·estado de Mercado) = **preventa / entrega inmediata**; la preventa
+  muestra su **fecha de entrega en ámbar** (no "amoblado/sin amoblar" como alquiler).
+- **SIN** secciones "Costo real mensual" ni "Ingreso sugerido" (son exclusivas de alquiler).
+- Nav de anclas: **Resumen · Mercado · Similares** (sin la pestaña "Costos").
+- Chips de inclusión: **Equipado / Parqueo / Baulera** (no Amoblado/Mascotas/Pet friendly).
+- Preguntas = **"Preguntas para el vendedor"** (no "broker"); su set incluye preguntas propias de
+  ventas (preventa, plan de pagos, TC) — ya en el código (`brokerQuestions` de ventas.tsx).
+- Puede mostrar **badges de venta** (preventa destacada, negociable, plan de pagos, -% contado,
+  parqueo/baulera incluida, TC paralelo) y "**Opcional: parqueo +$us / baulera +$us**" — ya en código.
+- Comparador de mercado (`bs-mkt2`/`bs-mktv`): por **$us/m²** + total; caveat "comparamos por m²".
 
 **Paleta oscura (ventas):** fondo sheet `#141210`, cards `#1d1a15`, texto `#ECE6D8`, nombre/precio
 `#FFFFFF`, muted `#B8AD9E`, hint `#7A7060`, líneas `#2c2822`, salvia `#7BB389`, salvia-bg
-`rgba(58,106,72,.16)`. (Para derivar el HTML de ventas: tomar este archivo, swap de esos colores.)
+`rgba(58,106,72,.16)`, ámbar (preventa) `#E7B24A`.
 
 ## Mockups YA IMPLEMENTADOS (referencia = código vivo, no hace falta HTML)
 - **Cards del feed** (P1, `b8dccf4`): specs con iconos + chip fiduciario. Ver `/ventas`, `/alquileres` en mobile.
