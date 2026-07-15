@@ -778,6 +778,9 @@
 .bs-comod-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 18px;}
 .bs-comod-item{display:flex;align-items:center;gap:11px;font-family:'DM Sans',sans-serif;font-size:14px;color:#141414;}
 .bs-comod-ico{width:20px;height:20px;color:#3A6A48;flex-shrink:0;}
+/* Mapa de ubicación en el sheet (mobile rico + modal desktop) */
+.bsm-flow-map{height:200px;border-radius:12px;overflow:hidden;border:1px solid #D8D0BC;position:relative;isolation:isolate;margin-bottom:12px;}
+.bs-side-alq .bsm-flow-map{height:360px;}
 .bs-ver-anuncio{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:transparent;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;border-radius:10px;transition:background 0.2s;cursor:pointer;}
 .bs-ver-anuncio:hover{background:rgba(58,106,72,0.12);}
 .bs-gate{display:flex;flex-direction:column;gap:12px}

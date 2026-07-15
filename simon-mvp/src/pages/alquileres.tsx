@@ -4367,7 +4367,15 @@ function BottomSheet({
         </div>
       )}
       {showTab('resumen') && hasGPS && (
-        <div className="bs-section">
+        <div className="bs-section" id="bsa-ubic">
+          {/* Mapa mediano — layout rico (mobile + modal desktop); antes solo estaba
+              el link a Google Maps. Espejo de la Ubicación de ventas. */}
+          {richLayout && (
+            <>
+              <div className="bs-sl"><span className="bs-sl-dot" />Ubicación</div>
+              <div className="bsm-flow-map"><MapComponent lat={p.latitud!} lng={p.longitud!} /></div>
+            </>
+          )}
           <a
             href={`https://www.google.com/maps?q=${p.latitud},${p.longitud}`}
             target="_blank"
