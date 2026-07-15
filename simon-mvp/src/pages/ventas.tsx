@@ -1650,7 +1650,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
       <div className="bs-mktv">
         <div className="bs-mktv-this">
           <span className="bs-mktv-label">{sideMode ? 'Precio de este departamento' : 'Este depto'}</span>
-          <span className="bs-mktv-value">{sideMode && p.precio_usd > 0 ? `$us ${Math.round(p.precio_usd).toLocaleString('en-US')} · ` : ''}$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>
+          <span className="bs-mktv-value">{p.precio_usd > 0 ? `$us ${Math.round(p.precio_usd).toLocaleString('en-US')} · ` : ''}$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>
           <span className="bs-mktv-status">{p.precio_m2 < marketData.rangoLow ? 'Más barato que similares' : p.precio_m2 > marketData.rangoHigh ? 'Más caro que similares' : 'En línea con similares'}</span>
         </div>
         <div className="bs-mktv-zona">
@@ -2053,9 +2053,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
             </div>
           )}
 
-          {/* Agente info — oculto en publicShareMode (cliente solo contacta al broker);
-              en contactoDirecto (B2C) se muestra: el cliente contacta a ese captador */}
-          {showTab('resumen') && !sideMode && (!publicShareMode || contactoDirecto) && p.agente_nombre && (
+          {/* Agente info — el feed fiduciario NO muestra el captador (decisión Lucho).
+              Solo se muestra en contactoDirecto (B2C): ahí el cliente contacta a ese captador. */}
+          {showTab('resumen') && !sideMode && contactoDirecto && p.agente_nombre && (
             <div className="bs-section">
               <div className="bs-agent">
                 <span className="bs-agent-name">{p.agente_nombre}</span>
@@ -2063,9 +2063,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
               </div>
             </div>
           )}
-          {/* Línea de confianza (modal desktop): captador. Los días en el
-              mercado se muestran en la sección Mercado. */}
-          {sideMode && (!publicShareMode || contactoDirecto) && p.agente_nombre && (
+          {/* "Captado por" solo en contactoDirecto (B2C); el sheet normal no lo muestra. */}
+          {sideMode && contactoDirecto && p.agente_nombre && (
             <div className="bs-section bsm-trust">
               {`Captado por ${p.agente_nombre}${p.agente_oficina ? ` · ${p.agente_oficina}` : ''}`}
             </div>

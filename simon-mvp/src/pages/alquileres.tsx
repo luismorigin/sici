@@ -4423,7 +4423,7 @@ function BottomSheet({
           <div className="bs-mkt">
             <div className="bs-mkta-this">
               <span className="bs-mkta-label">Este depto</span>
-              <span className="bs-mkta-value">{formatPrice(p.precio_mensual_bob)}/mes</span>
+              <span className="bs-mkta-value">{formatPrice(p.precio_mensual_bob)}/mes{p.area_m2 > 0 ? ` · Bs ${Math.round(p.precio_mensual_bob / p.area_m2).toLocaleString('es-BO')}/m²` : ''}</span>
             </div>
             <div className="bs-mkta-zona">
               Zona ({dormLabel(p.dormitorios)}{marketData.segmento ? ` · ${marketData.segmento}` : ''}): mediana <b>{formatPrice(marketData.mediana)}/mes</b>
