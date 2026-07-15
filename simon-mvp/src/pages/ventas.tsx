@@ -22,6 +22,7 @@ import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
 import { useTcParalelo } from '@/lib/useTcParalelo'
 import { useTypewriterPlaceholder } from '@/lib/useTypewriterPlaceholder'
+import PriceHistogram from '@/components/feed/PriceHistogram'
 import { AmenityIcon, SparkleIcon, hasCanonicalIcon } from '@/lib/amenity-icons'
 import { AMENIDADES_FILTRABLES } from '@/config/amenidades-mercado'
 import FeedDesktopNav from '@/components/feed/FeedDesktopNav'
@@ -364,7 +365,7 @@ function AreaInputsVT({ areaMin, areaMax, onAreaMin, onAreaMax }: {
   )
 }
 
-function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto, proyectoNames, onMinPrice, onMaxPrice, onToggleZona, onToggleDorm, onEntrega, onOrden, onProyecto, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, amenSel, onAmenToggle }: {
+function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto, proyectoNames, onMinPrice, onMaxPrice, onToggleZona, onToggleDorm, onEntrega, onOrden, onProyecto, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, amenSel, onAmenToggle, priceValues }: {
   minPrice: number; maxPrice: number; selectedDorms: Set<number>; selectedZonas: Set<string>; entrega: string; orden: FiltrosVentaSimple['orden']; proyecto: string; proyectoNames?: string[]
   onMinPrice: (v: number) => void; onMaxPrice: (v: number) => void; onToggleZona: (db: string) => void; onToggleDorm: (d: number) => void; onEntrega: (v: string) => void; onOrden: (v: FiltrosVentaSimple['orden']) => void; onProyecto: (v: string) => void
   brokerMode?: boolean
@@ -372,6 +373,8 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
   onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
   // Comodidades (edificio) + Atributos (depto), client-side vía amenSel del padre.
   amenSel?: Set<string>; onAmenToggle?: (a: string) => void
+  // Precios del feed cargado, para el histograma de distribución.
+  priceValues?: number[]
 }) {
   return (
     <>
@@ -393,6 +396,9 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
         </div>
       </div>
       <div className="vf-group"><div className="vf-label">PRESUPUESTO</div>
+        {priceValues && priceValues.length > 0 && (
+          <PriceHistogram values={priceValues} min={MIN_PRICE} max={MAX_PRICE} selMin={minPrice} selMax={maxPrice} dark />
+        )}
         <PriceInputsVT minPrice={minPrice} maxPrice={maxPrice} onMinPrice={onMinPrice} onMaxPrice={onMaxPrice} />
         <div className="vf-range-wrap">
           <input type="range" className="vf-slider vf-slider-min" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
@@ -1216,7 +1222,7 @@ function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onRe
 }
 
 // ===== Mobile Filter Overlay (TikTok/Airbnb style) =====
-function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, amenSel, onAmenToggle }: {
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, amenSel, onAmenToggle, priceValues }: {
   isOpen: boolean; onClose: () => void
   totalCount: number; filteredCount: number; isFiltered: boolean
   onApply: (f: FiltrosVentaSimple) => void; onReset: () => void; proyectoNames?: string[]
@@ -1224,6 +1230,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   areaMin?: number; areaMax?: number
   onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
   amenSel?: Set<string>; onAmenToggle?: (a: string) => void
+  priceValues?: number[]
 }) {
   const [minPrice, setMinPrice] = useState(MIN_PRICE)
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE)
@@ -1327,7 +1334,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
           entrega={entrega} orden={orden} proyecto={proyecto} proyectoNames={proyectoNames} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
           onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} onProyecto={v => setProyecto(v)}
           brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax} onAreaMin={onAreaMin} onAreaMax={onAreaMax}
-          amenSel={amenSel} onAmenToggle={onAmenToggle} />
+          amenSel={amenSel} onAmenToggle={onAmenToggle} priceValues={priceValues} />
       </div>
       <div className="fo-footer">
         <button className="fo-reset" onClick={handleReset}>Limpiar filtros</button>
@@ -2471,6 +2478,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const itemsDestacadaMap: Record<number, boolean> | null = publicShare && publicShare.itemsDestacada ? publicShare.itemsDestacada : null
   const initialProps = publicShareMode ? publicShare!.items : initialProperties
   const [properties, setProperties] = useState<UnidadVenta[]>(initialProps)
+  // Precios del feed cargado, para el histograma de distribución del filtro.
+  const priceValues = useMemo(() => properties.map(p => p.precio_usd).filter(v => v > 0), [properties])
   const [loading, setLoading] = useState(publicShareMode ? false : initialProperties.length === 0)
   const [loadError, setLoadError] = useState(false)
   const [filters, setFilters] = useState<FiltrosVentaSimple>({ orden: 'recientes' })
@@ -3656,7 +3665,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax}
         onAreaMin={setAreaMin}
         onAreaMax={setAreaMax}
-        amenSel={amenSel} onAmenToggle={toggleAmen} />
+        amenSel={amenSel} onAmenToggle={toggleAmen} priceValues={priceValues} />
 
       {(isDesktop || publicShareMode || brokerMode) ? (
         /* ===== DESKTOP (o public share / broker en cualquier device — feed con grid simple) ===== */

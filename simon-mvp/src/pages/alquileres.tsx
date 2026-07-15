@@ -14,6 +14,7 @@ import { buildAlquilerWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefL
 import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
 import { useTypewriterPlaceholder } from '@/lib/useTypewriterPlaceholder'
+import PriceHistogram from '@/components/feed/PriceHistogram'
 import { AmenityIcon, SparkleIcon, hasCanonicalIcon } from '@/lib/amenity-icons'
 import { AMENIDADES_FILTRABLES } from '@/config/amenidades-mercado'
 import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerShortlists'
@@ -341,6 +342,8 @@ export default function AlquileresPage({
   const brokerInfoProp: { nombre: string; inmobiliaria?: string | null } | null = broker ? { nombre: broker.nombre, inmobiliaria: broker.inmobiliaria } : null
 
   const [properties, setProperties] = useState<UnidadAlquiler[]>(initialProps)
+  // Precios (Bs/mes) del feed cargado, para el histograma de distribución del filtro.
+  const priceValues = useMemo(() => properties.map(p => p.precio_mensual_bob).filter(v => v > 0), [properties])
   const [loading, setLoading] = useState(false)
   const [spotlightId, setSpotlightId] = useState<number | null>(null)
   const [fetchedSpotlight, setFetchedSpotlight] = useState<UnidadAlquiler | null>(null)
@@ -2424,6 +2427,7 @@ export default function AlquileresPage({
         precioMin={precioMinAlq}
         onPrecioMin={setPrecioMinAlq}
         amenSel={amenSel} onAmenToggle={toggleAmen}
+        priceValues={priceValues}
       />
 
       {/* Full-screen mobile map — fuera del condicional layout para que funcione
@@ -2994,7 +2998,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }
 
 // ===== FILTER OVERLAY (full-screen, replaces MobileFilterCard in feed) =====
-function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, currentFilters, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, precioMin, onPrecioMin, amenSel, onAmenToggle }: {
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, currentFilters, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, precioMin, onPrecioMin, amenSel, onAmenToggle, priceValues }: {
   isOpen: boolean; onClose: () => void
   totalCount: number; filteredCount: number; isFiltered: boolean
   currentFilters: FiltrosAlquiler
@@ -3005,6 +3009,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   precioMin?: number; onPrecioMin?: (v: number) => void
   // Comodidades (edificio) + Atributos client (Equipado/Baulera), vía amenSel del padre.
   amenSel?: Set<string>; onAmenToggle?: (a: string) => void
+  priceValues?: number[]
 }) {
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set(currentFilters.dormitorios_lista || []))
@@ -3093,6 +3098,9 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
         </div>
         {/* Budget */}
         <div className="afo-group"><div className="afo-label"><span className="afo-dot" />{brokerMode ? 'PRESUPUESTO MENSUAL' : 'PRESUPUESTO MAXIMO'}</div>
+          {priceValues && priceValues.length > 0 && (
+            <PriceHistogram values={priceValues} min={2000} max={MAX_SLIDER_PRICE} selMin={brokerMode ? (precioMin ?? 0) : 0} selMax={maxPrice} />
+          )}
           {brokerMode && onPrecioMin ? (
             <div className="afo-range-wrap">
               <input type="range" className="afo-range-slider afo-range-slider-min"
