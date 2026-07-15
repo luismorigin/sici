@@ -2404,6 +2404,7 @@ export default function AlquileresPage({
         onAreaMax={setAreaMax}
         precioMin={precioMinAlq}
         onPrecioMin={setPrecioMinAlq}
+        amenSel={amenSel} onAmenToggle={toggleAmen}
       />
 
       {/* Full-screen mobile map — fuera del condicional layout para que funcione
@@ -2974,7 +2975,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }
 
 // ===== FILTER OVERLAY (full-screen, replaces MobileFilterCard in feed) =====
-function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, currentFilters, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, precioMin, onPrecioMin }: {
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, currentFilters, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, precioMin, onPrecioMin, amenSel, onAmenToggle }: {
   isOpen: boolean; onClose: () => void
   totalCount: number; filteredCount: number; isFiltered: boolean
   currentFilters: FiltrosAlquiler
@@ -2983,6 +2984,8 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   areaMin?: number; areaMax?: number
   onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
   precioMin?: number; onPrecioMin?: (v: number) => void
+  // Comodidades (edificio) + Atributos client (Equipado/Baulera), vía amenSel del padre.
+  amenSel?: Set<string>; onAmenToggle?: (a: string) => void
 }) {
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set(currentFilters.dormitorios_lista || []))
@@ -3048,9 +3051,8 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   return (
     <div className="afo-overlay">
       <div className="afo-header">
+        <span className="afo-hcount">{displayCount} resultados</span>
         <button className="afo-close" onClick={onClose}>&times;</button>
-        <span className="afo-title">Filtros</span>
-        <span className="afo-count">{displayCount} deptos</span>
       </div>
       <div className="afo-body">
         {/* Edificio search */}
@@ -3117,12 +3119,27 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
             <button key={d} className={`afo-dorm-btn ${selectedDorms.has(d) ? 'active' : ''}`} onClick={() => toggleDorm(d)}>{d === 0 ? 'Mono' : d === 3 ? '3+' : d}</button>
           ))}</div>
         </div>
-        {/* Toggles */}
-        <div className="afo-group"><div className="afo-dorms">
-          <button className={`afo-dorm-btn afo-amoblado ${amoblado ? 'active' : ''}`} onClick={() => setAmoblado(!amoblado)}>Amoblado</button>
-          <button className={`afo-dorm-btn afo-mascotas ${mascotas ? 'active' : ''}`} onClick={() => setMascotas(!mascotas)}>Mascotas</button>
-          <button className={`afo-dorm-btn ${conParqueo ? 'active' : ''}`} onClick={() => setConParqueo(!conParqueo)}>Parqueo</button>
-        </div></div>
+        {/* Comodidades (edificio) — client-side vía amenSel */}
+        {amenSel && onAmenToggle && (
+          <div className="afo-group"><div className="afo-label"><span className="afo-dot" />COMODIDADES</div>
+            <div className="afo-chips">
+              {AMEN_ALQ_DIFERENCIADORES.map(a => (
+                <button key={a} className={`afo-chip ${amenSel.has(a) ? 'active' : ''}`} onClick={() => onAmenToggle(a)}>{a}</button>
+              ))}
+            </div>
+            <div className="afo-amen-note">Filtramos por lo que el anuncio confirma; algún depto podría tenerla sin listarla.</div>
+          </div>
+        )}
+        {/* Atributos del departamento — Amoblado/Mascotas/Parqueo (server) + Equipado/Baulera (client) */}
+        <div className="afo-group"><div className="afo-label"><span className="afo-dot" />ATRIBUTOS DEL DEPARTAMENTO</div>
+          <div className="afo-chips">
+            <button className={`afo-chip ${amoblado ? 'active' : ''}`} onClick={() => setAmoblado(!amoblado)}>Amoblado</button>
+            {amenSel && onAmenToggle && <button className={`afo-chip ${amenSel.has('Equipado') ? 'active' : ''}`} onClick={() => onAmenToggle('Equipado')}>Equipado</button>}
+            <button className={`afo-chip ${conParqueo ? 'active' : ''}`} onClick={() => setConParqueo(!conParqueo)}>Parqueo</button>
+            {amenSel && onAmenToggle && <button className={`afo-chip ${amenSel.has('Baulera') ? 'active' : ''}`} onClick={() => onAmenToggle('Baulera')}>Baulera</button>}
+            <button className={`afo-chip ${mascotas ? 'active' : ''}`} onClick={() => setMascotas(!mascotas)}>Mascotas</button>
+          </div>
+        </div>
         {/* Orden */}
         <div className="afo-group"><div className="afo-label"><span className="afo-dot" />ORDENAR POR</div>
           <div className="afo-dorms">{ORDEN_OPTIONS.map(o => (
@@ -3131,10 +3148,8 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
         </div>
       </div>
       <div className="afo-footer">
-        {isFiltered && <button className="afo-reset" onClick={handleReset}>Quitar filtros</button>}
-        <button className="afo-apply" onClick={handleApply}>
-          VER {displayCount} RESULTADOS
-        </button>
+        <button className="afo-reset" onClick={handleReset}>Limpiar filtros</button>
+        <button className="afo-apply" onClick={handleApply}>Ver resultados</button>
       </div>
     </div>
   )

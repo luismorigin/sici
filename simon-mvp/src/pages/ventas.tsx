@@ -234,29 +234,24 @@ function PriceInputsVT({ minPrice, maxPrice, onMinPrice, onMaxPrice }: {
   minPrice: number; maxPrice: number
   onMinPrice: (v: number) => void; onMaxPrice: (v: number) => void
 }) {
-  const MIN_K = Math.round(MIN_PRICE / 1000)
-  const MAX_K = Math.round(MAX_PRICE / 1000)
-  const [minStr, setMinStr] = useState(String(Math.round(minPrice / 1000)))
-  const [maxStr, setMaxStr] = useState(String(Math.round(maxPrice / 1000)))
-  useEffect(() => { setMinStr(String(Math.round(minPrice / 1000))) }, [minPrice])
-  useEffect(() => { setMaxStr(String(Math.round(maxPrice / 1000))) }, [maxPrice])
+  // Montos en número COMPLETO (no "K" — confundía). Buffer string, commit en blur/Enter.
+  const [minStr, setMinStr] = useState(String(minPrice))
+  const [maxStr, setMaxStr] = useState(String(maxPrice))
+  useEffect(() => { setMinStr(String(minPrice)) }, [minPrice])
+  useEffect(() => { setMaxStr(String(maxPrice)) }, [maxPrice])
   function commitMin() {
     const n = parseInt(minStr)
-    if (!Number.isFinite(n)) { setMinStr(String(Math.round(minPrice / 1000))); return }
-    const maxK = Math.round(maxPrice / 1000)
-    const clampedK = Math.max(MIN_K, Math.min(n, maxK - Math.round(PRICE_STEP / 1000)))
-    setMinStr(String(clampedK))
-    const valPleno = clampedK * 1000
-    if (valPleno !== minPrice) onMinPrice(valPleno)
+    if (!Number.isFinite(n)) { setMinStr(String(minPrice)); return }
+    const clamped = Math.max(MIN_PRICE, Math.min(n, maxPrice - PRICE_STEP))
+    setMinStr(String(clamped))
+    if (clamped !== minPrice) onMinPrice(clamped)
   }
   function commitMax() {
     const n = parseInt(maxStr)
-    if (!Number.isFinite(n)) { setMaxStr(String(Math.round(maxPrice / 1000))); return }
-    const minK = Math.round(minPrice / 1000)
-    const clampedK = Math.min(MAX_K, Math.max(n, minK + Math.round(PRICE_STEP / 1000)))
-    setMaxStr(String(clampedK))
-    const valPleno = clampedK * 1000
-    if (valPleno !== maxPrice) onMaxPrice(valPleno)
+    if (!Number.isFinite(n)) { setMaxStr(String(maxPrice)); return }
+    const clamped = Math.min(MAX_PRICE, Math.max(n, minPrice + PRICE_STEP))
+    setMaxStr(String(clamped))
+    if (clamped !== maxPrice) onMaxPrice(clamped)
   }
   return (
     <div className="vf-price-inputs">
@@ -264,26 +259,24 @@ function PriceInputsVT({ minPrice, maxPrice, onMinPrice, onMaxPrice }: {
         <span className="vf-area-prefix">Min</span>
         <span className="vf-price-dollar">$</span>
         <input type="number" className="vf-area-input" inputMode="numeric"
-          min={MIN_K} max={MAX_K} step={5}
+          min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
           value={minStr}
-          aria-label="Precio mínimo en miles de USD"
+          aria-label="Precio mínimo en USD"
           onChange={e => setMinStr(e.target.value)}
           onBlur={commitMin}
           onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
-        <span className="vf-area-suffix">K</span>
       </label>
       <span className="vf-area-sep">—</span>
       <label className="vf-area-field">
         <span className="vf-area-prefix">Max</span>
         <span className="vf-price-dollar">$</span>
         <input type="number" className="vf-area-input" inputMode="numeric"
-          min={MIN_K} max={MAX_K} step={5}
+          min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
           value={maxStr}
-          aria-label="Precio máximo en miles de USD"
+          aria-label="Precio máximo en USD"
           onChange={e => setMaxStr(e.target.value)}
           onBlur={commitMax}
           onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
-        <span className="vf-area-suffix">K</span>
       </label>
     </div>
   )
@@ -353,12 +346,14 @@ function AreaInputsVT({ areaMin, areaMax, onAreaMin, onAreaMax }: {
   )
 }
 
-function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto, proyectoNames, onMinPrice, onMaxPrice, onToggleZona, onToggleDorm, onEntrega, onOrden, onProyecto, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax }: {
+function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto, proyectoNames, onMinPrice, onMaxPrice, onToggleZona, onToggleDorm, onEntrega, onOrden, onProyecto, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, amenSel, onAmenToggle }: {
   minPrice: number; maxPrice: number; selectedDorms: Set<number>; selectedZonas: Set<string>; entrega: string; orden: FiltrosVentaSimple['orden']; proyecto: string; proyectoNames?: string[]
   onMinPrice: (v: number) => void; onMaxPrice: (v: number) => void; onToggleZona: (db: string) => void; onToggleDorm: (d: number) => void; onEntrega: (v: string) => void; onOrden: (v: FiltrosVentaSimple['orden']) => void; onProyecto: (v: string) => void
   brokerMode?: boolean
   areaMin?: number; areaMax?: number
   onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
+  // Comodidades (edificio) + Atributos (depto), client-side vía amenSel del padre.
+  amenSel?: Set<string>; onAmenToggle?: (a: string) => void
 }) {
   return (
     <>
@@ -415,6 +410,25 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
           ))}
         </div>
       </div>
+      {amenSel && onAmenToggle && (
+        <div className="vf-group"><div className="vf-label">COMODIDADES</div>
+          <div className="vf-chips">
+            {AMEN_DIFERENCIADORES.map(a => (
+              <button key={a} className={`vf-chip ${amenSel.has(a) ? 'active' : ''}`} onClick={() => onAmenToggle(a)}>{a}</button>
+            ))}
+          </div>
+          <div className="vf-amen-note">Filtramos por lo que el anuncio confirma; algún depto podría tenerla sin listarla.</div>
+        </div>
+      )}
+      {amenSel && onAmenToggle && (
+        <div className="vf-group"><div className="vf-label">ATRIBUTOS DEL DEPARTAMENTO</div>
+          <div className="vf-chips">
+            {AMEN_ATRIBUTOS.map(a => (
+              <button key={a} className={`vf-chip ${amenSel.has(a) ? 'active' : ''}`} onClick={() => onAmenToggle(a)}>{a}</button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="vf-group"><div className="vf-label">ORDENAR POR</div>
         <div className="vf-btn-row">
           {ORDEN_OPTIONS.map(o => (
@@ -1184,13 +1198,14 @@ function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onRe
 }
 
 // ===== Mobile Filter Overlay (TikTok/Airbnb style) =====
-function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax }: {
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, amenSel, onAmenToggle }: {
   isOpen: boolean; onClose: () => void
   totalCount: number; filteredCount: number; isFiltered: boolean
   onApply: (f: FiltrosVentaSimple) => void; onReset: () => void; proyectoNames?: string[]
   brokerMode?: boolean
   areaMin?: number; areaMax?: number
   onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
+  amenSel?: Set<string>; onAmenToggle?: (a: string) => void
 }) {
   const [minPrice, setMinPrice] = useState(MIN_PRICE)
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE)
@@ -1283,9 +1298,8 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   return (
     <div className="fo-overlay">
       <div className="fo-header">
+        <span className="fo-hcount">{displayCount} resultados</span>
         <button className="fo-close" aria-label="Cerrar filtros" onClick={onClose}>&times;</button>
-        <span className="fo-title">Filtros</span>
-        <span className="fo-count">{displayCount} deptos</span>
       </div>
       <div className="fo-body">
         {/* El buscador natural ahora vive en el header del feed; el overlay
@@ -1293,13 +1307,12 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
         <FilterControls minPrice={minPrice} maxPrice={maxPrice} selectedDorms={selectedDorms} selectedZonas={selectedZonas}
           entrega={entrega} orden={orden} proyecto={proyecto} proyectoNames={proyectoNames} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
           onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} onProyecto={v => setProyecto(v)}
-          brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax} onAreaMin={onAreaMin} onAreaMax={onAreaMax} />
+          brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax} onAreaMin={onAreaMin} onAreaMax={onAreaMax}
+          amenSel={amenSel} onAmenToggle={onAmenToggle} />
       </div>
       <div className="fo-footer">
-        {isFiltered && <button className="fo-reset" onClick={handleReset}>Quitar filtros</button>}
-        <button className="fo-apply" onClick={handleApply}>
-          VER {displayCount} RESULTADOS
-        </button>
+        <button className="fo-reset" onClick={handleReset}>Limpiar filtros</button>
+        <button className="fo-apply" onClick={handleApply}>Ver resultados</button>
       </div>
     </div>
   )
@@ -3595,7 +3608,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
         brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax}
         onAreaMin={setAreaMin}
-        onAreaMax={setAreaMax} />
+        onAreaMax={setAreaMax}
+        amenSel={amenSel} onAmenToggle={toggleAmen} />
 
       {(isDesktop || publicShareMode || brokerMode) ? (
         /* ===== DESKTOP (o public share / broker en cualquier device — feed con grid simple) ===== */
@@ -4550,10 +4564,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* ===== FILTER OVERLAY (full-screen takeover) ===== */
         .fo-overlay { position:fixed; inset:0; z-index:200; background:#141414; display:flex; flex-direction:column; animation:foSlideUp 0.3s ease-out }
         @keyframes foSlideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
-        .fo-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; padding-top:max(16px, calc(env(safe-area-inset-top) + 8px)); border-bottom:1px solid rgba(237,232,220,0.08) }
-        .fo-close { width:44px; height:44px; border-radius:50%; border:none; background:rgba(237,232,220,0.08); color:#B8AD9E; font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer }
-        .fo-title { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC }
-        .fo-count { font-size:14px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-variant-numeric:tabular-nums }
+        .fo-header { position:relative; display:flex; align-items:center; justify-content:center; padding:16px 20px; padding-top:max(16px, calc(env(safe-area-inset-top) + 8px)); border-bottom:1px solid rgba(237,232,220,0.08) }
+        .fo-hcount { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; font-variant-numeric:tabular-nums }
+        .fo-close { position:absolute; right:16px; top:50%; transform:translateY(-50%); width:38px; height:38px; border-radius:50%; border:none; background:rgba(237,232,220,0.08); color:#B8AD9E; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer }
         .fo-body { flex:1; overflow-y:auto; padding:20px }
         /* Búsqueda en lenguaje natural (bnv-*) */
         .bnv-group { margin-bottom:22px }
@@ -4792,6 +4805,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vf-zona-btn.active { border:2px solid #3A6A48; color:#EDE8DC; background:rgba(58,106,72,0.15); font-weight:600 }
         .vf-btn-row { display:flex; gap:8px }
         .vf-btn { flex:1; padding:12px 8px; border-radius:10px; border:1px solid rgba(237,232,220,0.12); background:transparent; color:#9A8E7A; font-size:13px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s; text-align:center; min-height:44px }
+        .vf-chips { display:flex; flex-wrap:wrap; gap:9px }
+        .vf-chip { border:1px solid rgba(237,232,220,0.14); background:transparent; border-radius:11px; padding:10px 14px; font-size:13px; color:#B8AD9E; font-family:'DM Sans',sans-serif; cursor:pointer }
+        .vf-chip.active { border-color:#5c8a68; background:rgba(58,106,72,0.16); color:#EDE8DC; font-weight:600 }
+        .vf-amen-note { font-size:11.5px; color:#7A7060; line-height:1.45; margin-top:10px; font-family:'DM Sans',sans-serif }
         .vf-btn:hover { border-color:rgba(237,232,220,0.25); color:#EDE8DC }
         .vf-btn.active { border:2px solid #3A6A48; color:#EDE8DC; background:rgba(58,106,72,0.15); font-weight:600 }
         .vf-range-display { font-size:14px; color:#EDE8DC; margin-bottom:10px; text-align:right; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
