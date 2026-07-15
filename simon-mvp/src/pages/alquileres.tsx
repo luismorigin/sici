@@ -4020,10 +4020,16 @@ function BottomSheet({
     const build = (pool: UnidadAlquiler[], ampliado: boolean, mixto: boolean, segmento: string | null) => {
       if (pool.length < 5) return null
       const prices = pool.map(q => q.precio_mensual_bob).sort((a, b) => a - b)
+      // Rango por m² (Bs/m² = alquiler mensual / superficie) además del total,
+      // para el comparador que muestra ambos por fila. Solo con área conocida.
+      const m2vals = pool.filter(q => q.area_m2 > 0).map(q => q.precio_mensual_bob / q.area_m2).sort((a, b) => a - b)
+      const hasM2 = m2vals.length >= 3
       return {
         mediana: pctl(prices, 0.5),
         rangoLow: pctl(prices, 0.25),
         rangoHigh: pctl(prices, 0.75),
+        m2Low: hasM2 ? pctl(m2vals, 0.25) : null,
+        m2High: hasM2 ? pctl(m2vals, 0.75) : null,
         count: pool.length,
         ampliado,
         mixto,
@@ -4412,12 +4418,18 @@ function BottomSheet({
                 </div>
               </div>
               <div className="bs-mkt2-compare">
-                <div className="bs-mkt2-crow"><span>Este departamento</span><b>{formatPrice(precio)} <em>/mes</em></b></div>
-                <div className="bs-mkt2-crow"><span>Deptos similares ({dormTxt})</span><b>{formatPrice(marketData.rangoLow)} – {formatPrice(marketData.rangoHigh)} <em>/mes</em></b></div>
+                <div className="bs-mkt2-crow">
+                  <span>Este departamento</span>
+                  <div className="bs-mkt2-cval"><b>{formatPrice(precio)}<em> /mes</em></b>{p.area_m2 > 0 && <em>Bs {Math.round(precio / p.area_m2).toLocaleString('es-BO')}/m²</em>}</div>
+                </div>
+                <div className="bs-mkt2-crow">
+                  <span>Deptos similares ({dormTxt})</span>
+                  <div className="bs-mkt2-cval"><b>{formatPrice(marketData.rangoLow)} – {formatPrice(marketData.rangoHigh)}<em> /mes</em></b>{marketData.m2Low != null && <em>Bs {marketData.m2Low.toLocaleString('es-BO')} – {marketData.m2High!.toLocaleString('es-BO')}/m²</em>}</div>
+                </div>
               </div>
               <div className="bs-mkt2-note">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>
-                <span>Comparamos el <b>alquiler mensual</b> de deptos de la misma tipología ({dormTxt}{marketData.segmento ? `, ${marketData.segmento}` : ''}). {marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye amoblados y sin amoblar. ' : ''}Basado en {marketData.count} deptos similares en alquiler.</span>
+                <span>Comparamos el <b>alquiler total y por m²</b> de deptos de la misma tipología ({dormTxt}{marketData.segmento ? `, ${marketData.segmento}` : ''}). {marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye amoblados y sin amoblar. ' : ''}Basado en {marketData.count} deptos similares en alquiler.</span>
               </div>
               {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
                 <div className="bs-mktv-summary">

@@ -1513,10 +1513,15 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
     const build = (pool: UnidadVenta[], ampliado: boolean, mixto: boolean, segmento: string | null) => {
       if (pool.length < 5) return null
       const values = pool.map(q => q.precio_m2).sort((a, b) => a - b)
+      // Rango TOTAL (precio_usd) además del $/m², para el comparador que muestra
+      // ambos (total + por m²) por fila. precio_usd viene normalizado del RPC.
+      const totals = pool.map(q => q.precio_usd).sort((a, b) => a - b)
       return {
         mediana: pctl(values, 0.5),
         rangoLow: pctl(values, 0.25),
         rangoHigh: pctl(values, 0.75),
+        totalLow: pctl(totals, 0.25),
+        totalHigh: pctl(totals, 0.75),
         count: pool.length,
         ampliado,
         mixto,
@@ -1635,12 +1640,18 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
           )
         })()}
         <div className="bs-mkt2-compare">
-          <div className="bs-mkt2-crow"><span>Este departamento</span><b>$us {Math.round(p.precio_m2).toLocaleString('en-US')} <em>por m²</em></b></div>
-          <div className="bs-mkt2-crow"><span>Deptos similares ({dormShort})</span><b>$us {marketData.rangoLow.toLocaleString('en-US')} – {marketData.rangoHigh.toLocaleString('en-US')} <em>por m²</em></b></div>
+          <div className="bs-mkt2-crow">
+            <span>Este departamento</span>
+            <div className="bs-mkt2-cval"><b>$us {Math.round(p.precio_usd).toLocaleString('en-US')}</b><em>$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</em></div>
+          </div>
+          <div className="bs-mkt2-crow">
+            <span>Deptos similares ({dormShort})</span>
+            <div className="bs-mkt2-cval"><b>$us {marketData.totalLow.toLocaleString('en-US')} – {marketData.totalHigh.toLocaleString('en-US')}</b><em>$us {marketData.rangoLow.toLocaleString('en-US')} – {marketData.rangoHigh.toLocaleString('en-US')}/m²</em></div>
+          </div>
         </div>
         <div className="bs-mkt2-note">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>
-          <span>Comparamos el precio <b>por m²</b> (no el total) para que deptos de distinto tamaño sean comparables. {marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye preventa y entrega inmediata. ' : ''}Basado en {marketData.count} deptos similares en venta.</span>
+          <span>Comparamos el precio <b>total y por m²</b>. El precio por m² permite comparar aunque cambie el tamaño del depto. {marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye preventa y entrega inmediata. ' : ''}Basado en {marketData.count} deptos similares en venta.</span>
         </div>
         <div className="bs-mktv-summary">
           {p.dias_en_mercado !== null && (
@@ -4409,11 +4420,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-mkt2-here { position:absolute; top:22px; transform:translateX(-50%); font-size:12px; font-weight:500; color:#141414; white-space:nowrap }
         .bs-mkt2-tick { position:absolute; top:38px; transform:translateX(-50%); font-size:11px; color:#9A9384; white-space:nowrap }
         .bs-mkt2-compare { background:#F4F1E9; border-radius:10px; padding:12px 14px; margin-top:14px }
-        .bs-mkt2-crow { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:4px 0 }
+        .bs-mkt2-crow { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:4px 0 }
         .bs-mkt2-crow + .bs-mkt2-crow { border-top:0.5px solid #E7E1D3; margin-top:5px; padding-top:9px }
-        .bs-mkt2-crow span { font-size:13px; color:#6B6862 }
+        .bs-mkt2-crow span { font-size:13px; color:#6B6862; padding-top:1px }
         .bs-mkt2-crow b { font-size:15px; font-weight:500; color:#141414; text-align:right; font-variant-numeric:tabular-nums }
         .bs-mkt2-crow em { font-style:normal; font-size:12px; font-weight:400; color:#6B6862 }
+        .bs-mkt2-cval { display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-variant-numeric:tabular-nums }
+        .bs-mkt2-cval em { font-size:12px; color:#6B6862 }
         .bs-mkt2-note { display:flex; gap:8px; margin-top:14px; color:#9A9384 }
         .bs-mkt2-note svg { width:15px; height:15px; flex-shrink:0; margin-top:1px }
         .bs-mkt2-note span { font-size:12px; line-height:1.55 }
@@ -4550,6 +4563,20 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* Sticky: Comparar tematizado oscuro (par de Compartir) */
         .bs-venta.bs-rich .bs-compare-btn { border:1px solid rgba(237,232,220,0.15); color:#ECE6D8; background:transparent }
         .bs-venta.bs-rich .bs-compare-btn:hover { background:rgba(237,232,220,0.06) }
+        /* Orden de secciones en mobile rico = mismo que el modal desktop:
+           especial → comodidades → sobre → ubicación → mercado → similares →
+           preguntas → ver original (bsm-main pasa de display:contents a flex col) */
+        .bs-venta.bs-rich .bsm-main { display:flex; flex-direction:column }
+        .bs-venta.bs-rich #bsm-sec-especial { order:1 }
+        .bs-venta.bs-rich #bsm-sec-comod { order:2 }
+        .bs-venta.bs-rich #bsm-sec-desc { order:3 }
+        .bs-venta.bs-rich .bsm-trust { order:4 }
+        .bs-venta.bs-rich #bsm-sec-ubic { order:5 }
+        .bs-venta.bs-rich .bsm-ubic-link { order:6 }
+        .bs-venta.bs-rich #bsm-sec-mercado { order:7 }
+        .bs-venta.bs-rich #bsm-sec-similares { order:8 }
+        .bs-venta.bs-rich #bsm-sec-preguntas { order:9 }
+        .bs-venta.bs-rich .bsm-sec-original { order:10 }
 
         .bs-tabs { position:sticky; top:0; z-index:9; display:flex; gap:2px; background:#141414; border-bottom:1px solid rgba(237,232,220,0.1); padding:0 16px }
         .bs-tab { flex:1; background:none; border:none; border-bottom:2px solid transparent; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:11px 4px; cursor:pointer; transition:color 0.15s }
