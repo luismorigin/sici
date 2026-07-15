@@ -10,15 +10,24 @@
   centrado + ✕, footer Limpiar/Ver, números completos (no "K"). Verificado 390px.
 - ✅ **P3a** (`2aa6f1a`) — Sheet: mercado mobile muestra total + por m²; sheet normal ya no
   muestra "Captado por [agente]" (solo en contactoDirecto). Ícono compartir ya era universal.
-- 🔴 **P3b (PENDIENTE, tanda dedicada)** — el re-theme VISUAL del sheet mobile: des-gatear las
-  secciones ricas (stats con iconos `bsm-stats`, split amenidades `bsm-comod-*`/`bs-especial-*`,
-  mercado v2 con medidor `bs-mkt2-*`, costos/ingreso alquiler `bs-costos-*`) y **re-tematizarlas
-  para mobile**. **Bloqueo técnico**: su CSS está scopeado a `.bs-venta.bs-side` / `.bs-side-alq`
-  (modal claro desktop) con colores claros hardcodeados → en ventas mobile (oscuro) el texto
-  oscuro queda invisible. Hay que gatear `!sideMode && isDesktop` (viejas) / `sideMode || !isDesktop`
-  (ricas) + escribir estilos mobile (oscuro ventas / arena alquileres, que reusa más el estilo claro).
+- ✅ **P3b (HECHO — rama `claude/session-context-e0ffd1`, sin push)** — re-theme visual del sheet
+  mobile. Solución: se introdujo `richLayout = sideMode || (!isDesktop && !brokerMode && !publicShareMode)`
+  y una clase marcadora `bs-rich` (`richLayout && !sideMode`) en la raíz del sheet. Las secciones
+  ricas se gatearon `richLayout` (antes `sideMode`), las viejas `!richLayout` (antes `!sideMode`).
+  **Ventas (oscuro)**: bloque de overrides scopeado a `.bs-venta.bs-rich` (~40 reglas) re-tematiza
+  stats/inclusiones/especial/comodidades/mercado-v2 sobre `#1a1a1a`; el pin del medidor pasó a
+  `fill=currentColor` (era `#141414` invisible en oscuro). **Alquileres (arena)**: el body mobile YA
+  es arena (`.bs-section{background:#EDE8DC}`) y el CSS rico es global con colores claros → encajó
+  **casi sin override** (solo ocultar specs de texto duplicados + Reciente plano). Además: sticky
+  compacto (Comparar cableado al mobile via `onCompare`, label WhatsApp dinámico "N preguntas").
+  Verificado con Playwright 390px (header blanco/arena, stats iconos, comodidades, mercado v2 con
+  pin, costos/ingreso alquiler, preguntas, sticky). **Desvíos conscientes**: (1) el nav de anclas
+  superior (`bsm-nav`) NO se llevó a mobile — se conservan los botones flotantes cerrar/fav; (2) el
+  header de alquileres mobile queda OSCURO (diseño ya shippeado: header oscuro + body arena) en vez
+  del arena del mockup — bajo riesgo, coherente con lo vivo.
 - 🔴 Transversales desktop PENDIENTES: #3 histograma (mobile+desktop), #5 TC dinámico, #8 comparador
-  total+m² en DESKTOP (mobile ya hecho en P3a).
+  total+m² en DESKTOP (mobile ya hecho en P3a). Opcional pendiente: nav de anclas en mobile + header
+  arena en alquileres mobile (si Lucho lo quiere igual al mockup).
 
 ## Principio clave (lo que hace que NO se rompa TikTok)
 - La **base TikTok = el FEED** (swipe vertical full-screen, foto grande, corazón en la

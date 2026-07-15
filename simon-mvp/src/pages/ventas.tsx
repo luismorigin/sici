@@ -1457,6 +1457,11 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
   sideMode?: boolean
 }) {
   const publicShareMode = publicShareBroker !== null
+  // richLayout = las secciones "ricas" del modal desktop se muestran también en
+  // el sheet mobile del feed público (P3b). sideMode = desktop-split; el mobile
+  // público (no broker, no publicShare) también las recibe, tematizadas oscuro.
+  // Broker/publicShare (mobile o desktop-no-split) conservan las secciones viejas.
+  const richLayout = sideMode || (!isDesktop && !brokerMode && !publicShareMode)
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
   const [gateEmail, setGateEmail] = useState('')
@@ -1596,8 +1601,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
   const dormTxt = p.dormitorios === 0 ? 'monoambientes' : `${p.dormitorios} dormitorio${p.dormitorios !== 1 ? 's' : ''}`
   const dormShort = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
 
-  // Desktop (sideMode) = versión clara para usuario común; mobile = la actual.
-  const mercadoSection = !publicShareMode && (marketData ? (sideMode ? (
+  // richLayout (desktop-split + mobile público) = mercado v2 con medidor;
+  // broker/publicShare = la versión mktv anterior.
+  const mercadoSection = !publicShareMode && (marketData ? (richLayout ? (
     <div className="bs-section" id="bsm-sec-mercado">
       <div className="bs-sl"><span className="bs-sl-dot" />Cómo está el precio · {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
       <div className="bs-mkt2">
@@ -1619,7 +1625,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
               <div className="bs-mkt2-track">
                 <div className="bs-mkt2-band" style={{ left: `${bl}%`, width: `${bh - bl}%` }} />
                 <div className="bs-mkt2-pin" style={{ left: `${me}%` }}>
-                  <svg viewBox="0 0 32 42" width="15" height="20"><path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 26 16 26s16-15 16-26C32 7.2 24.8 0 16 0z" fill="#141414" /><circle cx="16" cy="16" r="5.5" fill="#FBFAF7" /></svg>
+                  <svg viewBox="0 0 32 42" width="15" height="20"><path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 26 16 26s16-15 16-26C32 7.2 24.8 0 16 0z" fill="currentColor" /><circle cx="16" cy="16" r="5.5" fill="#FBFAF7" /></svg>
                 </div>
                 <div className="bs-mkt2-here" style={{ left: `${me}%` }}>Este depto</div>
                 <div className="bs-mkt2-tick" style={{ left: `${bl}%` }}>$us {marketData.rangoLow.toLocaleString('en-US')}</div>
@@ -1743,8 +1749,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
             : 'Entrega inmediata',
         ].filter(Boolean).join(' · ')}</div>
       </div>
-      {/* Stats con iconos (modal desktop) — debajo del precio, en la columna izq */}
-      {sideMode && (
+      {/* Stats con iconos (modal desktop + mobile rico) — debajo del precio */}
+      {richLayout && (
         <div className="bsm-stats">
           {p.dormitorios !== null && (
             <div className="bsm-stat">
@@ -1776,7 +1782,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
           (equipado · N parqueo · baulera); lo OPCIONAL con costo extra (parqueo/
           baulera NO incluidos pero con precio) en una línea aparte. Nunca se
           muestra un ítem en los dos lados, ni se afirma ausencia. */}
-      {sideMode && (() => {
+      {richLayout && (() => {
         const amob = equipamiento.some(e => /amoblad/i.test(e))
         const equip = amob || equipamiento.length > 0
         const parqCount = (p.estacionamientos != null && p.estacionamientos > 0) ? p.estacionamientos : null
@@ -1812,7 +1818,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
   return (
     <>
       <div className={`bs-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />
-      <div className={`bs bs-venta ${isOpen ? 'open' : ''} ${sideMode ? 'bs-side' : (isDesktop ? 'bs-desktop' : '')}`}>
+      <div className={`bs bs-venta ${isOpen ? 'open' : ''} ${sideMode ? 'bs-side' : (isDesktop ? 'bs-desktop' : '')} ${richLayout && !sideMode ? 'bs-rich' : ''}`}>
         {/* Nav de anclas del modal desktop: saltan a secciones del MISMO
             scroll (no ocultan contenido) + acciones fav/cerrar */}
         {sideMode && (
@@ -1896,9 +1902,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
             </div>
           )}
 
-          {/* Características — oculta en el modal desktop (redundante con los
-              números grandes del header + las inclusiones); sigue en mobile */}
-          {showTab('resumen') && !sideMode && (
+          {/* Características — oculta en layout rico (redundante con los números
+              grandes del header + las inclusiones); sigue en broker/publicShare */}
+          {showTab('resumen') && !richLayout && (
           <div className="bs-section">
             <div className="bs-sl"><span className="bs-sl-dot" />Características</div>
             <div className="bs-grid">
@@ -1941,9 +1947,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
           </div>
           )}
 
-          {/* Badges — oculto en el modal desktop (estado va a Mercado,
-              inclusiones al header); sigue en mobile */}
-          {showTab('resumen') && !sideMode && (
+          {/* Badges — oculto en layout rico (estado va a Mercado,
+              inclusiones al header); sigue en broker/publicShare */}
+          {showTab('resumen') && !richLayout && (
           <div className="bs-section">
             <div className="bs-badges">
               {p.estado_construccion === 'preventa' && <span className="bs-badge gold">{p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa'}</span>}
@@ -1961,14 +1967,14 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
           {/* ACM inline — solo en modo broker */}
           {showTab('resumen') && brokerMode && <ACMInline propiedadId={p.id} tcSospechoso={p.tc_sospechoso} />}
 
-          {/* Amenidades / Equipamiento — MOBILE: chips por categoría (como antes) */}
-          {showTab('resumen') && !sideMode && amenities.length > 0 && (
+          {/* Amenidades / Equipamiento — broker/publicShare: chips por categoría */}
+          {showTab('resumen') && !richLayout && amenities.length > 0 && (
             <div className="bs-section">
               <div className="bs-sl"><span className="bs-sl-dot" />Edificio</div>
               <div className="bs-aw">{amenities.map((a, i) => <span key={i} className="bs-at">{a}</span>)}</div>
             </div>
           )}
-          {showTab('resumen') && !sideMode && equipamiento.length > 0 && (
+          {showTab('resumen') && !richLayout && equipamiento.length > 0 && (
             <div className="bs-section">
               <div className="bs-sl"><span className="bs-sl-dot" />Departamento</div>
               <div className="bs-aw">{equipamiento.map((e, i) => <span key={i} className="bs-at">{e}</span>)}</div>
@@ -1980,7 +1986,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
                 marcado con la chispita — escala a cualquier feature.
               · "Todas las comodidades" = las canónicas, con su icono del catálogo,
                 agrupadas En el edificio / En el departamento. */}
-          {showTab('resumen') && sideMode && (() => {
+          {showTab('resumen') && richLayout && (() => {
             // Split hecho por el PIPELINE (READER_SPEC), no por el cliente:
             //  · especial = cola larga no-canónica (amenidades_extra + equipamiento_otros)
             //  · canónico = amenities_confirmados (edificio) + equipamiento_detectado (depto)
@@ -2107,9 +2113,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
           )}
 
           {/* Ubicación Google Maps */}
-          {/* Ubicación con mapa mediano — solo modal desktop (mobile conserva
-              el link a Google Maps de siempre) */}
-          {sideMode && p.latitud && p.longitud && (
+          {/* Ubicación con mapa mediano — layout rico (desktop + mobile);
+              debajo va el link a Google Maps para todos */}
+          {richLayout && p.latitud && p.longitud && (
             <div className="bs-section" id="bsm-sec-ubic">
               <div className="bs-sl"><span className="bs-sl-dot" />Ubicación</div>
               <div className="bsm-flow-map">
@@ -2226,12 +2232,12 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
                   openWhatsApp(p.agente_telefono!, buildSheetMsg())
                 }}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                Whatsapp
+                {selectedQs.size > 0 ? `${selectedQs.size} pregunta${selectedQs.size > 1 ? 's' : ''}` : 'WhatsApp'}
               </a>
               )
             })()}
-            {/* Comparar — solo modal desktop: agrega a favoritos y abre el comparador */}
-            {sideMode && onCompare && !brokerMode && (
+            {/* Comparar — layout rico (desktop + mobile): agrega a favoritos y abre el comparador */}
+            {richLayout && onCompare && !brokerMode && (
               <button className="bs-compare-btn" onClick={onCompare}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" style={{ width: 16, height: 16 }}>
                   <rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/>
@@ -3281,6 +3287,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       {!splitDesktop && <BottomSheet property={sheetProperty} isOpen={sheetOpen}
         onClose={() => { setSheetOpen(false); setSheetProperty(null) }}
         onShare={sheetProperty ? () => shareProperty(sheetProperty) : undefined}
+        onCompare={(sheetProperty && !brokerMode && !publicShareMode) ? () => { setFavorites(prev => { const n = new Set(prev); n.add(sheetProperty.id); return n }); openCompare() } : undefined}
         isFavorite={sheetProperty ? favorites.has(sheetProperty.id) : false}
         onToggleFavorite={(sheetProperty && !publicShareMode) ? () => toggleFavorite(sheetProperty.id) : undefined}
         gateCompleted={gateCompleted} onGate={handleGate} isDesktop={isDesktop}
@@ -4484,6 +4491,60 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta.bs-side #bsm-sec-similares { order:8 }
         .bs-venta.bs-side #bsm-sec-preguntas { order:9 }
         .bs-venta.bs-side .bsm-sec-original { order:10 }
+
+        /* ===== P3b — Sheet mobile RICO (tema OSCURO ventas) =====
+           Las secciones ricas del modal desktop (bsm-stats, inclusiones, split
+           de comodidades, mercado v2 con medidor) ahora se renderizan también
+           en el sheet mobile público (clase bs-rich) — acá se re-tematizan sobre
+           el fondo oscuro (#1a1a1a). Preguntas/Similares/Maps/Ver-original/sticky
+           ya tenían base oscura mobile, no necesitan override. */
+        /* Header: nombre + precio en blanco puro (ancla); specs de texto ocultos
+           (los reemplazan los stats con iconos) */
+        .bs-venta.bs-rich .bs-h-name { color:#FFFFFF }
+        .bs-venta.bs-rich .bs-h-reciente { color:#7BB389 }
+        .bs-venta.bs-rich .bs-h-price { color:#FFFFFF }
+        .bs-venta.bs-rich .bs-h-specs { display:none }
+        /* Stats con iconos — fila bajo el precio */
+        .bs-venta.bs-rich .bsm-stats { display:flex; gap:0; margin-top:16px; padding-top:15px; border-top:1px solid rgba(237,232,220,0.1) }
+        .bs-venta.bs-rich .bsm-stat { flex:1; display:flex; flex-direction:column; align-items:flex-start; gap:5px; text-align:left }
+        .bs-venta.bs-rich .bsm-stat-ico { width:19px; height:19px; color:#7BB389 }
+        .bs-venta.bs-rich .bsm-stat b { font-size:17px; color:#FFFFFF }
+        .bs-venta.bs-rich .bsm-stat span { font-size:11px; color:#9A8E7A }
+        /* Inclusiones (chips) — sutiles sobre oscuro */
+        .bs-venta.bs-rich .bsm-incl-chip { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.1); color:#ECE6D8 }
+        .bs-venta.bs-rich .bsm-incl-chip svg { color:#7BB389 }
+        .bs-venta.bs-rich .bsm-opcional { color:#9A8E7A }
+        .bs-venta.bs-rich .bsm-opcional b { color:#ECE6D8 }
+        /* "Lo que la hace especial" — pills oscuras */
+        .bs-venta.bs-rich .bsm-especial-pill { background:rgba(237,232,220,0.05); border:0.5px solid rgba(237,232,220,0.14); color:#ECE6D8 }
+        .bs-venta.bs-rich .bsm-especial-ico { color:#7BB389 }
+        /* "Todas las comodidades" — grilla icono + label */
+        .bs-venta.bs-rich .bsm-comod-cat { color:#9A8E7A }
+        .bs-venta.bs-rich .bsm-comod-item { color:#ECE6D8 }
+        .bs-venta.bs-rich .bsm-comod-ico { color:#7BB389 }
+        /* Cómo está el precio (mercado v2 con medidor) */
+        .bs-venta.bs-rich .bs-mkt2-vico { background:rgba(123,179,137,0.16); color:#7BB389 }
+        .bs-venta.bs-rich .bs-mkt2-vtitle { color:#FFFFFF }
+        .bs-venta.bs-rich .bs-mkt2-vsub { color:#9A8E7A }
+        .bs-venta.bs-rich .bs-mkt2-ends { color:#7A7060 }
+        .bs-venta.bs-rich .bs-mkt2-track::before { background:rgba(237,232,220,0.1) }
+        .bs-venta.bs-rich .bs-mkt2-band { background:rgba(123,179,137,0.3) }
+        .bs-venta.bs-rich .bs-mkt2-pin { color:#7BB389 }
+        .bs-venta.bs-rich .bs-mkt2-here { color:#ECE6D8 }
+        .bs-venta.bs-rich .bs-mkt2-tick { color:#7A7060 }
+        .bs-venta.bs-rich .bs-mkt2-compare { background:rgba(237,232,220,0.05) }
+        .bs-venta.bs-rich .bs-mkt2-crow span { color:#9A8E7A }
+        .bs-venta.bs-rich .bs-mkt2-crow b { color:#FFFFFF }
+        .bs-venta.bs-rich .bs-mkt2-crow em { color:#9A8E7A }
+        .bs-venta.bs-rich .bs-mkt2-crow + .bs-mkt2-crow { border-top-color:rgba(237,232,220,0.1) }
+        .bs-venta.bs-rich .bs-mkt2-note { color:#9A8E7A }
+        .bs-venta.bs-rich .bs-mkt2-note b { color:#B8AD9E }
+        .bs-venta.bs-rich .bs-mktv-summary { border-top-color:rgba(237,232,220,0.1) }
+        .bs-venta.bs-rich .bs-mktv-sitem b { color:#FFFFFF }
+        .bs-venta.bs-rich .bs-mktv-sitem span { color:#9A8E7A }
+        /* Sticky: Comparar tematizado oscuro (par de Compartir) */
+        .bs-venta.bs-rich .bs-compare-btn { border:1px solid rgba(237,232,220,0.15); color:#ECE6D8; background:transparent }
+        .bs-venta.bs-rich .bs-compare-btn:hover { background:rgba(237,232,220,0.06) }
 
         .bs-tabs { position:sticky; top:0; z-index:9; display:flex; gap:2px; background:#141414; border-bottom:1px solid rgba(237,232,220,0.1); padding:0 16px }
         .bs-tab { flex:1; background:none; border:none; border-bottom:2px solid transparent; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:11px 4px; cursor:pointer; transition:color 0.15s }

@@ -728,6 +728,12 @@
 /* Modal desktop: stats grandes (espejo de bsm-stats de ventas) + chips de inclusión.
    La línea de specs de texto del header se oculta (los stats la reemplazan). */
 .bs-side-alq .bs-hr-specs{display:none;}
+/* P3b — sheet mobile rico: los stats con iconos (bsm-stats-alq) reemplazan la
+   fila de specs de texto del header. El body ya es arena, así que las secciones
+   ricas (colores base claros) encajan sin re-theme extra. */
+.bs-rich .bs-hr-specs{display:none;}
+/* "Reciente" = texto verde plano en el sheet mobile (no píldora), como ventas */
+.bs-rich .bs-hr-reciente{background:transparent;padding:0;margin-left:8px;}
 .bsm-stats-alq{display:flex;gap:30px;flex-wrap:wrap;}
 .bsm-stats-alq .bsm-stat{display:flex;align-items:center;gap:10px;}
 .bsm-stats-alq .bsm-stat-ico{width:22px;height:22px;color:#3A6A48;flex-shrink:0;}
