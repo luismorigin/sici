@@ -618,7 +618,16 @@
 /* Card ocupa el viewport menos el header fijo (--mfh-h heredado del feed). */
 .alq-card { --mfh-h: calc(104px + env(safe-area-inset-top)); height: calc(100dvh - var(--mfh-h)); scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #EDE8DC; }
 .alq-card.alq-card-first { height: calc(100dvh - var(--mfh-h)); }
-.amc-content { flex: 1 1 auto; min-height: 0; padding: 16px 24px 8px; padding-bottom: calc(72px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* flex:0 0 auto → el contenido toma SU alto real y nunca se recorta ni queda
+   tapado por la barra inferior (el padding-bottom reserva su alto). */
+.amc-content { flex: 0 0 auto; min-height: 0; padding: 16px 24px 8px; padding-bottom: calc(72px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* Equipos muy angostos (Galaxy Fold plegado, 280px): el texto envuelve más y
+   la foto ya no puede achicarse. Menos padding lateral = menos wrap, y se le
+   permite a la foto bajar un poco más. */
+@media (max-width: 340px) {
+  .amc-content { padding-left: 14px; padding-right: 14px; }
+  .pc-zone { min-height: 96px; }
+}
 .amc-name { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 500; color: #141414; line-height: 1.3; margin: 0; padding: 0; max-height: 2.6em; overflow: hidden; flex-shrink: 0; }
 .amc-meta-row, .amc-price-block { flex-shrink: 0; }
 .amc-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 5px 0 12px; }
@@ -664,7 +673,10 @@
 }
 
 /* Photo Carousel (pc-*) */
-.pc-zone { flex: 0 0 58%; min-height: 0; position: relative; overflow: hidden; }
+/* La foto ABSORBE la diferencia: base 58%, pero crece (sin dejar hueco) y
+   encoge (si el contenido necesita más). Con 0 0 58% fijo, en el S8 (360x740)
+   los specs envolvían y el chip fiduciario quedaba tapado por la barra. */
+.pc-zone { flex: 1 1 58%; min-height: 130px; position: relative; overflow: hidden; }
 .pc-zone::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 70px; background: linear-gradient(rgba(0,0,0,0.3), transparent); pointer-events: none; z-index: 2; }
 .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: linear-gradient(transparent, #EDE8DC); pointer-events: none; z-index: 2; }
 .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -1083,7 +1095,15 @@
 
 /* ===== Barra fija inferior (mt-bottombar) ===== */
 .mt-bottombar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 70; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; padding-bottom: max(10px, calc(env(safe-area-inset-bottom) + 6px)); background: #141414; border-top: 1px solid rgba(237,232,220,0.1); }
-.mt-bb-map { display: inline-flex; align-items: center; gap: 8px; background: rgba(237,232,220,0.08); border: 1px solid rgba(237,232,220,0.16); color: #EDE8DC; border-radius: 100px; padding: 10px 18px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* nowrap: a 280px "Ver mapa" se partía en 2 líneas → el botón crecía y con él
+   la barra (85px en vez de 64px). El contenido de la card reserva 72px para la
+   barra, así que esos 13px de más tapaban el chip fiduciario. */
+.mt-bb-map { display: inline-flex; align-items: center; gap: 8px; background: rgba(237,232,220,0.08); border: 1px solid rgba(237,232,220,0.16); color: #EDE8DC; border-radius: 100px; padding: 10px 18px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+/* En un Fold plegado el hint pasivo no entra al lado del botón. Se oculta solo
+   el hint (el CTA "Comparar" con 2+ favoritos es otro elemento y se mantiene). */
+@media (max-width: 340px) {
+  .mt-bb-hint { display: none; }
+}
 .mt-bb-map:disabled { opacity: 0.4; cursor: default; }
 .mt-bb-map:not(:disabled):active { transform: scale(0.97); }
 .mt-bb-right { display: flex; align-items: center; gap: 8px; min-width: 0; }

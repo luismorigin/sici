@@ -1159,7 +1159,7 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
           <div className="mc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="mc-tc">(T.C. oficial)</span></div>
           {(() => { const b = priceChangeBadge(priceSnapshot, p.precio_usd); return b ? <div className={`mc-price-change mc-price-change-${b.kind}`}>{b.label}</div> : null })()}
           <div className="mc-specs">
-            {p.dormitorios !== null && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 12V7a1 1 0 011-1h16a1 1 0 011 1v5M3 12h18M3 12v6M21 12v6M6 12V9h5v3"/></svg>{p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`}</span>}
+            {p.dormitorios !== null && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 12V7a1 1 0 011-1h16a1 1 0 011 1v5M3 12h18M3 12v6M21 12v6M6 12V9h5v3"/></svg>{p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}</span>}
             {p.area_m2 > 0 && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>{Math.round(p.area_m2)} m²</span>}
             {p.banos !== null && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 12V6a2 2 0 012-2 2 2 0 012 2M4 12h17v2a4 4 0 01-4 4H8a4 4 0 01-4-4zM6 18v2M18 18v2"/></svg>{p.banos} baño{p.banos !== 1 ? 's' : ''}</span>}
             {p.piso && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="6" y="3" width="12" height="18" rx="1"/><circle cx="14.5" cy="12" r="1"/></svg>Piso {p.piso}</span>}
@@ -4842,7 +4842,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-placeholder { height:calc(100dvh - var(--mfh-h, 0px)); scroll-snap-align:start; background:#141414 }
 
         /* Photo zone (60%) */
-        .mc-photo-zone { flex:0 0 60%; position:relative; overflow:hidden }
+        /* La foto ABSORBE la diferencia: base 60%, pero puede crecer (sin dejar
+           hueco) y encoger (si el contenido necesita más). Antes era 0 0 60% fijo
+           y el contenido —con overflow:hidden— se recortaba: en el S8 (360x740)
+           los specs envolvían a 2 líneas y el chip fiduciario quedaba tapado. */
+        .mc-photo-zone { flex:1 1 60%; min-height:130px; position:relative; overflow:hidden }
         .mc-photo-zone::after { content:''; position:absolute; bottom:0; left:0; right:0; height:80px; background:linear-gradient(transparent, #141414); pointer-events:none; z-index:2 }
         .mc-photo-zone::before { content:''; position:absolute; top:0; left:0; right:0; height:70px; background:linear-gradient(rgba(0,0,0,0.35), transparent); pointer-events:none; z-index:3 }
         .mc-photo-scroll { display:flex; height:100%; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
@@ -4886,7 +4890,15 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ds-spotlight-text { font-size:12px; color:#9A8E7A; font-family:'DM Sans',sans-serif; letter-spacing:0.5px; white-space:nowrap; text-transform:uppercase }
 
         /* Content zone (45%) */
-        .mc-content { flex:1; padding:14px 24px 8px; padding-bottom:max(8px, calc(env(safe-area-inset-bottom) + 4px)); display:flex; flex-direction:column; overflow:hidden; cursor:pointer; -webkit-tap-highlight-color:transparent }
+        /* flex:0 0 auto → el contenido toma SU alto real y nunca se recorta */
+        .mc-content { flex:0 0 auto; padding:14px 24px 8px; padding-bottom:max(8px, calc(env(safe-area-inset-bottom) + 4px)); display:flex; flex-direction:column; overflow:hidden; cursor:pointer; -webkit-tap-highlight-color:transparent }
+        /* Equipos muy angostos (Galaxy Fold plegado, 280px): el texto envuelve
+           más y la foto ya no puede achicarse. Menos padding lateral = menos
+           wrap, y se le permite a la foto bajar un poco más. */
+        @media (max-width: 340px) {
+          .mc-content { padding-left:14px; padding-right:14px }
+          .mc-photo-zone { min-height:96px }
+        }
         /* Corazón dentro de la foto (rediseño tanda 2) */
         .mc-heart { position:absolute; top:14px; right:14px; z-index:6; width:44px; height:44px; border-radius:50%; background:rgba(20,20,20,0.35); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent }
         .mc-heart.active { background:rgba(58,106,72,0.22) }
