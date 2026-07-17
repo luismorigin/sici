@@ -110,11 +110,36 @@ TRANSACCIONES. Es estructural en cualquier dato de portal. **El MOAT no es tener
 el único que dice con honestidad qué es cada número** (oferta / observado / estimado, nunca disfrazado
 de cierre). Matriz verde/amarillo/rojo en `LIMITES_DATA_FIDUCIARIA.md`.
 
+## Frontend + backend: dos mitades del cutover, en dos ramas distintas
+
+El cutover no es solo data — es **código en dos ramas separadas que hay que consolidar**:
+- **Backend shadow** → rama `claude/hybrid-worktree-structure-3b7b53` (esta): discovery, reader, cargador,
+  audits, migraciones shadow, la data. Incluye el endpoint `/api/ventas-shadow.ts` (con el merge de
+  `buscar_extras_shadow` — NO dropear, ver `CONTRATO_FRONTEND_SHADOW.md`).
+- **Frontend shadow** → rama `claude/session-context-e0ffd1` (otro worktree, ~65 commits sin push): el
+  rediseño (modal claro / desktop) + los feeds que leen shadow con toggle `?shadow=1` (integrado en
+  `/api/ventas.ts` + `/api/alquileres.ts`, no en un endpoint aparte).
+
+**La DATA ya está unida** (una sola `propiedades_v2_shadow` en Supabase; los dos worktrees le hablan a la
+misma tabla → en dev ya conviven). **Lo que falta unir es el CÓDIGO.** Puntos:
+- Las dos ramas **divergieron en cómo implementan el frontend shadow** (endpoint separado en hybrid vs
+  integrado con `?shadow=1` en session-context) → hay que **reconciliar**, no mergear a ciegas.
+- Hoy el front shadow es **dark-launch a propósito**: `?shadow=1` / endpoint que da 404 en prod. El público
+  no lo ve. Al cutover, el feed PÚBLICO (`/ventas`, `/alquileres`) pasa a leer la data del híbrido.
+- **No aplicar el front nuevo antes que el backend**: son dos mitades de la misma decisión. Se activan JUNTOS
+  (frontend + backend + Paquete TC), no por separado.
+- Ambas ramas están **sin push** → consolidar implica merge (con conflictos esperables en `CLAUDE.md` y en
+  la numeración de migraciones — ver checklist).
+
 ## Checklist de cutover de DATA (para EJECUTAR cuando el founder decida — no ahora)
 
 1. [ ] **Archivar** `propiedades_v2` (apagar n8n, NO borrar). Shadow pasa a base.
 2. [ ] **Paquete TC junto:** swappear `precio_normalizado()` a la versión nueva + re-apuntar snapshots,
        vistas y estudios JS a la fuente shadow, todo en el mismo movimiento.
+2b.[ ] **Consolidar las 2 ramas (frontend + backend)** — reconciliar `session-context-e0ffd1` (front, feeds
+       `?shadow=1`) con esta (`hybrid`, backend + `/api/ventas-shadow`). Resolver la divergencia del front
+       shadow + conflictos de `CLAUDE.md` y renumerar migs (268 duplicada). Apuntar el feed PÚBLICO a la data
+       del híbrido. **Frontend y backend se activan JUNTOS, no por separado.**
 3. [ ] **Auditar crudo sucio** (props `tc=paralelo` con `precio_usd`=oficial inflado) antes de confiar
        en el re-normalizado automático.
 4. [ ] **Mejoras del snapshot** (mismo movimiento): leer de vista + dedup + absorción por 2 señales.
