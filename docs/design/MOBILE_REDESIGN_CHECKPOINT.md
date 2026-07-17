@@ -45,8 +45,30 @@
   - **Fixes de sheet mobile** (`4d31ee8`) — foto antes del header en ventas; sticky flush (la causa
     era `padding-bottom:72px` en `.bs-venta.bs`: el sticky se pega al *content box*); header de
     alquileres de negro a arena; fotos 4/3→16/9 + `max-height:32vh` para que entren en un SE.
+  - **Orden del sheet = el de alquileres** (`552969d`) — nombre/precio/detalles → FOTO → iconos
+    grandes. En ventas los stats vivían DENTRO del header (el modal desktop los usa en un grid de
+    2 columnas junto al precio) → se extrajeron a `statsAndChips`: el header los incluye solo en
+    `sideMode`; en mobile van en su propia `bs-section` bajo la foto.
+- 📱 **RESPONSIVE — auditado en la matriz del F12 (280→430px)** (`21a2841` + `af8af6e`). Lo que
+  costaría redescubrir:
+  - **Regla de layout de la card: el contenido MANDA, la foto ABSORBE.** La foto era `flex:0 0 60%`
+    (ventas) / `0 0 58%` (alquileres) **fija** y el contenido recibía el resto con `overflow:hidden`
+    → **recortaba en silencio**. Se veía como "falta la última línea" (el chip fiduciario quedaba
+    tapado por la barra). Ahora foto = `flex:1 1 60%/58%` + `min-height`, contenido = `flex:0 0 auto`.
+    **Si algo del contenido de la card no aparece, empezar por acá.**
+  - **`padding-bottom:72px` del contenido = supuesto sobre el alto de la barra** (que mide 64px). El
+    margen real es de solo **8px**. En un Fold (280px) "Ver mapa" se partía en 2 líneas, la barra
+    crecía a 85px y tapaba 13px → se le puso `nowrap`. **Frágil**: si cambia el contenido de la
+    barra, vuelve a romper. Lo sólido sería medir la barra por JS y exponerla como var CSS.
+  - **`vh` → `dvh`** (con fallback) en todo lo que dimensione por viewport: el `vh` mide con la barra
+    de URL **oculta**, así que en el celu real sale más grande de lo pedido. Causa #1 de "se ve raro".
+  - **Los 3 botones del sticky no entran bajo 360px** → Compartir es solo-ícono (como el mockup).
+  - **Gotcha del método**: el chip fiduciario depende del dato (≥6 comparables), así que una matriz
+    automática a veces cae en una card sin chip y **no puede medir** — no confundir con "pasa".
+    Medir la card VISIBLE (la que intersecta el viewport), no `querySelector` del primer `.card`.
 - 🟡 Pendiente/opcional: nav de anclas superior en mobile (se conservan los flotantes cerrar/fav);
-  isologo real (el logo del filtro es placeholder); refinar el lead-gate del "ver anuncio original".
+  isologo real (el logo del filtro es placeholder); refinar el lead-gate del "ver anuncio original";
+  medir el alto de la barra por JS en vez del 72px hardcodeado (ver arriba).
 - ⚠️ **Bug de preview shadow corregido aparte** (`9232c0f`): el feed sirve data PROD por SSG/ISR (el
   build no conoce `?shadow=1`) y el refetch shadow estaba **diferido a idle** → el preview mostraba
   precios prod (ej. #3580 Maré: $275k prod vs $180k shadow). Ahora con `?shadow=1` el fetch shadow
