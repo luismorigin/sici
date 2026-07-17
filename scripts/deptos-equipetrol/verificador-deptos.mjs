@@ -57,11 +57,15 @@ async function chequear(url, fuente) {
 }
 
 // --- Señal 1: desaparecidas del discovery-deptos de hoy (las calcula y guarda el discovery) ---
-// Preferir el diff SHADOW-AWARE (desaparecidas vs shadow, no vs prod): evita el disyuntor
-// falso-positivo (el crudo cuenta ~221 desaparecidas vs prod; contra shadow son ~19 reales).
-// OJO: `.sort().pop()` agarraba el crudo porque "-shadowaware.json" ordena ANTES de ".json" (ASCII "-" < ".").
+// El discovery YA es shadow-aware de fábrica (mide desaparecidas vs shadow, no vs prod) y guarda
+// como `discovery-deptos-<ts>.json`. Elegir SIEMPRE el más reciente por TIMESTAMP del nombre.
+// 🔴 Antes se filtraba por `-shadowaware` (parche de cuando había 2 variantes por corrida): con un
+// archivo viejo de esos en output/, el verificador agarraba un crawl de días atrás e ignoraba el de
+// hoy (bug cazado 17-jul: usaba el del 13-jul). En empate de ts, preferir la variante shadowaware.
+const tsDe = (f) => (f.match(/(\d{4}-\d{2}-\d{2}T[\d-]+)/)?.[1] || '');
+const rank = (f) => (f.includes('-shadowaware') ? 1 : 0);
 const discFiles = readdirSync(OUT).filter(x => x.startsWith('discovery-deptos') && x.endsWith('.json'));
-const discFile = discFiles.filter(x => x.includes('-shadowaware')).sort().pop() || discFiles.sort().pop();
+const discFile = discFiles.sort((a, b) => tsDe(a).localeCompare(tsDe(b)) || rank(a) - rank(b)).pop();
 if (!discFile) { console.error('No hay output de discovery-deptos. Corré discovery-deptos.mjs primero (el verificador usa su lista de desaparecidas).'); process.exit(1); }
 const disc = JSON.parse(readFileSync(join(OUT, discFile), 'utf8'));
 const desap = disc.desaparecidas || [];

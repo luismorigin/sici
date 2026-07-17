@@ -167,19 +167,36 @@ async function prep() {
 // ===========================================================================
 async function prepNuevas(discoveryFile, n) {
   const disc = JSON.parse(readFileSync(discoveryFile, 'utf8'));
-  const nuevas = (disc.nuevas || []).slice(0, n);
+  // EXCLUIR por URL lo que YA está en shadow (y los rechazados por gate) ANTES del slice(n).
+  // Sin esto, `slice(0,n)` reprocesaba SIEMPRE las mismas primeras N: re-fetch inútil y, peor, les
+  // asignaba un id 8M nuevo → 2 filas para la misma url → viola el unique de `url` en el --apply.
+  // Con el filtro, corridas sucesivas AVANZAN sobre el inventario nuevo (mismo criterio que traerLote).
+  // + los multiproyecto YA detectados (viven en proyectos_detectados, NO en shadow): sin esto se
+  //   re-fetchean los mismos brochures en cada corrida y consumen slots del lote (mismo criterio que traerLote).
+  const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('url');
+  const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', 'equipetrol');
+  const urlsShadow = new Set([...(yaEn || []).map((r) => r.url), ...(yaProy || []).map((r) => r.url)]);
+  const pendientes = (disc.nuevas || []).filter((nv) => !urlsShadow.has(nv.url));
+  const yaCargadas = (disc.nuevas || []).length - pendientes.length;
+  const nuevas = pendientes.slice(0, n);
   const { data: tcRow } = await sb.from('config_global').select('valor').eq('clave', 'tipo_cambio_paralelo').single();
   const tasaParalelo = tcRow?.valor != null ? Number(tcRow.valor) : null;
-  console.log(`\n🌱 PREP NUEVAS — ${nuevas.length} deptos del discovery (no en prod). tasa_paralelo=${tasaParalelo}. NO escribe a la BD.\n`);
+  if (yaCargadas) console.log(`   (${yaCargadas} de las ${(disc.nuevas || []).length} del discovery ya están en shadow → se saltean; quedan ${pendientes.length} pendientes)`);
+  // 🔴 El id reservado ARRANCA DESDE EL MÁXIMO 8M YA EN SHADOW, no desde 8_000_000+i.
+  // Con `8_000_000 + i` cada corrida reiniciaba la numeración y COLISIONABA con las nuevas de
+  // corridas previas → el upsert del --apply PISABA props reales de otros edificios (bug cazado
+  // 17-jul: 29 colisiones, ej. 8000001 = Sky Luxury en shadow vs Sky Equinox nueva).
+  const { data: maxRow } = await sb.from('propiedades_v2_shadow').select('id').gte('id', 8_000_000)
+    .order('id', { ascending: false }).limit(1);
+  let idSeq = Math.max(8_000_000, maxRow?.[0]?.id ?? 8_000_000);
+  console.log(`\n🌱 PREP NUEVAS — ${nuevas.length} deptos del discovery (no en prod). tasa_paralelo=${tasaParalelo}. ids reservados desde ${idSeq + 1}. NO escribe a la BD.\n`);
   const entradas = [];
-  let i = 0;
   for (const nv of nuevas) {
-    i++;
     if (circuit.tripped) { console.log('🛑 circuit breaker.'); break; }
     let h = null, err = null;
     try { h = await fetchDetalleDepto(nv.fuente, nv.url); } catch (e) { err = String(e.message); }
     if (!h) { console.log(`   ✗ fetch ${nv.url.slice(0, 55)}: ${err || ''}`); await pace(400); continue; }
-    const id = 8_000_000 + i;                       // id reservado shadow (TEMPORAL; al cutover lo da prod)
+    const id = ++idSeq;                             // id reservado shadow (TEMPORAL; al cutover lo da prod)
     const area = h.area_const_m2 ?? h.area_texto ?? null;
     entradas.push({
       id, fuente: nv.fuente, zona: nv.zona || null, slug: slugDe(nv.url),
