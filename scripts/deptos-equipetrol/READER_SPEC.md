@@ -14,6 +14,11 @@
 > del estructurado — pero SOLO la específica de la unidad (no "desde"/rango/terraza/total); sin área específica en
 > ninguna fuente = multiproyecto. **B)** precio REDONDO = real (unidad) vs decimal crudo `.5` = `$/m²×área` fabricado
 > (multiproyecto); el "$/m² uniforme" a secas NO prueba fabricación. Ver detalle en Nivel 3.
+>
+> **v4.2 (17-jul-2026)** — 2 cortes: **①** BAÑOS **≤1 dorm (mono O 1 dorm) sin señal → 1 baño** (antes solo mono;
+> alinea con alquiler v2 — ver §BAÑOS). **②** BLOQUE / PISO COMPLETO / lote de N unidades juntas → **`es_multiproyecto`**
+> (no es una unidad comparable; el $/m² NO lo detecta, discrimina cuántas unidades vende el aviso — caso real 3742
+> Rhodium "SE VENDE PISO COMPLETO"; ver §GATE + MULTIPROYECTO).
 
 ## Entrada (lo que el lector LEE)
 Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente, sin regex):
@@ -337,7 +342,11 @@ intenta predecir todo. Se separa en:
 - El feed ya filtra área<20 / duplicados / es_multiproyecto — el gate cubre lo que la metadata no ve pero el texto delata.
 
 ## Matching (lo hace el `matcher.mjs`, NO el lector)
-El lector solo entrega `nombre_edificio_canonico`. El cargador llama `matchearPorNombre(nombre, zona, gps)`:
+El lector solo entrega `nombre_edificio_canonico`. El cargador llama `matchearPorNombre(sb, { nombre, zona, lat, lon })`
+(pide `p_limite: 15`, no 5 — para no perder candidatos válidos fuera del top-5 del fuzzy):
 - score ≥ 0.95 + zona corrobora → **auto-asigna**.
+- **desde 17-jul — `mismoTokenSet` (orden invertido):** un candidato con score < 0.95 también se da por **FUERTE** si
+  tiene el **MISMO conjunto de tokens distintivos** que el nombre-guess (p. ej. "Torre Alfa" ↔ "Alfa Torre"). Guardas:
+  ≥2 tokens, los dos conjuntos idénticos, y los números cuentan como token. Implementado en `mismoTokenSet` (lib/matcher.mjs).
 - ambiguo / fuzzy débil / sin nombre → queda sin match (el lector puede fijar `id_proyecto_master` a mano, o va al audit).
 GPS **secundario** (solo desempata mismo-nombre en zonas distintas). Ver `matcher.mjs`.

@@ -2,8 +2,8 @@
 
 > **Estado: la DETECCIÓN de tag (Pieza 1) es el RÉGIMEN ACTIVO del HÍBRIDO** (READER_SPEC ya lo marca así).
 > **PRODUCCIÓN = n8n**, que sigue con el régimen VIEJO — intacto. El híbrido/shadow NO es producción todavía.
-> Pieza 2 (función `precio_normalizado_v2`) + Pieza 3 (re-tag) quedan **por APLICAR en shadow** (SQL, paso humano);
-> el switch a n8n/prod es al cutover, cuando el oficial nuevo esté firme.
+> Pieza 2 (función `precio_normalizado_shadow`, mig 272) **YA está APLICADA en shadow** y el feed shadow la usa;
+> lo pendiente es aplicarla a PROD (= el cutover) + Pieza 3 (re-tag). El switch a n8n/prod es al cutover, cuando el oficial nuevo esté firme.
 >
 > Motivo: Bolivia unifica el oficial ≈ paralelo (Binance). Colapsan los tags; solo el precio anclado
 > al oficial VIEJO (6.96/7 explícito) necesita trato especial. La normalización es en vivo (SQL) →
@@ -43,7 +43,7 @@ Cuando el texto dice literal: **"6.96"** · **"Bs 7"** · **"TC 7"** · **"al ca
 Función NUEVA aparte (NO sobrescribir la de prod hasta estar seguro):
 
 ```sql
-CREATE OR REPLACE FUNCTION precio_normalizado_v2(p_precio_usd numeric, p_tipo_cambio_detectado text)
+CREATE OR REPLACE FUNCTION precio_normalizado_shadow(p_precio_usd numeric, p_tipo_cambio_detectado text)
 RETURNS numeric LANGUAGE sql STABLE AS $$
   SELECT CASE
     WHEN p_tipo_cambio_detectado = 'bob' THEN            -- crudo en BOLIVIANOS → USD real = BOB / tasa (LIVE)
@@ -54,7 +54,7 @@ RETURNS numeric LANGUAGE sql STABLE AS $$
   END;
 $$;
 -- 6.96 = constante fija (rate muerto). tipo_cambio_paralelo = Binance dinámico (cron diario, "binance_p2p").
--- Switch = repuntar v_mercado_venta / buscar_unidades_simple a v2 (reversible: repuntar a la vieja).
+-- Switch = repuntar v_mercado_venta / buscar_unidades_simple a la función nueva (precio_normalizado_shadow, reversible: repuntar a la vieja).
 ```
 
 Efecto (con paralelo 10.222): paralelo $100k → $100k (era $146.868, se va el premium); `oficial_viejo` "$100k al 7" → $68.088.

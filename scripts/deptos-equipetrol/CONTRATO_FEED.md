@@ -96,6 +96,9 @@ lector completa del texto. NUNCA inferir/promover `esEstandar`, ni derivar ameni
 - **Círculo virtuoso:** el lector alimenta el catálogo (alias + PM_NUEVO) → el mecánico mejora solo → menos intervención con el tiempo.
 
 ## Estado y decisiones (2-jul-2026)
+> ⚠️ **Superado (act. posterior):** el "cron nocturno = BACKLOG" y el "carril paralelo / archivos locales" de abajo YA se construyeron —
+> existen los crons `/cron-deptos-ventas` y `/cron-deptos-alquiler` + el entorno SHADOW aislado con **escritura real**
+> (`propiedades_v2_shadow`). Los dos puntos siguientes quedan como registro histórico.
 - **MOAT = yo (agente-lector en la sesión), NO API.** El comando prepara el material ($0 fetch); yo leo precio/TC/dorms/edificio.
 - **Cron nocturno = BACKLOG** (el sandbox en la nube no llega a los portales). Por ahora **comando on-demand** que se corre en sesión.
 - **CARRIL PARALELO, cero escritura a producción:** los deptos YA están en `propiedades_v2` (los carga n8n) → escribir ahí choca/duplica. El híbrido escribe a **archivos locales** (`carril-paralelo.mjs` → `output/`) y se **compara** vs n8n (solo SELECT). El corte (híbrido escribe / n8n se apaga) es MUCHO más adelante, con ok del founder tras varios lotes.

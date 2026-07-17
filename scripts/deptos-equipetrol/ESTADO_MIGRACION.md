@@ -1,9 +1,10 @@
 # Migración deptos Equipetrol al híbrido — ESTADO y mapa de estrangulamiento
 
-> Actualizado: 2026-07-10 (checkpoint fin del día, abajo). Contexto: Bloque 3 del plan strangler (ver
+> Actualizado: 2026-07-17 (el cron 17-jul subió el shadow de venta a ~460 props [458 activas]; discovery
+> ve ~505 en las 6 microzonas sobre 808 crudos). Checkpoint fin del día 10-jul, abajo. Contexto: Bloque 3 del plan strangler (ver
 > `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md`, sección 15 = mapa del cutover).
 > Memoria: `project_checkpoint_deptos_hibrido`.
-> Contrato técnico: `CONTRATO_FEED.md` · Reglas del lector: `READER_SPEC.md` (v4).
+> Contrato técnico: `CONTRATO_FEED.md` · Reglas del lector: `READER_SPEC.md` (v4.2, regla bloque/piso completo, 17-jul).
 
 ## 📺 Frontend del shadow (nota, 12-jul) — para no confundirse
 El feed shadow se ve en `localhost:3000/ventas?shadow=1`. El 12-jul se **mergeó main al worktree** para
@@ -26,16 +27,17 @@ n8n con paralelo/oficial ya descontado) → los diffs de $/m² son esperados por
 n8n) → comparar contra un baseline sucio no valida nada. El comparador fila-a-fila (`buscar_unidades_simple`
 vs `_shadow`) queda como herramienta de diagnóstico, NO como criterio de corte.
 
-**El gate REAL del cutover (ya cumplido en su mayor parte):**
+**El gate REAL del cutover (ya cumplido en su mayor parte)** — plan de datos del corte en `CUTOVER_DATA_PLAN.md`:
 - ✅ **Validación absoluta contra el ANUNCIO** (fuente de verdad, no prod): ~210 avisos hoy + 193 previos,
   spec v4, 0 alucinaciones, convergido. El híbrido lee bien DE ORIGEN.
 - ✅ **Feed shadow sano por sí mismo**: mediana $/m² en banda, 0 inflados, 92% match.
 - ✅ **Cobertura total**: inventario prod Equipetrol cerrado (0 pendientes).
 - 🔴 Falta (operativo, NO comparativo): **Paquete TC** (aplicar `TC_NUEVO_DECISION.md`) · enganches
-  (discovery carga `fecha_alta`, verificador integrado, snapshot absorción) · **loop drift→re-lectura**
-  (el híbrido lee la desc 1 sola vez y no re-mira; los anunciantes editan SOLO el texto — rebaja/vendido —
-  sin tocar la cabecera → punto ciego; el drift barato dispara re-lectura del reader solo en las que
-  cambiaron. Ver `AUDITORIAS_POST_CUTOVER.md` §Gap) · 2 PM nuevos (Hamburgo/La Salle, sin bloqueo GPS) ·
+  (discovery carga `fecha_alta`, ~~verificador integrado~~ [SUPERADO — `verificador-deptos.mjs` /
+  `verificador-alquiler.mjs`], snapshot absorción) · ~~**loop drift→re-lectura**~~ [SUPERADO — construido
+  como `/audit-deptos-shadow` (`auditar-shadow.mjs`): re-lee el anuncio HOY vs lo guardado y dispara
+  re-lectura solo en las que cambiaron; cierra el punto ciego de leer la desc 1 sola vez.
+  Ver `AUDITORIAS_POST_CUTOVER.md` §Gap] · 2 PM nuevos (Hamburgo/La Salle, sin bloqueo GPS) ·
   **red de cobertura** (props que prod muestra y shadow no, por matching — 595/Portobello/Murure; NO
   comparar precios, solo no perder inventario) · OK del founder para apagar n8n.
 - **Auditorías vs híbrido MAPEADAS** (11-jul): `AUDITORIAS_POST_CUTOVER.md` — ~60% de `/audit-feed-ventas`
@@ -44,11 +46,12 @@ vs `_shadow`) queda como herramienta de diagnóstico, NO como criterio de corte.
 
 ## ✅ CHECKPOINT 10-jul (fin del día) — leer esto para retomar
 
-Estado al cierre de la rama `feat/deptos-hibrido-shadow` (local, sin push):
+Estado al cierre de la rama `claude/hybrid-worktree-structure-3b7b53` (local, sin push):
 
 - ✅ **Auditoría de candados HECHA** — el Freno 1 era humo: el cutover solo re-aplica 2 matchings
   (2696/2714); 27/36 diffs son TC → van al Paquete TC.
 - ✅ **Discovery 0.005 VALIDADO** — 464 props en 6 microzonas > 444 de n8n (fix STEP 0.005, `ce1e2fe`).
+  [Act. 17-jul: el discovery ve ~505 en las 6 microzonas sobre 808 crudos.]
 - ✅ **Reader validado EXHAUSTIVO → spec v4** — ~193 props (100 ciegas + 93 re-leídas), **convergió**
   (0 edges nuevos en 10 lotes, 0 alucinaciones). Las 4 reglas v4 están en `READER_SPEC.md`.
   Método anti-drift que funcionó: congelar spec → material local → subagentes-lectores → loop-until-dry.
@@ -56,9 +59,10 @@ Estado al cierre de la rama `feat/deptos-hibrido-shadow` (local, sin push):
   (158 props, precios sin inflar). 2697 (alquiler colado) fue sacado.
 - **Cuello real = IP**: C21 residencial rate-limita ~2 lotes/100 desde la laptop; en prod el fetch
   corre desde infra, no laptop.
-- 🔴 **FALTA**: barrer ~271 props restantes (fetch con IP fresca) · fix del cargador
-  `parqueo_incluido` · id definitivo para las nuevas (secuencia en prod) · verificador integrado
-  (incremento 3) · Paquete TC (al cutover los paralelo/bob BAJAN ~34% — esperado, no bug) ·
+- 🔴 **FALTA**: ~~barrer ~271 props restantes~~ (SUPERADO — inventario barrido, ver checkpoint 11-jul; hoy
+  el cron corre solo) · ~~fix del cargador `parqueo_incluido`~~ (SUPERADO) · id definitivo para las nuevas
+  (secuencia en prod) · ~~verificador integrado (incremento 3)~~ (SUPERADO — `verificador-deptos.mjs` /
+  `verificador-alquiler.mjs`) · Paquete TC (al cutover los paralelo/bob BAJAN ~34% — esperado, no bug) ·
   bug C21-BOB-con-moneda-USD ya RESUELTO (regla en `READER_SPEC.md` §"Fallback C21 sin precio").
 
 *(La sección 15.7 de PLATAFORMA_HIBRIDA_GENERICA quedó desactualizada respecto a este checkpoint:
@@ -114,8 +118,9 @@ Todos Remax: Lofty Island ×5 (unidades, caso Sky Level) + Avanti/Sky Eclipse/Sk
 
 - **10 escritos, 0 rechazados, 0 multiproyecto.** TC: casi todos `no_especificado` (Remax sin TC en texto =
   el bug de los 368; el híbrido NO infla), 1 `paralelo` legítimo (SÖLO "Tc paralelo" declarado solo).
-- **Estado FINAL del shadow: 382 props · 352 con match (92,1%) · feed `v_mercado_venta_shadow` = 343 ·
-  mediana $/m² $1.652 · 0 inflados · 0 sin precio.**
+- **Estado FINAL del shadow (11-jul): 382 props · 352 con match (92,1%) · feed `v_mercado_venta_shadow` = 343 ·
+  mediana $/m² $1.652 · 0 inflados · 0 sin precio.** [Act. 17-jul: el cron subió el shadow de venta a
+  ~460 props (458 activas).]
 - **Pendientes reales del universo prod Equipetrol = 0** (query directo: todo lo fresco con teléfono ya está
   en shadow o en `proyectos_detectados`; el resto es rechazado/basura previa).
 - Total barrido hoy (3 lotes A+B+C): **194 unidades nuevas** a shadow + 9 multiproyecto a `proyectos_detectados`,
@@ -199,7 +204,7 @@ Domus Luxury 73/356 (prob. distintos).
 1. **Comparación integral shadow-vs-prod** — con el inventario completo: conteos, medianas $/m², diffs fila-a-fila (precio/TC/dorms/match). Es **el dato que justifica el corte de n8n**. Herramientas listas: `buscar_unidades_simple` (real) vs `buscar_unidades_simple_shadow`.
 2. **Enganches del cutover**: fecha LEAST en el camino de escritura real; C21 `fecha_alta` desde el discovery (`c21Listado`); `--shadow` en `actualizar-tc-binance.mjs`; script snapshot absorción.
 3. **Paquete "TC nuevo"** (default paralelo + normalización base-paralelo) — JUNTO a prod, al unificarse el TC oficial. Ver READER_SPEC.md.
-4. **Cutover**: el híbrido escribe `propiedades_v2` real / se apaga n8n para deptos venta — tras validar la comparación, con OK del founder.
+4. **Cutover**: el híbrido escribe `propiedades_v2` real / se apaga n8n para deptos venta — tras validar la comparación, con OK del founder. Plan de datos del corte: `CUTOVER_DATA_PLAN.md`.
 5. Detalles menores: 595 "Bloque La Salle" (leer el aviso), alquiler (otra operación, después).
 - **Pipeline reader-integrado completo**: `cargar-deptos-shadow.mjs` (`--prep`→lector→`--apply`) + `lib/matcher.mjs` (name-first) + `READER_SPEC.md` + `lib/reader-api.mjs` (costura API stub).
 - **Front shadow**: `/api/ventas-shadow.ts` (dev-only) + `?shadow=1` en `ventas.tsx` → `http://localhost:3000/ventas?shadow=1`.
@@ -210,7 +215,7 @@ Domus Luxury 73/356 (prob. distintos).
 ## Decisiones (founder)
 
 - **MOAT = el lector (Claude Code en sesión), NO API externa.** El script prepara el material ($0 fetch); yo leo precio/TC/dorms/edificio.
-- **Cron = BACKLOG.** Por ahora comando on-demand corrido en sesión.
+- **Cron = HECHO.** Crons end-to-end empaquetados como skills `/cron-deptos-ventas` y `/cron-deptos-alquiler` (corren en sesión bajo Max, $0). (Antes era comando on-demand / backlog.)
 - **Cero escritura a producción.** Evolución: (a) carril de archivos → (b) **entorno SHADOW aislado** (mig 268): un clon entero (`propiedades_v2_shadow` + TC shadow + normalización shadow) donde el híbrido corre el flujo COMPLETO (write + matching + render) sin que el feed público lo vea. El corte real (híbrido escribe la tabla REAL / n8n se apaga) es tras validar varios lotes en el shadow, con OK del founder.
 - **`datos_json` DIRECTO** (no reusar `merge_discovery_enrichment` SQL).
 
@@ -253,14 +258,14 @@ Clon aislado para la corrida completa sin tocar prod (verificado post-apply):
 | Enrichment LLM (**Firecrawl**) | `modulo_1/flujo_enrichment_llm_venta` | ✅ el lector |
 | Merge | `modulo_1/Flujo Merge` | ✅ `datos_json` directo |
 | Matching | `modulo_2/matching_nocturno` | ✅ reusa el SQL (`matching_completo_automatizado`) |
-| Verificador | `modulo_1/flujo_c_verificador` | ✅ `verificador-casas.mjs` (modelo deptos) |
+| Verificador | `modulo_1/flujo_c_verificador` | ✅ `verificador-deptos.mjs` (venta) / `verificador-alquiler.mjs` |
 
 ### SATÉLITES (estrangular aparte)
 | Pieza | Qué hace | Estado |
 |---|---|---|
 | `tc_dinamico_binance` | Binance → `config_global.paralelo` | ✅ `actualizar-tc-binance.mjs` (a flipear) |
 | Snapshot absorción | agrega `v_mercado_venta` → `market_absorption_snapshots` | 🔨 falta script chico |
-| `auditoria_diaria_sici` | health/checks | ✅ cubierto por skills de audit |
+| `auditoria_diaria_sici` | health/checks | ✅ cubierto por skills de audit. **2 audits shadow YA construidas:** `/audit-cola-shadow` (`auditar-matching-shadow.mjs`, matching+dedup en 3 superficies, respeta `campos_bloqueados`) + `/audit-deptos-shadow` (`auditar-shadow.mjs`, drift re-lectura del anuncio) |
 
 ### FUERA de alcance (después)
 - **Alquiler** (`alquiler/*`, 7 wf, también Firecrawl) — otra operación, tras venta.
@@ -360,5 +365,5 @@ re-toca la fila → `fecha_discovery`=NOW cada noche). Fix del híbrido:
 - Script snapshot absorción.
 - Más lotes de carril paralelo → decidir corte de deptos.
 - **TC transición**: correr `--full` (audit) y Binance MÁS SEGUIDO mientras dure; `precio_normalizado()` tiene 6.96 hardcodeado → actualizar la función cuando el oficial se unifique.
-- Empaquetar cron delta (`cron-deptos-equipetrol.mjs`) — backlog.
+- ✅ Cron delta empaquetado — skills `/cron-deptos-ventas` y `/cron-deptos-alquiler` (crons end-to-end en sesión).
 - Alquiler (después de venta).

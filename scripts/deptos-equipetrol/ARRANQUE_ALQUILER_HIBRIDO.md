@@ -1,5 +1,7 @@
 # Arranque — Híbrido de ALQUILER (deptos Equipetrol)
 
+> ⚠️ SUPERADO (17-jul): la premisa de este handoff ("alquiler es el siguiente frente, arrancar con reconocimiento, no codear") ya NO aplica. El híbrido de alquiler YA ESTÁ CONSTRUIDO Y CERRADO en shadow: existen `discovery-alquiler.mjs`, `cargar-alquiler-shadow.mjs`, `verificador-alquiler.mjs`, `READER_SPEC_ALQUILER.md` y la skill `/cron-deptos-alquiler` (~184 props en shadow). Rama real: `claude/hybrid-worktree-structure-3b7b53`. Este doc queda como handoff histórico del plan; estado actual → `project_checkpoint_deptos_hibrido` + `project_reconocimiento_alquiler_hibrido`.
+
 > Handoff para empezar el híbrido de alquiler tras cerrar venta. Escrito 12-jul-2026.
 > Retomar aquí después de un `/clear`. Contexto de venta: `ESTADO_MIGRACION.md`, `READER_SPEC.md` (v4, VENTA),
 > `WORKLIST_REVISION.md`, `AUDITORIAS_POST_CUTOVER.md`.

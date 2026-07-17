@@ -1,5 +1,7 @@
 # Auditorías vs. flujo híbrido — mapa de alineación al cutover
 
+> ✅ CONSTRUIDAS (14-17 jul): /audit-cola-shadow (auditar-matching-shadow.mjs) y /audit-deptos-shadow (auditar-shadow.mjs). Este doc era el PLAN; lo de abajo ya está implementado salvo donde se indique.
+
 > Reconocimiento 11-jul (deptos-venta Equipetrol). Qué pasa con las skills `/audit-feed-ventas-*` y
 > `/audit-cola-matching` cuando el híbrido reemplace a n8n. NO reescribir ahora — hoy prod = n8n y las
 > skills sirven tal cual. Esto es el plan de qué tocar EN el cutover. Fuente: 2 reconocimientos read-only.
@@ -19,7 +21,7 @@ redundantes (el reader ya los hace al leer), otros cambian de tabla, y unos poco
    conoce los tags viejos (`paralelo/oficial/no_especificado`). El régimen nuevo tiene `oficial_viejo` y `bob`
    que el check NO conoce. Hay que re-mapear todo el subsistema TC a los 4 tags nuevos.
 
-## 🟢 Gap del híbrido: NO hay re-lectura por drift de descripción (insight founder, 11-jul)
+## 🟢 Gap del híbrido: re-lectura por drift de descripción (insight founder, 11-jul) — ✅ IMPLEMENTADO en `auditar-shadow.mjs`
 
 **El problema.** El híbrido lee la descripción UNA sola vez (reader pass) y el cargador EXCLUYE los ya
 cargados (`cargar-deptos-shadow.mjs:81`) → nunca re-mira. Pero los anunciantes dejan **el mismo anuncio,
@@ -42,15 +44,17 @@ Es MÁS eficiente que n8n: en vez de re-leer todo cada noche, el drift dice QUÉ
 reader (lo caro) en las pocas que cambiaron. El drift decide *cuándo* vale la pena re-mirar. Reusa el fetcher
 de la gemela `-fetch` + `similarity.mjs` (levenshtein/buckets) que ya existen.
 
-**Acción de cutover:** el híbrido NECESITA este loop de drift→re-lectura (hoy no existe). Es parte del
-paquete de enganches, junto al verificador. Sin esto, el feed híbrido acumula datos viejos en props editadas.
+**Estado:** ✅ IMPLEMENTADO en `auditar-shadow.mjs` (/audit-deptos-shadow). El loop drift→re-lectura ya
+existe: re-lee el anuncio HOY vs lo guardado (drift + cambio de precio en portal + matching) y manda los
+sospechosos a subagentes-lectores (juez). $0, read-only. Cierra el punto ciego que el híbrido tenía por
+leer el anuncio una sola vez.
 
 ## `/audit-feed-ventas-*` — veredicto por capa
 
 | Capa / check | Cutover | Nota |
 |---|---|---|
 | **Matching** (regex 3.1 + juez LLM 3.1b + GPS 3.2 + prefijos 3.3/3.4) | ✅ **SOBREVIVE** | La más portable — es intrínseca al matcheo por nombre, no al pipeline. |
-| **Duplicados** (apart-hoteles, `dup-checks.mjs`) | ✅ **SOBREVIVE** | Comportamiento del PORTAL, ortogonal al pipeline. El híbrido tampoco los caza. |
+| **Duplicados** (apart-hoteles, `dup-checks.mjs`) | ✅ **SOBREVIVE — plegado en `/audit-cola-shadow` (Superficie 3)** | El dedup dejó de ser capa separada de `/audit-feed-*`: ahora vive DENTRO de `auditar-matching-shadow.mjs` como Superficie 3 (agrupa por `pm+precio+área` con guarda por piso, reusa `dup-checks.mjs`). |
 | **Drift portal** (Capa 1) | 🟢 **CRÍTICO — es el disparador de re-lectura** | Ver "Gap del híbrido" abajo. NO es "menos volumen": es la única red que detecta cambios post-captura. La gemela `-fetch` ya usa el fetcher del híbrido. |
 | similarity / reporter / persistencia (`audit_descripciones_*`, mig 242/267) | ✅ **SOBREVIVE** | Agnósticos del pipeline. `modo='fetch'` ya preparado. |
 | Precio explícito (2.3), $/m² (2.4 base), nombre basura (2.6), booleanos (2.7), área/desc corta (4.1/4.2) | ✅ **SOBREVIVE** | QA independiente. Repuntar la columna de desc. |
@@ -63,7 +67,11 @@ paquete de enganches, junto al verificador. Sin esto, el feed híbrido acumula d
 
 **Balance:** ~55-60% sobrevive tal cual o con ajuste mecánico · ~25% reescribir (eje TC + columna desc) · ~15-20% muere (redundante).
 
-## `/audit-cola-matching` — veredicto: **MUDA DE TABLA** (no muere)
+## `/audit-cola-matching` — veredicto: **MUDÓ DE TABLA** (no murió) — ✅ IMPLEMENTADO en `auditar-matching-shadow.mjs`
+
+> ✅ Ya migrado como `/audit-cola-shadow` (`auditar-matching-shadow.mjs`). El port ganó una **tercera
+> superficie** (dedup, ver abajo) y **respeta `campos_bloqueados` en las 3 superficies** (Regla Crítica #1).
+> El SQL corre contra `propiedades_v2_shadow`; el humano lo aplica.
 
 - **La cola `matching_sugerencias` muere** para Equipetrol/híbrido: el híbrido no la llena (matchea en el
   `--apply`). De hecho **Equipetrol nunca usó `pendiente_<macrozona>`** — usaba `pendiente` con UI propia.
@@ -72,13 +80,17 @@ paquete de enganches, junto al verificador. Sin esto, el feed híbrido acumula d
 - `lib/lector.mjs` (doble fetcher) y `lib/atractores.mjs` (clusters/atractores) ya son **compartidos** con
   las `/audit-feed-*` → sobreviven sin tocar.
 
-**Qué auditaría la versión híbrida** (= exactamente lo que dejamos hoy en el barrido):
+**Qué audita la versión híbrida** (TRES superficies, no dos):
 - **Superficie 1 (prioridad):** `id_proyecto_master IS NULL` CON nombre → candidatos **PM_NUEVO** (595 Bloque
   La Salle, 3660 Hamburgo) / **fuzzy débil** (1674 Sky Collection).
 - **Superficie 2:** auto-matches riesgosos, sobre todo `nombre_unico_zona_dif` confianza 85 (nombre único
   pero zona no coincide — hoy: Sky Luxury, Maré, Stone 3, Uptown Drei). Falsos positivos.
-- Cambio quirúrgico: solo `lib/db.mjs` (consultar `propiedades_v2 WHERE ... id_proyecto_master IS NULL AND
-  tiene_nombre` en vez de `getColaPendiente`). El juez-subagente y el generador de SQL no cambian.
+- **Superficie 3 (nueva — DEDUP):** duplicados apart-hotel / republicación, agrupando por `pm+precio+área` con
+  **guarda por piso** (reusa `dup-checks.mjs`). Es el dedup que antes vivía como capa separada de las
+  `/audit-feed-*`, plegado ahora DENTRO de esta skill. Determinístico (no juez LLM).
+- **Respeta `campos_bloqueados` en las 3 superficies** (Regla Crítica #1: Manual > Automatic).
+- Cambio ya hecho: `lib/db.mjs` consulta `propiedades_v2_shadow WHERE ... id_proyecto_master IS NULL AND
+  tiene_nombre` en vez de `getColaPendiente`. El juez-subagente y el generador de SQL no cambiaron.
 - Modo natural HOY: apuntarlo al **shadow** y comparar el veredicto del lector contra lo que el híbrido decidió.
 
 ## Qué NO cambia (para las OTRAS macrozonas)
@@ -88,5 +100,5 @@ para esas macrozonas. La transformación es solo sobre la porción que el híbri
 ## Orden sugerido al cutover
 1. Arreglar los 2 puntos de ruptura silenciosa (columna desc + eje TC) — sin esto, media auditoría lee NULL.
 2. Podar lo que muere (atractores, auto-aprobados, 2.9, desync) para no mantener código muerto.
-3. Mudar `audit-cola-matching` a auditar no-matches del híbrido (cambio en `lib/db.mjs`).
+3. ✅ HECHO: `audit-cola-matching` mudado a `/audit-cola-shadow` (`auditar-matching-shadow.mjs`) — audita no-matches del híbrido + dedup (Superficie 3), respeta `campos_bloqueados`.
 4. El resto (matching, duplicados, drift-fetch) queda como está.

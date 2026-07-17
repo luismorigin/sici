@@ -153,10 +153,11 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
   garantía ("1 mes de garantía Bs 3.500"), el depósito. El `precio_mensual` es la **renta mensual**, NO el mayor
   ni el de garantía. Ej: 3423 "3.300 bs (incluye expensas)… garantía 3.500 bs" → `precio 3300` (no 3500).
 
-> **Nota de esquema (shadow, a construir):** el modelo `precio_mensual` crudo + `moneda_original` + etiqueta
-> necesita una migración shadow de alquiler (análoga a la 268 de venta) + una función
-> **`precio_normalizado_alquiler(crudo, moneda, tag)`** AISLADA (regla 6: NUNCA tocar las funciones de venta) +
-> una `v_mercado_alquiler_shadow` que la consuma. El reader spec congela el CONTRATO; la migración lo implementa.
+> **Nota de esquema (shadow, implementado en migs 274/275):** el modelo `precio_mensual` crudo + `moneda_original` +
+> etiqueta se implementó en la migración shadow de alquiler (migs 274/275, análoga a la 268 de venta): la función
+> **`precio_normalizado_alquiler()`** AISLADA (regla 6: NUNCA tocar las funciones de venta) + la
+> `v_mercado_alquiler_shadow` que la consume + `buscar_unidades_alquiler_shadow`. El reader spec congeló el CONTRATO;
+> la migración lo implementó.
 > El cambio real vive en `config_global.tipo_cambio_paralelo` (Binance, cron diario — el mismo que venta).
 > **Confirmado founder (12-jul): 100% DINÁMICO** (Binance vivo), sin valor fijo — la función lee `config_global`
 > en cada consulta, nunca congela un número.
@@ -284,7 +285,7 @@ multiproyecto.
 - **plan de pagos / permuta / negociable**: no aplican a alquiler.
 
 ## Matching (lo hace el `matcher.mjs`, NO el lector) — reuso sin cambios
-El lector solo entrega `nombre_edificio_canonico`. El cargador llama `matchearPorNombre(nombre, zona, gps)`
+El lector solo entrega `nombre_edificio_canonico`. El cargador llama `matchearPorNombre(sb, { nombre, zona, lat, lon })`
 (agnóstico a operación, se reusa de venta tal cual): score ≥ 0.95 + zona corrobora → auto-asigna; ambiguo /
 fuzzy débil / sin nombre → queda sin match. GPS secundario. El catálogo `proyectos_master` es compartido
 edificio-nivel (venta y alquiler comparten edificios).
@@ -292,21 +293,26 @@ edificio-nivel (venta y alquiler comparten edificios).
 ---
 
 ## Pendientes que este spec deja abiertos (para el diseño de esquema / cargador)
-1. **Migración shadow de alquiler** (análoga a mig 268/269/271 de venta). **Decisión founder (12-jul): UNA SOLA
+
+> **✅ HECHO (17-jul) — los ítems 1-4 ya están implementados** (migs 274/275, `cargar-alquiler-shadow.mjs`,
+> `discovery-alquiler.mjs`). Se conservan abajo como registro de las decisiones congeladas. Solo el ítem 5
+> (confirmaciones con founder) sigue abierto.
+
+1. **✅ RESUELTO (migs 274/275) — Migración shadow de alquiler** (análoga a mig 268/269/271 de venta). **Decisión founder (12-jul): UNA SOLA
    tabla shadow** — reusar `propiedades_v2_shadow` discriminando por `tipo_operacion='alquiler'`, NO crear tabla
    separada. Razón: espeja prod (venta y alquiler conviven en `propiedades_v2` por `tipo_operacion`) → cutover más
    fiel; la tabla shadow ya heredó todas las columnas de alquiler (`LIKE ... INCLUDING ALL`). El aislamiento vive
    en las FUNCIONES, no en la tabla: `precio_normalizado_alquiler(crudo, moneda, tag)`, `v_mercado_alquiler_shadow`
    (filtra `tipo_operacion='alquiler'`), `buscar_unidades_alquiler_shadow` — todas propias, AISLADAS de venta
    (regla 6), nunca tocan las funciones de venta. Recarga selectiva = borrar filas `tipo_operacion='alquiler'`.
-2. **Mapeo del veredicto a columnas** (founder confirmó 12-jul: SÍ hay que mapear a columnas): el modelo crudo+tag
+2. **✅ RESUELTO (migs 274/275) — Mapeo del veredicto a columnas** (founder confirmó 12-jul: SÍ hay que mapear a columnas): el modelo crudo+tag
    necesita repensar las columnas actuales que asumían "siempre Bs / ÷6.96". Recomendación a validar en la migración
    shadow — espejar venta (que guarda el crudo BOB-o-USD en un solo campo `precio_usd` + `moneda_original` + tag):
    guardar el monto crudo mensual en un campo agnóstico a moneda + `moneda_original` ('BOB'/'USD') +
    `tipo_cambio_detectado`, y que `precio_normalizado_alquiler()` mire moneda+tag. Se cierra al diseñar la migración.
-3. **Cargador de alquiler**: adaptar `cargar-deptos-shadow.mjs` (los 14 acoplamientos venta→alquiler ya mapeados;
-   el grande es el modelo de precio en `construirFila`).
-4. **Discovery de alquiler**: parametrizar `operacion` en `sonda-suelo/lib/portales.mjs` (hoy hardcodea
-   `operacion_venta` en C21:31 y filtra Remax:87) + filtrar `tipo_operacion='alquiler'` en el diff.
+3. **✅ RESUELTO (`cargar-alquiler-shadow.mjs`) — Cargador de alquiler**: implementado como cargador propio de
+   alquiler (los 14 acoplamientos venta→alquiler mapeados; el grande era el modelo de precio en `construirFila`).
+4. **✅ RESUELTO (`discovery-alquiler.mjs`) — Discovery de alquiler**: implementado; parametriza `operacion` y
+   filtra `tipo_operacion='alquiler'` en el diff (antes hardcodeaba `operacion_venta` en `sonda-suelo/lib/portales.mjs`).
 5. **Confirmar con founder**: (a) el descuento de `oficial_viejo` en alquiler (¿existe el caso?), (b) si el valor
    del cambio real se fija o queda 100% dinámico Binance (misma pregunta abierta que venta en `TC_NUEVO_DECISION.md`).

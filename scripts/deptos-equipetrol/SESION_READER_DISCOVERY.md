@@ -1,7 +1,9 @@
 # Sesión — Discovery propio + Reader extendido (handoff)
 
+> ⚠️ SUPERADO (17-jul): este handoff es histórico. Ya se hicieron `--apply` extendido (cargador v4 persiste amenidades/extra/equipamiento/baños/piso/estado/multiproyecto), el empalme discovery→carga de NUEVAS (modo `--nuevas`/prepNuevas), el verificador de deptos (`verificador-deptos.mjs`), y la decisión de TC (congelada en `TC_NUEVO_DECISION.md`, implementada en shadow: `precio_normalizado_shadow`, mig 272). Rama real: `claude/hybrid-worktree-structure-3b7b53`. Estado actual → `SESION_READER_DISCOVERY.md` ya no es la fuente; ver `project_checkpoint_deptos_hibrido` + `TC_NUEVO_DECISION.md`.
+
 > Contexto para retomar. Complementa `ESTADO_MIGRACION.md` y `READER_SPEC.md`.
-> Rama: `feat/deptos-hibrido-shadow`. Todo READ-ONLY salvo lo indicado. Prod intacto.
+> Rama: `claude/hybrid-worktree-structure-3b7b53`. Todo READ-ONLY salvo lo indicado. Prod intacto.
 
 ## Qué se hizo esta sesión
 
@@ -41,19 +43,24 @@ texto (con estructurado como base donde aplica, y la descripción SIEMPRE manda)
 
 ## Qué FALTA (para retomar, en orden)
 
-1. **`--apply` extendido**: persistir los campos nuevos en `datos_json` de `propiedades_v2_shadow`
+1. ~~**`--apply` extendido**: persistir los campos nuevos en `datos_json` de `propiedades_v2_shadow`
    (`amenidades`, `amenidades_extra`, `equipamiento`, parqueo/baulera, baños, piso, estado, fecha, amoblado,
-   `es_multiproyecto`). Hoy el `--apply` solo escribe el veredicto viejo. **Cargar los 40 → ver en feed shadow.**
-2. **Empalme discovery→carga de NUEVAS**: las 97 nuevas del discovery no están en prod → el `--prep` (que lee
+   `es_multiproyecto`). Hoy el `--apply` solo escribe el veredicto viejo. **Cargar los 40 → ver en feed shadow.**~~
+   ✅ HECHO (17-jul): el cargador v4 persiste todos esos campos nuevos.
+2. ~~**Empalme discovery→carga de NUEVAS**: las 97 nuevas del discovery no están en prod → el `--prep` (que lee
    por id de prod) no las agarra; hay que fetchear su detalle desde la URL del portal (como `cron-casas`) y meterlas
-   al lector. Es un empalme chico, no pieza nueva.
-3. **Verificador integrado**: correr `verificador-casas.mjs` (modelo) sobre las desaparecidas → confirmar bajas por HTTP.
+   al lector. Es un empalme chico, no pieza nueva.~~
+   ✅ HECHO (17-jul): modo `--nuevas`/`prepNuevas` en `cargar-deptos-shadow.mjs`.
+3. ~~**Verificador integrado**: correr `verificador-casas.mjs` (modelo) sobre las desaparecidas → confirmar bajas por HTTP.~~
+   ✅ El verificador de deptos ya existe: `verificador-deptos.mjs` (no `verificador-casas.mjs`).
 4. **Cron/infra**: el cron nocturno es BACKLOG **por infra** (la nube no llega a los portales bolivianos) → correr
    en local/VM. No es complejidad de código.
 5. **Candados** (solo para la comparación shadow-vs-prod LIMPIA): sembrar `campos_bloqueados` prod→shadow. Para
    solo cargar/enriquecer NO hace falta.
 
-## Decisión pendiente: TIPO DE CAMBIO (pensar ANTES de tocar nada)
+## Decisión ~~pendiente~~ TOMADA: TIPO DE CAMBIO
+
+> ✅ RESUELTO (17-jul): la decisión de TC ya está tomada y congelada en `TC_NUEVO_DECISION.md`, e implementada en shadow (`precio_normalizado_shadow`, mig 272). Lo de abajo es el razonamiento histórico previo a la decisión.
 
 **Regla clave que NO cambia**: el lector guarda el CRUDO (`precio_usd` billete/directo) + `tipo_cambio_detectado`.
 La normalización la hace el FEED en vivo (`precio_normalizado()`). → **Cambiar el TC = cambiar la normalización UNA
