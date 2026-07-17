@@ -184,19 +184,30 @@ async function prep() {
 // ===========================================================================
 async function prepNuevas(discoveryFile, n) {
   const disc = JSON.parse(readFileSync(discoveryFile, 'utf8'));
-  const nuevas = (disc.nuevas || []).slice(0, n);
+  // EXCLUIR por URL lo ya cargado (shadow + multiproyectos detectados) ANTES del slice, e id 8M
+  // ARRANCANDO DESDE EL MÁXIMO ya en shadow — mismo fix que venta (cargar-deptos-shadow.mjs, 17-jul).
+  // Con `slice(0,n)` + `8_000_000+i` cada corrida reprocesaba las mismas y reiniciaba los ids →
+  // colisión que PISA props reales en el upsert (el rango 8M lo comparten venta y alquiler).
+  const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('url');
+  const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', 'equipetrol');
+  const urlsShadow = new Set([...(yaEn || []).map((r) => r.url), ...(yaProy || []).map((r) => r.url)]);
+  const pendientes = (disc.nuevas || []).filter((nv) => !urlsShadow.has(nv.url));
+  const yaCargadas = (disc.nuevas || []).length - pendientes.length;
+  const nuevas = pendientes.slice(0, n);
   const { data: tcRow } = await sb.from('config_global').select('valor').eq('clave', 'tipo_cambio_paralelo').single();
   const tasaParalelo = tcRow?.valor != null ? Number(tcRow.valor) : null;
-  console.log(`\n🌱 PREP NUEVAS ALQUILER — ${nuevas.length} deptos del discovery (no en prod). tasa_paralelo=${tasaParalelo}. NO escribe a la BD.\n`);
+  const { data: maxRow } = await sb.from('propiedades_v2_shadow').select('id').gte('id', 8_000_000)
+    .order('id', { ascending: false }).limit(1);
+  let idSeq = Math.max(8_000_000, maxRow?.[0]?.id ?? 8_000_000);
+  if (yaCargadas) console.log(`   (${yaCargadas} de las ${(disc.nuevas || []).length} del discovery ya están en shadow → se saltean; quedan ${pendientes.length} pendientes)`);
+  console.log(`\n🌱 PREP NUEVAS ALQUILER — ${nuevas.length} deptos del discovery (no en prod). tasa_paralelo=${tasaParalelo}. ids reservados desde ${idSeq + 1}. NO escribe a la BD.\n`);
   const entradas = [];
-  let i = 0;
   for (const nv of nuevas) {
-    i++;
     if (circuit.tripped) { console.log('🛑 circuit breaker.'); break; }
     let h = null, err = null;
     try { h = await fetchDetalleDepto(nv.fuente, nv.url); } catch (e) { err = String(e.message); }
     if (!h) { console.log(`   ✗ fetch ${nv.url.slice(0, 55)}: ${err || ''}`); await pace(400); continue; }
-    const id = 8_000_000 + i;                               // id reservado shadow (TEMPORAL; al cutover lo da prod)
+    const id = ++idSeq;                                     // id reservado shadow (TEMPORAL; al cutover lo da prod)
     const area = h.area_const_m2 ?? h.area_texto ?? null;
     const moneda = (nv.moneda || '').toUpperCase() || null; // crudo del LISTADO (no del detalle)
     const crudo = num(nv.precio_raw);
