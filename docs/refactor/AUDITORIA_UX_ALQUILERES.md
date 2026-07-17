@@ -50,7 +50,10 @@ El usuario piensa que vio todo cuando vio 3%. Cambiar a counter numérico como e
 
 ### I3. No hay diferenciación nuevo vs viejo
 Propiedad de 2 días y de 140 días se ven igual. Badge "Nuevo" para primeros 7 días.
-**Estado:** IMPLEMENTADO (19 Mar 2026) — badge verde "Nuevo" en cards desktop+mobile, tanto en /alquileres como /ventas
+**Estado:** IMPLEMENTADO (19 Mar 2026) → **REDISEÑADO (17 Jul 2026, migs 281/282)**. Ahora son
+DOS badges excluyentes con relojes distintos: **"Nuevo"** = capturado por nosotros ≤3 días
+(`fecha_creacion`, vía `dias_desde_captura`) · **"Reciente"** = publicado en el portal ≤30 días
+shadow / ≤60 prod (`dias_en_mercado`). En ambos feeds. Ver `project_badges_nuevo_reciente_shadow`.
 
 ### I4. Filtros invisibles en mobile
 El usuario no sabe que los filtros existen hasta card 3. Hint en top bar o primera card.
@@ -109,5 +112,6 @@ Muchas de estas mejoras aplican también a `/ventas`:
 | 19 Mar 2026 | Auditoría inicial — 5 mejoras top + 5 insights + 6 debilidades |
 | 19 Mar 2026 | D6+I1 implementados: gate en BottomSheet, "Ver ↗" eliminado de cards, `leads_gate` tabla + API. D1-D5 descartados (no aplican) |
 | 19 Mar 2026 | I3 implementado: badge "Nuevo" (verde, ≤7 días) en /alquileres y /ventas. I2 descartado (pips imperceptibles) |
+| 17 Jul 2026 | I3 rediseñado (migs 281/282): "Nuevo" (captura ≤3d) vs "Reciente" (publicado ≤30d), excluyentes, texto unificado. Ver `project_badges_nuevo_reciente_shadow` |
 | 19 Mar 2026 | Punto 1 implementado parcial: "Publicado hace X días" en BottomSheet (no cards). Punto 4 implementado: empty state contextualizado |
 | 19 Mar 2026 | Puntos 2,3,5 descartados. I4 descartado. I5 planificado en docs/backlog/RETENCION_USUARIOS.md (6 fases) |

@@ -172,18 +172,19 @@ número (ya está arriba). El navy de Zillow → **salvia de marca**.
 
 ---
 
-## TAREAS REGISTRADAS (transversales / desktop) — pendientes de implementar
-- **#3** Desktop: histograma en el filtro de precio (ventas + alquileres).
-- **#4** Desktop: MIN/MAX en número completo, no "K" (ventas + alquileres).
-- **#5** Desktop: TC del filtro = TC del día (Binance), no hardcoded 6.96 (ventas + alquileres).
-- **#6** Ventas mobile sheet: paridad con alquileres (preguntas checkbox + ver anuncio
+## TAREAS REGISTRADAS (transversales / desktop) — ✅ TODAS CERRADAS
+(Registradas al abrir el lote; cerradas en esta rama — commits en la sección ESTADO arriba.)
+- **#3** ✅ Desktop: histograma en el filtro de precio (ventas + alquileres) — `8c31e2b`.
+- **#4** ✅ Desktop: MIN/MAX en número completo, no "K" (ventas + alquileres).
+- **#5** ✅ Desktop: TC del filtro = TC del día (Binance), no hardcoded 6.96 — `4f35698`.
+- **#6** ✅ Ventas mobile sheet: paridad con alquileres (preguntas checkbox + ver anuncio
   original + sticky compacto + ícono compartir universal).
-- **#7** Desktop: quitar "Captado/Publicado por [agente]" del sheet (ventas + alquileres).
-- **#8** Sheet: comparador de "Cómo está el precio" muestra **total + por m²** en ambos
-  feeds, mobile **y desktop**.
+- **#7** ✅ Desktop: quitar "Captado/Publicado por [agente]" del sheet (ventas + alquileres).
+- **#8** ✅ Sheet: comparador de "Cómo está el precio" muestra **total + por m²** en ambos
+  feeds, mobile **y desktop** — `32367c5`.
 
-(Además, dos cosas quedan **pendientes de definir**: el **isologo real** y el **modal de
-captura** del "ver anuncio original".)
+**Sigue pendiente de DEFINIR** (no de implementar): el **isologo real** y el **modal de
+captura** del "ver anuncio original".
 
 ---
 

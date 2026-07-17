@@ -165,7 +165,8 @@ sici/
 │   ├── casas-zn/        → cron /cron-casas (reusa sonda-suelo/lib)
 │   ├── sonda-suelo/     → flujo híbrido casas ZN
 │   ├── auditoria-*/     → skills audit feed/cola (fuente de verdad)
-│   └── estudio-mercado/ → framework estudios SaaS
+│   ├── estudio-mercado/ → framework estudios SaaS
+│   └── poc-zona-norte/  → POC discovery Zona Norte (poc-discovery.mjs + geojson)
 ├── geodata/         → microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/   → modulo_1 (venta), modulo_2 (matching/audit/TC),
 │                      alquiler (6 wf), casas_terrenos (DESACTIVADO)
@@ -195,6 +196,8 @@ simon-mvp/src/
 ├── pages/admin/  → orquestadores delgados (ver tabla Admin Pages)
 ├── pages/api/    → API routes (ver Broker Pages & API)
 ├── components/   → landing-premium, alquiler, broker, filters-premium, results-premium, mercado
+├── contexts/     → AdminAuthContext (provider de admin auth, lo consume useAdminAuth)
+├── test/         → mocks JSON (chat, guía/razón fiduciaria, formulario)
 └── styles/       → globals.css, premium-theme.ts
 ```
 

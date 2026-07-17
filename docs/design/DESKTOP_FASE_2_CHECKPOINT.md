@@ -39,14 +39,16 @@ bajo el velo y **nunca se desmonta** (crash Leaflet `_leaflet_pos`).
 
 ## Qué FALTA
 
-1. **Espejo v4 en `/alquileres`** — tema claro, clase `bs-side-alq` en
-   `styles/alquileres.css` (NO styled-jsx), tab Costos en lugar de Compra,
-   mapa `AlquilerMapMulti`. Los feeds son gemelos con CSS separado: cada pieza
-   se hace 2 veces.
-2. Review de Lucho del v4 en ventas → recién ahí push/PR.
-3. Pendientes viejos de fase 2: URL por propiedad `/ventas/p/[id]` (SEO + OG),
-   "dibujar área de búsqueda" en el mapa, satélite (bloqueado: necesita token
-   Mapbox — Esri/Google no funcionan desde Bolivia).
+1. ✅ **HECHO** — **Espejo v4 en `/alquileres`** (tema claro, clase `bs-side-alq` en
+   `styles/alquileres.css`, tab Costos en lugar de Compra, mapa `AlquilerMapMulti`).
+   Ver `FEED_MODAL_CLARO_CHECKPOINT.md` ("ESPEJO COMPLETO ✅").
+2. Review de Lucho + push/PR → **sigue pendiente** (la rama no está pusheada).
+3. Pendientes viejos de fase 2:
+   - URL por propiedad `/ventas/p/[id]` (SEO + OG) — pendiente.
+   - "dibujar área de búsqueda / buscar en esta zona" en el mapa — **movido al backlog**
+     (`docs/backlog/FILTROS_FEED_PUBLICO.md` §3).
+   - Satélite — **RETIRADO** (necesita token Mapbox; Esri/Google no funcionan desde Bolivia).
+     Ver CLAUDE.md "Rediseño DESKTOP feeds".
 
 ## Cómo verificar (gotchas)
 

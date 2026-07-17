@@ -47,11 +47,11 @@ existente**, no reconstruye: todo lo de ventas ya está renderizado hoy en ese m
 - **Filtros** (P2, `166c761`): Comodidades + Atributos + header "N resultados" + Limpiar/Ver + números completos.
 - **Comparador mercado total+m²** (P3a, `2aa6f1a`): ya en el sheet mobile de ambos feeds.
 
-## Pendiente de mockup→código
-- **P3b**: el re-theme del sheet (usar `mobile-alquileres-sheet.html` como target).
-- **Desktop**: histograma en el filtro (#3), TC dinámico (#5), comparador total+m² en desktop (#8).
-- **TBD sin resolver**: isologo real de Simon; "modal de captura" del ver-anuncio-original
-  (hoy es el lead-gate `bs-gate` inline).
+## Mockup→código — ✅ TODO IMPLEMENTADO
+- **P3b** ✅: re-theme del sheet mobile (oscuro ventas / arena alquileres) — `3027867` + transversales.
+- **Desktop** ✅: histograma en el filtro (#3, `8c31e2b`), TC dinámico (#5, `4f35698`), comparador total+m² desktop (#8, `32367c5`).
+- **TBD sin resolver** (definición, no implementación): isologo real de Simon; "modal de captura"
+  del ver-anuncio-original (hoy es el lead-gate `bs-gate` inline).
 
 ## Cómo ver el target de P3b sin mockup
 El **modal claro de DESKTOP ya existe y funciona** — es la referencia de estructura. Abrir con
