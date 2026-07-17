@@ -25,9 +25,32 @@
   superior (`bsm-nav`) NO se llevó a mobile — se conservan los botones flotantes cerrar/fav; (2) el
   header de alquileres mobile queda OSCURO (diseño ya shippeado: header oscuro + body arena) en vez
   del arena del mockup — bajo riesgo, coherente con lo vivo.
-- 🔴 Transversales desktop PENDIENTES: #3 histograma (mobile+desktop), #5 TC dinámico, #8 comparador
-  total+m² en DESKTOP (mobile ya hecho en P3a). Opcional pendiente: nav de anclas en mobile + header
-  arena en alquileres mobile (si Lucho lo quiere igual al mockup).
+- ✅ **Transversales CERRADAS** (misma rama, sin push):
+  - **#8 comparador total + por m²** (`32367c5`) — el sheet rico mostraba solo /m² (ventas) o solo
+    /mes (alquileres); ahora cada fila lleva total + por m². `marketData` calcula el rango de la
+    otra dimensión (ventas: percentiles de `precio_usd`; alquiler: Bs/m²).
+  - **Orden de secciones** (`32367c5`) — Ubicación caía al final en ventas mobile; se replicó el
+    `order:` del modal desktop en `.bs-rich` (bsm-main pasa de `display:contents` a flex column).
+  - **Mapa en alquileres** (`79f8de6`) — no existía (ni mobile ni desktop), solo el link a Google
+    Maps. Se agregó `AlquilerMap` gateado `richLayout`.
+  - **#5 TC del día** (`4f35698`) — la nota del filtro decía "TC Bs 6.96" (oficial muerto); ahora
+    sale el paralelo vivo vía `/api/tc-actual` (hook cacheado `useTcParalelo` + `TcNote`).
+  - **Logo en el filtro** (`5875aae`) y **buscador typewriter** (`2db9f82`, escribe el placeholder
+    por ref → sin re-renders del feed).
+  - **#3 histograma** (`cef62cb` mobile + `8c31e2b` desktop) — `components/feed/PriceHistogram.tsx`
+    (estilos inline → sirve oscuro y arena). `priceValues` sale de las props cargadas.
+  - **Mínimo en alquileres** (`569bef2` mobile + `8c31e2b` desktop) — deuda vieja: el filtro público
+    era solo-MÁXIMO aunque el RPC y `FiltrosAlquiler` YA soportaban `precio_mensual_min`. Ahora es
+    rango min–max. El sidebar `DesktopFilters` es solo-broker y no se tocó.
+  - **Fixes de sheet mobile** (`4d31ee8`) — foto antes del header en ventas; sticky flush (la causa
+    era `padding-bottom:72px` en `.bs-venta.bs`: el sticky se pega al *content box*); header de
+    alquileres de negro a arena; fotos 4/3→16/9 + `max-height:32vh` para que entren en un SE.
+- 🟡 Pendiente/opcional: nav de anclas superior en mobile (se conservan los flotantes cerrar/fav);
+  isologo real (el logo del filtro es placeholder); refinar el lead-gate del "ver anuncio original".
+- ⚠️ **Bug de preview shadow corregido aparte** (`9232c0f`): el feed sirve data PROD por SSG/ISR (el
+  build no conoce `?shadow=1`) y el refetch shadow estaba **diferido a idle** → el preview mostraba
+  precios prod (ej. #3580 Maré: $275k prod vs $180k shadow). Ahora con `?shadow=1` el fetch shadow
+  es inmediato. **Prod sigue con el precio inflado hasta el cutover** (es data, no frontend).
 
 ## Principio clave (lo que hace que NO se rompa TikTok)
 - La **base TikTok = el FEED** (swipe vertical full-screen, foto grande, corazón en la
