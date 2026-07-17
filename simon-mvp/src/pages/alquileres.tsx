@@ -1734,7 +1734,7 @@ export default function AlquileresPage({
                       {/* Fila de pills de filtros */}
                       <FilterPillsAlquiler key={`fp-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered}
                         onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
-                        amenSel={amenSel} onAmenToggle={toggleAmen} />
+                        amenSel={amenSel} onAmenToggle={toggleAmen} priceValues={priceValues} />
                       {/* Título + contador + toggle lista|mixto|mapa */}
                       <div className="ad-count-row">
                         <h1 className="ad-h1">Departamentos en alquiler en {filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(id => ZONAS_ALQUILER_UI.find(z => z.id === id)?.label || id).join(', ') : 'Equipetrol'}</h1>
@@ -2632,12 +2632,14 @@ function AreaInputsAlq({ areaMin, areaMax, onAreaMin, onAreaMax }: {
 // [Más filtros ▾] ... [Ordenar ▾]. MISMO motor que DesktopFilters (estado local
 // inicializado de currentFilters al montar + autoApply con debounce + remount
 // vía key={filterComponentVersion} cuando el filtro cambia desde afuera).
-function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, proyectoNames, amenSel, onAmenToggle }: {
+function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, proyectoNames, amenSel, onAmenToggle, priceValues }: {
   currentFilters: FiltrosAlquiler; isFiltered: boolean
   onApply: (f: FiltrosAlquiler) => void; onReset: () => void; proyectoNames?: string[]
   amenSel: Set<string>; onAmenToggle: (a: string) => void
+  priceValues?: number[]
 }) {
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
+  const [minPrice, setMinPrice] = useState(currentFilters.precio_mensual_min || MIN_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set(currentFilters.dormitorios_lista || []))
   const [amoblado, setAmoblado] = useState(currentFilters.amoblado || false)
   const [mascotas, setMascotas] = useState(currentFilters.acepta_mascotas || false)
@@ -2658,9 +2660,11 @@ function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, pro
     return () => document.removeEventListener('mousedown', onDown)
   }, [])
 
-  const buildFilters = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, parq: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden'], proy?: string) => {
+  // price = máximo, minP = mínimo (se pasan explícitos para evitar closures viejas)
+  const buildFilters = useCallback((price: number, minP: number, dorms: Set<number>, amob: boolean, masc: boolean, parq: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden'], proy?: string) => {
     const f: FiltrosAlquiler = { orden: ord || 'recientes', limite: 200, solo_con_fotos: true }
     if (price < MAX_SLIDER_PRICE) f.precio_mensual_max = price
+    if (minP > MIN_SLIDER_PRICE) f.precio_mensual_min = minP
     if (dorms.size > 0) f.dormitorios_lista = Array.from(dorms)
     if (amob) f.amoblado = true
     if (masc) f.acepta_mascotas = true
@@ -2670,21 +2674,22 @@ function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, pro
     return f
   }, [])
 
-  const autoApply = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, parq: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden'], proy?: string) => {
+  const autoApply = useCallback((price: number, minP: number, dorms: Set<number>, amob: boolean, masc: boolean, parq: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden'], proy?: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      onApply(buildFilters(price, dorms, amob, masc, parq, zonas, ord, proy))
+      onApply(buildFilters(price, minP, dorms, amob, masc, parq, zonas, ord, proy))
     }, 400)
   }, [onApply, buildFilters])
 
-  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); autoApply(maxPrice, n, amoblado, mascotas, conParqueo, selectedZonas, orden, proyecto); return n }) }
-  function toggleZona(id: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, n, orden, proyecto); return n }) }
-  function handlePriceChange(price: number) { setMaxPrice(price); autoApply(price, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden, proyecto) }
-  function handleAmoblado() { const next = !amoblado; setAmoblado(next); autoApply(maxPrice, selectedDorms, next, mascotas, conParqueo, selectedZonas, orden, proyecto) }
-  function handleMascotas() { const next = !mascotas; setMascotas(next); autoApply(maxPrice, selectedDorms, amoblado, next, conParqueo, selectedZonas, orden, proyecto) }
-  function handleParqueo() { const next = !conParqueo; setConParqueo(next); autoApply(maxPrice, selectedDorms, amoblado, mascotas, next, selectedZonas, orden, proyecto) }
-  function handleOrden(o: FiltrosAlquiler['orden']) { setOrden(o); autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, o, proyecto) }
-  function handleProyecto(v: string) { setProyecto(v); autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden, v) }
+  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); autoApply(maxPrice, minPrice, n, amoblado, mascotas, conParqueo, selectedZonas, orden, proyecto); return n }) }
+  function toggleZona(id: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); autoApply(maxPrice, minPrice, selectedDorms, amoblado, mascotas, conParqueo, n, orden, proyecto); return n }) }
+  function handlePriceChange(price: number) { const p = Math.max(price, minPrice + 500); setMaxPrice(p); autoApply(p, minPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden, proyecto) }
+  function handleMinChange(min: number) { const m = Math.min(min, maxPrice - 500); setMinPrice(m); autoApply(maxPrice, m, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden, proyecto) }
+  function handleAmoblado() { const next = !amoblado; setAmoblado(next); autoApply(maxPrice, minPrice, selectedDorms, next, mascotas, conParqueo, selectedZonas, orden, proyecto) }
+  function handleMascotas() { const next = !mascotas; setMascotas(next); autoApply(maxPrice, minPrice, selectedDorms, amoblado, next, conParqueo, selectedZonas, orden, proyecto) }
+  function handleParqueo() { const next = !conParqueo; setConParqueo(next); autoApply(maxPrice, minPrice, selectedDorms, amoblado, mascotas, next, selectedZonas, orden, proyecto) }
+  function handleOrden(o: FiltrosAlquiler['orden']) { setOrden(o); autoApply(maxPrice, minPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, o, proyecto) }
+  function handleProyecto(v: string) { setProyecto(v); autoApply(maxPrice, minPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden, v) }
 
   // Labels dinámicos: la pill muestra lo aplicado, no un nombre genérico
   const zonasLabel = selectedZonas.size === 0 ? 'Todas las zonas' : (() => {
@@ -2727,10 +2732,20 @@ function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, pro
         <button type="button" className={`afp-pill ${precioActivo ? 'afp-on' : ''} ${openPill === 'precio' ? 'open' : ''}`} onClick={() => toggle('precio')} aria-expanded={openPill === 'precio'}>{precioLabel} {caret}</button>
         {openPill === 'precio' && (
           <div className="afp-pop afp-pop-precio">
-            <div className="df-label"><span className="df-dot" />PRESUPUESTO MAXIMO</div>
-            <input type="range" className="df-slider" min={2000} max={18000} step={500} value={maxPrice}
-              onChange={e => handlePriceChange(parseInt(e.target.value))} />
-            <PriceInputAlqMaxOnly maxPrice={maxPrice} onMaxPrice={handlePriceChange} />
+            <div className="df-label"><span className="df-dot" />PRESUPUESTO</div>
+            {priceValues && priceValues.length > 0 && (
+              <PriceHistogram values={priceValues} min={MIN_SLIDER_PRICE} max={MAX_SLIDER_PRICE} selMin={minPrice} selMax={maxPrice} />
+            )}
+            {/* Rango min–max (antes solo-máximo): el RPC ya soportaba precio_mensual_min */}
+            <div className="afo-range-wrap">
+              <input type="range" className="afo-range-slider afo-range-slider-min"
+                min={MIN_SLIDER_PRICE} max={MAX_SLIDER_PRICE} step={500} value={minPrice}
+                aria-label="Precio mínimo" onChange={e => handleMinChange(parseInt(e.target.value))} />
+              <input type="range" className="afo-range-slider afo-range-slider-max"
+                min={MIN_SLIDER_PRICE} max={MAX_SLIDER_PRICE} step={500} value={maxPrice}
+                aria-label="Precio máximo" onChange={e => handlePriceChange(parseInt(e.target.value))} />
+            </div>
+            <PriceInputAlq minPrice={minPrice} maxPrice={maxPrice} onMinPrice={handleMinChange} onMaxPrice={handlePriceChange} />
           </div>
         )}
       </div>

@@ -517,10 +517,11 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 // [Más filtros ▾] ... [Ordenar ▾]. MISMO motor que DesktopFilters (estado local
 // inicializado de currentFilters al montar + autoApply con debounce + remount
 // vía key={filterComponentVersion} cuando el filtro cambia desde afuera).
-function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proyectoNames, amenSel, onAmenToggle }: {
+function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proyectoNames, amenSel, onAmenToggle, priceValues }: {
   currentFilters: FiltrosVentaSimple; isFiltered: boolean
   onApply: (f: FiltrosVentaSimple) => void; onReset: () => void; proyectoNames?: string[]
   amenSel: Set<string>; onAmenToggle: (a: string) => void
+  priceValues?: number[]
 }) {
   const [minPrice, setMinPrice] = useState(currentFilters.precio_min || MIN_PRICE)
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_max || MAX_PRICE)
@@ -601,6 +602,9 @@ function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proye
         <button type="button" className={`vfp-pill ${precioActivo ? 'vfp-on' : ''} ${openPill === 'precio' ? 'open' : ''}`} onClick={() => toggle('precio')} aria-expanded={openPill === 'precio'}>{precioLabel} {caret}</button>
         {openPill === 'precio' && (
           <div className="vfp-pop vfp-pop-precio">
+            {priceValues && priceValues.length > 0 && (
+              <PriceHistogram values={priceValues} min={MIN_PRICE} max={MAX_PRICE} selMin={minPrice} selMax={maxPrice} dark />
+            )}
             <PriceInputsVT minPrice={minPrice} maxPrice={maxPrice} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice} />
             <div className="vf-range-wrap">
               <input type="range" className="vf-slider vf-slider-min" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
@@ -3784,7 +3788,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   {/* Fila de pills de filtros */}
                   <FilterPillsVentas key={`fp-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered}
                     onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
-                    amenSel={amenSel} onAmenToggle={toggleAmen} />
+                    amenSel={amenSel} onAmenToggle={toggleAmen} priceValues={priceValues} />
                   {/* Título + contador + toggle lista|mixto|mapa */}
                   <div className="vd-count-row">
                     <h1 className="vd-h1">Departamentos en venta en {filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : 'Equipetrol'}</h1>
