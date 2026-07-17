@@ -1764,34 +1764,13 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
     </div>
   ) : null
 
-  // Header (nombre · zona · precio · stats con iconos · inclusiones).
-  // En mobile se renderiza en su lugar de siempre (antes de las fotos);
-  // en el modal desktop se mete DENTRO de la columna izquierda para que la
-  // tarjeta de WhatsApp quede arriba, integrada al lado del precio (mockup).
-  const headerBlock = (
-    <div className="bs-dark-header" id="bsm-sec-resumen">
-      <div className="bs-h-name">
-        {p.proyecto}
-        {p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="bs-h-reciente">Reciente</span>}
-      </div>
-      <div className="bs-h-zona">{displayZona(p.zona)} · #{p.id}</div>
-      <div className="bs-h-price-block">
-        <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span>{p.tc_sospechoso && (!publicShareMode || contactoDirecto) && <span className="bs-tc-badge">Confirmar tipo de cambio</span>}</div>
-        <div className="bs-h-specs">{[
-          p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
-          p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
-          p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
-          p.piso ? `Piso ${p.piso}` : null,
-        ].filter(Boolean).join(' · ')}</div>
-        <div className="bs-h-sub">{[
-          p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : null,
-          p.estado_construccion === 'preventa'
-            ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa')
-            : 'Entrega inmediata',
-        ].filter(Boolean).join(' · ')}</div>
-      </div>
-      {/* Stats con iconos (modal desktop + mobile rico) — debajo del precio */}
-      {richLayout && (
+  // Stats con iconos + chips de inclusión. Van en distinto lugar según el layout:
+  //  · modal desktop → DENTRO del header (grid de 2 columnas, al lado del precio)
+  //  · mobile rico    → sección propia DEBAJO de la foto, igual que alquileres
+  //                     (orden: nombre/precio/detalles → foto → iconos grandes)
+  const statsAndChips = !richLayout ? null : (
+    <>
+      {(
         <div className="bsm-stats">
           {p.dormitorios !== null && (
             <div className="bsm-stat">
@@ -1853,6 +1832,34 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
           </>
         )
       })()}
+    </>
+  )
+
+  // Header: nombre · zona · precio · detalles. En el modal desktop lleva además
+  // los stats adentro (grid 2 col); en mobile los stats van aparte, bajo la foto.
+  const headerBlock = (
+    <div className="bs-dark-header" id="bsm-sec-resumen">
+      <div className="bs-h-name">
+        {p.proyecto}
+        {p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="bs-h-reciente">Reciente</span>}
+      </div>
+      <div className="bs-h-zona">{displayZona(p.zona)} · #{p.id}</div>
+      <div className="bs-h-price-block">
+        <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span>{p.tc_sospechoso && (!publicShareMode || contactoDirecto) && <span className="bs-tc-badge">Confirmar tipo de cambio</span>}</div>
+        <div className="bs-h-specs">{[
+          p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
+          p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
+          p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
+          p.piso ? `Piso ${p.piso}` : null,
+        ].filter(Boolean).join(' · ')}</div>
+        <div className="bs-h-sub">{[
+          p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : null,
+          p.estado_construccion === 'preventa'
+            ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa')
+            : 'Entrega inmediata',
+        ].filter(Boolean).join(' · ')}</div>
+      </div>
+      {sideMode && statsAndChips}
     </div>
   )
 
@@ -1897,11 +1904,11 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
           )}
           <button className="bs-close" aria-label="Cerrar detalles" onClick={onClose}>&times;</button>
         </div>
-        {/* Header — broker/publicShare mobile: acá (antes de las fotos, como
-            siempre). En el mobile RICO va DESPUÉS de las fotos (la foto primero,
-            luego nombre/precio/stats). En el modal desktop (sideMode) se mete
-            dentro de la columna izquierda (ver bsm-main). */}
-        {!sideMode && !richLayout && headerBlock}
+        {/* Header (nombre/precio/detalles) — en mobile va acá, antes de la foto.
+            En el modal desktop (sideMode) se mete dentro de la columna izquierda
+            (ver bsm-main). Los stats con iconos NO están acá en mobile: van en su
+            propia sección debajo de la foto, igual que alquileres. */}
+        {!sideMode && headerBlock}
           {/* Modal desktop + UNA sola foto: no forzar el banner ancho (recorta
               renders verticales). Foto completa (contain) sobre un fondo borroso
               de sí misma — no recorta ni deja negro. Click → visor. */}
@@ -1923,9 +1930,11 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
               )}
             </div>
           )}
-          {/* Mobile rico: el header va DESPUÉS de la foto (foto → nombre/precio/
-              stats). Así en pantallas cortas la foto no empuja el precio abajo. */}
-          {!sideMode && richLayout && headerBlock}
+          {/* Mobile rico: los iconos grandes + chips van DEBAJO de la foto
+              (nombre/precio/detalles → foto → iconos), espejo de alquileres. */}
+          {!sideMode && statsAndChips && (
+            <div className="bs-section bsm-stats-sec">{statsAndChips}</div>
+          )}
 
           {/* bsm-body/main/aside: en mobile son display:contents (no cambian
               nada); en el modal desktop arman las 2 columnas debajo de las
@@ -4562,8 +4571,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta.bs-rich .bs-h-reciente { color:#7BB389 }
         .bs-venta.bs-rich .bs-h-price { color:#FFFFFF }
         .bs-venta.bs-rich .bs-h-specs { display:none }
-        /* Stats con iconos — fila bajo el precio */
-        .bs-venta.bs-rich .bsm-stats { display:flex; gap:0; margin-top:16px; padding-top:15px; border-top:1px solid rgba(237,232,220,0.1) }
+        /* Stats con iconos — sección propia debajo de la foto (la separación la
+           da el padding de .bs-section, no un borde suelto) */
+        .bs-venta.bs-rich .bsm-stats { display:flex; gap:0 }
+        .bs-venta.bs-rich .bsm-stats-sec { padding-top:16px; padding-bottom:16px }
         .bs-venta.bs-rich .bsm-stat { flex:1; display:flex; flex-direction:column; align-items:flex-start; gap:5px; text-align:left }
         .bs-venta.bs-rich .bsm-stat-ico { width:19px; height:19px; color:#7BB389 }
         .bs-venta.bs-rich .bsm-stat b { font-size:17px; color:#FFFFFF }
