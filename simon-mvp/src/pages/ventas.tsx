@@ -1893,10 +1893,11 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
           )}
           <button className="bs-close" aria-label="Cerrar detalles" onClick={onClose}>&times;</button>
         </div>
-        {/* Header — en mobile va acá (antes de las fotos). En el modal desktop
-            (sideMode) NO se renderiza acá: se mete dentro de la columna izquierda
-            para alinear la tarjeta de WhatsApp arriba (ver bsm-main). */}
-        {!sideMode && headerBlock}
+        {/* Header — broker/publicShare mobile: acá (antes de las fotos, como
+            siempre). En el mobile RICO va DESPUÉS de las fotos (la foto primero,
+            luego nombre/precio/stats). En el modal desktop (sideMode) se mete
+            dentro de la columna izquierda (ver bsm-main). */}
+        {!sideMode && !richLayout && headerBlock}
           {/* Modal desktop + UNA sola foto: no forzar el banner ancho (recorta
               renders verticales). Foto completa (contain) sobre un fondo borroso
               de sí misma — no recorta ni deja negro. Click → visor. */}
@@ -1918,6 +1919,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
               )}
             </div>
           )}
+          {/* Mobile rico: el header va DESPUÉS de la foto (foto → nombre/precio/
+              stats). Así en pantallas cortas la foto no empuja el precio abajo. */}
+          {!sideMode && richLayout && headerBlock}
 
           {/* bsm-body/main/aside: en mobile son display:contents (no cambian
               nada); en el modal desktop arman las 2 columnas debajo de las
@@ -5041,6 +5045,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
 
         /* Base structure (ventas-specific, not in alquileres.css) */
         .bs-venta.bs { background:#1a1a1a; color:#EDE8DC; padding-bottom:72px }
+        /* El sticky (bottom:0) se pega al borde del CONTENT box: con el
+           padding-bottom quedaba flotando 72px sobre el fondo. En el sheet rico
+           el sticky es la última fila → flush abajo, como alquileres. */
+        .bs-venta.bs.bs-rich { padding-bottom:0 }
+        /* Tope de altura de la foto por viewport: en equipos cortos (SE) el 16/9
+           dejaba el precio/stats abajo del pliegue. */
+        .bs-venta.bs-rich .bsg-slide { max-height:32vh }
         .bs-venta .bs-floating-actions { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:flex-end; gap:4px; padding:8px 16px; padding-top:max(8px, calc(env(safe-area-inset-top) + 4px)) }
         .bs-venta .bs-fav { width:40px; height:40px; border-radius:50%; border:none; background:rgba(20,20,20,0.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#9A8E7A; display:flex; align-items:center; justify-content:center; cursor:pointer }
         .bs-venta .bs-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }

@@ -736,6 +736,21 @@
 .bs-rich .bs-hr-specs{display:none;}
 /* "Reciente" = texto verde plano en el sheet mobile (no píldora), como ventas */
 .bs-rich .bs-hr-reciente{background:transparent;padding:0;margin-left:8px;}
+/* Sheet mobile rico de alquileres = ARENA COMPLETO. El header venía negro
+   (#141414) y cortaba con el body arena. Las clases bs-hr-* son exclusivas de
+   alquileres → seguras aunque este CSS sea global (ventas usa bs-h-*).
+   El root sí lleva :not(.bs-venta) porque .bs-rich existe en los dos feeds. */
+.bs-rich:not(.bs-venta){background:#EDE8DC;}
+.bs-rich .bs-header-redesign{background:#EDE8DC;}
+.bs-rich .bs-hr-name{color:#141414;}
+.bs-rich .bs-hr-sub{color:#7A7060;}
+.bs-rich .bs-hr-id{color:#9A8E7A;}
+.bs-rich .bs-hr-price{color:#141414;}
+.bs-rich .bs-hr-price span{color:#7A7060;}
+.bs-rich .bs-hr-permetro{color:#7A7060;}
+/* Foto del sheet: 4/3 (292px @390) empujaba el precio fuera de pantalla en
+   equipos cortos. 16/9 como ventas + tope por viewport para pantallas bajas. */
+.bs-rich:not(.bs-venta) .bsg-slide{aspect-ratio:16/9;max-height:32vh;}
 .bsm-stats-alq{display:flex;gap:30px;flex-wrap:wrap;}
 .bsm-stats-alq .bsm-stat{display:flex;align-items:center;gap:10px;}
 .bsm-stats-alq .bsm-stat-ico{width:22px;height:22px;color:#3A6A48;flex-shrink:0;}
