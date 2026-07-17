@@ -1,6 +1,8 @@
 # Filtros pendientes en feed público
 
-Pendientes de extender los feeds públicos `/ventas` y `/alquileres` con filtros que ya se entregaron en modo broker (`/broker/[slug]` y `/broker/[slug]/alquileres`) durante abril 2026.
+Backlog de filtros pendientes para los feeds públicos `/ventas` y `/alquileres`. Dos orígenes:
+- **Promociones desde broker** (§1, §2): filtros ya entregados en modo broker (`/broker/[slug]` y `/broker/[slug]/alquileres`, abril 2026) que faltan des-gatear al público.
+- **Filtros nuevos** (§3): features que no existen en broker, propuestas para el feed público directamente.
 
 **Contexto:** Abel Flores (primer broker founder) pidió en una demo de café tres filtros adicionales: por fuente/franquicia, por superficie m², y inputs editables (no slider) para precio. Se implementaron en 4 fases (commits `c9fb067`, `ff5e438`, `ba58128`, `026b496`) — la Fase 3 ya promovió los inputs editables de precio al feed público. Las dos extensiones siguientes quedaron parqueadas a propósito.
 
