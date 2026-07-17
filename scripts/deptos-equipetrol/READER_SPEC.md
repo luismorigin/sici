@@ -287,6 +287,15 @@ intenta predecir todo. Se separa en:
     ejecutiva", "alta rentabilidad", "ideal para renta corta/Airbnb", "excelente inversión") Y el precio es de venta
     (6 cifras USD, no mensual). El adjetivo de inversión NO es la operación. **Señal dura:** precio mensual → alquiler;
     precio de venta + "renta" adjetivo → venta.
+- **🔴 v4.2 — BLOQUE / PISO COMPLETO / LOTE DE UNIDADES → `es_multiproyecto: true`** (caso real 17-jul, prop 3742
+  Rhodium: *"SE VENDE PISO COMPLETO"*, 4 unidades en bloque, $429.000 / 250 m²). El aviso vende **N unidades juntas**,
+  no un depto → **NO es una unidad comparable**: ensucia la mediana y al que busca un depto le aparece un piso entero.
+  - **Señal:** "piso completo", "piso entero", "bloque de N deptos", "N departamentos juntos/en bloque", "todo el piso",
+    "venta en bloque", y el área/precio son de VARIAS unidades sumadas (ej. 250 m² con 2 dorm = suma, no una unidad).
+  - **Ojo — el $/m² NO lo detecta:** 3742 daba $1.716/m² (coherente) y pasó el discriminador. Lo que discrimina es
+    **cuántas unidades vende el aviso**, no si el precio cierra. Si vende más de una → multiproyecto.
+  - NO usar `gate: rechazar` (no es basura: es inventario real, solo que agrupado) → taguear y que el cargador lo
+    desvíe a `proyectos_detectados`.
 - **Multiproyecto NO se rechaza** — se TAGUEA `es_multiproyecto: true` (+ `gate: aceptar`). El cargador lo
   DESVÍA a la tabla `proyectos_detectados` (mig 273): NO entra a `propiedades_v2_shadow` ni al feed. Se guarda
   la **cruda** (activo durable, portable, contable) para el **despliegue diferido** de tipologías.
