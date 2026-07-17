@@ -70,6 +70,9 @@ const ORDEN_OPTIONS: Array<{ value: FiltrosAlquiler['orden']; label: string }> =
 ]
 
 const MAX_SLIDER_PRICE = 18000
+// Piso del slider de presupuesto. El filtro público era solo-máximo (deuda
+// vieja): el RPC ya soportaba precio_mensual_min, faltaba exponerlo en la UI.
+const MIN_SLIDER_PRICE = 2000
 
 // Filtro de comodidades (client-side, fiduciario). Solo diferenciadores de
 // EDIFICIO. Amoblado/Mascotas/Parqueo se filtran server-side en "Más filtros";
@@ -3012,6 +3015,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   priceValues?: number[]
 }) {
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
+  const [minPrice, setMinPrice] = useState(currentFilters.precio_mensual_min || MIN_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set(currentFilters.dormitorios_lista || []))
   const [amoblado, setAmoblado] = useState(currentFilters.amoblado || false)
   const [mascotas, setMascotas] = useState(currentFilters.acepta_mascotas || false)
@@ -3026,6 +3030,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   const buildFilters = useCallback((): FiltrosAlquiler => {
     const f: FiltrosAlquiler = { orden: orden || 'recientes', limite: 200, solo_con_fotos: true }
     if (maxPrice < MAX_SLIDER_PRICE) f.precio_mensual_max = maxPrice
+    if (minPrice > MIN_SLIDER_PRICE) f.precio_mensual_min = minPrice
     if (selectedDorms.size > 0) f.dormitorios_lista = Array.from(selectedDorms)
     if (amoblado) f.amoblado = true
     if (mascotas) f.acepta_mascotas = true
@@ -3033,7 +3038,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
     if (selectedZonas.size > 0) f.zonas_permitidas = Array.from(selectedZonas)
     if (proyecto.trim()) f.proyecto = proyecto.trim()
     return f
-  }, [maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden, proyecto])
+  }, [maxPrice, minPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden, proyecto])
 
   // Debounced preview count
   useEffect(() => {
@@ -3063,7 +3068,8 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
 
   function handleApply() { onApply(buildFilters()) }
   function handleReset() {
-    setMaxPrice(MAX_SLIDER_PRICE); setSelectedDorms(new Set()); setSelectedZonas(new Set())
+    setMaxPrice(MAX_SLIDER_PRICE); setMinPrice(MIN_SLIDER_PRICE)
+    setSelectedDorms(new Set()); setSelectedZonas(new Set())
     setAmoblado(false); setMascotas(false); setConParqueo(false); setOrden('recientes'); setProyecto('')
     onReset()
   }
@@ -3097,9 +3103,9 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
           ))}</div>
         </div>
         {/* Budget */}
-        <div className="afo-group"><div className="afo-label"><span className="afo-dot" />{brokerMode ? 'PRESUPUESTO MENSUAL' : 'PRESUPUESTO MAXIMO'}</div>
+        <div className="afo-group"><div className="afo-label"><span className="afo-dot" />{brokerMode ? 'PRESUPUESTO MENSUAL' : 'PRESUPUESTO'}</div>
           {priceValues && priceValues.length > 0 && (
-            <PriceHistogram values={priceValues} min={2000} max={MAX_SLIDER_PRICE} selMin={brokerMode ? (precioMin ?? 0) : 0} selMax={maxPrice} />
+            <PriceHistogram values={priceValues} min={MIN_SLIDER_PRICE} max={MAX_SLIDER_PRICE} selMin={brokerMode ? (precioMin ?? 0) : minPrice} selMax={maxPrice} />
           )}
           {brokerMode && onPrecioMin ? (
             <div className="afo-range-wrap">
@@ -3123,12 +3129,23 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
                 }} />
             </div>
           ) : (
-            <input type="range" className="afo-slider" min={2000} max={MAX_SLIDER_PRICE} step={500} value={maxPrice} onChange={e => setMaxPrice(parseInt(e.target.value))} />
+            /* Público: rango min–max (antes era solo-máximo). El mínimo va como
+               precio_mensual_min al RPC, que ya lo soportaba. */
+            <div className="afo-range-wrap">
+              <input type="range" className="afo-range-slider afo-range-slider-min"
+                min={MIN_SLIDER_PRICE} max={MAX_SLIDER_PRICE} step={500}
+                value={minPrice} aria-label="Precio mínimo"
+                onChange={e => setMinPrice(Math.min(parseInt(e.target.value), maxPrice - 500))} />
+              <input type="range" className="afo-range-slider afo-range-slider-max"
+                min={MIN_SLIDER_PRICE} max={MAX_SLIDER_PRICE} step={500}
+                value={maxPrice} aria-label="Precio máximo"
+                onChange={e => setMaxPrice(Math.max(parseInt(e.target.value), minPrice + 500))} />
+            </div>
           )}
           {brokerMode && onPrecioMin ? (
             <PriceInputAlq minPrice={precioMin ?? 0} maxPrice={maxPrice} onMinPrice={onPrecioMin} onMaxPrice={setMaxPrice} />
           ) : (
-            <PriceInputAlqMaxOnly maxPrice={maxPrice} onMaxPrice={setMaxPrice} />
+            <PriceInputAlq minPrice={minPrice} maxPrice={maxPrice} onMinPrice={setMinPrice} onMaxPrice={setMaxPrice} />
           )}
         </div>
         {brokerMode && onAreaMin && onAreaMax && (
