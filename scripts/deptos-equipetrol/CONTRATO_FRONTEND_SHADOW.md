@@ -89,12 +89,16 @@ GRANTs solo `service_role`+`claude_readonly` → invisibles al Data API público
 | 278 | `proyectos_master.pet_friendly` (columna + derivación) |
 | 279/280 | las 2 RPCs exponen `pet_friendly` + sacan "Pet Friendly" de amenidades |
 
-## ⚠️ `buscar_extras_shadow` (mig 271) — REDUNDANTE, se puede dropear
+## ⚠️ `buscar_extras_shadow` (mig 271) — NO dropear en VENTA (verificado 17-jul)
 El feed shadow de venta (`ventas-shadow.ts`) llama aparte a `buscar_extras_shadow` para mergear
-`amenidades_extra, equipamiento_otros, amoblado, equipado`. **Ya NO hace falta:** las migs 277/280
-devuelven esos campos en el RPC principal. Lee la misma data canonicalizada (consistente), no toca
-`amenities_lista` (no le afecta el sacar "Pet Friendly"). → El front puede **usar una sola fuente** (el RPC
-principal) y sacar la llamada extra. No está roto, solo duplicado.
+`amenidades_extra, equipamiento_otros, amoblado, equipado`. **De esos, a la RPC principal de VENTA
+(`buscar_unidades_simple_shadow`, mig 277) SOLO migraron `equipado` + `equipamiento_otros` (+uso_inmueble).
+`amoblado` y `amenidades_extra` NO están en el RETURNS de venta** — se verificó llamando la RPC real, y
+`ventas-shadow.ts` los consume del helper (líneas ~96/98/160/162). **Dropear el helper = el feed de venta
+pierde `amoblado` y `amenidades_extra`.** → En VENTA el helper NO es redundante, NO dropear.
+> Ojo con la confusión: la mig **276 (ALQUILER)** SÍ trae `amenities_extra` en su RPC → para el feed de
+> alquiler el helper puede que sí sobre, pero **venta ≠ alquiler** (mig 277 es más acotada). Verificar por
+> operación antes de tocar. (Ver la tabla de migraciones arriba: 277 = venta = equipado/uso/equipamiento_otros.)
 
 ## Baños — regla ≤1 dorm (venta + alquiler, alineados desde mig c78aaad)
 `banos`: **≤1 dorm (mono o 1 dorm) → 1** (definicional); **2+ dorm sin info → `null`** (no "1" — sería
