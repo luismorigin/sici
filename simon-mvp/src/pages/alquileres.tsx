@@ -74,6 +74,24 @@ const MAX_SLIDER_PRICE = 18000
 // vieja): el RPC ya soportaba precio_mensual_min, faltaba exponerlo en la UI.
 const MIN_SLIDER_PRICE = 2000
 
+// ===== Badges de frescura (mismo criterio que /ventas) =====
+//  · "Nuevo"    = recién capturado por NOSOTROS (dias_desde_captura, derivado de
+//                 fecha_creacion: estable). Solo viaja en shadow; en prod es null.
+//  · "Reciente" = recién PUBLICADO en el portal (dias_en_mercado).
+// Excluyentes: si es nuevo gana "Nuevo". Umbral de reciente 30d en shadow, 60d en
+// prod (gate por presencia de dias_desde_captura → prod queda intacto).
+const NUEVO_MAX_DIAS = 3
+const RECIENTE_MAX_DIAS_SHADOW = 30
+const RECIENTE_MAX_DIAS_PROD = 60
+function esNuevoCaptura(p: UnidadAlquiler): boolean {
+  return p.dias_desde_captura != null && p.dias_desde_captura <= NUEVO_MAX_DIAS
+}
+function esPublicacionReciente(p: UnidadAlquiler): boolean {
+  if (p.dias_en_mercado == null) return false
+  const umbral = p.dias_desde_captura != null ? RECIENTE_MAX_DIAS_SHADOW : RECIENTE_MAX_DIAS_PROD
+  return p.dias_en_mercado <= umbral
+}
+
 // Filtro de comodidades (client-side, fiduciario). Solo diferenciadores de
 // EDIFICIO. Amoblado/Mascotas/Parqueo se filtran server-side en "Más filtros";
 // Equipado/Baulera son ATRIBUTOS de la unidad, client-side (también en "Más
@@ -195,6 +213,7 @@ function mapRawToUnidad(p: any): UnidadAlquiler {
     agente_telefono: p.agente_telefono || null,
     agente_whatsapp: p.agente_whatsapp || null,
     dias_en_mercado: p.dias_en_mercado || null,
+    dias_desde_captura: p.dias_desde_captura ?? null,
     estado_construccion: p.estado_construccion || 'no_especificado',
     id_proyecto_master: p.id_proyecto_master || null,
     amenities_lista: p.amenities_lista || null,
@@ -3432,7 +3451,7 @@ const DesktopCard = memo(function DesktopCard({
 
       {/* Content */}
       <div className="dc-content">
-        <div className="dc-name">{displayName}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="dc-reciente">Publicación reciente</span>}</div>
+        <div className="dc-name">{displayName}{esNuevoCaptura(p) ? <span className="dc-nuevo">Nuevo</span> : esPublicacionReciente(p) && <span className="dc-reciente">Reciente</span>}</div>
         <div className="dc-zona">{displayZona(p.zona)} <span className="dc-id">#{p.id}</span></div>
         <div className="dc-price-block">
           <div className="dc-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
@@ -3636,7 +3655,7 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenInfo() } }}>
         <div className="amc-name">{displayName}</div>
         <div className="amc-meta-row">
-          {p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="amc-reciente">Publicación reciente</span>}
+          {esNuevoCaptura(p) ? <span className="amc-nuevo">Nuevo</span> : esPublicacionReciente(p) && <span className="amc-reciente">Reciente</span>}
           <span className="amc-zona">{displayZona(p.zona)} <span className="amc-id">#{p.id}</span></span>
         </div>
         <div className="amc-price-block">
@@ -3802,7 +3821,11 @@ const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorit
     return () => obs.disconnect()
   }, [])
 
-  const esNueva = p.dias_en_mercado !== null && p.dias_en_mercado <= 60
+  const badgeNuevo = esNuevoCaptura(p)
+  const badgeReciente = !badgeNuevo && esPublicacionReciente(p)
+  // Prod (sin señal de captura) conserva el badge histórico "Nuevo"; shadow separa
+  // "Nuevo" (capturado) de "Reciente" (publicado).
+  const badgeRecienteLabel = p.dias_desde_captura != null ? 'Reciente' : 'Nuevo'
   // Inclusiones muteadas (icono + label, solo si están). Amoblado gana sobre Semi.
   const amobladoFull = p.amoblado === 'si'
   const amobladoSemi = p.amoblado === 'semi'
@@ -3816,7 +3839,8 @@ const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorit
       onKeyDown={(e) => { if (e.key === 'Enter') onOpen(p) }}
       onMouseEnter={() => onHover?.(p.id)} onMouseLeave={() => onHover?.(null)}>
       <div className="alc-photo" style={hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
-        {esNueva && <span className="alc-nueva">Nuevo</span>}
+        {badgeNuevo && <span className="alc-nueva">Nuevo</span>}
+        {badgeReciente && <span className="alc-nueva alc-reciente-badge">{badgeRecienteLabel}</span>}
         {!hasPhotos && <div className="alc-nofoto">Sin fotos</div>}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="alc-nav alc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}>
@@ -4157,7 +4181,7 @@ function BottomSheet({
   const headerBlock = (
     <div className="bs-header-redesign" id="bsa-resumen">
       <div className="bs-hr-name">{displayName}
-        {richLayout && p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="bs-hr-reciente">Reciente</span>}
+        {richLayout && (esNuevoCaptura(p) ? <span className="bs-hr-nuevo">Nuevo</span> : esPublicacionReciente(p) && <span className="bs-hr-reciente">Reciente</span>)}
       </div>
       <div className="bs-hr-sub">{displayZona(p.zona)} <span className="bs-hr-id">#{p.id}</span>
         {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (

@@ -584,6 +584,7 @@
 .dc-content { padding: 16px; flex: 1; display: flex; flex-direction: column; }
 .dc-name { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; line-height: 1.2; margin-bottom: 2px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .dc-reciente { font-size: 11px; font-weight: 500; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; }
+.dc-nuevo { font-size: 11px; font-weight: 700; color: #0A3D1E; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; background: #7BB389; padding: 1px 7px; border-radius: 4px; margin-left: 6px; }
 .dc-zona { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
 .dc-id { color: #7A7060; font-size: 12px; margin-left: 4px; letter-spacing: 0; }
 .dc-price-block { border-left: 3px solid #3A6A48; padding-left: 12px; margin-bottom: 8px; }
@@ -632,6 +633,7 @@
 .amc-meta-row, .amc-price-block { flex-shrink: 0; }
 .amc-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 5px 0 12px; }
 .amc-reciente { font-size: 11px; font-weight: 600; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; background: rgba(58,106,72,0.12); padding: 2px 8px; border-radius: 4px; }
+.amc-nuevo { font-size: 11px; font-weight: 700; color: #0A3D1E; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; background: #7BB389; padding: 2px 8px; border-radius: 4px; }
 .amc-zona { font-size: 13px; color: #7A7060; letter-spacing: 0.3px; margin-bottom: 0; font-family: 'DM Sans', sans-serif; }
 .amc-id { color: #7A7060; font-size: 12px; margin-left: 4px; letter-spacing: 0; }
 .amc-price-block { border-left: 3px solid #3A6A48; padding-left: 14px; margin-bottom: 8px; }
@@ -748,6 +750,7 @@
 .bs-rich .bs-hr-specs{display:none;}
 /* "Reciente" = texto verde plano en el sheet mobile (no píldora), como ventas */
 .bs-rich .bs-hr-reciente{background:transparent;padding:0;margin-left:8px;}
+.bs-hr-nuevo{display:inline-block;vertical-align:middle;margin-left:10px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:#0A3D1E;background:#7BB389;padding:3px 10px;border-radius:100px;letter-spacing:0.2px;}
 /* Sheet mobile rico de alquileres = ARENA COMPLETO. El header venía negro
    (#141414) y cortaba con el body arena. Las clases bs-hr-* son exclusivas de
    alquileres → seguras aunque este CSS sea global (ventas usa bs-h-*).
@@ -1204,6 +1207,7 @@
 .alc-active { border-color: #3A6A48; box-shadow: 0 0 0 1px #3A6A48; }
 .alc-photo { width: 230px; min-width: 230px; background-size: cover; background-position: center; background-color: #E2DCCB; position: relative; }
 .alc-nueva { position: absolute; top: 10px; left: 10px; z-index: 3; font-family: 'DM Sans', sans-serif; font-size: 10.5px; font-weight: 600; color: #0A3D1E; background: #7BB389; padding: 3px 9px; border-radius: 100px; letter-spacing: 0.2px; }
+.alc-reciente-badge { background: rgba(255,255,255,0.92); color: #3A6A48; }
 .alc-nofoto { display: flex; align-items: center; justify-content: center; height: 100%; color: #9A8E7A; font-size: 12px; font-family: 'DM Sans', sans-serif; }
 .alc-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: rgba(20,20,20,0.65); border: none; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 3; color: #EDE8DC; }
 .alc:hover .alc-nav { display: flex; }

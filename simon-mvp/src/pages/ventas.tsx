@@ -197,6 +197,27 @@ function buildFilters(
   return f
 }
 
+// ===== Badges de frescura =====
+// Dos conceptos distintos que antes estaban colapsados en uno:
+//  · "Nuevo"    = recién capturado por NOSOTROS (dias_desde_captura, derivado de
+//                 fecha_creacion: estable, no se pisa como fecha_discovery).
+//                 Solo viaja en el feed shadow; en prod es null y el badge no
+//                 aplica (dias_desde_captura ausente = gate del comportamiento).
+//  · "Reciente" = recién PUBLICADO en el portal (dias_en_mercado).
+// Excluyentes: si es nuevo gana "Nuevo"; el umbral de reciente baja a 30d en
+// shadow y conserva 60d en prod para no tocar el feed vivo hasta el cutover.
+const NUEVO_MAX_DIAS = 3
+const RECIENTE_MAX_DIAS_SHADOW = 30
+const RECIENTE_MAX_DIAS_PROD = 60
+function esNuevoCaptura(p: UnidadVenta): boolean {
+  return p.dias_desde_captura != null && p.dias_desde_captura <= NUEVO_MAX_DIAS
+}
+function esPublicacionReciente(p: UnidadVenta): boolean {
+  if (p.dias_en_mercado == null) return false
+  const umbral = p.dias_desde_captura != null ? RECIENTE_MAX_DIAS_SHADOW : RECIENTE_MAX_DIAS_PROD
+  return p.dias_en_mercado <= umbral
+}
+
 // ===== Filtro de amenidades (client-side, fiduciario) =====
 // Se parte en DOS pills alineadas con /alquileres:
 //  · Comodidades = SOLO amenidades diferenciadoras de EDIFICIO (esEstandar:false).
@@ -832,7 +853,7 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
         </>)}
       </div>
       <div className="vc-body">
-        <div className="vc-name">{p.proyecto}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="vc-reciente">Publicación reciente</span>}</div>
+        <div className="vc-name">{p.proyecto}{esNuevoCaptura(p) ? <span className="vc-nuevo">Nuevo</span> : esPublicacionReciente(p) && <span className="vc-reciente">Reciente</span>}</div>
         <div className="vc-zona">{displayZona(p.zona)} <span className="vc-id">#{p.id}</span></div>
         <div className="vc-price-block">
           <div className="vc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="vc-tc">(T.C. oficial)</span></div>
@@ -968,7 +989,11 @@ const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isA
   }, [])
 
   const esPreventa = p.estado_construccion === 'preventa'
-  const esNueva = p.dias_en_mercado !== null && p.dias_en_mercado <= 60
+  const badgeNuevo = esNuevoCaptura(p)
+  const badgeReciente = !badgeNuevo && esPublicacionReciente(p)
+  // Prod (sin señal de captura) conserva el badge histórico "Nueva"; shadow separa
+  // "Nuevo" (capturado) de "Reciente" (publicado).
+  const badgeRecienteLabel = p.dias_desde_captura != null ? 'Reciente' : 'Nueva'
   // Inclusiones (icono + label muteado, solo si están). Amoblado gana sobre Equipado.
   const equipList = p.equipamiento_detectado || []
   const amoblado = equipList.some(e => /amoblad/i.test(e))
@@ -981,7 +1006,8 @@ const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isA
       onKeyDown={(e) => { if (e.key === 'Enter') onOpen(p) }}
       onMouseEnter={() => onHover?.(p.id)} onMouseLeave={() => onHover?.(null)}>
       <div className="vlc-photo" style={hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
-        {esNueva && <span className="vlc-nueva">Nueva</span>}
+        {badgeNuevo && <span className="vlc-nueva">Nuevo</span>}
+        {badgeReciente && <span className="vlc-nueva vlc-reciente-badge">{badgeRecienteLabel}</span>}
         {!hasPhotos && <div className="vlc-nofoto">Sin fotos</div>}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="vlc-nav vlc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
@@ -1152,7 +1178,7 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDetails(p) } }}>
         <div className="mc-name">{p.proyecto}</div>
         <div className="mc-meta-row">
-          {p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="mc-reciente">Publicación reciente</span>}
+          {esNuevoCaptura(p) ? <span className="mc-nuevo">Nuevo</span> : esPublicacionReciente(p) && <span className="mc-reciente">Reciente</span>}
           <span className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></span>
         </div>
         <div className="mc-price-block">
@@ -1841,7 +1867,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
     <div className="bs-dark-header" id="bsm-sec-resumen">
       <div className="bs-h-name">
         {p.proyecto}
-        {p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="bs-h-reciente">Reciente</span>}
+        {esNuevoCaptura(p) ? <span className="bs-h-nuevo">Nuevo</span> : esPublicacionReciente(p) && <span className="bs-h-reciente">Reciente</span>}
       </div>
       <div className="bs-h-zona">{displayZona(p.zona)} · #{p.id}</div>
       <div className="bs-h-price-block">
@@ -4257,6 +4283,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vlc-count { position:absolute; bottom:6px; left:6px; background:rgba(20,20,20,0.75); color:rgba(255,255,255,0.85); font-size:10px; padding:2px 7px; border-radius:100px; font-family:'DM Sans',sans-serif }
         /* "Nueva" sobre la foto (solo recientes) — señal de atención */
         .vlc-nueva { position:absolute; top:10px; left:10px; z-index:3; font-family:'DM Sans',sans-serif; font-size:10.5px; font-weight:600; color:#0A3D1E; background:#7BB389; padding:3px 9px; border-radius:100px; letter-spacing:0.2px }
+        .vlc-reciente-badge { background:rgba(255,255,255,0.92); color:#3A6A48 }
         .vlc-body { flex:1; min-width:0; padding:14px 18px; display:flex; flex-direction:column; font-family:'DM Sans',sans-serif }
         /* Precio héroe + favorito */
         .vlc-toprow { display:flex; align-items:flex-start; justify-content:space-between; gap:8px }
@@ -4924,6 +4951,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-name { font-family:'Figtree',sans-serif; font-size:22px; font-weight:500; color:#EDE8DC; line-height:1.3; margin:0; padding:0; max-height:2.6em; overflow:hidden; flex-shrink:0 }
         .mc-meta-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:5px 0 12px; flex-shrink:0 }
         .mc-reciente { font-size:11px; font-weight:600; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:rgba(58,106,72,0.15); padding:2px 8px; border-radius:4px }
+        .mc-nuevo { font-size:11px; font-weight:700; color:#0A3D1E; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:#7BB389; padding:2px 8px; border-radius:4px }
         .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; font-family:'DM Sans',sans-serif }
         .mc-price-block { border-left:3px solid #3A6A48; padding-left:14px; margin-bottom:8px; flex-shrink:0 }
         .mc-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
@@ -5035,6 +5063,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vc-body { padding:16px; flex:1; display:flex; flex-direction:column }
         .vc-name { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; line-height:1.2; margin-bottom:2px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap }
         .vc-reciente { font-size:11px; font-weight:500; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px }
+        .vc-nuevo { font-size:11px; font-weight:700; color:#0A3D1E; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:#7BB389; padding:1px 7px; border-radius:4px; margin-left:6px }
         .vc-zona { font-size:12px; color:#9A8E7A; letter-spacing:0.5px; margin-bottom:10px }
         .vc-id { color:rgba(237,232,220,0.3); font-size:12px; margin-left:4px; letter-spacing:0 }
         .vc-price-block { border-left:3px solid #3A6A48; padding-left:12px; margin-bottom:8px }
@@ -5097,6 +5126,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta .bs-dark-header { background:#141414; padding:0 24px 20px }
         .bs-venta .bs-h-name { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1.1; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap }
         .bs-venta .bs-h-reciente { font-size:11px; font-weight:500; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px }
+        .bs-venta .bs-h-nuevo { font-size:11px; font-weight:700; color:#0A3D1E; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:#7BB389; padding:1px 8px; border-radius:4px; margin-left:8px }
         .bs-venta .bs-h-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; margin-bottom:12px; font-family:'DM Sans',sans-serif; margin-top:2px }
         .bs-venta .bs-h-price-block { border-left:3px solid #3A6A48; padding-left:14px }
         .bs-venta .bs-h-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }

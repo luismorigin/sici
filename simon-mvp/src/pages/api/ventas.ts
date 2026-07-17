@@ -66,6 +66,7 @@ function mapRow(p: RawUnidadSimpleRow) {
     es_multiproyecto: p.es_multiproyecto || false,
     estado_construccion: p.estado_construccion || 'no_especificado',
     dias_en_mercado: p.dias_en_mercado ?? null,
+    dias_desde_captura: p.dias_desde_captura ?? null,
     amenities_confirmados: p.amenities_confirmados || [],
     amenities_por_verificar: p.amenities_por_verificar || [],
     equipamiento_detectado: p.equipamiento_detectado || [],

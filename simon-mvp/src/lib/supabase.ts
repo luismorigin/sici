@@ -499,6 +499,9 @@ export interface UnidadAlquiler {
   agente_telefono: string | null
   agente_whatsapp: string | null
   dias_en_mercado: number | null
+  // Días desde la captura (fecha_creacion). Solo RPC shadow; en prod es null.
+  // Su presencia distingue "Nuevo" (capturado) de "Reciente" (publicado).
+  dias_desde_captura?: number | null
   estado_construccion: string
   id_proyecto_master: number | null
   amenities_lista: string[] | null
@@ -2000,6 +2003,9 @@ export interface UnidadVenta {
   es_multiproyecto: boolean
   estado_construccion: string
   dias_en_mercado: number | null
+  // Días desde la captura (fecha_creacion). Solo RPC shadow; en prod es null.
+  // Su presencia distingue "Nuevo" (capturado) de "Reciente" (publicado).
+  dias_desde_captura?: number | null
   amenities_confirmados: string[]
   amenities_por_verificar: string[]
   equipamiento_detectado: string[]
