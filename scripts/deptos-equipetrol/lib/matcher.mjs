@@ -65,7 +65,11 @@ export async function matchearPorNombre(sb, { nombre, zona, lat, lon } = {}) {
     return { pm: null, confianza: 0, metodo: 'sin_nombre', auto: false, candidatos: [], motivo: 'el lector no extrajo nombre de edificio' };
   }
 
-  const { data, error } = await sb.rpc('buscar_proyecto_fuzzy', { p_nombre: nom, p_umbral_minimo: 0.3, p_limite: 5 });
+  // p_limite 15 (no 5): `mismoTokenSet` re-scorea SOLO lo que la RPC devuelve, y el trigram hunde a
+  // los de orden invertido (caso pm252: vino TERCERO con 0.412). Con un top-5 el candidato correcto
+  // puede quedar fuera y el fix ni lo ve. Pedir más candidatos es gratis (read-only, misma llamada) y
+  // no afecta a prod: el que filtra es este matcher, no la RPC.
+  const { data, error } = await sb.rpc('buscar_proyecto_fuzzy', { p_nombre: nom, p_umbral_minimo: 0.3, p_limite: 15 });
   if (error) throw error;
   const candidatos = (data || []).map((c) => ({
     pm: c.id_proyecto, nombre: c.nombre, zona: c.zona, score: Number(c.score), tipo: c.match_tipo,
