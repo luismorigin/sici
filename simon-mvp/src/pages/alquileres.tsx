@@ -4731,15 +4731,15 @@ function BottomSheet({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" style={{ width: 16, height: 16 }}>
               <rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/>
             </svg>
-            Comparar
+            <span className="bs-btn-label">Comparar</span>
           </button>
         )}
         {onShare && !publicShareMode && (
-          <button className="bs-footer-share" onClick={onShare}>
+          <button className="bs-footer-share" onClick={onShare} aria-label="Compartir">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
             </svg>
-            Compartir
+            <span className="bs-btn-label">Compartir</span>
           </button>
         )}
       </div>

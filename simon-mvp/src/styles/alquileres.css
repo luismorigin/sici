@@ -749,8 +749,18 @@
 .bs-rich .bs-hr-price span{color:#7A7060;}
 .bs-rich .bs-hr-permetro{color:#7A7060;}
 /* Foto del sheet: 4/3 (292px @390) empujaba el precio fuera de pantalla en
-   equipos cortos. 16/9 como ventas + tope por viewport para pantallas bajas. */
-.bs-rich:not(.bs-venta) .bsg-slide{aspect-ratio:16/9;max-height:32vh;}
+   equipos cortos. 16/9 como ventas + tope por viewport para pantallas bajas.
+   dvh (con fallback vh) = alto VISIBLE real: en mobile el vh mide con la barra
+   de URL oculta, así que la foto salía más alta de lo pedido. */
+.bs-rich:not(.bs-venta) .bsg-slide{aspect-ratio:16/9;max-height:32vh;max-height:32dvh;}
+/* Compartir = solo ícono (como el mockup). Con los 3 botones + texto el sticky
+   desbordaba a lo ancho en equipos <=360px (Fold/S8/12 mini) y el sheet
+   scrolleaba en horizontal. Padding lateral menor por la misma razón. */
+.bs-rich:not(.bs-venta) .bs-sticky-footer{padding-left:14px;padding-right:14px;gap:8px;}
+.bs-rich .bs-footer-share .bs-btn-label{display:none;}
+.bs-rich .bs-footer-share{padding:12px;flex:0 0 auto;min-width:46px;}
+.bs-rich .bs-footer-wsp{min-width:0;}
+.bs-rich .bs-footer-compare{flex:0 0 auto;white-space:nowrap;}
 .bsm-stats-alq{display:flex;gap:30px;flex-wrap:wrap;}
 .bsm-stats-alq .bsm-stat{display:flex;align-items:center;gap:10px;}
 .bsm-stats-alq .bsm-stat-ico{width:22px;height:22px;color:#3A6A48;flex-shrink:0;}
@@ -850,7 +860,9 @@
 .bs-sim-specs{font-size:12px;color:#7A7060;font-family:'DM Sans',sans-serif;margin-top:2px;}
 
 /* Bottom Sheet — Broker Questions (bs-q-*) */
-.bs-q-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+/* wrap: el hint es nowrap y en equipos muy angostos (Fold 280px) no entra al
+   lado del título → desbordaba el sheet. Ahora baja a su propia línea. */
+.bs-q-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:4px 10px;}
 .bs-q-header .bs-sl{margin-bottom:0;}
 .bs-q-hint{font-size:11px;color:#7A7060;font-family:'DM Sans',sans-serif;white-space:nowrap;}
 .bs-q-list{display:flex;flex-direction:column;gap:6px;}

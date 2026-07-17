@@ -2296,15 +2296,15 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" style={{ width: 16, height: 16 }}>
                   <rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/>
                 </svg>
-                Comparar
+                <span className="bs-btn-label">Comparar</span>
               </button>
             )}
             {onShare && !brokerMode && (
-              <button className="bs-share-btn" onClick={onShare}>
+              <button className="bs-share-btn" onClick={onShare} aria-label="Compartir">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
                   <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
                 </svg>
-                Compartir
+                <span className="bs-btn-label">Compartir</span>
               </button>
             )}
           </div>
@@ -4614,6 +4614,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* Sticky: Comparar tematizado oscuro (par de Compartir) */
         .bs-venta.bs-rich .bs-compare-btn { border:1px solid rgba(237,232,220,0.15); color:#ECE6D8; background:transparent }
         .bs-venta.bs-rich .bs-compare-btn:hover { background:rgba(237,232,220,0.06) }
+        /* Compartir = SOLO ícono (como el mockup). Con los 3 botones + texto el
+           sticky desbordaba a lo ancho en equipos <=360px (Fold/S8/12 mini) y el
+           sheet scrolleaba en horizontal. Padding lateral menor por la misma razón. */
+        .bs-venta.bs-rich .bs-sticky-footer { padding-left:14px; padding-right:14px; gap:8px }
+        .bs-venta.bs-rich .bs-share-btn .bs-btn-label { display:none }
+        .bs-venta.bs-rich .bs-share-btn { padding:12px; flex:0 0 auto; min-width:46px; justify-content:center }
+        .bs-venta.bs-rich .bs-wsp-cta { min-width:0 }
+        .bs-venta.bs-rich .bs-compare-btn { flex:0 0 auto; white-space:nowrap }
         /* Orden de secciones en mobile rico = mismo que el modal desktop:
            especial → comodidades → sobre → ubicación → mercado → similares →
            preguntas → ver original (bsm-main pasa de display:contents a flex col) */
@@ -5065,8 +5073,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
            el sticky es la última fila → flush abajo, como alquileres. */
         .bs-venta.bs.bs-rich { padding-bottom:0 }
         /* Tope de altura de la foto por viewport: en equipos cortos (SE) el 16/9
-           dejaba el precio/stats abajo del pliegue. */
-        .bs-venta.bs-rich .bsg-slide { max-height:32vh }
+           dejaba el precio/stats abajo del pliegue. dvh (fallback vh) = alto
+           VISIBLE real; el vh mide con la barra de URL oculta. */
+        .bs-venta.bs-rich .bsg-slide { max-height:32vh; max-height:32dvh }
         .bs-venta .bs-floating-actions { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:flex-end; gap:4px; padding:8px 16px; padding-top:max(8px, calc(env(safe-area-inset-top) + 4px)) }
         .bs-venta .bs-fav { width:40px; height:40px; border-radius:50%; border:none; background:rgba(20,20,20,0.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#9A8E7A; display:flex; align-items:center; justify-content:center; cursor:pointer }
         .bs-venta .bs-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
@@ -5122,7 +5131,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta .bs-share-btn { display:flex; align-items:center; justify-content:center; gap:6px; padding:12px 16px; background:transparent; border:1px solid rgba(237,232,220,0.15); border-radius:10px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:400; cursor:pointer; transition:opacity 0.2s }
 
         /* Broker questions (dark) */
-        .bs-venta .bs-q-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px }
+        /* wrap: el hint es nowrap y en equipos muy angostos (Fold 280px) no entra
+           al lado del título → desbordaba el sheet. Ahora baja a su propia línea. */
+        .bs-venta .bs-q-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:4px 10px }
         .bs-venta .bs-q-header .bs-sl { margin-bottom:0 }
         .bs-venta .bs-q-hint { font-size:11px; color:#9A8E7A; font-family:'DM Sans',sans-serif; white-space:nowrap }
         .bs-venta .bs-q-list { display:flex; flex-direction:column; gap:6px }
