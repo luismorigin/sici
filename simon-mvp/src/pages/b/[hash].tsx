@@ -301,6 +301,8 @@ function mapRowVenta(r: RawUnidadSimpleRow): UnidadVenta {
     tc_sospechoso: r.tc_sospechoso ?? false,
     // Política del edificio → chip "Pet friendly" (no amenidad).
     pet_friendly: (r as { pet_friendly?: boolean | null }).pet_friendly ?? null,
+    // Badge "Nuevo" (recién captado) vs "Reciente" (recién publicado).
+    dias_desde_captura: (r as { dias_desde_captura?: number | null }).dias_desde_captura ?? null,
   }
 }
 
@@ -335,6 +337,7 @@ function mapRowAlquiler(r: RawUnidadAlquilerRow): UnidadAlquiler {
     agente_telefono: r.agente_telefono || null,
     agente_whatsapp: r.agente_whatsapp || null,
     dias_en_mercado: r.dias_en_mercado || null,
+    dias_desde_captura: (r as { dias_desde_captura?: number | null }).dias_desde_captura ?? null,
     estado_construccion: r.estado_construccion || 'no_especificado',
     id_proyecto_master: r.id_proyecto_master || null,
     amenities_lista: r.amenities_lista || null,

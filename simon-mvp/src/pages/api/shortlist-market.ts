@@ -1,12 +1,14 @@
 // API read-only: contexto de MERCADO para una tipología (dorms) + zona.
-// Alimenta la sección "Contexto de mercado" del bottom sheet en /b/[hash].
+// Alimenta la sección "Cómo está el precio" del bottom sheet en /b/[hash].
 // A diferencia del resumen de la selección (que describe la lista), esto compara
 // contra el mercado ACTIVO (v_mercado_venta / v_mercado_alquiler — ya filtran
 // ≤150d + calidad, regla 10 CLAUDE.md).
 //
-// El cliente pasa zona + dorms (los tiene la card); el endpoint sólo calcula el
-// cohort del mercado, sin lookup de la propiedad. Cohort por zona+dorms; si es
-// fino (<5) cae a todo Equipetrol misma tipología (ampliado).
+// Devuelve DOS rangos sobre el mismo cohort:
+//  - venta:    principal = precio_m2 ; secundario = precio_norm (total normalizado)
+//  - alquiler: principal = precio_mensual_bob ; secundario = Bs/m² (bob/area)
+// El cliente arma el mismo objeto `marketData` que usa el feed y renderiza la
+// sección nativa (mismo medidor accesible↔premium + comparador total y por m²).
 //
 // Seguridad (SEGURIDAD_SUPABASE.md regla 1): service_role server-side.
 import type { NextApiRequest, NextApiResponse } from 'next'
@@ -22,9 +24,13 @@ export interface ShortlistMarketData {
   enough: boolean
   ampliado: boolean
   count: number
+  // Métrica principal (precio_m2 venta | precio_mensual_bob alquiler)
   mediana: number
   p25: number
   p75: number
+  // Métrica secundaria (precio total normalizado venta | Bs/m² alquiler)
+  secP25: number
+  secP75: number
 }
 
 function pctl(sorted: number[], p: number): number {
@@ -48,52 +54,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (Number.isNaN(dorms)) return res.status(400).json({ error: 'Missing or invalid dorms' })
 
   const view = op === 'alquiler' ? 'v_mercado_alquiler' : 'v_mercado_venta'
-  const priceCol = op === 'alquiler' ? 'precio_mensual_bob' : 'precio_m2'
+  const cols = op === 'alquiler'
+    ? 'precio_mensual_bob, area_total_m2, zona, dormitorios'
+    : 'precio_m2, precio_norm, zona, dormitorios'
+
+  const num = (v: unknown) => (typeof v === 'number' ? v : parseFloat(String(v)))
+  const valid = (n: number) => Number.isFinite(n) && n > 0
 
   try {
     const supabase = createClient(url, serviceKey)
 
-    const { data, error } = await supabase
-      .from(view)
-      .select(`${priceCol}, zona, dormitorios`)
-      .eq('dormitorios', dorms)
-
+    const { data, error } = await supabase.from(view).select(cols).eq('dormitorios', dorms)
     if (error) {
       console.error('shortlist-market query error:', error)
       return res.status(500).json({ error: 'Database query failed' })
     }
 
-    const rows = (data || []) as Array<Record<string, unknown>>
-    const priceOf = (r: Record<string, unknown>) => {
-      const v = r[priceCol]
-      return typeof v === 'number' ? v : parseFloat(String(v))
+    type Row = Record<string, unknown>
+    const rows = (data || []) as Row[]
+    const mainOf = (r: Row) => num(op === 'alquiler' ? r.precio_mensual_bob : r.precio_m2)
+    const secOf = (r: Row) => {
+      if (op === 'alquiler') {
+        const bob = num(r.precio_mensual_bob)
+        const area = num(r.area_total_m2)
+        return valid(area) ? bob / area : NaN
+      }
+      return num(r.precio_norm)
     }
-    const valid = (n: number) => Number.isFinite(n) && n > 0
 
-    // Cohort zona-específico
-    let pool = rows.filter((r) => r.zona === zona).map(priceOf).filter(valid)
+    // Cohort zona-específico → fallback a todo Equipetrol si es fino (<5).
+    let cohort = rows.filter((r) => r.zona === zona)
     let ampliado = false
-
-    // Fallback: todo Equipetrol misma tipología
-    if (pool.length < MIN_COHORT) {
-      pool = rows
-        .filter((r) => typeof r.zona === 'string' && ZONAS_EQUIPETROL_DB.includes(r.zona as string))
-        .map(priceOf)
-        .filter(valid)
+    if (cohort.filter((r) => valid(mainOf(r))).length < MIN_COHORT) {
+      cohort = rows.filter((r) => typeof r.zona === 'string' && ZONAS_EQUIPETROL_DB.includes(r.zona as string))
       ampliado = true
     }
 
-    const sorted = pool.sort((a, b) => a - b)
+    const main = cohort.map(mainOf).filter(valid).sort((a, b) => a - b)
+    const sec = cohort.map(secOf).filter(valid).sort((a, b) => a - b)
+
     const payload: ShortlistMarketData = {
       op,
       dormitorios: dorms,
       zona,
-      enough: sorted.length >= MIN_COHORT,
+      enough: main.length >= MIN_COHORT,
       ampliado,
-      count: sorted.length,
-      mediana: pctl(sorted, 0.5),
-      p25: pctl(sorted, 0.25),
-      p75: pctl(sorted, 0.75),
+      count: main.length,
+      mediana: pctl(main, 0.5),
+      p25: pctl(main, 0.25),
+      p75: pctl(main, 0.75),
+      secP25: pctl(sec, 0.25),
+      secP75: pctl(sec, 0.75),
     }
 
     res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300')

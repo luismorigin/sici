@@ -30,7 +30,6 @@ import ShortlistMobileHeader from '@/components/shortlist/ShortlistMobileHeader'
 import ShortlistContextSummary from '@/components/shortlist/ShortlistContextSummary'
 import ShortlistBottomBar from '@/components/shortlist/ShortlistBottomBar'
 import ShortlistMenu from '@/components/shortlist/ShortlistMenu'
-import ShortlistMarketContext from '@/components/shortlist/ShortlistMarketContext'
 import ShortlistCardChip from '@/components/shortlist/ShortlistCardChip'
 import { computeVentaShortlistStats } from '@/lib/shortlist-context'
 // WhatsApp oficial de Simon (negocio) — NO el personal del fundador.
@@ -851,7 +850,7 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
           </div>
         )}
         {!useCarousel && !hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
-        {p.tc_sospechoso && (!publicShareMode || contactoDirecto) && <div className="vc-tc-badge"><span className="vc-tc-badge-i">ⓘ</span>Confirmar tipo de cambio</div>}
+        {p.tc_sospechoso && !publicShareMode && <div className="vc-tc-badge"><span className="vc-tc-badge-i">ⓘ</span>Confirmar tipo de cambio</div>}
         {brokerMode && !publicShareMode && (() => { const fb = fuenteBadge(p.fuente); return fb ? <div className="vc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null })()}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="vc-nav vc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); useCarousel ? navTo(photoIdx - 1) : setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
@@ -1530,6 +1529,25 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
   // publicShare mobile (shortlist /b/[hash]) también usa el layout rico: mismo
   // sheet que el feed (lo que la hace especial · En el departamento · orden).
   const richLayout = sideMode || (!isDesktop && !brokerMode)
+  // Shortlist (/b/[hash]): el mercado se compara contra el MERCADO real (cohort
+  // por zona+dorms de /api/shortlist-market), NO contra `properties` (que es la
+  // lista curada). Se arma el mismo objeto que el feed y se renderiza la sección
+  // nativa "Cómo está el precio".
+  const [slMarket, setSlMarket] = useState<null | { mediana: number; rangoLow: number; rangoHigh: number; totalLow: number; totalHigh: number; count: number; ampliado: boolean; mixto: boolean; segmento: string | null }>(null)
+  useEffect(() => {
+    if (!publicShareMode || !p) { setSlMarket(null); return }
+    let cancel = false
+    const qs = `op=venta&dorms=${p.dormitorios ?? 0}&zona=${encodeURIComponent(p.zona || '')}`
+    fetch(`/api/shortlist-market?${qs}`)
+      .then(r => r.json())
+      .then(res => {
+        const d = res?.data
+        if (cancel || !d || !d.enough) { if (!cancel) setSlMarket(null); return }
+        setSlMarket({ mediana: d.mediana, rangoLow: d.p25, rangoHigh: d.p75, totalLow: d.secP25, totalHigh: d.secP75, count: d.count, ampliado: d.ampliado, mixto: false, segmento: null })
+      })
+      .catch(() => { if (!cancel) setSlMarket(null) })
+    return () => { cancel = true }
+  }, [publicShareMode, p?.id, p?.dormitorios, p?.zona])
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
   const [gateEmail, setGateEmail] = useState('')
@@ -1570,7 +1588,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
   // barra. El precio depende de acabados/desarrollador (caveat en el render).
   // Cascada: zona (≥5 comparables) → todo Equipetrol DECLARADO como "zona
   // ampliada" (≥5) → null (el render muestra una línea de "sin comparables").
-  const marketData = useMemo(() => {
+  const marketDataMemo = useMemo(() => {
     if (!p || !p.precio_m2 || p.precio_m2 <= 0 || !properties || properties.length === 0) return null
     const pctl = (sorted: number[], pct: number) => {
       const idx = (sorted.length - 1) * pct
@@ -1611,6 +1629,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
       ?? build(properties.filter(q => enZona(q) && mismaTipologia(q)), false, true, null)
       ?? build(properties.filter(mismaTipologia), true, true, null)
   }, [p?.id, p?.zona, p?.dormitorios, p?.precio_m2, p?.estado_construccion, properties])
+  // En la shortlist (publicShare) el mercado sale del cohort real (slMarket), no
+  // de la lista. En el feed, del cálculo local sobre `properties`.
+  const marketData = publicShareMode ? slMarket : marketDataMemo
 
   const brokerQuestions = useMemo(() => {
     if (!p) return []
@@ -1676,7 +1697,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
 
   // richLayout (desktop-split + mobile público) = mercado v2 con medidor;
   // broker/publicShare = la versión mktv anterior.
-  const mercadoSection = !publicShareMode && (marketData ? (richLayout ? (
+  const mercadoSection = (marketData ? (richLayout ? (
     <div className="bs-section" id="bsm-sec-mercado">
       <div className="bs-sl"><span className="bs-sl-dot" />Cómo está el precio · {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
       <div className="bs-mkt2">
@@ -1892,7 +1913,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
       </div>
       <div className="bs-h-zona">{displayZona(p.zona)} · #{p.id}</div>
       <div className="bs-h-price-block">
-        <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span>{p.tc_sospechoso && (!publicShareMode || contactoDirecto) && <span className="bs-tc-badge">Confirmar tipo de cambio</span>}</div>
+        <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span>{p.tc_sospechoso && !publicShareMode && <span className="bs-tc-badge">Confirmar tipo de cambio</span>}</div>
         <div className="bs-h-specs">{[
           p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
           p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
@@ -2183,21 +2204,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
             </div>
           )}
 
-          {/* Contexto de mercado */}
+          {/* Cómo está el precio — en la shortlist alimentado por el mercado
+              real (slMarket), en el feed por el cálculo local. Sección nativa. */}
           {mercadoSection}
-          {/* Contexto de mercado en shortlist (/b/[hash]): compara contra el
-              mercado activo real (cohort por zona+dorms), no contra la lista. */}
-          {publicShareMode && !sideMode && p.precio_m2 > 0 && (
-            <ShortlistMarketContext
-              variant="venta"
-              op="venta"
-              sectionId="bsm-sec-mercado"
-              dormitorios={p.dormitorios ?? 0}
-              zonaDb={p.zona}
-              zonaDisplay={displayZona(p.zona)}
-              precioComparable={p.precio_m2}
-            />
-          )}
           {/* "Datos de compra" se plegó dentro de Mercado (días + estado);
               parqueo/baulera/equipado viven ahora como inclusiones en el header. */}
 

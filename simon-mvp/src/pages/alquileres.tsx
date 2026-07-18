@@ -29,7 +29,6 @@ import ShortlistMobileHeader from '@/components/shortlist/ShortlistMobileHeader'
 import ShortlistContextSummary from '@/components/shortlist/ShortlistContextSummary'
 import ShortlistBottomBar from '@/components/shortlist/ShortlistBottomBar'
 import ShortlistMenu from '@/components/shortlist/ShortlistMenu'
-import ShortlistMarketContext from '@/components/shortlist/ShortlistMarketContext'
 import ShortlistCardChip from '@/components/shortlist/ShortlistCardChip'
 import { computeAlquilerShortlistStats } from '@/lib/shortlist-context'
 
@@ -4089,6 +4088,23 @@ function BottomSheet({
   // publicShare mobile (shortlist /b/[hash]) también usa el layout rico: mismo
   // sheet que el feed (lo que la hace especial · En el departamento · orden).
   const richLayout = sideMode || (!isDesktop && !brokerMode)
+  // Shortlist (/b/[hash]): mercado contra el MERCADO real (cohort por zona+dorms
+  // de /api/shortlist-market), NO contra `properties` (la lista curada).
+  const [slMarket, setSlMarket] = useState<null | { mediana: number; rangoLow: number; rangoHigh: number; m2Low: number | null; m2High: number | null; count: number; ampliado: boolean; mixto: boolean; segmento: string | null }>(null)
+  useEffect(() => {
+    if (!publicShareMode || !property) { setSlMarket(null); return }
+    let cancel = false
+    const qs = `op=alquiler&dorms=${property.dormitorios ?? 0}&zona=${encodeURIComponent(property.zona || '')}`
+    fetch(`/api/shortlist-market?${qs}`)
+      .then(r => r.json())
+      .then(res => {
+        const d = res?.data
+        if (cancel || !d || !d.enough) { if (!cancel) setSlMarket(null); return }
+        setSlMarket({ mediana: d.mediana, rangoLow: d.p25, rangoHigh: d.p75, m2Low: d.secP25 || null, m2High: d.secP75 || null, count: d.count, ampliado: d.ampliado, mixto: false, segmento: null })
+      })
+      .catch(() => { if (!cancel) setSlMarket(null) })
+    return () => { cancel = true }
+  }, [publicShareMode, property?.id, property?.dormitorios, property?.zona])
   const [showGate, setShowGate] = useState(false)
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
@@ -4187,7 +4203,7 @@ function BottomSheet({
   // — mediana, rango típico (p25-p75, no min/max: un outlier rompía el rango)
   // y barra visual con la posición de este depto. Cascada: zona (≥5) → todo
   // Equipetrol DECLARADO como "zona ampliada" (≥5) → null (línea explicativa).
-  const marketData = useMemo(() => {
+  const marketDataMemo = useMemo(() => {
     if (!property || !property.precio_mensual_bob || !properties || properties.length === 0) return null
     const pctl = (sorted: number[], pct: number) => {
       const idx = (sorted.length - 1) * pct
@@ -4229,6 +4245,8 @@ function BottomSheet({
       ?? build(properties.filter(q => enZona(q) && mismaTipologia(q)), false, true, null)
       ?? build(properties.filter(mismaTipologia), true, true, null)
   }, [property?.id, property?.zona, property?.dormitorios, property?.precio_mensual_bob, property?.amoblado, properties])
+  // Shortlist → cohort real (slMarket); feed → cálculo local sobre `properties`.
+  const marketData = publicShareMode ? slMarket : marketDataMemo
 
   function toggleQuestion(idx: number) {
     setSelectedQs(prev => {
@@ -4571,7 +4589,7 @@ function BottomSheet({
           ventas). Oculto en publicShare: `properties` ahí es la shortlist. --- */}
       {/* Mercado v2 — modal desktop: lenguaje llano + medidor accesible→premium.
           Mobile conserva el formato barra (bs-mkta). */}
-      {showTab('mercado') && !publicShareBroker && marketData && richLayout && (() => {
+      {showTab('mercado') && marketData && richLayout && (() => {
         const precio = p.precio_mensual_bob
         const pos3 = precio < marketData.rangoLow ? 'bajo' : precio > marketData.rangoHigh ? 'sobre' : 'dentro'
         const vtxt = pos3 === 'bajo' ? 'Más barato que similares' : pos3 === 'sobre' ? 'Más caro que similares' : 'En línea con similares'
@@ -4627,7 +4645,7 @@ function BottomSheet({
           </div>
         )
       })()}
-      {showTab('mercado') && !publicShareBroker && marketData && !richLayout && (
+      {showTab('mercado') && marketData && !richLayout && (
         <div className="bs-section">
           <div className="bs-sl"><span className="bs-sl-dot" />Mercado en {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
           <div className="bs-mkt">
@@ -4661,23 +4679,10 @@ function BottomSheet({
         </div>
       )}
       {/* Nivel 3 de la cascada: la ausencia se explica, no se disimula. */}
-      {showTab('mercado') && !publicShareBroker && !marketData && p.precio_mensual_bob > 0 && (
+      {showTab('mercado') && !marketData && p.precio_mensual_bob > 0 && (
         <div className="bs-section">
           <div className="bs-mkta-empty">Sin suficientes deptos comparables activos para mostrar contexto de mercado.</div>
         </div>
-      )}
-      {/* Contexto de mercado en shortlist (/b/[hash]): compara contra el mercado
-          activo real (cohort por zona+dorms), no contra la lista curada. */}
-      {publicShareBroker && !sideMode && p.precio_mensual_bob > 0 && (
-        <ShortlistMarketContext
-          variant="alquiler"
-          op="alquiler"
-          sectionId="bsa-mercado"
-          dormitorios={p.dormitorios ?? 0}
-          zonaDb={p.zona}
-          zonaDisplay={displayZona(p.zona)}
-          precioComparable={p.precio_mensual_bob}
-        />
       )}
       {/* Costos — costo real mensual + ingreso sugerido (layout rico: desktop + mobile) */}
       {richLayout && (
