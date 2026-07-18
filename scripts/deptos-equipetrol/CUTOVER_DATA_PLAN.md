@@ -23,6 +23,66 @@ y toda la data se re-muestra sola sobre el mismo crudo. No se "reconvierte al re
 - **Recomendación: archivar.** Es casi gratis (una tabla que no se toca) y deja todas las puertas
   abiertas. Volar es la única jugada sin retorno de todo el cutover.
 
+## Cutover Equipetrol-PRIMERO: plan de acción (objetivo del founder)
+
+Meta: **poner deptos-venta Equipetrol en prod primero**, sin romper el resto, y después adaptar el
+híbrido a las otras zonas con las mejoras ya hechas. Transición eficiente.
+
+### La clave que lo hace fácil: n8n NO es todo-o-nada
+n8n tiene workflows separados (deptos-venta, alquiler, casas, por zona). El cutover de Equipetrol
+**apaga SOLO el workflow de deptos-venta Equipetrol**. Todo lo demás (ZN, casas, alquiler) **sigue con
+n8n, intacto**. No hay conflicto de captura; ZN no se toca.
+
+### Los DOS bloqueos reales
+1. **Captura diaria automática de Equipetrol** (= "me faltan los snapshots/mercado diarios"). Para que la
+   absorción de Equipetrol no se corte al apagar su workflow n8n, el híbrido tiene que capturar cada noche
+   **solo**. Hoy corre a mano → pre-requisito duro. Ver §Automatización.
+2. **La normalización es GLOBAL.** `precio_normalizado()` la usan feed + snapshots + estudios para TODAS las
+   zonas → no se cambia solo para Equipetrol sin tocar ZN. Dos caminos:
+   - **Simple (recomendado):** aceptar el TC nuevo **para todo** (Equipetrol + ZN), un solo swap. ZN también
+     baja ~34% (correcto: es el precio real). Requiere **auditar el crudo de ZN** (cazar sucios de v16.5).
+   - **Complejo:** aislar Equipetrol con su propia función; ZN sigue con la vieja. Dos regímenes conviviendo.
+
+### Las 4 fases
+1. **Motor automático** (desbloquea la captura diaria): construir `reader-api` → medir modelos baratos
+   contra el ground truth → montar routine + proxy → probar el ciclo end-to-end.
+2. **Normalización + consumidores (Paquete TC):** auditar el crudo de ZN → swappear `precio_normalizado()`
+   + re-apuntar snapshots/vistas/estudios a la data híbrida.
+3. **Switch de Equipetrol:** feed público + snapshots de Equipetrol leen la data híbrida (absorción sin
+   corte; precios con el escalón declarado) → apagar SOLO el workflow deptos-venta Equipetrol en n8n.
+4. **Después:** adaptar el híbrido a ZN (mismo patrón shadow) + apagar su workflow, zona por zona.
+
+## ⚠️ Zona Norte ya está en prod con el pipeline VIEJO (afecta el Paquete TC)
+`propiedades_v2` tiene **~554+ props activas de ZN** (14 microzonas: anillos Banzer/Radial 26/La Salle/
+Alemana), deptos + casas, capturadas con **n8n `v16.5` (256) + versiones `1.9`/`null`** — NO con el híbrido
+bueno. Tienen los defectos del enfoque viejo (TC inflado, matching flojo, sin campos v4.2).
+- **No se borran ni quedan colgadas:** el híbrido, al expandirse a ZN, las **re-lee y corrige fila por fila**
+  (como Equipetrol). `propiedades_v2` es la misma tabla; cada fila se mejora cuando el híbrido la re-mira.
+- **🔴 El Paquete TC (swap de función) toca TODA `propiedades_v2`, incluida ZN.** Si swapeás la normalización
+  global antes de re-procesar ZN, sus precios v16.5 (crudo posiblemente sucio) se re-normalizan con la lógica
+  nueva → riesgo de des-normalizar mal 554+ props. **Auditar el crudo de ZN antes del swap global**, o migrar
+  ZN por shadow primero.
+
+## Automatización (pre-requisito de apagar n8n) — hallazgos 17-jul
+Hoy el híbrido corre **a mano, en sesión bajo Max** (subagentes-lectores). Para reemplazar el MOTOR de n8n
+(captura diaria automática) faltan 3 ladrillos:
+1. **`reader-api.mjs`** (hoy stub): el MOAT llamando a un LLM por API con el READER_SPEC como system-prompt,
+   en un loop (sin subagentes — su viabilidad en routine cloud no está documentada). Desacopla el modelo.
+2. **Fetch sin bloqueo desde la nube:** **proxy residencial ROTATIVO** (IPRoyal ~$1,75-7/GB, tráfico no
+   expira; Decodo/BrightData más caros). Solo rota IP — el bajar+parsear ya lo hace el híbrido → mucho más
+   barato que Firecrawl (que cobra por página). Se enchufa en `fetchRetry` (una capa; ya hay `lib/firecrawl.mjs`
+   de precedente). Tráfico liviano: **las fotos NO se descargan** (solo se guarda la URL → hotlinking del CDN
+   del portal, $0 storage/bandwidth; riesgo: fotos rotas si el portal las borra). Estimación Equipetrol
+   ~1,5 GB/mes ≈ pocos dólares (MEDIR bytes reales en una corrida).
+3. **Routine cloud de Claude Code:** corre en la nube (sin tu compu), **bajo tu suscripción Max, NO API**
+   (draws down subscription usage). Consume cuota; hay tope diario. **Modelo elegible** (recomendado barato).
+- **Costo del LLM (medido hoy, 69 anuncios, Opus):** ~667k tokens = **~10k tokens/anuncio**. En $: **~$14 con
+  Opus por API (no escala) vs ~$0,25 con modelo barato** (DeepSeek/GLM/Qwen). **Opus quema demasiada cuota/plata
+  a escala → el camino es reader-api + modelo barato medido contra el ground truth.** Haiku ya se probó y no
+  alcanzó; con el spec v4.2 (más complejo) daría peor.
+- **Escala (ciudad → Bolivia):** Max NO escala (cuota). A ese volumen: API + modelo barato + proxy bulk. El
+  presupuesto = (requests × $/GB proxy) + (anuncios × $/anuncio LLM), lineal con el volumen.
+
 ## Qué pasa con cada activo de data
 
 ### 1. Inventario de props → se recupera solo (re-normaliza hacia adelante, NO al revés)
@@ -133,15 +193,21 @@ misma tabla → en dev ya conviven). **Lo que falta unir es el CÓDIGO.** Puntos
 
 ## Checklist de cutover de DATA (para EJECUTAR cuando el founder decida — no ahora)
 
-1. [ ] **Archivar** `propiedades_v2` (apagar n8n, NO borrar). Shadow pasa a base.
+0. [ ] **Motor automático (pre-requisito de apagar n8n):** `reader-api` + medir modelo barato vs ground
+       truth + routine cloud + proxy rotativo. Sin captura diaria automática, la absorción de Equipetrol se
+       corta al apagar su workflow. Ver §Automatización.
+1. [ ] **Archivar** `propiedades_v2` (NO borrar — respaldo del crudo histórico). Apagar **solo el workflow
+       deptos-venta Equipetrol** en n8n (ZN/casas/alquiler siguen). El shadow de Equipetrol pasa a base.
 2. [ ] **Paquete TC junto:** swappear `precio_normalizado()` a la versión nueva + re-apuntar snapshots,
-       vistas y estudios JS a la fuente shadow, todo en el mismo movimiento.
+       vistas y estudios JS a la fuente híbrida, todo en el mismo movimiento. **Toca TODA `propiedades_v2`,
+       incluida ZN v16.5** → ver ítem 3.
 2b.[ ] **Consolidar las 2 ramas (frontend + backend)** — reconciliar `session-context-e0ffd1` (front, feeds
        `?shadow=1`) con esta (`hybrid`, backend + `/api/ventas-shadow`). Resolver la divergencia del front
        shadow + conflictos de `CLAUDE.md` y renumerar migs (268 duplicada). Apuntar el feed PÚBLICO a la data
        del híbrido. **Frontend y backend se activan JUNTOS, no por separado.**
 3. [ ] **Auditar crudo sucio** (props `tc=paralelo` con `precio_usd`=oficial inflado) antes de confiar
-       en el re-normalizado automático.
+       en el re-normalizado automático — **en Equipetrol Y en las ~554+ props de ZN (v16.5)** que el swap
+       global tocaría. Alternativa: migrar ZN por shadow antes del swap.
 4. [ ] **Mejoras del snapshot** (mismo movimiento): leer de vista + dedup + absorción por 2 señales.
 5. [ ] **Serie de precios/yields:** decidir corte declarado (recomendado) vs recompute aproximado.
 6. [ ] **Métricas de inversión** nuevas: cada una con su etiqueta de la matriz fiduciaria.
