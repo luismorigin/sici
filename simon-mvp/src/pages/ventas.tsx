@@ -2152,8 +2152,11 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
           )}
 
           {/* Agente info — el feed fiduciario NO muestra el captador (decisión Lucho).
-              Solo se muestra en contactoDirecto (B2C): ahí el cliente contacta a ese captador. */}
-          {showTab('resumen') && !sideMode && contactoDirecto && p.agente_nombre && (
+              En la shortlist B2C tampoco se muestra el nombre/oficina del captador
+              (decisión Lucho 18-jul): el contacto va al captador por WhatsApp con
+              atribución de Simón, pero Simón es la cara — no se expone al broker.
+              Antes se mostraba en contactoDirecto; ahora se oculta en publicShare. */}
+          {showTab('resumen') && !sideMode && contactoDirecto && !publicShareMode && p.agente_nombre && (
             <div className="bs-section">
               <div className="bs-agent">
                 <span className="bs-agent-name">{p.agente_nombre}</span>
@@ -2176,6 +2179,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
             <ShortlistMarketContext
               variant="venta"
               op="venta"
+              sectionId="bsm-sec-mercado"
               dormitorios={p.dormitorios ?? 0}
               zonaDb={p.zona}
               zonaDisplay={displayZona(p.zona)}

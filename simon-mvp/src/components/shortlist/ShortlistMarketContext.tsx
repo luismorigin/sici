@@ -15,6 +15,10 @@ interface Props {
   zonaDisplay: string
   // precio_m2 (venta) | precio_mensual_bob (alquiler) de la propiedad
   precioComparable: number
+  // id de la sección para que el CSS `order` del sheet rico la ubique en el
+  // lugar del mercado (venta usa #bsm-sec-mercado order:7). Sin esto, cae en
+  // order:0 y aparece fuera de lugar.
+  sectionId?: string
 }
 
 const fmtVenta = (n: number) => '$us ' + Math.round(n).toLocaleString('en-US') + '/m²'
@@ -22,7 +26,7 @@ const fmtAlquiler = (n: number) => 'Bs ' + Math.round(n).toLocaleString('es-BO')
 const rangoVenta = (a: number, b: number) => '$us ' + Math.round(a).toLocaleString('en-US') + '–' + Math.round(b).toLocaleString('en-US')
 const rangoAlquiler = (a: number, b: number) => 'Bs ' + Math.round(a).toLocaleString('es-BO') + '–' + Math.round(b).toLocaleString('es-BO')
 
-export default function ShortlistMarketContext({ variant, op, dormitorios, zonaDb, zonaDisplay, precioComparable }: Props) {
+export default function ShortlistMarketContext({ variant, op, dormitorios, zonaDb, zonaDisplay, precioComparable, sectionId }: Props) {
   const t = shortlistTheme(variant)
   const [data, setData] = useState<ShortlistMarketData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -52,7 +56,7 @@ export default function ShortlistMarketContext({ variant, op, dormitorios, zonaD
   // Sin cohort suficiente → declararlo (transparencia fiduciaria)
   if (!data.enough) {
     return (
-      <div className="bs-section">
+      <div className="bs-section" id={sectionId}>
         <div className="bs-sl"><span className="bs-sl-dot" />Contexto de mercado</div>
         <div className="slmk-empty">No hay suficientes comparables confiables para esta tipología/zona.</div>
         <style jsx>{`
@@ -73,7 +77,7 @@ export default function ShortlistMarketContext({ variant, op, dormitorios, zonaD
   const pos = (v: number) => Math.min(98, Math.max(2, ((v - lo) / (hi - lo)) * 100))
 
   return (
-    <div className="bs-section">
+    <div className="bs-section" id={sectionId}>
       <div className="bs-sl"><span className="bs-sl-dot" />Contexto de mercado · {zonaLabel}</div>
       <p className="slmk-lead">
         Este {op === 'alquiler' ? 'alquiler' : 'depto'} está <b>{posicion}</b> la mediana comparable

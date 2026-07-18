@@ -4672,6 +4672,7 @@ function BottomSheet({
         <ShortlistMarketContext
           variant="alquiler"
           op="alquiler"
+          sectionId="bsa-mercado"
           dormitorios={p.dormitorios ?? 0}
           zonaDb={p.zona}
           zonaDisplay={displayZona(p.zona)}
