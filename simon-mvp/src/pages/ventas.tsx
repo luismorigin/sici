@@ -31,6 +31,7 @@ import ShortlistContextSummary from '@/components/shortlist/ShortlistContextSumm
 import ShortlistBottomBar from '@/components/shortlist/ShortlistBottomBar'
 import ShortlistMenu from '@/components/shortlist/ShortlistMenu'
 import ShortlistMarketContext from '@/components/shortlist/ShortlistMarketContext'
+import ShortlistCardChip from '@/components/shortlist/ShortlistCardChip'
 import { computeVentaShortlistStats } from '@/lib/shortlist-context'
 // WhatsApp oficial de Simon (negocio) — NO el personal del fundador.
 const SIMON_WHATSAPP = '59177066308'
@@ -879,6 +880,9 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
+        {publicShareMode && p.precio_m2 > 0 && (
+          <ShortlistCardChip variant="venta" op="venta" dormitorios={p.dormitorios ?? 0} zonaDb={p.zona} precioComparable={p.precio_m2} />
+        )}
         {brokerComment && publicShareMode && (
           <div className="vc-comentario">
             <div className="vc-comentario-quote">&ldquo;</div>

@@ -30,6 +30,7 @@ import ShortlistContextSummary from '@/components/shortlist/ShortlistContextSumm
 import ShortlistBottomBar from '@/components/shortlist/ShortlistBottomBar'
 import ShortlistMenu from '@/components/shortlist/ShortlistMenu'
 import ShortlistMarketContext from '@/components/shortlist/ShortlistMarketContext'
+import ShortlistCardChip from '@/components/shortlist/ShortlistCardChip'
 import { computeAlquilerShortlistStats } from '@/lib/shortlist-context'
 
 // --- SEO types ---
@@ -3562,6 +3563,9 @@ const DesktopCard = memo(function DesktopCard({
             p.monto_expensas_bob && p.monto_expensas_bob > 0 ? `Expensas Bs ${p.monto_expensas_bob}` : null,
           ].filter(Boolean).map((t, i) => <span key={i}>{i > 0 || p.amoblado || p.acepta_mascotas ? '  ·  ' : ''}{t}</span>)}
         </div>
+        {publicShareMode && p.precio_mensual_bob > 0 && (
+          <ShortlistCardChip variant="alquiler" op="alquiler" dormitorios={p.dormitorios ?? 0} zonaDb={p.zona} precioComparable={p.precio_mensual_bob} />
+        )}
         {priceChangeBadge && (
           <div className={`dc-price-change dc-price-change-${priceChangeBadge.direction}`}>
             {priceChangeBadge.direction === 'down'
