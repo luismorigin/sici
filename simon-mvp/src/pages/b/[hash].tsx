@@ -299,6 +299,8 @@ function mapRowVenta(r: RawUnidadSimpleRow): UnidadVenta {
     plan_pagos_texto: r.plan_pagos_texto || null,
     fuente: r.fuente || '',
     tc_sospechoso: r.tc_sospechoso ?? false,
+    // Política del edificio → chip "Pet friendly" (no amenidad).
+    pet_friendly: (r as { pet_friendly?: boolean | null }).pet_friendly ?? null,
   }
 }
 

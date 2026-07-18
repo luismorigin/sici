@@ -1846,19 +1846,28 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
         const parqCount = (p.estacionamientos != null && p.estacionamientos > 0) ? p.estacionamientos : null
         const parqIncl = p.parqueo_incluido === true || parqCount != null
         const baulIncl = p.baulera === true || p.baulera_incluido === true
+        // Pet friendly = política del EDIFICIO (chip, como parqueo/equipado — NO
+        // una amenidad). Se saca de "Todas las comodidades" más abajo. Se deriva
+        // del flag pet_friendly O de la mención en amenidades (dato subreportado:
+        // a veces viene solo como texto "Pet Friendly" sin el flag).
+        const petMatch = (a: string) => /pet\s*friendly|mascota/i.test(a)
+        const petFriendly = p.pet_friendly === true
+          || (p.amenities_confirmados || []).some(petMatch)
+          || (p.amenidades_extra || []).some(petMatch)
         const opcionales: string[] = []
         if (!parqIncl && p.parqueo_precio_adicional != null && p.parqueo_precio_adicional > 0)
           opcionales.push(`Parqueo +$us ${Math.round(p.parqueo_precio_adicional).toLocaleString('en-US')}`)
         if (!baulIncl && p.baulera_precio_adicional != null && p.baulera_precio_adicional > 0)
           opcionales.push(`Baulera +$us ${Math.round(p.baulera_precio_adicional).toLocaleString('en-US')}`)
-        if (!equip && !parqIncl && !baulIncl && opcionales.length === 0) return null
+        if (!equip && !parqIncl && !baulIncl && !petFriendly && opcionales.length === 0) return null
         return (
           <>
-            {(equip || parqIncl || baulIncl) && (
+            {(equip || parqIncl || baulIncl || petFriendly) && (
               <div className="bsm-incl">
                 {equip && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 11V7a2 2 0 012-2h12a2 2 0 012 2v4"/><path d="M2 13a2 2 0 012-2h16a2 2 0 012 2v4H2z"/><path d="M4 17v2M20 17v2"/></svg>{amob ? 'Amoblado' : 'Equipado'}</span>}
                 {parqIncl && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>{parqCount ? `${parqCount} parqueo${parqCount > 1 ? 's' : ''}` : 'Parqueo'}</span>}
                 {baulIncl && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Baulera</span>}
+                {petFriendly && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10c-2 0-4 2-4 4 0 2 1 3 3 3 1 0 2-1 3-1s2 1 3 1c2 0 3-1 3-3 0-2-2-4-4-4-1 0-1.5.5-2.5.5S10 10 9 10z"/></svg>Pet friendly</span>}
               </div>
             )}
             {opcionales.length > 0 && (
@@ -2088,11 +2097,14 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
             // hacen especial a nadie) y verdaderamente fuera de catálogo (Rooftop,
             // Cine, Sala de TV). Las estándar reconocidas (tienen icono canónico)
             // van a "En el edificio"; solo lo NO reconocido queda en "especial".
-            const extraRaw = p.amenidades_extra || []
-            const especial = extraRaw.filter(a => !hasCanonicalIcon(a))
-            const extraEstandar = extraRaw.filter(a => hasCanonicalIcon(a))
+            // "Pet friendly" NO es una comodidad: ya se muestra como chip arriba
+            // (política del edificio). Se filtra de especial y de "En el edificio".
+            const isPet = (a: string) => /pet\s*friendly|mascota/i.test(a)
+            const extraRaw = (p.amenidades_extra || []).filter((a: string) => !isPet(a))
+            const especial = extraRaw.filter((a: string) => !hasCanonicalIcon(a))
+            const extraEstandar = extraRaw.filter((a: string) => hasCanonicalIcon(a))
             const edificioSet = new Set<string>()
-            const edificioCanon = [...amenities, ...extraEstandar].filter(a => {
+            const edificioCanon = ([...amenities, ...extraEstandar] as string[]).filter((a) => !isPet(a)).filter((a) => {
               const k = a.trim().toLowerCase()
               if (edificioSet.has(k)) return false
               edificioSet.add(k); return true
