@@ -338,6 +338,15 @@ function mapRowAlquiler(r: RawUnidadAlquilerRow): UnidadAlquiler {
     amenities_lista: r.amenities_lista || null,
     equipamiento_lista: r.equipamiento_lista || null,
     descripcion: r.descripcion || null,
+    // Campos del RPC shadow (undefined en prod → las secciones quedan vacías).
+    // Alimentan "Lo que la hace especial" (amenities_extra) y "En el departamento"
+    // (equipamiento_lista + equipamiento_otros) + chips (equipado/pet_friendly).
+    amenities_extra: (r as { amenities_extra?: string[] | null }).amenities_extra || null,
+    equipamiento_otros: (r as { equipamiento_otros?: string[] | null }).equipamiento_otros || null,
+    equipado: (r as { equipado?: boolean | null }).equipado ?? null,
+    uso_inmueble: (r as { uso_inmueble?: string | null }).uso_inmueble || null,
+    expensas_incluidas: (r as { expensas_incluidas?: boolean | null }).expensas_incluidas ?? null,
+    pet_friendly: (r as { pet_friendly?: boolean | null }).pet_friendly ?? null,
   }
 }
 
@@ -362,6 +371,13 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
 
   const hash = ctx.params?.hash as string | undefined
   if (!hash) return { notFound: true }
+
+  // Preview shadow (pre-cutover): /b/hash?shadow=1 lee las RPC del reader híbrido
+  // (buscar_unidades_*_shadow + buscar_extras_shadow) para que aparezcan "Lo que
+  // la hace especial" y "En el departamento" (campos que hoy solo existen en
+  // shadow). Sin el flag, la shortlist lee prod (links reales intactos). En el
+  // cutover shadow→prod esto pasa a ser el default sin cambiar nada más.
+  const useShadow = ctx.query.shadow === '1'
 
   const isDemo = isDemoShortlistHash(hash)
 
@@ -503,7 +519,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       // shortlist (5-20) en lugar de traer 138 filas y filtrar en JS.
       // TTFB del SSR baja ~50% al reducir transferencia Postgres → Vercel.
       const [rpcRes, bobRes] = await Promise.all([
-        supabase.rpc('buscar_unidades_alquiler', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
+        supabase.rpc(useShadow ? 'buscar_unidades_alquiler_shadow' : 'buscar_unidades_alquiler', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
         supabase.from('propiedades_v2').select('id, precio_mensual_bob').in('id', propIds),
       ])
 
@@ -589,7 +605,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     // shortlist (5-20) en lugar de traer 323 filas y filtrar en JS.
     // TTFB del SSR baja ~50% al reducir transferencia Postgres → Vercel.
     const [rpcRes, rawRes] = await Promise.all([
-      supabase.rpc('buscar_unidades_simple', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
+      supabase.rpc(useShadow ? 'buscar_unidades_simple_shadow' : 'buscar_unidades_simple', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
       supabase.from('propiedades_v2').select('id, precio_usd').in('id', propIds),
     ])
 
@@ -599,6 +615,28 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       .map(i => indexed.get(i.propiedad_id))
       .filter((r): r is RawUnidadSimpleRow => Boolean(r))
       .map(mapRowVenta)
+
+    // Shadow: mergear la "cola larga" no canónica (buscar_extras_shadow, mig 271)
+    // → amenidades_extra ("Lo que la hace especial") + equipamiento_otros
+    // ("En el departamento"). Best-effort: si falla, las secciones quedan vacías.
+    if (useShadow && properties.length > 0) {
+      try {
+        const extras = await supabase.rpc('buscar_extras_shadow', { p_ids: properties.map(p => p.id) })
+        if (!extras.error && Array.isArray(extras.data)) {
+          const byId = new Map(extras.data.map((e: { id: number }) => [e.id, e]))
+          for (const p of properties) {
+            const e = byId.get(p.id) as { amenidades_extra?: string[]; equipamiento_otros?: string[] } | undefined
+            if (e) {
+              // UnidadVenta no declara estos campos shadow (deuda de tipos de la
+              // rama); se asignan con cast para no propagar el `any`.
+              const pv = p as { amenidades_extra?: string[]; equipamiento_otros?: string[] }
+              pv.amenidades_extra = e.amenidades_extra || []
+              pv.equipamiento_otros = e.equipamiento_otros || []
+            }
+          }
+        }
+      } catch { /* helper opcional: no rompe el SSR si no existe aún */ }
+    }
 
     // Sanitizar agente_* server-side antes de hidratar al cliente. Sin esto,
     // un broker prospect con DevTools puede leer __NEXT_DATA__ y extraer los
