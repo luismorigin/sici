@@ -886,6 +886,8 @@
 @media (max-width:768px){
   .desktop-layout-public{padding-top:0;height:auto;overflow:visible;display:block;}
   .desktop-layout-public .desktop-main{padding:64px 12px 80px;height:auto;overflow:visible;}
+  /* Shortlist mobile (rediseño, NO demo): header compacto 56px + barra inferior. */
+  .alq-shortlist-redesign.desktop-layout-public .desktop-main{padding:56px 12px calc(84px + env(safe-area-inset-bottom));}
   .desktop-layout-public .desktop-grid{grid-template-columns:1fr;gap:14px;max-width:100%;}
   .desktop-layout-broker{padding-top:0;height:auto;overflow:visible;display:block;}
   .desktop-layout-broker .desktop-main{padding:144px 12px 80px;height:auto;overflow:visible;}

@@ -21,6 +21,12 @@ import ReportPropertyModal from '@/components/broker/ReportPropertyModal'
 import DataReportsBanner from '@/components/broker/DataReportsBanner'
 import type { Broker } from '@/lib/simon-brokers'
 import FeedDesktopNav from '@/components/feed/FeedDesktopNav'
+import ShortlistMobileHeader from '@/components/shortlist/ShortlistMobileHeader'
+import ShortlistContextSummary from '@/components/shortlist/ShortlistContextSummary'
+import ShortlistBottomBar from '@/components/shortlist/ShortlistBottomBar'
+import ShortlistMenu from '@/components/shortlist/ShortlistMenu'
+import ShortlistMarketContext from '@/components/shortlist/ShortlistMarketContext'
+import { computeAlquilerShortlistStats } from '@/lib/shortlist-context'
 
 // --- SEO types ---
 interface AlquileresSEO {
@@ -253,6 +259,8 @@ export interface PublicShareDataAlquiler {
   // Modo demo (/b/demo): renderiza placeholder "Tu foto" sobre la silueta
   // del broker cuando foto_url es null.
   isDemo?: boolean
+  // Nombre del cliente de la shortlist — header mobile "Selección para {nombre}".
+  clienteNombre?: string | null
 }
 
 // ===== MAIN PAGE =====
@@ -282,6 +290,9 @@ export default function AlquileresPage({
   // lleva). Cuando es true, los CTA por propiedad contactan al captador como en
   // el feed en vez del broker dueño. Default false ⇒ comportamiento B2B intacto.
   const contactoDirecto = publicShare?.broker?.contacto_directo === true
+  // Rediseño mobile de la shortlist (/b/[hash]): aplica a shortlists reales, NO a
+  // la demo de broker (/b/demo), que conserva su header + intro + watermark.
+  const shortlistRedesign = publicShareMode && !!publicShare && !publicShare.isDemo
   const publicShareBrokerProp: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null = publicShare ? publicShare.broker : null
   const priceSnapshotsMap: Record<number, { bobSnapshot: number | null; bobActual: number | null }> | null = publicShare && publicShare.priceSnapshots ? publicShare.priceSnapshots : null
   const itemCommentsMap: Record<number, string | null> | null = publicShare && publicShare.itemComments ? publicShare.itemComments : null
@@ -430,6 +441,9 @@ export default function AlquileresPage({
   const [listOnly, setListOnly] = useState(false)
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
+  // Chrome mobile de la shortlist: menú hamburguesa + señal para reabrir el resumen
+  const [shortlistMenuOpen, setShortlistMenuOpen] = useState(false)
+  const [contextExpandSignal, setContextExpandSignal] = useState(0)
   const [chipsExpanded, setChipsExpanded] = useState(false)
   const [compareOpen, setCompareOpen] = useState(false)
   const [filterOverlayOpen, setFilterOverlayOpen] = useState(false)
@@ -1277,6 +1291,55 @@ export default function AlquileresPage({
     </div>
   )
 
+  // ===== Chrome mobile de la shortlist (/b/[hash]) — solo publicShare mobile =====
+  const shortlistStats = useMemo(
+    () => (publicShareMode ? computeAlquilerShortlistStats(properties) : null),
+    [publicShareMode, properties]
+  )
+  const buildShortlistBotMsg = (): string => {
+    if (!publicShare) return ''
+    const hearted = properties.filter(p => favorites.has(p.id))
+    let msg: string
+    if (hearted.length > 0) {
+      const lines = hearted.map(p => {
+        const name = p.nombre_edificio || p.nombre_proyecto || 'Depto'
+        const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+        return `• ${name} (${dorms} · ${Math.round(p.area_m2)}m² · Bs ${Math.round(p.precio_mensual_bob).toLocaleString('es-BO')}/mes)`
+      }).join('\n')
+      if (contactoDirecto) {
+        msg = `Hola ${firstName(publicShare.broker.nombre)}, de los que me pasaste me interesaron:\n\n${lines}\n\n¿Tenés otras parecidas?`
+      } else {
+        const plural = hearted.length === 1 ? 'este' : 'estos'
+        const noun = hearted.length === 1 ? 'alquiler' : `${hearted.length} alquileres`
+        msg = `Hola ${firstName(publicShare.broker.nombre)}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
+      }
+    } else if (contactoDirecto) {
+      msg = `Hola ${firstName(publicShare.broker.nombre)}, vi la selección que me mandaste. ¿Me mostrás otras opciones?`
+    } else {
+      msg = `Hola ${firstName(publicShare.broker.nombre)}, vi los alquileres que me enviaste.`
+    }
+    if (contactoDirecto && REF_ALTERNATIVAS_ENABLED) {
+      msg += `\n\n${buildAlternativasRefLine(publicShare.hash, hearted.map(p => p.id))}`
+    }
+    return msg
+  }
+  const openShortlistBotWhatsApp = () => {
+    if (publicShare) openWhatsApp(publicShare.broker.telefono, buildShortlistBotMsg())
+  }
+  const shareShortlist = () => {
+    const url = typeof window !== 'undefined' ? window.location.href : ''
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({ title: 'Selección en Simon', url }).catch(() => {})
+    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => showToast('Link copiado')).catch(() => {})
+    }
+  }
+  const reportarDatoShortlist = () => {
+    if (!publicShare) return
+    const msg = `Hola, quiero reportar un dato de mi selección en Simon.\n\n${buildAlternativasRefLine(publicShare.hash, properties.filter(p => favorites.has(p.id)).map(p => p.id))}`
+    openWhatsApp(publicShare.broker.telefono, msg)
+  }
+
   return (
     <>
       <AlquileresHead
@@ -1371,7 +1434,7 @@ export default function AlquileresPage({
            brokerMode = broker armando shortlist en /broker/[slug]/alquileres → mismo patrón que venta
            (paridad con /broker/[slug] que ya forzaba desktop layout en mobile via brokerMode).
            Patrón espejo de ventas.tsx (regla CLAUDE.md: paridad UX entre venta/alquiler). */
-        <div className={`desktop-layout ${splitDesktop ? 'desktop-layout-split' : ''} ${publicShareMode ? 'desktop-layout-public' : ''} ${brokerMode ? 'desktop-layout-broker' : ''}`}>
+        <div className={`desktop-layout ${splitDesktop ? 'desktop-layout-split' : ''} ${publicShareMode ? 'desktop-layout-public' : ''} ${shortlistRedesign ? 'alq-shortlist-redesign' : ''} ${brokerMode ? 'desktop-layout-broker' : ''}`}>
           {/* Nav superior desktop — solo feed público (broker/public-share tienen sus banners) */}
           {splitDesktop && (
             <FeedDesktopNav active="alquileres" variant="light"
@@ -1748,6 +1811,14 @@ export default function AlquileresPage({
                 )}
                 {!splitDesktop && (
                 <div className="desktop-grid">
+                  {shortlistRedesign && !isDesktop && shortlistStats && (
+                    <ShortlistContextSummary
+                      variant="alquiler"
+                      stats={shortlistStats}
+                      hasFavorites={favorites.size > 0}
+                      expandSignal={contextExpandSignal}
+                    />
+                  )}
                   {gridProperties.map((p, idx) => {
                     const showDivider = filters.acepta_mascotas && idx > 0 && gridProperties[idx - 1]?.acepta_mascotas === true && p.acepta_mascotas !== true
                     return (
@@ -2202,9 +2273,44 @@ export default function AlquileresPage({
         </div>
       )}
 
-      {/* Header modo public share — header del broker que comparte la shortlist
-          con su cliente. CTA WhatsApp arma mensaje con los corazones marcados. */}
-      {publicShareMode && publicShare && (
+      {/* Chrome mobile de la shortlist (/b/[hash]) — reemplaza el header de broker
+          + FAB mapa en mobile. Header compacto + barra inferior + menú hamburguesa. */}
+      {shortlistRedesign && publicShare && !isDesktop && (
+        <>
+          <ShortlistMobileHeader
+            variant="alquiler"
+            clienteNombre={publicShare.clienteNombre ? firstName(publicShare.clienteNombre) : null}
+            onMenu={() => setShortlistMenuOpen(true)}
+          />
+          {!mobileMapOpen && properties.length > 0 && (
+            <ShortlistBottomBar
+              variant="alquiler"
+              favCount={favorites.size}
+              onVerMapa={() => setMobileMapOpen(true)}
+              onComparar={openCompare}
+              onMasOpciones={openShortlistBotWhatsApp}
+            />
+          )}
+          <ShortlistMenu
+            variant="alquiler"
+            open={shortlistMenuOpen}
+            onClose={() => setShortlistMenuOpen(false)}
+            favCount={favorites.size}
+            destinoNuevaBusqueda="/alquileres"
+            onMasOpciones={openShortlistBotWhatsApp}
+            onComparar={openCompare}
+            onVerMapa={() => setMobileMapOpen(true)}
+            onContextoSeleccion={() => setContextExpandSignal(s => s + 1)}
+            onCompartir={shareShortlist}
+            onReportar={reportarDatoShortlist}
+            onIrWebapp={(d) => { window.location.href = d }}
+          />
+        </>
+      )}
+
+      {/* Header modo public share — header del broker (desktop siempre; y mobile en
+          la demo de broker, que conserva su experiencia original). */}
+      {publicShareMode && publicShare && (isDesktop || publicShare.isDemo) && (
         <div className="alq-public-share-header">
           <div className="apsh-broker">
             {publicShare.broker.foto_url
@@ -2266,27 +2372,15 @@ export default function AlquileresPage({
         </div>
       )}
 
-      {/* FAB "Mapa" — mobile only, publicShareMode. El top bar con el toggle
-          está oculto en este modo, este FAB es la forma de llegar al mapa.
-          Oculto cuando el overlay de mapa ya está abierto (mobileMapOpen). */}
-      {publicShareMode && !isDesktop && !mobileMapOpen && properties.length > 0 && (
-        <button
-          className="alq-public-map-fab"
-          onClick={() => setMobileMapOpen(true)}
-          aria-label="Ver mapa"
-        >
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
-          </svg>
-          Mapa
-        </button>
-      )}
+      {/* FAB "Mapa" mobile publicShare RETIRADO — reemplazado por el botón
+          "Ver mapa" de la barra inferior de la shortlist (ShortlistBottomBar). */}
 
       {/* Banner inferior Comparar — SOLO desktop / publicShare (grid).
           En el feed mobile público el affordance de comparar vive en la barra fija
           inferior (mt-bottombar) del rediseño; esta píldora quedaría duplicada.
-          Se muestra en desktop y en publicShareMode (cliente ve la shortlist en grid). */}
-      {!brokerMode && (isDesktop || publicShareMode) && favorites.size >= 1 && (
+          Se muestra en desktop y en publicShareMode DESKTOP. En publicShare mobile
+          el comparar vive en la barra fija de la shortlist (ShortlistBottomBar). */}
+      {!brokerMode && (isDesktop || (publicShareMode && isDesktop)) && favorites.size >= 1 && (
         <div className={`alq-compare-banner-wrap ${splitDesktop ? 'alq-tray-split' : ''}`}>
           <button className="alq-compare-banner" onClick={() => favorites.size >= 2 ? openCompare() : showToast('Elegí al menos 2 para comparar')} style={{ flex: 1 }}>
             {splitDesktop && favorites.size >= 2 && (
@@ -4085,6 +4179,18 @@ function BottomSheet({
         <div className="bs-section">
           <div className="bs-mkta-empty">Sin suficientes deptos comparables activos para mostrar contexto de mercado.</div>
         </div>
+      )}
+      {/* Contexto de mercado en shortlist (/b/[hash]): compara contra el mercado
+          activo real (cohort por zona+dorms), no contra la lista curada. */}
+      {publicShareBroker && !sideMode && p.precio_mensual_bob > 0 && (
+        <ShortlistMarketContext
+          variant="alquiler"
+          op="alquiler"
+          dormitorios={p.dormitorios ?? 0}
+          zonaDb={p.zona}
+          zonaDisplay={displayZona(p.zona)}
+          precioComparable={p.precio_mensual_bob}
+        />
       )}
       {/* Tab Costos — costo real mensual + entrada (solo side sheet desktop) */}
       {sideMode && sideTab === 'costos' && (

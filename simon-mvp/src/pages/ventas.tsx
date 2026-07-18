@@ -21,6 +21,12 @@ import { buildAtribucionWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRe
 import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
 import FeedDesktopNav from '@/components/feed/FeedDesktopNav'
+import ShortlistMobileHeader from '@/components/shortlist/ShortlistMobileHeader'
+import ShortlistContextSummary from '@/components/shortlist/ShortlistContextSummary'
+import ShortlistBottomBar from '@/components/shortlist/ShortlistBottomBar'
+import ShortlistMenu from '@/components/shortlist/ShortlistMenu'
+import ShortlistMarketContext from '@/components/shortlist/ShortlistMarketContext'
+import { computeVentaShortlistStats } from '@/lib/shortlist-context'
 // WhatsApp oficial de Simon (negocio) — NO el personal del fundador.
 const SIMON_WHATSAPP = '59177066308'
 
@@ -705,7 +711,7 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
           </div>
         )}
         {!useCarousel && !hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
-        {p.tc_sospechoso && (!publicShareMode || contactoDirecto) && <div className="vc-tc-badge">Confirmar tipo de cambio</div>}
+        {p.tc_sospechoso && (!publicShareMode || contactoDirecto) && <div className="vc-tc-badge"><span className="vc-tc-badge-i">ⓘ</span>Confirmar tipo de cambio</div>}
         {brokerMode && !publicShareMode && (() => { const fb = fuenteBadge(p.fuente); return fb ? <div className="vc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null })()}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="vc-nav vc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); useCarousel ? navTo(photoIdx - 1) : setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
@@ -757,7 +763,7 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
               </svg>
             )}
           </button>
-          {!brokerMode && (
+          {!brokerMode && !publicShareMode && (
             <button className="vc-act-btn" aria-label="Compartir" onClick={() => onShare(p)}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
@@ -1740,6 +1746,18 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
 
           {/* Contexto de mercado */}
           {mercadoSection}
+          {/* Contexto de mercado en shortlist (/b/[hash]): compara contra el
+              mercado activo real (cohort por zona+dorms), no contra la lista. */}
+          {publicShareMode && !sideMode && p.precio_m2 > 0 && (
+            <ShortlistMarketContext
+              variant="venta"
+              op="venta"
+              dormitorios={p.dormitorios ?? 0}
+              zonaDb={p.zona}
+              zonaDisplay={displayZona(p.zona)}
+              precioComparable={p.precio_m2}
+            />
+          )}
           {/* Datos de compra — sección del modal desktop */}
           {sideMode && (
             <div className="bs-section" id="bsm-sec-datos">
@@ -2091,6 +2109,8 @@ export interface PublicShareData {
   // del broker cuando foto_url es null. Otros affordances de demo
   // (intercept WA, intro sheet, watermark) viven en pages/b/[hash].tsx.
   isDemo?: boolean
+  // Nombre del cliente de la shortlist — header mobile "Selección para {nombre}".
+  clienteNombre?: string | null
 }
 
 // ===== Page =====
@@ -2101,6 +2121,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   // lleva). Cuando es true, los CTA por propiedad contactan al captador como en
   // el feed en vez del broker dueño. Default false ⇒ comportamiento B2B intacto.
   const contactoDirecto = publicShare?.broker?.contacto_directo === true
+  // Rediseño mobile de la shortlist (/b/[hash]): aplica a shortlists reales, NO a
+  // la demo de broker (/b/demo), que conserva su header + intro + watermark. La
+  // demo se detecta por publicShare.isDemo. SSR-safe (sin isDesktop).
+  const shortlistRedesign = publicShareMode && !!publicShare && !publicShare.isDemo
   const publicShareBrokerProp: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null = publicShare ? publicShare.broker : null
   const priceSnapshotsMap: Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }> | null = publicShare && publicShare.priceSnapshots ? publicShare.priceSnapshots : null
   const itemCommentsMap: Record<number, string | null> | null = publicShare && publicShare.itemComments ? publicShare.itemComments : null
@@ -2140,6 +2164,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const [sheetProperty, setSheetProperty] = useState<UnidadVenta | null>(null)
   const [gateCompleted, setGateCompleted] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
+  // Chrome mobile de la shortlist: menú hamburguesa + señal para reabrir el resumen
+  const [shortlistMenuOpen, setShortlistMenuOpen] = useState(false)
+  const [contextExpandSignal, setContextExpandSignal] = useState(0)
   // Modo "solo lista" del layout split: oculta el panel derecho y la lista
   // pasa a 2 columnas (densidad máxima). Con el side sheet abierto vuelve
   // al split mientras dure, y al cerrarlo retoma la lista pura.
@@ -2914,6 +2941,56 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     </div>
   )
 
+  // ===== Chrome mobile de la shortlist (/b/[hash]) — solo publicShare mobile =====
+  const shortlistStats = useMemo(
+    () => (publicShareMode ? computeVentaShortlistStats(properties) : null),
+    [publicShareMode, properties]
+  )
+  // Mensaje "Más opciones"/"Pedir parecidas" al bot (simon-asistente). Misma
+  // lógica que el header de broker; centralizado para header + barra + menú.
+  const buildShortlistBotMsg = (): string => {
+    if (!publicShare) return ''
+    const hearted = properties.filter(p => favorites.has(p.id))
+    let msg: string
+    if (hearted.length > 0) {
+      const lines = hearted.map(p => {
+        const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+        return `• ${p.proyecto} (${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+      }).join('\n')
+      if (contactoDirecto) {
+        msg = `Hola ${firstName(publicShare.broker.nombre)}, de las que me pasaste me interesaron:\n\n${lines}\n\n¿Tenés otras parecidas?`
+      } else {
+        const plural = hearted.length === 1 ? 'esta' : 'estas'
+        const noun = hearted.length === 1 ? 'propiedad' : `${hearted.length} propiedades`
+        msg = `Hola ${firstName(publicShare.broker.nombre)}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
+      }
+    } else if (contactoDirecto) {
+      msg = `Hola ${firstName(publicShare.broker.nombre)}, vi la selección que me mandaste. ¿Me mostrás otras opciones?`
+    } else {
+      msg = `Hola ${firstName(publicShare.broker.nombre)}, vi las propiedades que me enviaste.`
+    }
+    if (contactoDirecto && REF_ALTERNATIVAS_ENABLED) {
+      msg += `\n\n${buildAlternativasRefLine(publicShare.hash, hearted.map(p => p.id))}`
+    }
+    return msg
+  }
+  const openShortlistBotWhatsApp = () => {
+    if (publicShare) openWhatsApp(publicShare.broker.telefono, buildShortlistBotMsg())
+  }
+  const shareShortlist = () => {
+    const url = typeof window !== 'undefined' ? window.location.href : ''
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({ title: 'Selección en Simon', url }).catch(() => {})
+    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => showToast('Link copiado', 'success')).catch(() => {})
+    }
+  }
+  const reportarDatoShortlist = () => {
+    if (!publicShare) return
+    const msg = `Hola, quiero reportar un dato de mi selección en Simon.\n\n${buildAlternativasRefLine(publicShare.hash, properties.filter(p => favorites.has(p.id)).map(p => p.id))}`
+    openWhatsApp(publicShare.broker.telefono, msg)
+  }
+
   return (
     <>
       <VentasHead
@@ -3164,22 +3241,44 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         </div>
       )}
 
-      {/* FAB mapa en publicShareMode mobile — el toggle Grid|Mapa text se pierde con scroll */}
-      {publicShareMode && !isDesktop && viewMode === 'grid' && properties.length > 0 && (
-        <button
-          className="vt-public-map-fab"
-          onClick={() => setViewMode('map')}
-          aria-label="Ver mapa"
-        >
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
-          </svg>
-          Mapa
-        </button>
+      {/* Chrome mobile de la shortlist (/b/[hash]) — reemplaza el header de broker
+          + FAB mapa en mobile. Header compacto + barra inferior + menú hamburguesa. */}
+      {shortlistRedesign && publicShare && !isDesktop && (
+        <>
+          <ShortlistMobileHeader
+            variant="venta"
+            clienteNombre={publicShare.clienteNombre ? firstName(publicShare.clienteNombre) : null}
+            onMenu={() => setShortlistMenuOpen(true)}
+          />
+          {viewMode === 'grid' && properties.length > 0 && (
+            <ShortlistBottomBar
+              variant="venta"
+              favCount={favorites.size}
+              onVerMapa={() => setViewMode('map')}
+              onComparar={openCompare}
+              onMasOpciones={openShortlistBotWhatsApp}
+            />
+          )}
+          <ShortlistMenu
+            variant="venta"
+            open={shortlistMenuOpen}
+            onClose={() => setShortlistMenuOpen(false)}
+            favCount={favorites.size}
+            destinoNuevaBusqueda="/ventas"
+            onMasOpciones={openShortlistBotWhatsApp}
+            onComparar={openCompare}
+            onVerMapa={() => setViewMode('map')}
+            onContextoSeleccion={() => setContextExpandSignal(s => s + 1)}
+            onCompartir={shareShortlist}
+            onReportar={reportarDatoShortlist}
+            onIrWebapp={(d) => { window.location.href = d }}
+          />
+        </>
       )}
 
-      {/* Header modo public share — header del broker que comparte la shortlist */}
-      {publicShareMode && publicShare && (
+      {/* Header modo public share — header del broker (desktop siempre; y mobile en
+          la demo de broker, que conserva su experiencia original). */}
+      {publicShareMode && publicShare && (isDesktop || publicShare.isDemo) && (
         <div className="vt-public-share-header">
           <div className="vpsh-broker">
             {publicShare.broker.foto_url
@@ -3250,7 +3349,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
 
       {(isDesktop || publicShareMode || brokerMode) ? (
         /* ===== DESKTOP (o public share / broker en cualquier device — feed con grid simple) ===== */
-        <div className={`ventas-desktop ${splitDesktop ? 'ventas-desktop-split' : ''} ${publicShareMode ? 'ventas-desktop-public' : ''} ${(brokerMode && !isDesktop) ? 'ventas-desktop-broker-mobile' : ''} ${brokerMode ? 'ventas-desktop-broker' : ''}`}>
+        <div className={`ventas-desktop ${splitDesktop ? 'ventas-desktop-split' : ''} ${publicShareMode ? 'ventas-desktop-public' : ''} ${shortlistRedesign ? 'vt-shortlist-redesign' : ''} ${(brokerMode && !isDesktop) ? 'ventas-desktop-broker-mobile' : ''} ${brokerMode ? 'ventas-desktop-broker' : ''}`}>
           {/* Nav superior desktop — solo feed público (broker/public-share tienen sus banners) */}
           {splitDesktop && (
             <FeedDesktopNav active="ventas" variant="dark"
@@ -3473,6 +3572,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             )}
             {!splitDesktop && displayedProperties.length > 0 && viewMode === 'grid' && (
               <div className="ventas-grid">
+                {shortlistRedesign && !isDesktop && shortlistStats && (
+                  <ShortlistContextSummary
+                    variant="venta"
+                    stats={shortlistStats}
+                    hasFavorites={favorites.size > 0}
+                    expandSignal={contextExpandSignal}
+                  />
+                )}
                 {(spotlightProperty ? displayedProperties.filter(p => p.id !== spotlightId) : displayedProperties).map((p, idx) => (
                   <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)} isFirst={idx === 0}
                     onToggleFavorite={onCardToggleFavorite} onShare={onCardShare}
@@ -3665,6 +3772,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-desktop { display:flex; min-height:100vh; font-family:'DM Sans',sans-serif; color:#EDE8DC }
         .ventas-desktop-public .ventas-main { margin-left:0 !important; padding-top:80px !important }
         .ventas-desktop-public .ventas-grid { grid-template-columns:repeat(auto-fill,minmax(280px,1fr)) }
+        /* Shortlist mobile (rediseño, NO demo): header compacto 56px + barra
+           inferior. El resumen (primer item del grid) queda bajo el header. */
+        @media (max-width:767px) {
+          .vt-shortlist-redesign.ventas-desktop-public .ventas-main { padding-top:56px !important; padding-bottom:calc(84px + env(safe-area-inset-bottom)) !important }
+          .vt-shortlist-redesign.ventas-desktop-public .ventas-grid { gap:14px; padding-left:12px; padding-right:12px }
+        }
         /* Broker en mobile: mismo layout que public share — grid simple sin sidebar */
         .ventas-desktop-broker-mobile .ventas-main { margin-left:0 !important; padding-top:144px !important; padding:144px 12px 24px !important }
         .ventas-desktop-broker-mobile .ventas-grid { grid-template-columns:1fr; gap:14px }
@@ -4283,7 +4396,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vc-nav-prev { left:8px }
         .vc-nav-next { right:8px }
         .vc-photo-count { position:absolute; top:10px; right:10px; background:rgba(20,20,20,0.75); color:rgba(255,255,255,0.8); font-size:11px; padding:3px 8px; border-radius:100px; font-family:'DM Sans',sans-serif }
-        .vc-tc-badge { position:absolute; bottom:10px; left:10px; background:rgba(70,130,200,0.9); color:#fff; font-size:11px; font-weight:500; padding:4px 10px; border-radius:4px; font-family:'DM Sans',sans-serif; letter-spacing:0.2px; z-index:3 }
+        .vc-tc-badge { position:absolute; bottom:10px; left:10px; display:inline-flex; align-items:center; gap:5px; background:rgba(20,20,20,0.62); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); color:rgba(237,232,220,0.92); font-size:10.5px; font-weight:500; padding:4px 9px; border-radius:100px; border:1px solid rgba(237,232,220,0.22); font-family:'DM Sans',sans-serif; letter-spacing:0.2px; z-index:3 }
+        .vc-tc-badge-i { font-size:11px; opacity:0.85 }
         .vc-fuente-badge { position:absolute; top:10px; left:10px; font-size:10px; font-weight:700; padding:4px 9px; border-radius:4px; font-family:'DM Sans',sans-serif; letter-spacing:0.4px; text-transform:uppercase; z-index:4; box-shadow:0 2px 4px rgba(0,0,0,0.2) }
         .vc-fav { position:absolute; top:10px; left:10px; width:40px; height:40px; border-radius:50%; background:rgba(20,20,20,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s; z-index:3 }
         .vc-fav:hover { transform:scale(1.1) }
