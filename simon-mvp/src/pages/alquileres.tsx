@@ -4086,7 +4086,9 @@ function BottomSheet({
   // público (P3b). El body mobile ya es arena (bs-section claro), así que las
   // secciones ricas (colores base claros) encajan sin re-theme. Broker/publicShare
   // conservan las secciones viejas. Espejo de ventas.tsx.
-  const richLayout = sideMode || (!isDesktop && !brokerMode && !publicShareMode)
+  // publicShare mobile (shortlist /b/[hash]) también usa el layout rico: mismo
+  // sheet que el feed (lo que la hace especial · En el departamento · orden).
+  const richLayout = sideMode || (!isDesktop && !brokerMode)
   const [showGate, setShowGate] = useState(false)
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')

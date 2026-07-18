@@ -1527,7 +1527,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
   // el sheet mobile del feed público (P3b). sideMode = desktop-split; el mobile
   // público (no broker, no publicShare) también las recibe, tematizadas oscuro.
   // Broker/publicShare (mobile o desktop-no-split) conservan las secciones viejas.
-  const richLayout = sideMode || (!isDesktop && !brokerMode && !publicShareMode)
+  // publicShare mobile (shortlist /b/[hash]) también usa el layout rico: mismo
+  // sheet que el feed (lo que la hace especial · En el departamento · orden).
+  const richLayout = sideMode || (!isDesktop && !brokerMode)
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
   const [gateEmail, setGateEmail] = useState('')
