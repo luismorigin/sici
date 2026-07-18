@@ -43,6 +43,7 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
   const mapInstance = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null)
+  const highlightRef = useRef<L.Marker | null>(null)
 
   const makeIcon = useCallback((price: string, isSelected: boolean) => {
     return L.divIcon({
@@ -184,6 +185,28 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
       const price = 'Bs ' + p.precio_mensual_bob.toLocaleString('es-BO')
       marker.setIcon(makeIcon(price, id === selectedId))
     })
+    // Ubicar la propiedad seleccionada (hover en la card): anillo de resalte en
+    // el punto EXACTO (por encima de clusters) + pan suave si está fuera de vista.
+    const map = mapInstance.current
+    if (!map) return
+    const sel = selectedId != null ? properties.find(x => x.id === selectedId) : null
+    if (sel && sel.latitud && sel.longitud) {
+      const ll: [number, number] = [sel.latitud, sel.longitud]
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="width:42px;height:42px;border-radius:50%;background:rgba(58,106,72,0.22);border:2px solid #3A6A48;box-shadow:0 0 0 5px rgba(58,106,72,0.12)"></div>`,
+        iconSize: [42, 42], iconAnchor: [21, 21],
+      })
+      if (!highlightRef.current) {
+        highlightRef.current = L.marker(ll, { icon, zIndexOffset: 2000, interactive: false }).addTo(map)
+      } else {
+        highlightRef.current.setLatLng(ll).setIcon(icon)
+        if (!map.hasLayer(highlightRef.current)) highlightRef.current.addTo(map)
+      }
+      try { if (!map.getBounds().contains(ll)) map.panTo(ll, { animate: true, duration: 0.35 }) } catch { /* best-effort */ }
+    } else if (highlightRef.current && map.hasLayer(highlightRef.current)) {
+      map.removeLayer(highlightRef.current)
+    }
   }, [selectedId, properties, makeIcon])
 
   return <div ref={mapRef} className="alq-map-multi" style={{ width: '100%', height: '100%' }} />

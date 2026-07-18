@@ -366,10 +366,15 @@
 /* Filter Overlay (fo-*) */
 .afo-overlay{position:fixed;inset:0;z-index:200;background:#EDE8DC;display:flex;flex-direction:column;animation:afoSlideUp 0.3s ease-out;}
 @keyframes afoSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.afo-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;padding-top:max(16px, calc(env(safe-area-inset-top) + 8px));border-bottom:1px solid #D8D0BC;}
-.afo-close{width:36px;height:36px;border-radius:50%;border:none;background:rgba(20,20,20,0.06);color:#7A7060;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-.afo-title{font-family:'Figtree',sans-serif;font-size:18px;font-weight:500;color:#141414;}
-.afo-count{font-family:'DM Sans',sans-serif;font-size:13px;color:#7A7060;}
+.afo-header{position:relative;display:flex;align-items:center;justify-content:center;padding:16px 20px;padding-top:max(16px, calc(env(safe-area-inset-top) + 8px));border-bottom:1px solid #D8D0BC;}
+.afo-hcount{font-family:'Figtree',sans-serif;font-size:20px;font-weight:500;color:#141414;font-variant-numeric:tabular-nums;}
+.afo-logo{position:absolute;left:20px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:#3A6A48;}
+.afo-logo::after{content:'';position:absolute;top:5px;left:5px;width:9px;height:9px;border-radius:50%;background:#EDE8DC;}
+.afo-close{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;border:none;background:rgba(20,20,20,0.06);color:#7A7060;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.afo-chips{display:flex;flex-wrap:wrap;gap:9px;}
+.afo-chip{border:1px solid #D8D0BC;background:#FBF9F3;border-radius:11px;padding:10px 14px;font-size:13px;color:#6b6152;font-family:'DM Sans',sans-serif;cursor:pointer;}
+.afo-chip.active{border-color:#3A6A48;background:rgba(58,106,72,0.12);color:#2a5238;font-weight:600;}
+.afo-amen-note{font-size:11.5px;color:#8a8172;line-height:1.45;margin-top:10px;font-family:'DM Sans',sans-serif;}
 .afo-body{flex:1;overflow-y:auto;padding:20px;}
 /* Búsqueda en lenguaje natural (bna-*) */
 .bna-group{margin-bottom:22px;}
@@ -579,6 +584,7 @@
 .dc-content { padding: 16px; flex: 1; display: flex; flex-direction: column; }
 .dc-name { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; line-height: 1.2; margin-bottom: 2px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .dc-reciente { font-size: 11px; font-weight: 500; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; }
+.dc-nuevo { font-size: 11px; font-weight: 700; color: #0A3D1E; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; background: #7BB389; padding: 1px 7px; border-radius: 4px; margin-left: 6px; }
 .dc-zona { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
 .dc-id { color: #7A7060; font-size: 12px; margin-left: 4px; letter-spacing: 0; }
 .dc-price-block { border-left: 3px solid #3A6A48; padding-left: 12px; margin-bottom: 8px; }
@@ -613,16 +619,32 @@
 /* Card ocupa el viewport menos el header fijo (--mfh-h heredado del feed). */
 .alq-card { --mfh-h: calc(104px + env(safe-area-inset-top)); height: calc(100dvh - var(--mfh-h)); scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #EDE8DC; }
 .alq-card.alq-card-first { height: calc(100dvh - var(--mfh-h)); }
-.amc-content { flex: 1 1 auto; min-height: 0; padding: 16px 24px 8px; padding-bottom: calc(72px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* flex:0 0 auto → el contenido toma SU alto real y nunca se recorta ni queda
+   tapado por la barra inferior (el padding-bottom reserva su alto). */
+.amc-content { flex: 0 0 auto; min-height: 0; padding: 16px 24px 8px; padding-bottom: calc(72px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* Equipos muy angostos (Galaxy Fold plegado, 280px): el texto envuelve más y
+   la foto ya no puede achicarse. Menos padding lateral = menos wrap, y se le
+   permite a la foto bajar un poco más. */
+@media (max-width: 340px) {
+  .amc-content { padding-left: 14px; padding-right: 14px; }
+  .pc-zone { min-height: 96px; }
+}
 .amc-name { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 500; color: #141414; line-height: 1.3; margin: 0; padding: 0; max-height: 2.6em; overflow: hidden; flex-shrink: 0; }
 .amc-meta-row, .amc-price-block { flex-shrink: 0; }
 .amc-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 5px 0 12px; }
 .amc-reciente { font-size: 11px; font-weight: 600; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; background: rgba(58,106,72,0.12); padding: 2px 8px; border-radius: 4px; }
+.amc-nuevo { font-size: 11px; font-weight: 700; color: #0A3D1E; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; background: #7BB389; padding: 2px 8px; border-radius: 4px; }
 .amc-zona { font-size: 13px; color: #7A7060; letter-spacing: 0.3px; margin-bottom: 0; font-family: 'DM Sans', sans-serif; }
 .amc-id { color: #7A7060; font-size: 12px; margin-left: 4px; letter-spacing: 0; }
 .amc-price-block { border-left: 3px solid #3A6A48; padding-left: 14px; margin-bottom: 8px; }
 .amc-price { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
-.amc-specs { font-size: 15px; font-weight: 300; color: #3A3530; font-family: 'DM Sans', sans-serif; }
+.amc-specs { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 15px; font-weight: 300; color: #3A3530; font-family: 'DM Sans', sans-serif; }
+.amc-sp { display: inline-flex; align-items: center; gap: 6px; }
+.amc-sp svg { width: 16px; height: 16px; color: #9A8E7A; flex-shrink: 0; }
+.amc-fidrow { margin-top: 10px; }
+.amc-fid { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 9px; background: rgba(58,106,72,0.10); color: #3A6A48; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; }
+.amc-fid svg { width: 15px; height: 15px; flex-shrink: 0; }
+.amc-fid.amc-fid-sobre { background: rgba(216,138,90,0.14); color: #B4622F; }
 .amc-specs-2 { font-size: 15px; font-weight: 300; color: #7A7060; font-family: 'DM Sans', sans-serif; margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 0; }
 .amc-highlight { font-weight: 500; color: #3A3530; margin-right: 4px; }
 .amc-highlight::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
@@ -653,7 +675,10 @@
 }
 
 /* Photo Carousel (pc-*) */
-.pc-zone { flex: 0 0 58%; min-height: 0; position: relative; overflow: hidden; }
+/* La foto ABSORBE la diferencia: base 58%, pero crece (sin dejar hueco) y
+   encoge (si el contenido necesita más). Con 0 0 58% fijo, en el S8 (360x740)
+   los specs envolvían y el chip fiduciario quedaba tapado por la barra. */
+.pc-zone { flex: 1 1 58%; min-height: 130px; position: relative; overflow: hidden; }
 .pc-zone::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 70px; background: linear-gradient(rgba(0,0,0,0.3), transparent); pointer-events: none; z-index: 2; }
 .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: linear-gradient(transparent, #EDE8DC); pointer-events: none; z-index: 2; }
 .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -706,17 +731,71 @@
 .bs-sticky-fav.active svg{filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4));}
 .bs-header-redesign{padding:0 24px 20px;background:#141414;}
 .bs-hr-name{font-family:'Figtree',sans-serif;font-size:24px;font-weight:500;color:#EDE8DC;line-height:1.15;margin-bottom:4px;}
+/* Badge "Reciente" en el header del modal (dias_en_mercado <= 60) */
+.bs-hr-reciente{display:inline-block;vertical-align:middle;margin-left:10px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:#3A6A48;background:rgba(58,106,72,0.12);padding:3px 10px;border-radius:100px;letter-spacing:0.2px;}
 .bs-hr-sub{font-size:13px;color:#9A8E7A;font-family:'DM Sans',sans-serif;margin-bottom:10px;}
 .bs-hr-id{color:#9A8E7A;font-size:12px;margin-left:2px;}
 .bs-hr-price-block{border-left:3px solid #3A6A48;padding-left:12px;margin-bottom:8px;}
 .bs-hr-price{font-family:'DM Sans',sans-serif;font-size:28px;font-weight:500;color:#EDE8DC;line-height:1;font-variant-numeric:tabular-nums;}
 .bs-hr-price span{font-size:14px;color:#9A8E7A;font-weight:400;}
 .bs-hr-specs{font-size:15px;font-weight:300;color:#9A8E7A;font-family:'DM Sans',sans-serif;}
+/* Línea de contexto bajo el precio (modal): Bs/m² · estado amoblado */
+.bs-hr-permetro{font-size:13px;color:#7A7060;font-family:'DM Sans',sans-serif;margin-top:4px;font-variant-numeric:tabular-nums;}
+/* Modal desktop: stats grandes (espejo de bsm-stats de ventas) + chips de inclusión.
+   La línea de specs de texto del header se oculta (los stats la reemplazan). */
+.bs-side-alq .bs-hr-specs{display:none;}
+/* P3b — sheet mobile rico: los stats con iconos (bsm-stats-alq) reemplazan la
+   fila de specs de texto del header. El body ya es arena, así que las secciones
+   ricas (colores base claros) encajan sin re-theme extra. */
+.bs-rich .bs-hr-specs{display:none;}
+/* "Reciente" = texto verde plano en el sheet mobile (no píldora), como ventas */
+.bs-rich .bs-hr-reciente{background:transparent;padding:0;margin-left:8px;}
+.bs-hr-nuevo{display:inline-block;vertical-align:middle;margin-left:10px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:#0A3D1E;background:#7BB389;padding:3px 10px;border-radius:100px;letter-spacing:0.2px;}
+/* Sheet mobile rico de alquileres = ARENA COMPLETO. El header venía negro
+   (#141414) y cortaba con el body arena. Las clases bs-hr-* son exclusivas de
+   alquileres → seguras aunque este CSS sea global (ventas usa bs-h-*).
+   El root sí lleva :not(.bs-venta) porque .bs-rich existe en los dos feeds. */
+.bs-rich:not(.bs-venta){background:#EDE8DC;}
+.bs-rich .bs-header-redesign{background:#EDE8DC;}
+.bs-rich .bs-hr-name{color:#141414;}
+.bs-rich .bs-hr-sub{color:#7A7060;}
+.bs-rich .bs-hr-id{color:#9A8E7A;}
+.bs-rich .bs-hr-price{color:#141414;}
+.bs-rich .bs-hr-price span{color:#7A7060;}
+.bs-rich .bs-hr-permetro{color:#7A7060;}
+/* Foto del sheet: 4/3 (292px @390) empujaba el precio fuera de pantalla en
+   equipos cortos. 16/9 como ventas + tope por viewport para pantallas bajas.
+   dvh (con fallback vh) = alto VISIBLE real: en mobile el vh mide con la barra
+   de URL oculta, así que la foto salía más alta de lo pedido. */
+.bs-rich:not(.bs-venta) .bsg-slide{aspect-ratio:16/9;max-height:32vh;max-height:32dvh;}
+/* Compartir = solo ícono (como el mockup). Con los 3 botones + texto el sticky
+   desbordaba a lo ancho en equipos <=360px (Fold/S8/12 mini) y el sheet
+   scrolleaba en horizontal. Padding lateral menor por la misma razón. */
+.bs-rich:not(.bs-venta) .bs-sticky-footer{padding-left:14px;padding-right:14px;gap:8px;}
+.bs-rich .bs-footer-share .bs-btn-label{display:none;}
+.bs-rich .bs-footer-share{padding:12px;flex:0 0 auto;min-width:46px;}
+.bs-rich .bs-footer-wsp{min-width:0;}
+.bs-rich .bs-footer-compare{flex:0 0 auto;white-space:nowrap;}
+.bsm-stats-alq{display:flex;gap:30px;flex-wrap:wrap;}
+.bsm-stats-alq .bsm-stat{display:flex;align-items:center;gap:10px;}
+.bsm-stats-alq .bsm-stat-ico{width:22px;height:22px;color:#3A6A48;flex-shrink:0;}
+.bsm-stats-alq .bsm-stat-txt{display:flex;flex-direction:column;line-height:1.1;}
+.bsm-stats-alq .bsm-stat-txt b{font-family:'Figtree',sans-serif;font-size:20px;font-weight:600;color:#141414;font-variant-numeric:tabular-nums;}
+.bsm-stats-alq .bsm-stat-txt span{font-size:12px;color:#7A7060;}
+.bsm-incl-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
+.bsm-incl-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:100px;background:rgba(58,106,72,0.08);color:#3A5F49;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;}
+.bsm-incl-chip svg{width:16px;height:16px;color:#3A6A48;flex-shrink:0;}
+/* "Sin amoblar" = chip neutro/muteado (no es un beneficio, pero es info útil) */
+.bsm-incl-chip-mute{background:rgba(20,20,20,0.05);color:#7A7060;}
+.bsm-incl-chip-mute svg{color:#9A8E7A;}
 .bs-sticky-footer{position:sticky;bottom:0;background:#EDE8DC;border-top:1px solid #D8D0BC;padding:12px 24px;padding-bottom:max(12px,calc(env(safe-area-inset-bottom) + 4px));display:flex;gap:10px;z-index:10;}
 .bs-footer-wsp{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:#1EA952;border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;text-decoration:none;min-height:44px;transition:opacity 0.2s;}
 .bs-footer-wsp:active{opacity:0.85;}
 .bs-footer-share{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;background:transparent;border:1px solid #D8D0BC;border-radius:10px;color:#7A7060;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity 0.2s;}
 .bs-footer-share:active{opacity:0.7;}
+/* Comparar — mismo estilo secundario que Compartir (solo tarjeta del modal) */
+.bs-footer-compare{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;background:transparent;border:1px solid #D8D0BC;border-radius:10px;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background 0.2s;}
+.bs-footer-compare:hover{background:rgba(58,106,72,0.08);}
 .bs-section{padding:18px 24px;border-bottom:1px solid rgba(216,208,188,0.5);background:#EDE8DC;}
 .bs-section:last-child{border-bottom:none;}
 .bs-sl{font-size:12px;font-weight:600;color:#7A7060;letter-spacing:0.5px;margin-bottom:12px;font-family:'DM Sans',sans-serif;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
@@ -731,6 +810,19 @@
 .bs-feat.hl .bs-fv{color:#141414;font-weight:600;}
 .bs-aw{display:flex;flex-wrap:wrap;gap:6px;}
 .bs-at{font-size:14px;font-weight:300;padding:5px 12px;border-radius:10px;background:#FAFAF8;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;}
+/* Comodidades modelo "What's special" (solo side sheet desktop) — split
+   client-side con hasCanonicalIcon. Espejo de ventas (bsm-especial/bsm-comod). */
+.bs-especial{display:flex;flex-wrap:wrap;gap:10px;}
+.bs-especial-pill{display:inline-flex;align-items:center;gap:8px;background:#FFFFFF;border:0.5px solid #D7CDB8;border-radius:12px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:#141414;}
+.bs-especial-ico{width:17px;height:17px;color:#3A6A48;flex-shrink:0;}
+.bs-comod-group + .bs-comod-group{margin-top:16px;}
+.bs-comod-cat{font-size:13px;color:#3D3A33;margin-bottom:12px;font-family:'DM Sans',sans-serif;}
+.bs-comod-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 18px;}
+.bs-comod-item{display:flex;align-items:center;gap:11px;font-family:'DM Sans',sans-serif;font-size:14px;color:#141414;}
+.bs-comod-ico{width:20px;height:20px;color:#3A6A48;flex-shrink:0;}
+/* Mapa de ubicación en el sheet (mobile rico + modal desktop) */
+.bsm-flow-map{height:200px;border-radius:12px;overflow:hidden;border:1px solid #D8D0BC;position:relative;isolation:isolate;margin-bottom:12px;}
+.bs-side-alq .bsm-flow-map{height:360px;}
 .bs-ver-anuncio{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:transparent;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;border-radius:10px;transition:background 0.2s;cursor:pointer;}
 .bs-ver-anuncio:hover{background:rgba(58,106,72,0.12);}
 .bs-gate{display:flex;flex-direction:column;gap:12px}
@@ -783,7 +875,9 @@
 .bs-sim-specs{font-size:12px;color:#7A7060;font-family:'DM Sans',sans-serif;margin-top:2px;}
 
 /* Bottom Sheet — Broker Questions (bs-q-*) */
-.bs-q-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+/* wrap: el hint es nowrap y en equipos muy angostos (Fold 280px) no entra al
+   lado del título → desbordaba el sheet. Ahora baja a su propia línea. */
+.bs-q-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:4px 10px;}
 .bs-q-header .bs-sl{margin-bottom:0;}
 .bs-q-hint{font-size:11px;color:#7A7060;font-family:'DM Sans',sans-serif;white-space:nowrap;}
 .bs-q-list{display:flex;flex-direction:column;gap:6px;}
@@ -1006,7 +1100,15 @@
 
 /* ===== Barra fija inferior (mt-bottombar) ===== */
 .mt-bottombar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 70; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; padding-bottom: max(10px, calc(env(safe-area-inset-bottom) + 6px)); background: #141414; border-top: 1px solid rgba(237,232,220,0.1); }
-.mt-bb-map { display: inline-flex; align-items: center; gap: 8px; background: rgba(237,232,220,0.08); border: 1px solid rgba(237,232,220,0.16); color: #EDE8DC; border-radius: 100px; padding: 10px 18px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* nowrap: a 280px "Ver mapa" se partía en 2 líneas → el botón crecía y con él
+   la barra (85px en vez de 64px). El contenido de la card reserva 72px para la
+   barra, así que esos 13px de más tapaban el chip fiduciario. */
+.mt-bb-map { display: inline-flex; align-items: center; gap: 8px; background: rgba(237,232,220,0.08); border: 1px solid rgba(237,232,220,0.16); color: #EDE8DC; border-radius: 100px; padding: 10px 18px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+/* En un Fold plegado el hint pasivo no entra al lado del botón. Se oculta solo
+   el hint (el CTA "Comparar" con 2+ favoritos es otro elemento y se mantiene). */
+@media (max-width: 340px) {
+  .mt-bb-hint { display: none; }
+}
 .mt-bb-map:disabled { opacity: 0.4; cursor: default; }
 .mt-bb-map:not(:disabled):active { transform: scale(0.97); }
 .mt-bb-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -1059,11 +1161,12 @@
 /* Botón de retorno del mapa completo (en split no existe el toggle clásico) */
 .ad-back-to-grid { position: absolute; top: 14px; left: 14px; z-index: 1100; display: inline-flex; align-items: center; gap: 6px; background: #141414; color: #EDE8DC; border: none; padding: 10px 16px; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.3px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
 .ad-back-to-grid:active { transform: scale(0.97); }
-/* Chip fiduciario en card */
-.alc-mkt { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; font-size: 12px; color: #7A7060; }
-.alc-mkt::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #B8AD9E; flex-shrink: 0; }
-.alc-mkt-bajo { color: #3A6A48; }
-.alc-mkt-bajo::before { background: #3A6A48; }
+/* Chip fiduciario en card (rediseño): "vs. similares", un color = un significado.
+   bajo/en línea = salvia; más caro = neutro (no penaliza visualmente). */
+.alc-signals { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: auto; padding-top: 10px; }
+.alc-mkt2 { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: #3A6A48; background: rgba(58,106,72,0.1); padding: 4px 11px; border-radius: 100px; }
+.alc-mkt2 svg { width: 14px; height: 14px; flex-shrink: 0; }
+.alc-mkt2-sobre { color: #7A7060; background: rgba(20,20,20,0.05); }
 /* Fila de pills de filtros (tema claro) */
 .afp { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: 'DM Sans', sans-serif; }
 .afp-feed { display: inline-flex; align-items: center; gap: 6px; background: #3A6A48; color: #EDE8DC; font-size: 13px; font-weight: 600; padding: 8px 15px; border-radius: 100px; letter-spacing: 0.2px; }
@@ -1075,8 +1178,23 @@
 .afp-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 80; min-width: 250px; background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; padding: 14px; box-shadow: 0 12px 34px rgba(58,53,48,0.18); }
 .afp-pop-precio { min-width: 300px; }
 .afp-pop-mas { min-width: 300px; }
+.afp-pop-amen { min-width: 320px; max-width: 360px; }
 .afp-pop-right { left: auto; right: 0; }
 .afp-pop .df-label { margin-bottom: 8px; }
+/* Filtro de comodidades (tema claro, chips como df-zona-btn) */
+.afp-amen-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+.afp-amen-chip { padding: 7px 13px; border-radius: 100px; border: 1px solid #D8D0BC; background: #FAFAF8; color: #3A3530; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+.afp-amen-chip:hover { border-color: #9A8E7A; color: #141414; }
+.afp-amen-chip.active { background: #3A6A48; border-color: #3A6A48; color: #EDE8DC; font-weight: 600; }
+.afp-amen-note { display: flex; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #E4DDCB; color: #7A7060; }
+.afp-amen-note svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; }
+.afp-amen-note span { font-size: 11.5px; line-height: 1.5; }
+.afp-amen-note b { font-weight: 600; color: #3A3530; }
+/* Nota fiduciaria sobre la lista cuando el filtro de comodidades está activo */
+.ad-amen-note { display: flex; align-items: flex-start; gap: 8px; padding: 11px 14px; background: rgba(58,106,72,0.06); border: 1px solid rgba(58,106,72,0.18); border-radius: 12px; color: #4A5F50; font-family: 'DM Sans', sans-serif; margin-bottom: 4px; }
+.ad-amen-note svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; }
+.ad-amen-note span { font-size: 12.5px; line-height: 1.5; }
+.ad-amen-note b { font-weight: 600; color: #3A6A48; }
 .afp-reset { background: none; border: none; color: #7A7060; font-family: 'DM Sans', sans-serif; font-size: 12.5px; text-decoration: underline; cursor: pointer; padding: 8px 6px; white-space: nowrap; }
 .afp-reset:hover { color: #141414; }
 .afp-orden { margin-left: auto; }
@@ -1090,6 +1208,8 @@
 .alc:hover { border-color: #9A8E7A; box-shadow: 0 4px 14px rgba(58,53,48,0.08); }
 .alc-active { border-color: #3A6A48; box-shadow: 0 0 0 1px #3A6A48; }
 .alc-photo { width: 230px; min-width: 230px; background-size: cover; background-position: center; background-color: #E2DCCB; position: relative; }
+.alc-nueva { position: absolute; top: 10px; left: 10px; z-index: 3; font-family: 'DM Sans', sans-serif; font-size: 10.5px; font-weight: 600; color: #0A3D1E; background: #7BB389; padding: 3px 9px; border-radius: 100px; letter-spacing: 0.2px; }
+.alc-reciente-badge { background: rgba(255,255,255,0.92); color: #3A6A48; }
 .alc-nofoto { display: flex; align-items: center; justify-content: center; height: 100%; color: #9A8E7A; font-size: 12px; font-family: 'DM Sans', sans-serif; }
 .alc-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: rgba(20,20,20,0.65); border: none; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 3; color: #EDE8DC; }
 .alc:hover .alc-nav { display: flex; }
@@ -1098,21 +1218,26 @@
 .alc-nav-next { right: 6px; }
 .alc-count { position: absolute; bottom: 6px; left: 6px; background: rgba(20,20,20,0.75); color: rgba(255,255,255,0.85); font-size: 10px; padding: 2px 7px; border-radius: 100px; font-family: 'DM Sans', sans-serif; }
 .alc-body { flex: 1; min-width: 0; padding: 14px 18px; display: flex; flex-direction: column; font-family: 'DM Sans', sans-serif; }
-.alc-toprow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-.alc-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
-.alc-chips em { font-style: normal; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: #3A6A48; background: rgba(58,106,72,0.1); border: 1px solid rgba(58,106,72,0.25); padding: 2px 9px; border-radius: 100px; white-space: nowrap; }
-.alc-chips .alc-chip-muted { color: #7A7060; background: rgba(20,20,20,0.04); border-color: #D8D0BC; }
+/* Precio héroe (Bs) + favorito */
+.alc-toprow { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.alc-priceblock { min-width: 0; }
+.alc-price { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 600; color: #141414; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
+.alc-mes { font-size: 12px; font-weight: 400; color: #7A7060; }
+.alc-pricesub { font-size: 12.5px; color: #7A7060; margin-top: 3px; font-variant-numeric: tabular-nums; }
 .alc-fav { width: 32px; height: 32px; min-width: 32px; border-radius: 50%; background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #9A8E7A; }
 .alc-fav:hover { color: #141414; }
-.alc-name { font-family: 'Figtree', sans-serif; font-size: 19px; font-weight: 500; color: #141414; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.alc-zona { font-size: 12.5px; color: #7A7060; letter-spacing: 0.3px; margin: 3px 0 8px; }
+/* Specs core con iconos */
+.alc-specs2 { display: flex; gap: 16px; margin-top: 12px; font-size: 13.5px; color: #3A3530; }
+.alc-spec { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+.alc-spec svg { width: 16px; height: 16px; color: #9A8E7A; flex-shrink: 0; }
+/* Inclusiones muteadas */
+.alc-incl { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 12px; color: #7A7060; }
+.alc-incl-item { display: inline-flex; align-items: center; gap: 5px; }
+.alc-incl-item svg { width: 15px; height: 15px; color: #3A6A48; flex-shrink: 0; }
+/* Nombre · zona · #id (secundario — el precio es el ancla) */
+.alc-name2 { font-family: 'Figtree', sans-serif; font-size: 15px; font-weight: 500; color: #141414; line-height: 1.3; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alc-zona2 { font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 400; color: #7A7060; }
 .alc-id { color: #B8AD9E; }
-.alc-specs { font-size: 14px; color: #3A3530; font-weight: 300; }
-/* Precio + expensas juntos a la izquierda (sin hueco central) — card compacta */
-.alc-bottomrow { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 8px; }
-.alc-exp { font-size: 12.5px; color: #7A7060; font-variant-numeric: tabular-nums; }
-.alc-price { font-size: 20px; font-weight: 600; color: #141414; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.alc-mes { font-size: 12px; font-weight: 400; color: #7A7060; }
 /* Panel derecho: sticky dentro del scroll de .desktop-main */
 .ad-panel { position: sticky; top: 0; height: calc(100vh - 56px - 64px); display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 /* El bloque mapa+resumen se OCULTA (no se desmonta) cuando el side sheet está
@@ -1141,17 +1266,99 @@
 .ad-mkt-num { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .ad-mkt-label { font-size: 11.5px; color: #7A7060; line-height: 1.35; }
 .ad-mkt-caveat { font-size: 11.5px; color: #9A8E7A; line-height: 1.45; border-top: 1px solid rgba(216,208,188,0.6); padding-top: 10px; }
+.ad-mkt-petnote { font-size: 11.5px; color: #6B5E48; line-height: 1.45; background: rgba(58,106,72,0.07); border: 1px solid rgba(58,106,72,0.18); border-radius: 10px; padding: 9px 11px; }
 /* Side sheet embebido (variant del bottom sheet .bs) */
 /* Side sheet ANCLADO al viewport (fixed): entre el nav (56 + 24 de aire) y el
    borde inferior. El sheet nunca excede la pantalla → el footer sticky bottom:0
    queda SIEMPRE visible. El .ad-panel mantiene su height → la columna no
    colapsa. Ancho = columna derecha del grid (~52%); padding lateral del main
    es 32, por eso el calc y el right difieren de ventas. */
-.bs.bs-side-alq { position: fixed; inset: auto; left: auto; top: 80px; right: 32px; bottom: 32px; width: min(520px, calc((100vw - 84px) * 0.52)); max-height: none; overflow-y: auto; overflow-x: hidden; transform: none; max-width: none; border-radius: 14px; border: 1px solid #D8D0BC; z-index: 40; padding-bottom: 84px; }
+/* Modal claro (espejo del de ventas): centrado, más ancho, scroll único con
+   nav de anclas. Todo scopeado a .bs-side-alq → el sheet mobile queda intacto. */
+.bs.bs-side-alq { position: fixed; inset: auto; left: 50%; right: auto; top: 3vh; bottom: 3vh; transform: translateX(-50%); width: min(900px, 94vw); max-height: none; overflow-y: auto; overflow-x: hidden; max-width: none; background: #FBFAF7; color: #3D3A33; border-radius: 16px; border: 1px solid #E0DACB; box-shadow: 0 24px 80px rgba(20,20,20,0.30); z-index: 501; padding-bottom: 0; }
 /* Footer WhatsApp/Compartir FIJO a la pantalla (misma columna que el sheet),
    siempre abajo sin depender del scroll interno. El sheet reserva 84px. */
-.bs-side-alq .bs-sticky-footer { position: fixed; box-sizing: border-box; left: auto; right: 32px; bottom: 32px; width: min(520px, calc((100vw - 84px) * 0.52)); z-index: 60; border-radius: 0 0 14px 14px; }
-.bs.bs-side-alq.open { transform: none; }
+/* Dos columnas del modal: contenido (main) + tarjeta WhatsApp sticky (aside).
+   display:contents por defecto → en mobile los wrappers son transparentes. */
+.bsm-body, .bsm-main, .bsm-aside { display: contents; }
+.bs-side-alq .bsm-body { display: flex; align-items: flex-start; gap: 0; }
+.bs-side-alq .bsm-main { display: block; flex: 1; min-width: 0; }
+.bs-side-alq .bsm-aside { display: block; width: 300px; flex-shrink: 0; padding: 16px 20px 0 0; align-self: stretch; }
+/* Footer = tarjeta sticky del aside (columna derecha) en el modal desktop */
+.bs-side-alq .bs-sticky-footer { position: sticky; box-sizing: border-box; top: 60px; bottom: auto; left: auto; right: auto; width: auto; z-index: 5; flex-direction: column; align-items: stretch; gap: 8px; background: #FBFAF7; border: 1px solid #E7E1D3; border-radius: 14px; margin-top: 0; padding: 16px; }
+.bs.bs-side-alq.open { transform: translateX(-50%); }
+/* Header claro (modal): fondo arena, texto oscuro. Mobile queda oscuro. */
+.bs-side-alq .bs-header-redesign { background: #FBFAF7; padding-top: 8px; }
+.bs-side-alq .bs-hr-name { color: #141414; }
+.bs-side-alq .bs-hr-sub { color: #7A7060; }
+.bs-side-alq .bs-hr-price { color: #141414; }
+.bs-side-alq .bs-hr-price span { color: #7A7060; }
+.bs-side-alq .bs-hr-specs { color: #55524A; }
+/* El sticky-top viejo (fav/close flotante) lo reemplaza el nav */
+.bs-side-alq .bs-sticky-top { display: none; }
+.bs-side-alq .bs-handle { display: none; }
+/* Backdrop del modal centrado (oscurece el feed detrás; click afuera cierra) */
+.bsa-overlay { position: fixed; inset: 0; background: rgba(20,20,20,0.55); z-index: 500; animation: bsaFade 0.18s ease-out; }
+@keyframes bsaFade { from { opacity: 0; } to { opacity: 1; } }
+/* Nav de anclas sticky arriba de todo (claro) */
+.bsa-nav { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 4px; background: #FBFAF7; border-bottom: 1px solid #E7E1D3; padding: 8px 20px; }
+.bsa-nav-link { background: none; border: none; color: #6B6862; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 7px 10px; cursor: pointer; border-radius: 8px; transition: color 0.15s, background 0.15s; }
+.bsa-nav-link:hover { color: #141414; background: rgba(20,20,20,0.05); }
+.bsa-nav-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.bsa-nav-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(20,20,20,0.05); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #55524A; }
+.bsa-nav-btn:hover { background: rgba(20,20,20,0.10); }
+.bsa-nav-close { font-size: 22px; line-height: 1; }
+/* Anclas: dejar aire bajo el nav sticky al saltar a una sección */
+.bs-side-alq .bs-header-redesign, .bs-side-alq .bs-section { scroll-margin-top: 54px; }
+/* Grilla de fotos 1+4 (modal): el carrusel horizontal pasa a grid acotado. Las
+   fotos son puerta, no cuerpo — "Ver las N fotos" abre el visor. */
+.bs-side-alq .bsm-photos { position: relative; padding: 14px 20px 6px; }
+.bs-side-alq .bsm-photos .bsg-wrap { overflow: visible; }
+.bs-side-alq .bsm-photos .bsg-scroll { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 176px 176px; gap: 8px; overflow: visible; scroll-snap-type: none; }
+.bs-side-alq .bsm-photos .bsg-slide { flex: none; aspect-ratio: auto; height: 100%; width: auto; min-height: 0; border-radius: 10px; overflow: hidden; scroll-snap-align: none; }
+.bs-side-alq .bsm-photos .bsg-slide:first-child { grid-row: 1 / 3; }
+.bs-side-alq .bsm-photos .bsg-slide:nth-child(n+6) { display: none; }
+.bs-side-alq .bsm-photos-n1 .bsg-scroll { grid-template-columns: 1fr; grid-template-rows: 360px; }
+.bs-side-alq .bsm-photos-n1 .bsg-slide:first-child { grid-row: auto; }
+.bs-side-alq .bsm-photos-n2 .bsg-scroll { grid-template-columns: 1fr 1fr; grid-template-rows: 356px; }
+.bs-side-alq .bsm-photos-n2 .bsg-slide:first-child { grid-row: auto; }
+.bs-side-alq .bsm-photos-n3 .bsg-scroll { grid-template-columns: 2fr 1fr; grid-template-rows: 180px 180px; }
+.bs-side-alq .bsm-photos-n4 .bsg-scroll { grid-template-columns: 1fr 1fr; grid-template-rows: 180px 180px; }
+.bs-side-alq .bsm-photos-n4 .bsg-slide:first-child { grid-row: auto; }
+.bs-side-alq .bsm-photos .bsg-arrow, .bs-side-alq .bsm-photos .bsg-counter, .bs-side-alq .bsm-photos .bsg-dots { display: none; }
+.bsm-verfotos { position: absolute; right: 32px; bottom: 18px; display: inline-flex; align-items: center; gap: 7px; background: #FBFAF7; color: #141414; border: 1px solid #D8D0BC; padding: 8px 14px; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(20,20,20,0.18); }
+.bsm-verfotos:hover { background: #fff; }
+/* Mercado v2 (modal): veredicto llano + medidor accesible→premium. Espejo de ventas. */
+.bs-mkt2 { font-family: 'DM Sans', sans-serif; }
+.bs-mkt2-verdict { display: flex; align-items: center; gap: 11px; margin-bottom: 4px; }
+.bs-mkt2-vico { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #EAF0EC; color: #3A6A48; flex-shrink: 0; }
+.bs-mkt2-vico svg { width: 16px; height: 16px; }
+.bs-mkt2-vtitle { font-family: 'Figtree', sans-serif; font-size: 18px; font-weight: 500; color: #141414; line-height: 1.2; }
+.bs-mkt2-vsub { font-size: 13px; color: #6B6862; margin-top: 2px; }
+.bs-mkt2-gauge { margin: 22px 0 4px; }
+.bs-mkt2-ends { display: flex; justify-content: space-between; font-size: 11px; color: #9A9384; margin-bottom: 7px; }
+.bs-mkt2-track { position: relative; height: 52px; }
+.bs-mkt2-track::before { content: ''; position: absolute; top: 20px; left: 0; right: 0; height: 8px; background: #E7E1D3; border-radius: 5px; }
+.bs-mkt2-band { position: absolute; top: 20px; height: 8px; background: #BFD3C6; border-radius: 5px; }
+.bs-mkt2-pin { position: absolute; top: 0; transform: translateX(-50%); line-height: 0; }
+.bs-mkt2-here { position: absolute; top: 22px; transform: translateX(-50%); font-size: 12px; font-weight: 500; color: #141414; white-space: nowrap; }
+.bs-mkt2-tick { position: absolute; top: 38px; transform: translateX(-50%); font-size: 11px; color: #9A9384; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bs-mkt2-compare { background: #F4F1E9; border-radius: 10px; padding: 12px 14px; margin-top: 14px; }
+.bs-mkt2-crow { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 4px 0; }
+.bs-mkt2-crow + .bs-mkt2-crow { border-top: 0.5px solid #E7E1D3; margin-top: 5px; padding-top: 9px; }
+.bs-mkt2-crow span { font-size: 13px; color: #6B6862; padding-top: 1px; }
+.bs-mkt2-crow b { font-size: 15px; font-weight: 500; color: #141414; text-align: right; font-variant-numeric: tabular-nums; }
+.bs-mkt2-crow em { font-style: normal; font-size: 12px; font-weight: 400; color: #6B6862; }
+.bs-mkt2-cval { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-variant-numeric: tabular-nums; }
+.bs-mkt2-cval > em { font-size: 12px; color: #6B6862; }
+.bs-mkt2-note { display: flex; gap: 8px; margin-top: 14px; color: #9A9384; }
+.bs-mkt2-note svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; }
+.bs-mkt2-note span { font-size: 12px; line-height: 1.55; }
+.bs-mkt2-note b { font-weight: 500; color: #6B6862; }
+.bs-mkt2 .bs-mktv-summary { display: flex; gap: 26px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #E7E1D3; }
+.bs-mkt2 .bs-mktv-sitem { display: flex; flex-direction: column; gap: 2px; }
+.bs-mkt2 .bs-mktv-sitem b { font-family: 'Figtree', sans-serif; font-size: 15px; font-weight: 500; color: #141414; }
+.bs-mkt2 .bs-mktv-sitem span { font-size: 11.5px; color: #7A7060; }
 /* fav+close: fijos en la esquina del sheet (absolute sobre el sheet fixed),
    siempre visibles, sin ocupar flujo ni chocar con las tabs. */
 .bs-side-alq .bs-sticky-top { position: absolute; top: 10px; right: 12px; z-index: 50; background: transparent; padding: 0; pointer-events: none; }

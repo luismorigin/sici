@@ -109,6 +109,8 @@ export interface RawUnidadAlquilerRow {
   agente_telefono: string | null
   agente_whatsapp: string | null
   dias_en_mercado: number | null
+  // Días desde la captura (fecha_creacion). Solo la RPC shadow lo devuelve.
+  dias_desde_captura?: number | null
   estado_construccion: string | null
   id_proyecto_master: number | null
   amenities_lista: string[] | null
@@ -140,6 +142,9 @@ export interface RawUnidadSimpleRow {
   es_multiproyecto: boolean | null
   estado_construccion: string | null
   dias_en_mercado: number | null
+  // Días desde que NOSOTROS lo capturamos (fecha_creacion). Solo la RPC shadow lo
+  // devuelve; en prod es undefined. Ausencia = gate del badge "Nuevo".
+  dias_desde_captura?: number | null
   amenities_confirmados: string[] | null
   amenities_por_verificar: string[] | null
   equipamiento_detectado: string[] | null
