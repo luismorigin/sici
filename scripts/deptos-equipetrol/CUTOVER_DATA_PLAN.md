@@ -188,14 +188,17 @@ El cutover no es solo data — es **código en dos ramas separadas que hay que c
 - **Backend shadow** → rama `claude/hybrid-worktree-structure-3b7b53` (esta): discovery, reader, cargador,
   audits, migraciones shadow, la data. Incluye el endpoint `/api/ventas-shadow.ts` (con el merge de
   `buscar_extras_shadow` — NO dropear, ver `CONTRATO_FRONTEND_SHADOW.md`).
-- **Frontend shadow** → rama `claude/session-context-e0ffd1` (otro worktree, ~65 commits sin push): el
-  rediseño (modal claro / desktop) + los feeds que leen shadow con toggle `?shadow=1` (integrado en
-  `/api/ventas.ts` + `/api/alquileres.ts`, no en un endpoint aparte).
+- **Frontend consolidado** → rama `feat/desktop-fase-2` (otro worktree, **+72 commits, SIN PUSH**): tiene TODO
+  el frontend — rediseño desktop + mobile + shortlist + feeds que leen shadow (`?shadow=1`, en `/api/ventas.ts`
+  + `/api/alquileres.ts`). **Ya mergeó `claude/session-context-e0ffd1`** (que era solo la fuente) + 5 commits
+  encima (pet friendly chip, preview shadow en `/b/hash`, sheet rico, chip fiduciario, rediseño mobile shortlist).
+  Al merge a main va **`desktop-fase-2`** — session-context ya está adentro, NO mergear las dos por separado.
 
 **La DATA ya está unida** (una sola `propiedades_v2_shadow` en Supabase; los dos worktrees le hablan a la
 misma tabla → en dev ya conviven). **Lo que falta unir es el CÓDIGO.** Puntos:
-- Las dos ramas **divergieron en cómo implementan el frontend shadow** (endpoint separado en hybrid vs
-  integrado con `?shadow=1` en session-context) → hay que **reconciliar**, no mergear a ciegas.
+- El backend (`hybrid`) tiene el endpoint separado `/api/ventas-shadow.ts`; el frontend (`desktop-fase-2`)
+  integra shadow en `/api/ventas.ts` + `/api/alquileres.ts` con `?shadow=1` → al consolidar, **reconciliar**
+  las dos formas, no mergear a ciegas.
 - Hoy el front shadow es **dark-launch a propósito**: `?shadow=1` / endpoint que da 404 en prod. El público
   no lo ve. Al cutover, el feed PÚBLICO (`/ventas`, `/alquileres`) pasa a leer la data del híbrido.
 - **No aplicar el front nuevo antes que el backend**: son dos mitades de la misma decisión. Se activan JUNTOS
@@ -229,10 +232,11 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
 2. [ ] **Paquete TC junto:** swappear `precio_normalizado()` a la versión nueva + re-apuntar snapshots,
        vistas y estudios JS a la fuente híbrida, todo en el mismo movimiento. **Toca TODA `propiedades_v2`,
        incluida ZN v16.5** → ver ítem 3.
-2b.[ ] **Consolidar las 2 ramas (frontend + backend)** — reconciliar `session-context-e0ffd1` (front, feeds
-       `?shadow=1`) con esta (`hybrid`, backend + `/api/ventas-shadow`). Resolver la divergencia del front
-       shadow + conflictos de `CLAUDE.md` y renumerar migs (268 duplicada). Apuntar el feed PÚBLICO a la data
-       del híbrido. **Frontend y backend se activan JUNTOS, no por separado.**
+2b.[ ] **Consolidar las 2 ramas (frontend + backend)** — reconciliar `feat/desktop-fase-2` (frontend
+       consolidado: desktop+mobile+shortlist, feeds `?shadow=1`; ya mergeó session-context) con esta (`hybrid`,
+       backend + `/api/ventas-shadow`). Resolver la divergencia del front shadow + conflictos de `CLAUDE.md` y
+       renumerar migs (268 duplicada). Apuntar el feed PÚBLICO a la data del híbrido. **Frontend y backend se
+       activan JUNTOS, no por separado.**
 3. [ ] **Auditar crudo sucio** (props `tc=paralelo` con `precio_usd`=oficial inflado) antes de confiar
        en el re-normalizado automático — **en Equipetrol Y en las ~670 props de ZN en v16.5 (554 deptos +
        117 casas, vía `v_mercado_casas`)** que el swap global tocaría. Alternativa: migrar ZN por shadow antes.
