@@ -76,6 +76,22 @@ Object.assign(ICONS, {
   'closet': ICONS['roperos/closets'],
   'termotanque': ICONS['termotanque/calefon'],
   'calefon': ICONS['termotanque/calefon'],
+  // Seguridad y Ascensor son ESTÁNDAR (casi todo edificio los tiene) → deben ir
+  // a "En el edificio", NUNCA a "Lo que la hace especial". El reader los deja en
+  // la cola larga con muchas variantes; sin estos alias, las que no son la clave
+  // exacta ("seguridad 24/7"/"ascensor") caen a "especial" con chispita. Variantes
+  // reales de la data (buscar_extras_shadow).
+  'seguridad': ICONS['seguridad 24/7'],
+  'sistema de seguridad': ICONS['seguridad 24/7'],
+  'seguridad 24 horas': ICONS['seguridad 24/7'],
+  'seguridad 24h': ICONS['seguridad 24/7'],
+  'seguridad 24hs': ICONS['seguridad 24/7'],
+  'porteria': ICONS['seguridad 24/7'],
+  'vigilancia': ICONS['seguridad 24/7'],
+  'ascensores': ICONS['ascensor'],
+  'ascensor social': ICONS['ascensor'],
+  'ascensores sociales': ICONS['ascensor'],
+  'ascensor de servicio': ICONS['ascensor'],
 })
 
 /** ¿Está en el catálogo canónico (y por ende tiene icono propio)? */
