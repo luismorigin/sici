@@ -52,16 +52,28 @@ n8n, intacto**. No hay conflicto de captura; ZN no se toca.
    corte; precios con el escalón declarado) → apagar SOLO el workflow deptos-venta Equipetrol en n8n.
 4. **Después:** adaptar el híbrido a ZN (mismo patrón shadow) + apagar su workflow, zona por zona.
 
-## ⚠️ Zona Norte ya está en prod con el pipeline VIEJO (afecta el Paquete TC)
-`propiedades_v2` tiene **~554+ props activas de ZN** (14 microzonas: anillos Banzer/Radial 26/La Salle/
-Alemana), deptos + casas, capturadas con **n8n `v16.5` (256) + versiones `1.9`/`null`** — NO con el híbrido
-bueno. Tienen los defectos del enfoque viejo (TC inflado, matching flojo, sin campos v4.2).
-- **No se borran ni quedan colgadas:** el híbrido, al expandirse a ZN, las **re-lee y corrige fila por fila**
-  (como Equipetrol). `propiedades_v2` es la misma tabla; cada fila se mejora cuando el híbrido la re-mira.
-- **🔴 El Paquete TC (swap de función) toca TODA `propiedades_v2`, incluida ZN.** Si swapeás la normalización
-  global antes de re-procesar ZN, sus precios v16.5 (crudo posiblemente sucio) se re-normalizan con la lógica
-  nueva → riesgo de des-normalizar mal 554+ props. **Auditar el crudo de ZN antes del swap global**, o migrar
-  ZN por shadow primero.
+## ⚠️ Zona Norte NO tiene shadow — está en prod (dark launch) con el pipeline VIEJO
+**Aclaración (verificado 17-jul): ZN NO tiene un shadow aislado.** Confusión frecuente: shadow ≠ dark launch.
+- **Shadow** (Equipetrol): tabla aislada `propiedades_v2_shadow` + función `precio_normalizado_shadow` → laboratorio, no toca prod.
+- **Dark launch** (ZN + casas): la data está **en PROD** (`propiedades_v2`), con la función **vieja global**;
+  los feeds `/zona-norte/*` y `/ventas/casas` solo están **ocultos** (noindex). Estar ocultos NO los aísla.
+- En `propiedades_v2_shadow`: ZN = **1 sola** prop suelta; casas = **0**. El shadow es ~100% Equipetrol.
+
+**Inventario ZN en PROD (con la regla vieja):**
+- **Deptos ZN: ~554+ activos** (14 microzonas: anillos Banzer/Radial 26/La Salle/Alemana), scraper **n8n `v16.5`
+  (256) + `1.9`/`null`**.
+- **Casas ZN: 117 activas** (feed `v_mercado_casas`, mig 262).
+- Total ~**670 props ZN** en v16.5, con los defectos del enfoque viejo (TC inflado, matching flojo, sin campos v4.2).
+
+**Qué pasa con esta data:**
+- **No se borra ni queda colgada:** el híbrido, al expandirse a ZN, la **re-lee y corrige fila por fila** (como
+  Equipetrol). `propiedades_v2` es la misma tabla; cada fila se mejora cuando el híbrido la re-mira.
+- **🔴 El Paquete TC (swap de `precio_normalizado()`) toca TODA `propiedades_v2` — deptos ZN Y casas ZN.**
+  `v_mercado_casas` usa `precio_normalizado()` (mig 262, líneas 69-70) → el swap recalcula también las 117 casas.
+  El dark-launch NO protege (la función es global). Si swapeás antes de re-procesar ZN, ~670 props v16.5
+  (crudo sin auditar) se re-normalizan con la lógica nueva → **riesgo de des-normalizar mal ~670 props**.
+- **Antes del swap global:** (a) **auditar el crudo de ZN** (deptos + casas) como en Equipetrol, o (b) **migrar
+  ZN por shadow** primero (más limpio, más lento).
 
 ## Automatización (pre-requisito de apagar n8n) — hallazgos 17-jul
 Hoy el híbrido corre **a mano, en sesión bajo Max** (subagentes-lectores). Para reemplazar el MOTOR de n8n
@@ -206,8 +218,8 @@ misma tabla → en dev ya conviven). **Lo que falta unir es el CÓDIGO.** Puntos
        shadow + conflictos de `CLAUDE.md` y renumerar migs (268 duplicada). Apuntar el feed PÚBLICO a la data
        del híbrido. **Frontend y backend se activan JUNTOS, no por separado.**
 3. [ ] **Auditar crudo sucio** (props `tc=paralelo` con `precio_usd`=oficial inflado) antes de confiar
-       en el re-normalizado automático — **en Equipetrol Y en las ~554+ props de ZN (v16.5)** que el swap
-       global tocaría. Alternativa: migrar ZN por shadow antes del swap.
+       en el re-normalizado automático — **en Equipetrol Y en las ~670 props de ZN en v16.5 (554 deptos +
+       117 casas, vía `v_mercado_casas`)** que el swap global tocaría. Alternativa: migrar ZN por shadow antes.
 4. [ ] **Mejoras del snapshot** (mismo movimiento): leer de vista + dedup + absorción por 2 señales.
 5. [ ] **Serie de precios/yields:** decidir corte declarado (recomendado) vs recompute aproximado.
 6. [ ] **Métricas de inversión** nuevas: cada una con su etiqueta de la matriz fiduciaria.
