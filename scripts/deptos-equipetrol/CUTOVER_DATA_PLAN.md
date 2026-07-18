@@ -203,6 +203,22 @@ misma tabla → en dev ya conviven). **Lo que falta unir es el CÓDIGO.** Puntos
 - Ambas ramas están **sin push** → consolidar implica merge (con conflictos esperables en `CLAUDE.md` y en
   la numeración de migraciones — ver checklist).
 
+### Consumidores con toggle `?shadow=1` — todos leen PROD por default (modo prueba)
+El modelo es: los consumidores leen **prod**; `?shadow=1` es solo el modo de PRUEBA para ver la data híbrida
+antes del cutover. El cutover **migra la data buena a prod** — NO apunta los consumidores a shadow. Consumidores
+con toggle hoy:
+- **Feed** `/ventas` `/alquileres` (`?shadow=1`).
+- **Shortlists** `/b/hash` (`?shadow=1`, decisión 17-jul opción 1): los links reales que circulan por WhatsApp
+  siguen en prod (el cliente ve lo que vio); `?shadow=1` es para validar el espejo completo. 
+Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortlists) — no olvidar ninguno.
+- 🔴 **Las shortlists dependen de `buscar_extras_shadow`** para las secciones "lo que la hace especial"
+  (amenidades_extra) + amoblado en VENTA (la RPC principal de venta mig 277 NO los expone). Al cutover, cuando
+  las shortlists lean prod con data nueva, ese helper (o su equivalente en prod) **tiene que existir** o esas
+  secciones salen vacías. Refuerza: **NO dropear `buscar_extras_shadow`** (ver `CONTRATO_FRONTEND_SHADOW.md`).
+- **Escalón de precio en links activos:** al cutover, los links de shortlist ya enviados por WhatsApp pasan de
+  precio viejo (prod) a nuevo (~34% menos, TC). Un cliente con un link viejo verá el precio bajar ese día →
+  comunicarlo o aceptarlo.
+
 ## Checklist de cutover de DATA (para EJECUTAR cuando el founder decida — no ahora)
 
 0. [ ] **Motor automático (pre-requisito de apagar n8n):** `reader-api` + medir modelo barato vs ground
