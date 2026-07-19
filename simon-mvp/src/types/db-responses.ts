@@ -46,6 +46,9 @@ export interface RawUnidadRealRow {
   amenities_confirmados: string[] | null
   amenities_por_verificar: string[] | null
   equipamiento_detectado: string[] | null
+  // Cola larga no canónica (reader híbrido, mig 271 → buscar_extras; vacío en prod hasta el cutover)
+  amenidades_extra: string[] | null
+  equipamiento_otros: string[] | null
   descripcion: string | null
   posicion_mercado: { categoria: string; diferencia_pct: number } | null
   // GPS y extras
@@ -109,6 +112,8 @@ export interface RawUnidadAlquilerRow {
   agente_telefono: string | null
   agente_whatsapp: string | null
   dias_en_mercado: number | null
+  // Días desde la captura (fecha_creacion). Solo la RPC shadow lo devuelve.
+  dias_desde_captura?: number | null
   estado_construccion: string | null
   id_proyecto_master: number | null
   amenities_lista: string[] | null
@@ -140,6 +145,9 @@ export interface RawUnidadSimpleRow {
   es_multiproyecto: boolean | null
   estado_construccion: string | null
   dias_en_mercado: number | null
+  // Días desde que NOSOTROS lo capturamos (fecha_creacion). Solo la RPC shadow lo
+  // devuelve; en prod es undefined. Ausencia = gate del badge "Nuevo".
+  dias_desde_captura?: number | null
   amenities_confirmados: string[] | null
   amenities_por_verificar: string[] | null
   equipamiento_detectado: string[] | null
@@ -149,7 +157,7 @@ export interface RawUnidadSimpleRow {
   estacionamientos: number | null
   baulera: boolean | null
   fecha_entrega: string | null
-  piso: string | null
+  piso: number | null
   plan_pagos_desarrollador: boolean | null
   acepta_permuta: boolean | null
   solo_tc_paralelo: boolean | null

@@ -11,6 +11,7 @@
 
 **Casas ZN** (`tipo_propiedad_original='casa'`) — pipeline propio, **aislado del feed de deptos** (0 en `v_mercado_venta`, 0 con `id_proyecto_master`). Cargadas vía **flujo híbrido manual** (`scripts/sonda-suelo/`: discovery/dedup/fetch-contacto/merge + agentes-lectores para el MOAT, con contacto del captador) — NO el n8n viejo de Equipetrol. Condominios en `condominios_master` (FK `id_condominio_master`; matcher `matchear_condominio(lat,lon,nombre)` nombre-primario + GPS). Feed `v_mercado_casas` → `/ventas/casas` **en prod (dark launch/noindex)** + cron de captura `/cron-casas` (`scripts/casas-zn/`, $0 bajo Max). Pendiente: validar → og:image → público. Diseño: `docs/proyectos/zona-norte/DISENO_PIPELINE_CASAS_VIVIENDA.md`.
 **Casas ZN × ALQUILER** (exploratorio, en curso): prototipo read-only `scripts/casas-zn/muestra-alquiler-zn.mjs` + clasificador `clasificar-uso.mjs` (`uso_inmueble`: residencial/mixto/comercial, expuesto como filtro NO exclusión). Falta pipeline+feed+migración. Ver memoria `project_feed_alquiler_casas_zn_uso`.
+**Deptos Equipetrol → HÍBRIDO** (en curso, rama `claude/hybrid-worktree-structure-3b7b53`, NO merged): reemplazar el n8n de deptos-venta por el flujo híbrido (discovery propio + reader-extendido en sesión = MOAT + apply a entorno SHADOW aislado `propiedades_v2_shadow`, migs 268/269 + helper 271 + normalización TC-nuevo 272 ⚠️ [las migs 268 y 276 colisionan con main/frontend → renumerar al cutover, ver `docs/migrations/MIGRATION_INDEX.md`]). Reader spec `scripts/deptos-equipetrol/READER_SPEC.md` **v4.2** (precio/TC/dorms/baños/piso/amenidades+extra/equipamiento-3-baldes/parqueo/baulera/estado/amoblado/equipado/multiproyecto+bloque-piso-completo). **TC nuevo** (unificación oficial=paralelo) congelado en `TC_NUEVO_DECISION.md` (default vs `oficial_viejo`; **principio de arquitectura: normalización = frontera de acceso, crudo+tag adentro / normalizado afuera** — portable, para la Plataforma Híbrida Genérica). Ciclo end-to-end en skills: captura `/cron-deptos-ventas` + `/cron-deptos-alquiler`, auditoría `/audit-cola-shadow` (matching+dedup) + `/audit-deptos-shadow` (drift). Plan de corte de datos al cutover: `scripts/deptos-equipetrol/CUTOVER_DATA_PLAN.md` · auditorías post-cutover: `AUDITORIAS_POST_CUTOVER.md`. Estado: memoria `project_checkpoint_deptos_hibrido`.
 
 ## MCP Servers
 
@@ -48,6 +49,7 @@ Workflows n8n usan env vars para secrets (NO hardcodear): `SLACK_WEBHOOK_SICI=..
     - **Mensuales**: `/audit-feed-ventas-mensual` (~$1.75 Firecrawl, **NUNCA sin OK explícito del user en el momento**) + gemela $0 `/audit-feed-ventas-mensual-fetch` (fetcher directo, validada con `/probar-fetcher-ventas`) + `/audit-feed-alquileres-mensual` ($0). Drift portal + capas SQL + detector duplicados (`lib/dup-checks.mjs`). Persisten en `audit_descripciones_*`. Pre-req alquileres: `npm run backfill` 1 vez.
     - **Semanales**: `/audit-feed-ventas-semanal` / `/audit-feed-alquileres-semanal`. $0 sin persistencia, props nuevas en ventana (`--dias`, `--macrozona` default `equipetrol`). Detector TC + candado **formato-objeto** (un string NO protege — merge usa `_is_campo_bloqueado`). Check matching = regex + juez LLM.
     - **`/audit-cola-matching`**: audita la cola (`matching_sugerencias.estado='pendiente_<macrozona>'`) ANTES de aprobar. El `.mjs` filtra/fetchea; **veredicto = subagentes-lectores (juez LLM), NUNCA el script**. SQL read-only (UPDATE + candado `IS NULL`).
+    - **Shadow (híbrido)** — fuente de verdad en `scripts/deptos-equipetrol/` (NO `scripts/auditoria-*/`): `/audit-cola-shadow` (matching + dedup apart-hotel, 3 superficies, respeta `campos_bloqueados`) + `/audit-deptos-shadow` (drift = re-lectura del anuncio vs lo guardado). $0 read-only sobre `propiedades_v2_shadow`; veredicto de matching = subagentes-lectores.
     - Memorias TC: `precio_paralelo_vs_oficial_billete`, `feedback_candado_formato_objeto`, `project_bug_tc_flag_paralelo_historico`.
 
 ## Zonas Canonicas (6 zonas)
@@ -91,7 +93,7 @@ Referencia completa: `docs/arquitectura/TIPO_CAMBIO_SICI.md` (flujo portal→ext
 | **Product Brief Simón** | `docs/simon/SIMON_PRODUCT_BRIEF.md` |
 | **Simon Broker** | `docs/broker/README.md` (MVP venta + Fase 2 alquileres + v1 protección shortlists, mig 228-235) |
 | **Demo + Prospección** | `docs/broker/PROSPECCION_Y_DEMO.md` (mig 236-238) |
-| **Contacto Directo B2C (bot) ✅ PROD** | `docs/broker/CONTACTO_DIRECTO_B2C_PLAN.md` — shortlists del bot `simon-asistente` contactan al captador vía flag `simon_brokers.contacto_directo` (mig 256). Atribución `buildAtribucionWaMessage` en `lib/wa-message.ts`. Rollback = `contacto_directo=false`. Memoria `project_plan_contacto_directo_b2c` |
+| **Contacto Directo B2C (bot) ✅ PROD** | `docs/broker/CONTACTO_DIRECTO_B2C_PLAN.md` — shortlists del bot `simon-asistente` contactan al captador vía flag `simon_brokers.contacto_directo` (mig 256). Atribución `buildAtribucionWaMessage` en `lib/wa-message.ts`. Rollback = `contacto_directo=false`. Memoria `project_plan_contacto_directo_b2c`. **Rediseño mobile + shadow-por-default:** el feed público de la shortlist `/b/[hash]` (mobile) usa el sheet rico del feed y lee data SHADOW por defecto (helper `rpcShadowFirst` en `pages/b/[hash].tsx` + `pages/api/shortlist-market.ts`, cutover-safe con fallback a prod). Memoria `project_shortlist_mobile_redesign` |
 | **Arquitectura SICI** | `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md` |
 | **Plataforma Híbrida Genérica (visión)** | `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md` — reemplazar n8n por plataforma genérica (tipo×operación×zona); casas ZN ya producidas por el híbrido |
 | **Simon Arquitectura Cognitiva** | `docs/simon/SIMON_ARQUITECTURA_COGNITIVA.md` |
@@ -165,7 +167,8 @@ sici/
 │   ├── casas-zn/        → cron /cron-casas (reusa sonda-suelo/lib)
 │   ├── sonda-suelo/     → flujo híbrido casas ZN
 │   ├── auditoria-*/     → skills audit feed/cola (fuente de verdad)
-│   └── estudio-mercado/ → framework estudios SaaS
+│   ├── estudio-mercado/ → framework estudios SaaS
+│   └── poc-zona-norte/  → POC discovery Zona Norte (poc-discovery.mjs + geojson)
 ├── geodata/         → microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/   → modulo_1 (venta), modulo_2 (matching/audit/TC),
 │                      alquiler (6 wf), casas_terrenos (DESACTIVADO)
@@ -195,6 +198,8 @@ simon-mvp/src/
 ├── pages/admin/  → orquestadores delgados (ver tabla Admin Pages)
 ├── pages/api/    → API routes (ver Broker Pages & API)
 ├── components/   → landing-premium, alquiler, broker, filters-premium, results-premium, mercado
+├── contexts/     → AdminAuthContext (provider de admin auth, lo consume useAdminAuth)
+├── test/         → mocks JSON (chat, guía/razón fiduciaria, formulario)
 └── styles/       → globals.css, premium-theme.ts
 ```
 

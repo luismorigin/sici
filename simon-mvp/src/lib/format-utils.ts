@@ -61,7 +61,7 @@ export const formatNum = (n: number | null | undefined): string => {
  */
 export function dormLabel(d: number | null | undefined): string {
   if (d === null || d === undefined) return '—'
-  return d === 0 ? 'Estudio' : d + ' dorm'
+  return d === 0 ? 'Mono' : d + ' dorm'
 }
 
 /**

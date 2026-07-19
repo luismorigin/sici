@@ -9,6 +9,9 @@ import { buildAtribucionWaMessage } from '@/lib/wa-message'
 interface CompareSheetProps {
   open: boolean
   properties: UnidadVenta[]
+  // Posición fiduciaria vs. deptos similares (por id) — se computa en la página
+  // con TODO el mercado (no solo los 2-3 favoritos). null = sin base suficiente.
+  chips?: Map<number, { pos: 'bajo' | 'dentro' | 'sobre'; count: number }> | null
   onClose: () => void
   // Cuando viene, el comparativo está embebido en una shortlist pública (/b/[hash])
   // → ocultar preguntas al broker, "durante la visita" y CTAs WA por propiedad.
@@ -39,7 +42,7 @@ function estadoLabel(estado: string | null | undefined): string {
   return 'Entrega inmediata'
 }
 
-export default function CompareSheet({ open, properties, onClose, publicShareBroker = null, contactoDirecto = false, onOpenFavorites }: CompareSheetProps) {
+export default function CompareSheet({ open, properties, chips = null, onClose, publicShareBroker = null, contactoDirecto = false, onOpenFavorites }: CompareSheetProps) {
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
   const [copied, setCopied] = useState(false)
   const MAX_QS = 3
@@ -69,6 +72,13 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
       const base = p.proyecto || `Depto ${i + 1}`
       const dup = props.filter(x => (x.proyecto || '') === (p.proyecto || '')).length > 1
       return dup ? `${base} (${String.fromCharCode(65 + i)})` : base
+    }
+
+    // Insight fiduciario (diferenciador): quién está más barato que sus similares.
+    if (chips) {
+      const bajos = props.map((p, i) => ({ i, c: chips.get(p.id) })).filter(x => x.c?.pos === 'bajo')
+      if (bajos.length === 1) result.push(`${nameAt(bajos[0].i)} es el mejor precio por m² frente a deptos similares (más barato que su mercado).`)
+      else if (bajos.length > 1) result.push(`${bajos.map(x => nameAt(x.i)).join(' y ')} están más baratos que deptos similares.`)
     }
 
     // Cohort comparable = misma tipologia (dorms) + mismo estado normalizado.
@@ -183,13 +193,11 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
     }
 
     return result.slice(0, 4)
-  }, [props, precioM2, minPrecioM2, publicShareMode, contactoDirecto])
+  }, [props, precioM2, minPrecioM2, publicShareMode, contactoDirecto, chips])
 
   // Ocultar filas donde ninguna prop aporta data util (todo null/vacio).
   const showBanos = props.some(p => p.banos !== null && p.banos !== undefined)
-  const showParqueo = props.some(p => p.estacionamientos !== null && p.estacionamientos !== undefined && p.estacionamientos > 0)
-  const showBaulera = props.some(p => p.baulera === true || p.baulera === false)
-  const showPiso = props.some(p => p.piso !== null && p.piso !== undefined && p.piso !== '')
+  const showPiso = props.some(p => p.piso !== null && p.piso !== undefined)
 
   // Questions for broker
   const questions = useMemo(() => {
@@ -265,8 +273,8 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
       {/* Header */}
       <div className="csv-header">
         <div className="csv-header-left">
-          <div className="csv-title">Comparativo Express</div>
-          <div className="csv-subtitle">{props.length} favoritos seleccionados</div>
+          <div className="csv-title">Comparar favoritos</div>
+          <div className="csv-subtitle">{props.length} deptos seleccionados</div>
         </div>
         <button className="csv-close" aria-label="Cerrar comparativo" onClick={onClose}>&times;</button>
       </div>
@@ -308,6 +316,17 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
                     </td>
                   ))}
                 </tr>
+                {chips && props.some(p => chips.get(p.id)) && (
+                  <tr>
+                    <td className="csv-td-label">vs. similares</td>
+                    {props.map(p => {
+                      const c = chips.get(p.id)
+                      if (!c) return <td key={p.id} className="csv-td csv-td-muted">—</td>
+                      const txt = c.pos === 'bajo' ? 'Más barato' : c.pos === 'sobre' ? 'Más caro' : 'En línea'
+                      return <td key={p.id} className={`csv-td ${c.pos === 'bajo' ? 'csv-good' : ''}`}>{txt} · {c.count}</td>
+                    })}
+                  </tr>
+                )}
                 <tr>
                   <td className="csv-td-label">Area</td>
                   {props.map(p => <td key={p.id} className="csv-td">{p.area_m2}m²</td>)}
@@ -334,16 +353,25 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
                     </td>
                   ))}
                 </tr>
-                {showParqueo && (
+                <tr>
+                  <td className="csv-td-label">Incluye</td>
+                  {props.map(p => {
+                    const eq = p.equipamiento_detectado || []
+                    const amob = eq.some(e => /amoblad/i.test(e))
+                    const items: string[] = []
+                    if (amob || eq.length > 0) items.push(amob ? 'Amoblado' : 'Equipado')
+                    if (p.parqueo_incluido === true || (p.estacionamientos != null && p.estacionamientos > 0)) items.push('Parqueo')
+                    if (p.baulera === true) items.push('Baulera')
+                    return <td key={p.id} className={`csv-td ${items.length ? '' : 'csv-td-muted'}`}>{items.length ? items.join(' · ') : '—'}</td>
+                  })}
+                </tr>
+                {props.some(p => (p.amenities_confirmados || []).length > 0) && (
                   <tr>
-                    <td className="csv-td-label">Parqueo</td>
-                    {props.map(p => <td key={p.id} className="csv-td">{p.estacionamientos ? `${p.estacionamientos} incl.` : '—'}</td>)}
-                  </tr>
-                )}
-                {showBaulera && (
-                  <tr>
-                    <td className="csv-td-label">Baulera</td>
-                    {props.map(p => <td key={p.id} className="csv-td">{p.baulera === true ? 'Si' : p.baulera === false ? 'No' : '—'}</td>)}
+                    <td className="csv-td-label">Amenidades</td>
+                    {props.map(p => {
+                      const am = (p.amenities_confirmados || []).slice(0, 3)
+                      return <td key={p.id} className={`csv-td ${am.length ? '' : 'csv-td-muted'}`}>{am.length ? am.join(' · ') : '—'}</td>
+                    })}
                   </tr>
                 )}
                 {showPiso && (
@@ -358,7 +386,7 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
                     En contactoDirecto (B2C) se muestra, como el feed (§6 dec.3). */}
                 {(!publicShareMode || contactoDirecto) && (
                   <tr>
-                    <td className="csv-td-label">Dias publicado</td>
+                    <td className="csv-td-label">Publicado</td>
                     {props.map(p => (
                       <td key={p.id} className={`csv-td ${p.dias_en_mercado && p.dias_en_mercado > 90 ? 'csv-warn' : ''}`}>
                         {p.dias_en_mercado ?? '—'}
@@ -374,7 +402,7 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
         {/* Insights */}
         {insights.length > 0 && (
           <div className="csv-section">
-            <div className="csv-label"><span className="csv-label-dot" />INSIGHTS</div>
+            <div className="csv-label"><span className="csv-label-dot" />LO QUE DICEN LOS DATOS</div>
             <div className="csv-insights">
               {insights.map((insight, i) => (
                 <div key={i} className="csv-insight">
@@ -607,6 +635,7 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
         .csv-best { color: #3A6A48 !important; font-weight: 600; }
         .csv-good { color: #3A6A48; }
         .csv-warn { color: #7A7060; font-style: italic; }
+        .csv-td-muted { color: rgba(20,20,20,0.32); }
 
         /* Insights */
         .csv-insights { display: flex; flex-direction: column; gap: 10px; }

@@ -299,6 +299,10 @@ function mapRowVenta(r: RawUnidadSimpleRow): UnidadVenta {
     plan_pagos_texto: r.plan_pagos_texto || null,
     fuente: r.fuente || '',
     tc_sospechoso: r.tc_sospechoso ?? false,
+    // Política del edificio → chip "Pet friendly" (no amenidad).
+    pet_friendly: (r as { pet_friendly?: boolean | null }).pet_friendly ?? null,
+    // Badge "Nuevo" (recién captado) vs "Reciente" (recién publicado).
+    dias_desde_captura: (r as { dias_desde_captura?: number | null }).dias_desde_captura ?? null,
   }
 }
 
@@ -333,12 +337,33 @@ function mapRowAlquiler(r: RawUnidadAlquilerRow): UnidadAlquiler {
     agente_telefono: r.agente_telefono || null,
     agente_whatsapp: r.agente_whatsapp || null,
     dias_en_mercado: r.dias_en_mercado || null,
+    dias_desde_captura: (r as { dias_desde_captura?: number | null }).dias_desde_captura ?? null,
     estado_construccion: r.estado_construccion || 'no_especificado',
     id_proyecto_master: r.id_proyecto_master || null,
     amenities_lista: r.amenities_lista || null,
     equipamiento_lista: r.equipamiento_lista || null,
     descripcion: r.descripcion || null,
+    // Campos del RPC shadow (undefined en prod → las secciones quedan vacías).
+    // Alimentan "Lo que la hace especial" (amenities_extra) y "En el departamento"
+    // (equipamiento_lista + equipamiento_otros) + chips (equipado/pet_friendly).
+    amenities_extra: (r as { amenities_extra?: string[] | null }).amenities_extra || null,
+    equipamiento_otros: (r as { equipamiento_otros?: string[] | null }).equipamiento_otros || null,
+    equipado: (r as { equipado?: boolean | null }).equipado ?? null,
+    uso_inmueble: (r as { uso_inmueble?: string | null }).uso_inmueble || null,
+    expensas_incluidas: (r as { expensas_incluidas?: boolean | null }).expensas_incluidas ?? null,
+    pet_friendly: (r as { pet_friendly?: boolean | null }).pet_friendly ?? null,
   }
+}
+
+// Shadow-first con fallback a prod. La shortlist muestra el marco de
+// normalización nuevo (shadow) de una. CUTOVER-SAFE: si la RPC `_shadow` deja de
+// existir cuando shadow→prod, cae automáticamente a la RPC prod (que para
+// entonces YA es igual a shadow) → nada se rompe, sin tocar código.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function rpcShadowFirst(supabase: any, base: string, params: any) {
+  const s = await supabase.rpc(`${base}_shadow`, params)
+  if (!s.error) return s
+  return supabase.rpc(base, params)
 }
 
 function blockedProps(
@@ -363,6 +388,8 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const hash = ctx.params?.hash as string | undefined
   if (!hash) return { notFound: true }
 
+  // La shortlist lee SHADOW por defecto (marco de normalización nuevo = precios
+  // correctos) vía rpcShadowFirst, con fallback prod cutover-safe. Ver helper.
   const isDemo = isDemoShortlistHash(hash)
 
   // Lookup con campos de protección (filtra is_published + archived_at IS NULL).
@@ -503,7 +530,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       // shortlist (5-20) en lugar de traer 138 filas y filtrar en JS.
       // TTFB del SSR baja ~50% al reducir transferencia Postgres → Vercel.
       const [rpcRes, bobRes] = await Promise.all([
-        supabase.rpc('buscar_unidades_alquiler', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
+        rpcShadowFirst(supabase, 'buscar_unidades_alquiler', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
         supabase.from('propiedades_v2').select('id, precio_mensual_bob').in('id', propIds),
       ])
 
@@ -566,6 +593,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
           priceSnapshots,
           initialHearts,
           isDemo,
+          clienteNombre: isDemo ? null : shortlist.cliente_nombre,
         },
         shortlistTitle,
         shortlistMeta,
@@ -588,7 +616,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     // shortlist (5-20) en lugar de traer 323 filas y filtrar en JS.
     // TTFB del SSR baja ~50% al reducir transferencia Postgres → Vercel.
     const [rpcRes, rawRes] = await Promise.all([
-      supabase.rpc('buscar_unidades_simple', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
+      rpcShadowFirst(supabase, 'buscar_unidades_simple', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
       supabase.from('propiedades_v2').select('id, precio_usd').in('id', propIds),
     ])
 
@@ -598,6 +626,28 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       .map(i => indexed.get(i.propiedad_id))
       .filter((r): r is RawUnidadSimpleRow => Boolean(r))
       .map(mapRowVenta)
+
+    // Cola larga no canónica (buscar_extras, mig 271) → amenidades_extra ("Lo que
+    // la hace especial") + equipamiento_otros ("En el departamento"). Shadow-first
+    // con fallback. Best-effort: si falla, las secciones quedan vacías.
+    if (properties.length > 0) {
+      try {
+        const extras = await rpcShadowFirst(supabase, 'buscar_extras', { p_ids: properties.map(p => p.id) })
+        if (!extras.error && Array.isArray(extras.data)) {
+          const byId = new Map(extras.data.map((e: { id: number }) => [e.id, e]))
+          for (const p of properties) {
+            const e = byId.get(p.id) as { amenidades_extra?: string[]; equipamiento_otros?: string[] } | undefined
+            if (e) {
+              // UnidadVenta no declara estos campos shadow (deuda de tipos de la
+              // rama); se asignan con cast para no propagar el `any`.
+              const pv = p as { amenidades_extra?: string[]; equipamiento_otros?: string[] }
+              pv.amenidades_extra = e.amenidades_extra || []
+              pv.equipamiento_otros = e.equipamiento_otros || []
+            }
+          }
+        }
+      } catch { /* helper opcional: no rompe el SSR si no existe aún */ }
+    }
 
     // Sanitizar agente_* server-side antes de hidratar al cliente. Sin esto,
     // un broker prospect con DevTools puede leer __NEXT_DATA__ y extraer los
@@ -646,6 +696,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
         priceSnapshots,
         initialHearts,
         isDemo,
+        clienteNombre: isDemo ? null : shortlist.cliente_nombre,
       },
       shortlistTitle,
       shortlistMeta,

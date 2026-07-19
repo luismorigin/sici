@@ -194,6 +194,17 @@ edificios** (nombre + GPS exacto), que es la parte más compleja del n8n actual.
 trabajo técnico pesado de la migración de deptos. (Ojo con el bug histórico del loop K1: el matching
 de edificios NO debe pisar `nombre_edificio`.)
 
+> **⚠️ CORRECCIÓN (2-jul-2026, tras investigar el matching real):** esta sección SOBRESTIMÓ la
+> dificultad. El matching de edificios **NO es JS pesado a reescribir — es 100% SQL reusable.**
+> n8n solo ejecuta `SELECT * FROM matching_completo_automatizado();` (`modulo_2/matching_nocturno.json`);
+> todo el fuzzy (nombre/URL/trigram/GPS) + scoring + auto-aprobación ≥85 vive en `sql/functions/matching/`.
+> El híbrido **reusa el motor tal cual** (un `.mjs` corre el mismo query). Única trampa: NO usar
+> `aplicar_matches_aprobados()` (bug loop K1) — aplicar con UPDATE directo estilo mig 259, sin pisar
+> `nombre_edificio`. Además, con el LECTOR en la ingesta el match se **confirma al leer el anuncio**
+> (nombre-primario, GPS solo desempata → robusto a GPS mal puesto por el broker). El trabajo neto de
+> deptos resultó MUCHO menor: el extractor ya está construido, el matching se reusa. Ver
+> `scripts/deptos-equipetrol/ESTADO_MIGRACION.md` y memoria `project_deptos_equipetrol_al_hibrido`.
+
 ---
 
 ## 10. Estrategia de migración (strangler) y orden de construcción
@@ -347,6 +358,69 @@ extractor de terrenos).
 
 **Primer movimiento de mayor ROI / menor riesgo:** destapar el feed de **deptos ZN** (ya capturado,
 solo es frontend) — producto nuevo sin tocar pipeline.
+
+---
+
+## 15. Mapa del cutover — estado 10-jul-2026 (rama `feat/deptos-hibrido-shadow`)
+
+> Consolidado del due-diligence de cutover. **Deptos-VENTA es la punta de lanza**: acá se resuelve el
+> proceso completo; después escala a alquiler/terrenos reusando el esqueleto. Memorias:
+> `project_checkpoint_deptos_hibrido`, `project_discovery_c21_grid_bottleneck`,
+> `project_multiproyectos_proyectos_detectados`, `project_bug_bob_moneda_usd_cutover`.
+
+### 15.1 Estado real por pipeline (estrangular n8n = migrar los 4, no solo venta)
+| Pipeline | Estado del híbrido |
+|---|---|
+| Deptos **venta** | 🟡 en curso — comando `/cron-deptos` (discovery propio + reader 12+ campos + apply resiliente + incremento 2 "empalme de nuevas" + tabla `proyectos_detectados` para multiproyectos). Reader **maduro** (test ciego de 50). |
+| Deptos **alquiler** | 🔴 **SIN híbrido** — sigue n8n. Reader PROPIO pendiente: `precio_mensual_bob` (Bs, sin TC paralelo), `uso_inmueble`, depósito/mascotas/servicios/expensas. Funciones `_alquiler` (Regla 6: nunca tocar venta). |
+| **Casas ZN** | ✅ híbrido (`/cron-casas`) |
+| **Terrenos** / anticrético | ⚫ no empezados |
+
+### 15.2 El cuello de botella descubierto (walking skeleton)
+**No es el reader (impecable) — es el discovery C21.** El grid topaba a 100 props/cuadrante → perdía ~44%
+del inventario C21 (veía 249 vs 444 de n8n). Fix: `STEP 0.005` (commit ce1e2fe). **Pendiente: correr el
+discovery completo 0.005 con IP fresca** para validar el conteo total. Detalle + patrón anti-bloqueo en
+`project_discovery_c21_grid_bottleneck`.
+
+### 15.3 Consumidores de la data — quién se rompe al apagar n8n
+Verificado leyendo el código. Todo el crudo se guarda (nada de data cruda se pierde).
+| Consumidor | Lee | ¿Se rompe? |
+|---|---|---|
+| Feed `/ventas`, chat alquileres (front), broker shortlists | RPC (`buscar_unidades_simple`) | ❌ No |
+| Admin editor | `datos_json` primero, `datos_json_enrichment` de fallback | ❌ No (degrada gracioso) |
+| **Bot ventas (kapso, `lab-kapso/src/sici.js`)** | vista `v_mercado_venta` (`precio_norm`, `dias_en_mercado`…) | ❌ No — protegido por la frontera. ⚠️ revisar **copys "6.96"** en kapso |
+| **Estudios de mercado** (`estudio-mercado/src/db.ts`) | `propiedades_v2` directo + normaliza en **JS** + lee `datos_json_enrichment` | 🟡 **paquete TC** + ajustar path enrichment→`datos_json` |
+| **Snapshots absorción** (`sql/functions/snapshots`) | `precio_normalizado()` SQL | 🟡 absorción/inventario intacto; $/m² → **versionar (v4)** + tags nuevos |
+| Skills de auditoría (venta/alquiler/casas/cola) | `datos_json_enrichment` | 🟢 herramientas — ajustar al usarlas |
+| Merge / enrichment / matching de n8n | `datos_json_enrichment` | — se **apagan** (el híbrido matchea con `matcher.mjs`) |
+
+### 15.4 El "paquete TC" — toca 4 lugares (va JUNTO a prod, al unificarse el oficial)
+La normalización con tags nuevos (`bob`/`oficial_viejo`/default) hay que aplicarla a la vez en:
+`precio_normalizado()` SQL · las **vistas** (`v_mercado_venta`) · la normalización **JS de estudios** · los
+**snapshots**. Antes no rompe la comparación shadow-vs-prod. El fallback C21-BOB por $/m² ya resuelto
+(`project_bug_bob_moneda_usd_cutover`).
+
+### 15.5 Riesgo al re-escribir existentes (mismo id — id resuelto: lo da la secuencia de `propiedades_v2`)
+- 🔴 **Candados** (`campos_bloqueados`): NO respetar ciego (la mayoría son parches sobre errores de n8n; el
+  híbrido lee bien de origen → ~61% sobran). **Auditoría**: soltar donde el híbrido coincide, mantener el
+  conocimiento puro (paralelo sin señal), revisar el resto. Conservador ante la duda.
+- 🔴 **No empobrecer**: preservar campos que n8n llena y el híbrido no toca (no pisar con null).
+- 🟡 **Corte limpio**: apagar n8n-deptos ANTES de que el híbrido escriba prod (no dos escritores).
+- Comparación híbrido-vs-prod (10-jul): el híbrido MEJORA (piso 0→39, baulera, equipamiento, flags,
+  parqueo aparte) y deja de INVENTAR (estado 88→38, baños 88→73 = null honesto en vez de default falso).
+
+### 15.6 Snapshots / absorción — no se pierde historia
+Absorción/inventario/DOM **no dependen del TC** → serie continua. $/m² sí → `filter_version` v4 (TC nuevo),
+v3 congelada como histórico del régimen viejo, marcar el quiebre. Hacia adelante: que los snapshots guarden
+crudo+tag (aplicar la frontera también acá) para que un futuro cambio de TC sea recalculable.
+
+### 15.7 Orden de pendientes (cuando se retome)
+1. Discovery C21 completo a 0.005 (IP fresca) — validar conteo.
+2. Auditoría de candados (cero-fetch, sobre shadow vs prod).
+3. Reader de **alquiler** (pipeline propio — el próximo gran paso).
+4. Paquete TC (4 lugares) — al unificarse el oficial.
+5. Badge "Entrega inmediata" del front + copys "6.96" del bot kapso.
+6. id definitivo (secuencia en prod) · verificador integrado (incremento 3).
 
 ---
 

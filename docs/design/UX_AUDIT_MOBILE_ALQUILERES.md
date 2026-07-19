@@ -87,7 +87,7 @@ LAYOUT 2 COLUMNAS (sidebar 320px + main area)
 │   ├── Google Maps link
 │   └── Ver anuncio original (con gate)
 │
-└── PhotoViewer: NO SE USA (eliminado en favor de BottomSheet)
+└── PhotoViewer: EN USO — visor de fotos fullscreen, importado en alquileres.tsx y reusado por ventas.tsx
 ```
 
 ---
