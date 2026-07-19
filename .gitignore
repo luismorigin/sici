@@ -55,10 +55,6 @@ scripts/personal-doble-via/
 # Output generado de PoCs (no versionar)
 scripts/poc-zona-norte/resultados*.json
 
-# Output generado del análisis de deptos Equipetrol (artefactos de corridas: material
-# crudo, veredictos, contratos — se regeneran; el node_modules ya lo cubre la regla global)
-scripts/deptos-equipetrol/output/
-
 # Temporales de proceso del audit de cola (se regeneran en cada corrida)
 scripts/auditoria-cola-matching/cola-*.json
 scripts/auditoria-cola-matching/lote-juez-*.json

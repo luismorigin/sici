@@ -100,7 +100,7 @@ pierde `amoblado` y `amenidades_extra`.** → En VENTA el helper NO es redundant
 > alquiler el helper puede que sí sobre, pero **venta ≠ alquiler** (mig 277 es más acotada). Verificar por
 > operación antes de tocar. (Ver la tabla de migraciones arriba: 277 = venta = equipado/uso/equipamiento_otros.)
 
-## Baños — regla ≤1 dorm (venta + alquiler, alineados desde mig c78aaad)
+## Baños — regla ≤1 dorm (venta + alquiler, alineados desde el commit c78aaad)
 `banos`: **≤1 dorm (mono o 1 dorm) → 1** (definicional); **2+ dorm sin info → `null`** (no "1" — sería
 engañoso). El front puede confiar: un `null` en baños solo aparece en 2+ dorm sin dato.
 

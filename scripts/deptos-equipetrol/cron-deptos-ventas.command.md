@@ -143,8 +143,8 @@ ambiguos, sin-match). Registrá una línea en `output/cron-deptos-ventas-log.md`
 - ✅ **Incremento 3 — verificador: HECHO** (paso 5, `verificador-deptos.mjs`, gemelo del de alquiler).
 - **Candados** (solo para comparación shadow-vs-prod limpia): sembrar `campos_bloqueados` prod→shadow.
   Para solo cargar/enriquecer NO hace falta. Ver `ESTADO_MIGRACION.md` §Frenos.
-- **Repoblar el inventario COMPLETO** con el lector nuevo (los ~19 en shadow son muestra; el discovery
-  ve ~423 en zona).
+- ✅ **Repoblar el inventario COMPLETO: HECHO** (barrido a shadow con el lector nuevo). Conteo vivo en
+  `ESTADO_MIGRACION.md` / `node verificar-shadow.mjs` (~460 venta al 17-jul; NO hardcodear).
 - **Empaquetar el orquestador** (`cron-deptos-equipetrol.mjs`) que encadene los pasos determinísticos
   (discovery + prep) en un solo `.mjs` — hoy este `.command.md` es el orquestador (el agente ejecuta).
 - Contexto: `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md` (visión) + memoria `project_checkpoint_deptos_hibrido`.

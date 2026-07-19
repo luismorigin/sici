@@ -9,9 +9,9 @@
 > anuncio y dictar precio/TC/dorms/nombre/gate/condiciones) lo hacen **subagentes-lectores en paralelo**
 > (patrón `/audit-cola-matching`) → **gratis, bajo Max, sin API, sin servidor**.
 >
-> **Gemelo:** `/cron-deptos` (venta). **Este comando lo MEJORA:** incluye el paso **verificador** (baja de
-> desaparecidos) que a `/cron-deptos` le falta (su Incremento 3). El `verificador-alquiler.mjs` es el molde
-> para agregárselo a venta después.
+> **Gemelo:** `/cron-deptos-ventas` (venta) — que YA tiene su propio verificador (`verificador-deptos.mjs`,
+> Incremento 3 HECHO). Ambos crons corren el paso **verificador** (baja de desaparecidos); acá es
+> `verificador-alquiler.mjs` (paso 5).
 >
 > **Distinto de venta (lo propio de alquiler):** precio MENSUAL Bs-first (crudo+tag, NUNCA `precio_usd`);
 > gate INVERSO (rechaza venta/anticrético colados); condiciones (expensas/depósito/contrato/amoblado/equipado/
@@ -62,7 +62,7 @@ escribe `output/veredictos-chunk-K.json` (array de veredictos con `id`). Reglas 
 - **gate INVERSO**: rechazá venta colada (verbo venta Y precio 6 cifras USD) o anticrético. Verbo venta + precio
   de renta ($/mes) = alquiler mislabel → ACEPTAR (el precio es el discriminador duro).
 - **condiciones**: expensas_bob/incluidas (solo texto), deposito_meses, contrato_minimo_meses, **amoblado**
-  (muebles sueltos, default "no") y **equipado** (electrodomésticos) SEPARADOS, **acepta_mascotas** (texto O
+  (muebles sueltos, silencio→`null` v3.1, NO default "no") y **equipado** (electrodomésticos) SEPARADOS, **acepta_mascotas** (texto O
   checkbox portal), **uso_inmueble** (residencial/mixto), servicios_incluidos.
 - **dormitorios** (0=mono, la SUITE cuenta), **banos** (dorms≤1→1), **nombre_edificio_canonico** (arábigo, sin
   prefijo; el matcher normaliza romano↔arábigo; `id_proyecto_master` null salvo certeza).
@@ -78,7 +78,7 @@ Arma la fila (**ANTI-DOBLE-NORM**: crudo solo en la columna de su moneda, la otr
 name-first (`matcher.mjs`), protege `fecha_publicacion` con LEAST, upsertea. Imprime escritos, rechazados
 (gate), reporte por depto, alias sugeridos, y con-nombre-sin-auto-match (la cola de excepciones).
 
-### 5. Verificador — baja de desaparecidos (el paso que a /cron-deptos le falta)
+### 5. Verificador — baja de desaparecidos (gemelo del de venta, `verificador-deptos.mjs`)
 ```
 node verificador-alquiler.mjs           # DRY-RUN: reporta candidatos + HTTP
 node verificador-alquiler.mjs --apply    # aplica contador / baja confirmada

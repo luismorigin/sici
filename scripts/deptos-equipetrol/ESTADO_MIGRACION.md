@@ -224,7 +224,7 @@ Domus Luxury 73/356 (prob. distintos).
 Clon aislado para la corrida completa sin tocar prod (verificado post-apply):
 - **`propiedades_v2_shadow`** — copia exacta (`LIKE ... INCLUDING ALL`, 88 cols; `id` sin default = id real de prod para comparar fila-a-fila; sin FK ni triggers).
 - **`config_global_shadow`** — TC shadow separado (paralelo 9.97 / oficial 6.96); el Binance del híbrido escribe acá (`--shadow`, seguro) + simula la unificación moviendo el oficial.
-- **`precio_normalizado_shadow()`** — usa el oficial shadow como divisor (con la semilla = idéntica a la real: 100k paralelo→143.247).
+- **`precio_normalizado_shadow()`** — lógica ORIGINAL (oficial shadow como divisor; 100k paralelo→143.247). **⚠️ SUPERADA por la mig 272** (`precio_normalizado_shadow_v2`, régimen TC nuevo: BOB live, se va el ×1.47). La mig 272 es la lógica ACTIVA hoy; ver `TC_NUEVO_DECISION.md`.
 - Aislada 100%: GRANTs `service_role`+`claude_readonly`, SIN anon/authenticated → invisible al Data API público. Rollback inline en la migración.
 
 ## Qué está construido (`scripts/deptos-equipetrol/`)

@@ -234,8 +234,11 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
        incluida ZN v16.5** → ver ítem 3.
 2b.[ ] **Consolidar las 2 ramas (frontend + backend)** — reconciliar `feat/desktop-fase-2` (frontend
        consolidado: desktop+mobile+shortlist, feeds `?shadow=1`; ya mergeó session-context) con esta (`hybrid`,
-       backend + `/api/ventas-shadow`). Resolver la divergencia del front shadow + conflictos de `CLAUDE.md` y
-       renumerar migs (268 duplicada). Apuntar el feed PÚBLICO a la data del híbrido. **Frontend y backend se
+       backend + `/api/ventas-shadow`). Resolver la divergencia del front shadow + conflictos de
+       `CLAUDE.md`/`MIGRATION_INDEX.md`/`ventas.tsx` y renumerar migs: **268 duplicada** (main×híbrido) Y
+       **276 duplicada** (híbrido×frontend: `276_shadow_alquiler_rpc_campos_frontend` vs `276_buscar_extras_prod`).
+       Renumerar es cosmético (las migs ya están aplicadas; la BD no trackea el filename). Apuntar el feed
+       PÚBLICO a la data del híbrido. **Frontend y backend se
        activan JUNTOS, no por separado.**
 3. [ ] **Auditar crudo sucio** (props `tc=paralelo` con `precio_usd`=oficial inflado) antes de confiar
        en el re-normalizado automático — **en Equipetrol Y en las ~670 props de ZN en v16.5 (554 deptos +

@@ -314,5 +314,6 @@ edificio-nivel (venta y alquiler comparten edificios).
    alquiler (los 14 acoplamientos venta→alquiler mapeados; el grande era el modelo de precio en `construirFila`).
 4. **✅ RESUELTO (`discovery-alquiler.mjs`) — Discovery de alquiler**: implementado; parametriza `operacion` y
    filtra `tipo_operacion='alquiler'` en el diff (antes hardcodeaba `operacion_venta` en `sonda-suelo/lib/portales.mjs`).
-5. **Confirmar con founder**: (a) el descuento de `oficial_viejo` en alquiler (¿existe el caso?), (b) si el valor
-   del cambio real se fija o queda 100% dinámico Binance (misma pregunta abierta que venta en `TC_NUEVO_DECISION.md`).
+5. **Confirmar con founder**: si el valor del cambio real se fija o queda 100% dinámico Binance (misma
+   pregunta abierta que venta en `TC_NUEVO_DECISION.md`).
+   [El descuento de `oficial_viejo` en alquiler → ✅ **CONFIRMADO founder 12-jul: SÍ ocurre** (ver §PRECIO, arriba).]
