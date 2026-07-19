@@ -10,7 +10,7 @@
 El feed shadow se ve en `localhost:3000/ventas?shadow=1`. El 12-jul se **mergeó main al worktree** para
 traer el frontend de PRODUCCIÓN (rediseño desktop fase 1, PR #19 `0177826`) — antes el worktree tenía el
 `/ventas` viejo (pre-8jul). **OJO:** lo que se ve es la **fase 1 (prod actual)**, NO el rediseño **fase 2 en
-proceso** (MODAL ZILLOW v4, en rama `feat/desktop-fase-2`, sin merge — ver memoria `project_frontend_desktop_feeds`).
+proceso** (MODAL ZILLOW v4, ya en main vía PR #22 — ver memoria `project_frontend_desktop_feeds`).
 Si el shadow "se ve distinto" al diseño más nuevo, es por eso: la fase 2 avanza en paralelo y NO está acá. El
 shadow refleja el diseño de prod HOY, que es lo correcto para validar los DATOS del híbrido.
 Choque de numeración de migración 268 (híbrido vs main) anotado en `docs/migrations/MIGRATION_INDEX.md`.
@@ -46,7 +46,7 @@ vs `_shadow`) queda como herramienta de diagnóstico, NO como criterio de corte.
 
 ## ✅ CHECKPOINT 10-jul (fin del día) — leer esto para retomar
 
-Estado al cierre de la rama `claude/hybrid-worktree-structure-3b7b53` (local, sin push):
+Estado al cierre de la rama `claude/hybrid-worktree-structure-3b7b53` (ya en main vía PR #22):
 
 - ✅ **Auditoría de candados HECHA** — el Freno 1 era humo: el cutover solo re-aplica 2 matchings
   (2696/2714); 27/36 diffs son TC → van al Paquete TC.
@@ -224,7 +224,7 @@ Domus Luxury 73/356 (prob. distintos).
 Clon aislado para la corrida completa sin tocar prod (verificado post-apply):
 - **`propiedades_v2_shadow`** — copia exacta (`LIKE ... INCLUDING ALL`, 88 cols; `id` sin default = id real de prod para comparar fila-a-fila; sin FK ni triggers).
 - **`config_global_shadow`** — TC shadow separado (paralelo 9.97 / oficial 6.96); el Binance del híbrido escribe acá (`--shadow`, seguro) + simula la unificación moviendo el oficial.
-- **`precio_normalizado_shadow()`** — lógica ORIGINAL (oficial shadow como divisor; 100k paralelo→143.247). **⚠️ SUPERADA por la mig 272** (`precio_normalizado_shadow_v2`, régimen TC nuevo: BOB live, se va el ×1.47). La mig 272 es la lógica ACTIVA hoy; ver `TC_NUEVO_DECISION.md`.
+- **`precio_normalizado_shadow()`** — lógica ORIGINAL (oficial shadow como divisor; 100k paralelo→143.247). **⚠️ SUPERADA por la mig 272** (archivo `272_precio_normalizado_shadow_v2.sql`, que hace `CREATE OR REPLACE` de la MISMA función `precio_normalizado_shadow` con el régimen TC nuevo: BOB live, se va el ×1.47 — el "_v2" es solo el nombre del archivo, NO de la función). La mig 272 es la lógica ACTIVA hoy; ver `TC_NUEVO_DECISION.md`.
 - Aislada 100%: GRANTs `service_role`+`claude_readonly`, SIN anon/authenticated → invisible al Data API público. Rollback inline en la migración.
 
 ## Qué está construido (`scripts/deptos-equipetrol/`)

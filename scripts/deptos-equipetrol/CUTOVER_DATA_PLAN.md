@@ -62,8 +62,8 @@ n8n, intacto**. No hay conflicto de captura; ZN no se toca.
 **Inventario ZN en PROD (con la regla vieja):**
 - **Deptos ZN: ~554+ activos** (14 microzonas: anillos Banzer/Radial 26/La Salle/Alemana), scraper **n8n `v16.5`
   (256) + `1.9`/`null`**.
-- **Casas ZN: 117 activas** (feed `v_mercado_casas`, mig 262).
-- Total ~**670 props ZN** en v16.5, con los defectos del enfoque viejo (TC inflado, matching flojo, sin campos v4.2).
+- **Casas ZN: ~103 activas en el feed** (`v_mercado_casas`, verificado 19-jul; mig 262). ⚠️ El bruto de la vista es ~298 — el swap global de TC toca TODAS las filas casa de ZN (activas o no), no solo el feed.
+- Total del FEED ~**650 props ZN** en v16.5. ⚠️ El **alcance de la auditoría de crudo** (antes del swap) es MAYOR: el bruto de deptos+casas ZN que la función re-normaliza. Defectos del enfoque viejo: TC inflado, matching flojo, sin campos v4.2.
 
 **Qué pasa con esta data:**
 - **No se borra ni queda colgada:** el híbrido, al expandirse a ZN, la **re-lee y corrige fila por fila** (como
@@ -182,13 +182,17 @@ TRANSACCIONES. Es estructural en cualquier dato de portal. **El MOAT no es tener
 el único que dice con honestidad qué es cada número** (oferta / observado / estimado, nunca disfrazado
 de cierre). Matriz verde/amarillo/rojo en `LIMITES_DATA_FIDUCIARIA.md`.
 
-## Frontend + backend: dos mitades del cutover, en dos ramas distintas
+## Frontend + backend: código YA consolidado en main (✅ PR #22, 18-jul-2026)
 
-El cutover no es solo data — es **código en dos ramas separadas que hay que consolidar**:
+> **Actualización 18-jul:** las dos ramas (backend híbrido + frontend `desktop-fase-2`) **ya se mergearon a `main`**
+> (PR #22, merge commit `66e055e`). Lo que sigue del cutover es OPERATIVO (Paquete TC, motor automático, apagar
+> n8n), **NO** el merge de ramas. Renumerar migs 268/276 sigue pendiente (paso de cutover). Detalle histórico abajo:
+
+El cutover no es solo data — fue **código en dos ramas separadas que se consolidaron** (ya hecho):
 - **Backend shadow** → rama `claude/hybrid-worktree-structure-3b7b53` (esta): discovery, reader, cargador,
   audits, migraciones shadow, la data. Traía el endpoint `/api/ventas-shadow.ts` (**retirado en la integración** →
   el frontend integró shadow en `/api/ventas`; el merge de `buscar_extras_shadow` sobrevive ahí — NO dropear, ver `CONTRATO_FRONTEND_SHADOW.md`).
-- **Frontend consolidado** → rama `feat/desktop-fase-2` (otro worktree, **+72 commits, SIN PUSH**): tiene TODO
+- **Frontend consolidado** → rama `feat/desktop-fase-2` (**ya en main vía PR #22**): tiene TODO
   el frontend — rediseño desktop + mobile + shortlist + feeds que leen shadow (`?shadow=1`, en `/api/ventas.ts`
   + `/api/alquileres.ts`). **Ya mergeó `claude/session-context-e0ffd1`** (que era solo la fuente) + 5 commits
   encima (pet friendly chip, preview shadow en `/b/hash`, sheet rico, chip fiduciario, rediseño mobile shortlist).
@@ -203,10 +207,17 @@ misma tabla → en dev ya conviven). **Lo que falta unir es el CÓDIGO.** Puntos
   no lo ve. Al cutover, el feed PÚBLICO (`/ventas`, `/alquileres`) pasa a leer la data del híbrido.
 - **No aplicar el front nuevo antes que el backend**: son dos mitades de la misma decisión. Se activan JUNTOS
   (frontend + backend + Paquete TC), no por separado.
-- Ambas ramas están **sin push** → consolidar implica merge (con conflictos esperables en `CLAUDE.md` y en
-  la numeración de migraciones — ver checklist).
+- ✅ **Consolidado (PR #22):** las dos ramas se mergearon a main. Conflictos resueltos (`CLAUDE.md`,
+  `MIGRATION_INDEX.md`, `ventas.tsx`→gana el frontend). **Renumerar migs 268/276 sigue PENDIENTE** (paso de cutover).
 
-### Consumidores con toggle `?shadow=1` — todos leen PROD por default (modo prueba)
+### Consumidores del feed shadow — ⚠️ REVISAR (feed vs shortlists difieren)
+> ⚠️ **18-jul (pendiente decisión founder):** esta sección dice "todos leen prod por default", pero el CÓDIGO
+> deployado difiere: el **feed** (`/ventas`,`/alquileres`) SÍ lee prod por default (`?shadow=1` opt-in), pero las
+> **SHORTLISTS `/b/[hash]` leen SHADOW-FIRST siempre** (`rpcShadowFirst`, sin `?shadow=1`; fallback a prod solo si
+> la vista `_shadow` desaparece). O sea: los links de shortlist ya muestran precios shadow (~34% menos) para
+> Equipetrol. Decidir: dejarlo shadow-first, o volver a prod-default hasta el cutover. El checklist "quitar
+> `?shadow=1` en shortlists" NO aplica (no tienen ese toggle).
+
 El modelo es: los consumidores leen **prod**; `?shadow=1` es solo el modo de PRUEBA para ver la data híbrida
 antes del cutover. El cutover **migra la data buena a prod** — NO apunta los consumidores a shadow. Consumidores
 con toggle hoy:
@@ -231,8 +242,10 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
        deptos-venta Equipetrol** en n8n (ZN/casas/alquiler siguen). El shadow de Equipetrol pasa a base.
 2. [ ] **Paquete TC junto:** swappear `precio_normalizado()` a la versión nueva + re-apuntar snapshots,
        vistas y estudios JS a la fuente híbrida, todo en el mismo movimiento. **Toca TODA `propiedades_v2`,
-       incluida ZN v16.5** → ver ítem 3.
-2b.[ ] **Consolidar las 2 ramas (frontend + backend)** — reconciliar `feat/desktop-fase-2` (frontend
+       incluida ZN v16.5** → ver ítem 3. **+ reescribir los docs canónicos de TC** que hoy describen el régimen
+       VIEJO como correcto (`docs/arquitectura/TIPO_CAMBIO_SICI.md` —su header lo auto-exige antes de tocar la
+       función—, `docs/canonical/ABSORCION_LIMITACIONES.md`, `LIMITES_DATA_FIDUCIARIA.md`).
+2b.[✅ HECHO — PR #22 (18-jul); SOLO RESTA renumerar migs 268/276] **Consolidar las 2 ramas (frontend + backend)** — reconciliar `feat/desktop-fase-2` (frontend
        consolidado: desktop+mobile+shortlist, feeds `?shadow=1`; ya mergeó session-context) con esta (`hybrid`,
        backend + `/api/ventas-shadow` [retirado en la integración]). Divergencia del front shadow ✅ RECONCILIADA (gana `/api/ventas`); resolver conflictos de
        `CLAUDE.md`/`MIGRATION_INDEX.md`/`ventas.tsx` y renumerar migs: **268 duplicada** (main×híbrido) Y
@@ -241,8 +254,9 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
        PÚBLICO a la data del híbrido. **Frontend y backend se
        activan JUNTOS, no por separado.**
 3. [ ] **Auditar crudo sucio** (props `tc=paralelo` con `precio_usd`=oficial inflado) antes de confiar
-       en el re-normalizado automático — **en Equipetrol Y en las ~670 props de ZN en v16.5 (554 deptos +
-       117 casas, vía `v_mercado_casas`)** que el swap global tocaría. Alternativa: migrar ZN por shadow antes.
+       en el re-normalizado automático — **en Equipetrol Y en TODAS las props ZN v16.5 que el swap global toca**
+       (feed activo ~650; pero el BRUTO de deptos+casas ZN es mayor — casas: feed ~103 vs bruto ~298 → dimensionar
+       la auditoría sobre el bruto, no el feed). Alternativa: migrar ZN por shadow antes.
 4. [ ] **Mejoras del snapshot** (mismo movimiento): leer de vista + dedup + absorción por 2 señales.
 5. [ ] **Serie de precios/yields:** decidir corte declarado (recomendado) vs recompute aproximado.
 6. [ ] **Métricas de inversión** nuevas: cada una con su etiqueta de la matriz fiduciaria.
