@@ -1,0 +1,12 @@
+{
+  "name": "deptos-equipetrol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Migración de deptos Equipetrol de n8n al flujo híbrido (fetch $0, sin Firecrawl). Reusa scripts/sonda-suelo/lib. Ver docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md (Bloque 3).",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5"
+  },
+  "engines": { "node": ">=20" }
+}
