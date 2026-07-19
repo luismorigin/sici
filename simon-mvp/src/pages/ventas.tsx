@@ -1537,10 +1537,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
   useEffect(() => {
     if (!publicShareMode || !p) { setSlMarket(null); return }
     let cancel = false
-    // En ?shadow=1 el cohort sale de la vista shadow (misma base de normalización
-    // que la propiedad shadow-normalizada).
-    const shadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
-    const qs = `op=venta&dorms=${p.dormitorios ?? 0}&zona=${encodeURIComponent(p.zona || '')}${shadow ? '&shadow=1' : ''}`
+    // El endpoint lee el cohort shadow-first (misma base que la propiedad).
+    const qs = `op=venta&dorms=${p.dormitorios ?? 0}&zona=${encodeURIComponent(p.zona || '')}`
     fetch(`/api/shortlist-market?${qs}`)
       .then(r => r.json())
       .then(res => {

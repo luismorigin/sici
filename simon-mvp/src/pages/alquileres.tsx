@@ -4094,8 +4094,8 @@ function BottomSheet({
   useEffect(() => {
     if (!publicShareMode || !property) { setSlMarket(null); return }
     let cancel = false
-    const shadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
-    const qs = `op=alquiler&dorms=${property.dormitorios ?? 0}&zona=${encodeURIComponent(property.zona || '')}${shadow ? '&shadow=1' : ''}`
+    // El endpoint lee el cohort shadow-first (misma base que la propiedad).
+    const qs = `op=alquiler&dorms=${property.dormitorios ?? 0}&zona=${encodeURIComponent(property.zona || '')}`
     fetch(`/api/shortlist-market?${qs}`)
       .then(r => r.json())
       .then(res => {

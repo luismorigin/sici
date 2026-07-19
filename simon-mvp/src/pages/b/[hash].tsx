@@ -355,6 +355,17 @@ function mapRowAlquiler(r: RawUnidadAlquilerRow): UnidadAlquiler {
   }
 }
 
+// Shadow-first con fallback a prod. La shortlist muestra el marco de
+// normalización nuevo (shadow) de una. CUTOVER-SAFE: si la RPC `_shadow` deja de
+// existir cuando shadow→prod, cae automáticamente a la RPC prod (que para
+// entonces YA es igual a shadow) → nada se rompe, sin tocar código.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function rpcShadowFirst(supabase: any, base: string, params: any) {
+  const s = await supabase.rpc(`${base}_shadow`, params)
+  if (!s.error) return s
+  return supabase.rpc(base, params)
+}
+
 function blockedProps(
   reason: BlockReason,
   broker: { nombre: string; telefono: string }
@@ -377,13 +388,8 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const hash = ctx.params?.hash as string | undefined
   if (!hash) return { notFound: true }
 
-  // Preview shadow (pre-cutover): /b/hash?shadow=1 lee las RPC del reader híbrido
-  // (buscar_unidades_*_shadow + buscar_extras_shadow) para que aparezcan "Lo que
-  // la hace especial" y "En el departamento" (campos que hoy solo existen en
-  // shadow). Sin el flag, la shortlist lee prod (links reales intactos). En el
-  // cutover shadow→prod esto pasa a ser el default sin cambiar nada más.
-  const useShadow = ctx.query.shadow === '1'
-
+  // La shortlist lee SHADOW por defecto (marco de normalización nuevo = precios
+  // correctos) vía rpcShadowFirst, con fallback prod cutover-safe. Ver helper.
   const isDemo = isDemoShortlistHash(hash)
 
   // Lookup con campos de protección (filtra is_published + archived_at IS NULL).
@@ -524,7 +530,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       // shortlist (5-20) en lugar de traer 138 filas y filtrar en JS.
       // TTFB del SSR baja ~50% al reducir transferencia Postgres → Vercel.
       const [rpcRes, bobRes] = await Promise.all([
-        supabase.rpc(useShadow ? 'buscar_unidades_alquiler_shadow' : 'buscar_unidades_alquiler', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
+        rpcShadowFirst(supabase, 'buscar_unidades_alquiler', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
         supabase.from('propiedades_v2').select('id, precio_mensual_bob').in('id', propIds),
       ])
 
@@ -610,7 +616,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     // shortlist (5-20) en lugar de traer 323 filas y filtrar en JS.
     // TTFB del SSR baja ~50% al reducir transferencia Postgres → Vercel.
     const [rpcRes, rawRes] = await Promise.all([
-      supabase.rpc(useShadow ? 'buscar_unidades_simple_shadow' : 'buscar_unidades_simple', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
+      rpcShadowFirst(supabase, 'buscar_unidades_simple', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
       supabase.from('propiedades_v2').select('id, precio_usd').in('id', propIds),
     ])
 
@@ -621,12 +627,12 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       .filter((r): r is RawUnidadSimpleRow => Boolean(r))
       .map(mapRowVenta)
 
-    // Shadow: mergear la "cola larga" no canónica (buscar_extras_shadow, mig 271)
-    // → amenidades_extra ("Lo que la hace especial") + equipamiento_otros
-    // ("En el departamento"). Best-effort: si falla, las secciones quedan vacías.
-    if (useShadow && properties.length > 0) {
+    // Cola larga no canónica (buscar_extras, mig 271) → amenidades_extra ("Lo que
+    // la hace especial") + equipamiento_otros ("En el departamento"). Shadow-first
+    // con fallback. Best-effort: si falla, las secciones quedan vacías.
+    if (properties.length > 0) {
       try {
-        const extras = await supabase.rpc('buscar_extras_shadow', { p_ids: properties.map(p => p.id) })
+        const extras = await rpcShadowFirst(supabase, 'buscar_extras', { p_ids: properties.map(p => p.id) })
         if (!extras.error && Array.isArray(extras.data)) {
           const byId = new Map(extras.data.map((e: { id: number }) => [e.id, e]))
           for (const p of properties) {
