@@ -2009,13 +2009,16 @@ export interface UnidadVenta {
   amenities_confirmados: string[]
   amenities_por_verificar: string[]
   equipamiento_detectado: string[]
+  // Cola larga no canónica (reader híbrido, mig 271 → buscar_extras). Alimenta "Lo que la hace especial".
+  amenidades_extra?: string[]
+  equipamiento_otros?: string[]
   descripcion: string | null
   latitud: number | null
   longitud: number | null
   estacionamientos: number | null
   baulera: boolean | null
   fecha_entrega: string | null
-  piso: string | null
+  piso: number | null
   plan_pagos_desarrollador: boolean | null
   acepta_permuta: boolean | null
   solo_tc_paralelo: boolean | null

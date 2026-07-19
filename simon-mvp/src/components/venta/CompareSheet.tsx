@@ -197,7 +197,7 @@ export default function CompareSheet({ open, properties, chips = null, onClose, 
 
   // Ocultar filas donde ninguna prop aporta data util (todo null/vacio).
   const showBanos = props.some(p => p.banos !== null && p.banos !== undefined)
-  const showPiso = props.some(p => p.piso !== null && p.piso !== undefined && p.piso !== '')
+  const showPiso = props.some(p => p.piso !== null && p.piso !== undefined)
 
   // Questions for broker
   const questions = useMemo(() => {
