@@ -186,8 +186,8 @@ de cierre). Matriz verde/amarillo/rojo en `LIMITES_DATA_FIDUCIARIA.md`.
 
 El cutover no es solo data — es **código en dos ramas separadas que hay que consolidar**:
 - **Backend shadow** → rama `claude/hybrid-worktree-structure-3b7b53` (esta): discovery, reader, cargador,
-  audits, migraciones shadow, la data. Incluye el endpoint `/api/ventas-shadow.ts` (con el merge de
-  `buscar_extras_shadow` — NO dropear, ver `CONTRATO_FRONTEND_SHADOW.md`).
+  audits, migraciones shadow, la data. Traía el endpoint `/api/ventas-shadow.ts` (**retirado en la integración** →
+  el frontend integró shadow en `/api/ventas`; el merge de `buscar_extras_shadow` sobrevive ahí — NO dropear, ver `CONTRATO_FRONTEND_SHADOW.md`).
 - **Frontend consolidado** → rama `feat/desktop-fase-2` (otro worktree, **+72 commits, SIN PUSH**): tiene TODO
   el frontend — rediseño desktop + mobile + shortlist + feeds que leen shadow (`?shadow=1`, en `/api/ventas.ts`
   + `/api/alquileres.ts`). **Ya mergeó `claude/session-context-e0ffd1`** (que era solo la fuente) + 5 commits
@@ -196,9 +196,9 @@ El cutover no es solo data — es **código en dos ramas separadas que hay que c
 
 **La DATA ya está unida** (una sola `propiedades_v2_shadow` en Supabase; los dos worktrees le hablan a la
 misma tabla → en dev ya conviven). **Lo que falta unir es el CÓDIGO.** Puntos:
-- El backend (`hybrid`) tiene el endpoint separado `/api/ventas-shadow.ts`; el frontend (`desktop-fase-2`)
-  integra shadow en `/api/ventas.ts` + `/api/alquileres.ts` con `?shadow=1` → al consolidar, **reconciliar**
-  las dos formas, no mergear a ciegas.
+- ✅ **RECONCILIADO en la integración:** el backend (`hybrid`) traía el endpoint separado `/api/ventas-shadow.ts`;
+  el frontend (`desktop-fase-2`) integra shadow en `/api/ventas.ts` + `/api/alquileres.ts` con `?shadow=1`.
+  Ganó la forma integrada del frontend; `ventas-shadow.ts` se retiró (dead code).
 - Hoy el front shadow es **dark-launch a propósito**: `?shadow=1` / endpoint que da 404 en prod. El público
   no lo ve. Al cutover, el feed PÚBLICO (`/ventas`, `/alquileres`) pasa a leer la data del híbrido.
 - **No aplicar el front nuevo antes que el backend**: son dos mitades de la misma decisión. Se activan JUNTOS
@@ -234,7 +234,7 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
        incluida ZN v16.5** → ver ítem 3.
 2b.[ ] **Consolidar las 2 ramas (frontend + backend)** — reconciliar `feat/desktop-fase-2` (frontend
        consolidado: desktop+mobile+shortlist, feeds `?shadow=1`; ya mergeó session-context) con esta (`hybrid`,
-       backend + `/api/ventas-shadow`). Resolver la divergencia del front shadow + conflictos de
+       backend + `/api/ventas-shadow` [retirado en la integración]). Divergencia del front shadow ✅ RECONCILIADA (gana `/api/ventas`); resolver conflictos de
        `CLAUDE.md`/`MIGRATION_INDEX.md`/`ventas.tsx` y renumerar migs: **268 duplicada** (main×híbrido) Y
        **276 duplicada** (híbrido×frontend: `276_shadow_alquiler_rpc_campos_frontend` vs `276_buscar_extras_prod`).
        Renumerar es cosmético (las migs ya están aplicadas; la BD no trackea el filename). Apuntar el feed

@@ -62,7 +62,7 @@
 }
 
 > **Extras vía helper (mig 271):** `amenidades_extra`, `equipamiento_otros`, `amoblado`, `equipado` los expone
-> `buscar_extras_shadow` y el `/api/ventas-shadow` los mergea. **Pendiente para prod: portar ese merge al
+> `buscar_extras_shadow` y `/api/ventas.ts` (con el flag `shadow`) los mergea. **Pendiente para prod: portar ese merge al
 > `/api/ventas`** para que el front nuevo los reciba (hoy solo el shadow). Los demás campos salen directo de la RPC.
 ```
 

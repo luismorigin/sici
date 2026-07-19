@@ -90,11 +90,11 @@ GRANTs solo `service_role`+`claude_readonly` → invisibles al Data API público
 | 279/280 | las 2 RPCs exponen `pet_friendly` + sacan "Pet Friendly" de amenidades |
 
 ## ⚠️ `buscar_extras_shadow` (mig 271) — NO dropear en VENTA (verificado 17-jul)
-El feed shadow de venta (`ventas-shadow.ts`) llama aparte a `buscar_extras_shadow` para mergear
+El feed shadow de venta (`/api/ventas.ts` con el flag `shadow`) llama aparte a `buscar_extras_shadow` para mergear
 `amenidades_extra, equipamiento_otros, amoblado, equipado`. **De esos, a la RPC principal de VENTA
 (`buscar_unidades_simple_shadow`, mig 277) SOLO migraron `equipado` + `equipamiento_otros` (+uso_inmueble).
 `amoblado` y `amenidades_extra` NO están en el RETURNS de venta** — se verificó llamando la RPC real, y
-`ventas-shadow.ts` los consume del helper (líneas ~96/98/160/162). **Dropear el helper = el feed de venta
+`/api/ventas.ts` (flag `shadow`) los consume del helper. **Dropear el helper = el feed de venta
 pierde `amoblado` y `amenidades_extra`.** → En VENTA el helper NO es redundante, NO dropear.
 > Ojo con la confusión: la mig **276 (ALQUILER)** SÍ trae `amenities_extra` en su RPC → para el feed de
 > alquiler el helper puede que sí sobre, pero **venta ≠ alquiler** (mig 277 es más acotada). Verificar por

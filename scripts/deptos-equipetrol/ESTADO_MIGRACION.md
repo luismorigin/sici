@@ -207,7 +207,7 @@ Domus Luxury 73/356 (prob. distintos).
 4. **Cutover**: el híbrido escribe `propiedades_v2` real / se apaga n8n para deptos venta — tras validar la comparación, con OK del founder. Plan de datos del corte: `CUTOVER_DATA_PLAN.md`.
 5. Detalles menores: 595 "Bloque La Salle" (leer el aviso), alquiler (otra operación, después).
 - **Pipeline reader-integrado completo**: `cargar-deptos-shadow.mjs` (`--prep`→lector→`--apply`) + `lib/matcher.mjs` (name-first) + `READER_SPEC.md` + `lib/reader-api.mjs` (costura API stub).
-- **Front shadow**: `/api/ventas-shadow.ts` (dev-only) + `?shadow=1` en `ventas.tsx` → `http://localhost:3000/ventas?shadow=1`.
+- **Front shadow**: `/api/ventas.ts` con el flag `shadow` (dev-only; `?shadow=1` en `ventas.tsx`) → `http://localhost:3000/ventas?shadow=1`. (El endpoint separado `ventas-shadow.ts` se retiró al consolidar — el frontend integró shadow en `/api/ventas`.)
 - **Migraciones**: 268 (entorno shadow) + 269 (vistas/RPC feed shadow) + **270 (FIX `buscar_proyecto_fuzzy`: LIMIT truncaba por id no por score — bug de matching de PROD también)**.
 - **Test de bloqueo**: 100 fetch en vivo = 0 bloqueos, 100% calidad. El fetching escala; el constraint es la lectura (MOAT/tokens).
 - **TC conservador = prod** (el paquete "TC nuevo" default-paralelo + normalización base-paralelo va DESPUÉS, junto a prod, al unificarse el TC).

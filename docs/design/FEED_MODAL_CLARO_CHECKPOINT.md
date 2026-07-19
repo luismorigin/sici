@@ -65,7 +65,7 @@ a 390px en cada pieza; `display:contents` en los wrappers).
     del reader y la esparce por el OR a nivel edificio (68/161 vs 31 acepta). Se
     auto-limpia cuando se arregle el reader + corran los crons.
 
-### Cableado del feed a la SHADOW (d8d1815) — clave. **Contrato: `scripts/deptos-equipetrol/CONTRATO_FRONTEND_SHADOW.md`** (del worktree `hybrid-worktree-structure-3b7b53`, migs 274-280) = fuente de verdad de qué devuelve cada RPC shadow campo por campo.
+### Cableado del feed a la SHADOW (d8d1815) — clave. **Contrato: `scripts/deptos-equipetrol/CONTRATO_FRONTEND_SHADOW.md`** (migs 274-280; ya consolidado en la misma rama) = fuente de verdad de qué devuelve cada RPC shadow campo por campo.
 `/alquileres?shadow=1` lee el **RPC `buscar_unidades_alquiler_shadow`** vía
 `/api/alquileres` (server, service_role — el flag va en el body). `/ventas?shadow=1`
 = `buscar_unidades_simple_shadow` vía `/api/ventas` (**el fetch cliente mapea con
@@ -141,7 +141,7 @@ El shadow usa un marco de TC NUEVO (`precio_normalizado_shadow_v2`):
   estándar nunca cae en "especial" aunque el reader la mande a la cola. Contrato con
   el pipeline documentado en el header del config: el vocabulario canónico del
   READER_SPEC debe ser superconjunto de estas claves. Verificado Playwright 1440px.
-  **Pendiente reader-side (otro worktree):** alinear READER_SPEC a este archivo.
+  **Pendiente reader-side:** alinear READER_SPEC a este archivo (ya consolidado en la misma rama).
 - Cablear `uso_inmueble` como filtro (no exclusión) cuando se escale a casas/mixto.
 - Pasada de contraste global al feed oscuro (fuera de la card).
 - Review del founder + commit/push (~31 commits locales).
