@@ -2009,13 +2009,15 @@ export interface UnidadVenta {
   amenities_confirmados: string[]
   amenities_por_verificar: string[]
   equipamiento_detectado: string[]
+  amenidades_extra?: string[]
+  equipamiento_otros?: string[]
   descripcion: string | null
   latitud: number | null
   longitud: number | null
   estacionamientos: number | null
   baulera: boolean | null
   fecha_entrega: string | null
-  piso: string | null
+  piso: number | null
   plan_pagos_desarrollador: boolean | null
   acepta_permuta: boolean | null
   solo_tc_paralelo: boolean | null

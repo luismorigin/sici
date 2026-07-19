@@ -46,6 +46,8 @@ export interface RawUnidadRealRow {
   amenities_confirmados: string[] | null
   amenities_por_verificar: string[] | null
   equipamiento_detectado: string[] | null
+  amenidades_extra: string[] | null
+  equipamiento_otros: string[] | null
   descripcion: string | null
   posicion_mercado: { categoria: string; diferencia_pct: number } | null
   // GPS y extras
@@ -154,7 +156,7 @@ export interface RawUnidadSimpleRow {
   estacionamientos: number | null
   baulera: boolean | null
   fecha_entrega: string | null
-  piso: string | null
+  piso: number | null
   plan_pagos_desarrollador: boolean | null
   acepta_permuta: boolean | null
   solo_tc_paralelo: boolean | null
