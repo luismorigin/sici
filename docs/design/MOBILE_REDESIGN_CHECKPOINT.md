@@ -11,9 +11,14 @@
 - ✅ **P3a** (`2aa6f1a`) — Sheet: mercado mobile muestra total + por m²; sheet normal ya no
   muestra "Captado por [agente]" (solo en contactoDirecto). Ícono compartir ya era universal.
 - ✅ **P3b (HECHO — rama `claude/session-context-e0ffd1`, sin push)** — re-theme visual del sheet
-  mobile. Solución: se introdujo `richLayout = sideMode || (!isDesktop && !brokerMode && !publicShareMode)`
+  mobile. Solución: se introdujo `richLayout` (originalmente
+  `sideMode || (!isDesktop && !brokerMode && !publicShareMode)`)
   y una clase marcadora `bs-rich` (`richLayout && !sideMode`) en la raíz del sheet. Las secciones
   ricas se gatearon `richLayout` (antes `sideMode`), las viejas `!richLayout` (antes `!sideMode`).
+  > ⚠️ **Actualización (rama `feat/desktop-fase-2`):** se **quitó** el término `&& !publicShareMode` →
+  > `richLayout = sideMode || (!isDesktop && !brokerMode)`. Ahora la **shortlist** `/b/[hash]`
+  > (publicShare mobile) TAMBIÉN usa el sheet rico, a propósito (espejo del feed). Ver
+  > `project_shortlist_mobile_redesign`.
   **Ventas (oscuro)**: bloque de overrides scopeado a `.bs-venta.bs-rich` (~40 reglas) re-tematiza
   stats/inclusiones/especial/comodidades/mercado-v2 sobre `#1a1a1a`; el pin del medidor pasó a
   `fill=currentColor` (era `#141414` invisible en oscuro). **Alquileres (arena)**: el body mobile YA
@@ -73,6 +78,9 @@
   build no conoce `?shadow=1`) y el refetch shadow estaba **diferido a idle** → el preview mostraba
   precios prod (ej. #3580 Maré: $275k prod vs $180k shadow). Ahora con `?shadow=1` el fetch shadow
   es inmediato. **Prod sigue con el precio inflado hasta el cutover** (es data, no frontend).
+  > **Alcance:** esto es de los **feeds** `/ventas`·`/alquileres` (shadow por flag `?shadow=1`). La
+  > **shortlist** `/b/[hash]` es aparte: ya lee **shadow por defecto** (helper `rpcShadowFirst` +
+  > `v_mercado_*_shadow`, cutover-safe con fallback a prod). Ver `project_shortlist_mobile_redesign`.
 
 ## Principio clave (lo que hace que NO se rompa TikTok)
 - La **base TikTok = el FEED** (swipe vertical full-screen, foto grande, corazón en la
@@ -199,6 +207,10 @@ captura** del "ver anuncio original".
 - **Para traer las ricas a mobile SIN tocar broker/publicShare-desktop-no-split** (que usan la rama
   `!sideMode` con `isDesktop=true` → clase `bs-desktop`): gatear **viejas** `{!sideMode && isDesktop && …}`
   y **ricas** `{(sideMode || !isDesktop) && …}`. Así real-mobile (`isDesktop=false`) recibe las ricas y no las viejas.
+  > ⚠️ **Superado (rama `feat/desktop-fase-2`):** la premisa "SIN tocar publicShare" ya NO aplica.
+  > La **shortlist** `/b/[hash]` (publicShare mobile) ahora entra al layout rico a propósito
+  > (`richLayout = sideMode || (!isDesktop && !brokerMode)`) para ser espejo del feed. Broker sigue
+  > excluido (`!brokerMode`). Ver `project_shortlist_mobile_redesign`.
 - **Secciones VIEJAS mobile a reemplazar**: Características = tiles `bs-grid`/`bs-feat`; Amenidades =
   chips planos `bs-aw`/`bs-at` (ventas 2 bloques Edificio/Departamento; alquileres 1 bloque); Mercado =
   `bs-mktv` (ventas) / `bs-mkta` (alquileres).

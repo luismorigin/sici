@@ -95,8 +95,13 @@ El shadow usa un marco de TC NUEVO (`precio_normalizado_shadow_v2`):
   [[project_bug_acepta_mascotas_llm]].
 
 ## Pendiente
-- 🔴 **Cutover shadow→prod** (decisión founder): hoy la data limpia solo se ve con
-  `?shadow=1`. Para prod: o parchar los RPC de prod, o apuntar el front a shadow.
+- 🔴 **Cutover shadow→prod** (decisión founder): en los **feeds** `/ventas`·`/alquileres` la data
+  limpia todavía solo se ve con `?shadow=1`. Para prod: o parchar los RPC de prod, o apuntar el
+  front a shadow.
+  > ✅ **Actualización — la shortlist `/b/[hash]` ya está apuntada a shadow** (rama
+  > `feat/desktop-fase-2`): lee shadow por defecto vía `rpcShadowFirst` + `v_mercado_*_shadow`,
+  > cutover-safe con fallback a prod. O sea el cutover pendiente es solo para los feeds, no para la
+  > shortlist. Ver `project_shortlist_mobile_redesign`.
 - ✅ **Alinear filtros ventas↔alquileres — HECHO (14-jul, verificado Playwright 1440px).**
   Ambos feeds ahora tienen la misma estructura: **Comodidades** = solo amenidades
   diferenciadoras de EDIFICIO (Piscina · Churrasquera · Gimnasio · Co-working ·

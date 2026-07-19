@@ -91,7 +91,7 @@ Referencia completa: `docs/arquitectura/TIPO_CAMBIO_SICI.md` (flujo portal→ext
 | **Product Brief Simón** | `docs/simon/SIMON_PRODUCT_BRIEF.md` |
 | **Simon Broker** | `docs/broker/README.md` (MVP venta + Fase 2 alquileres + v1 protección shortlists, mig 228-235) |
 | **Demo + Prospección** | `docs/broker/PROSPECCION_Y_DEMO.md` (mig 236-238) |
-| **Contacto Directo B2C (bot) ✅ PROD** | `docs/broker/CONTACTO_DIRECTO_B2C_PLAN.md` — shortlists del bot `simon-asistente` contactan al captador vía flag `simon_brokers.contacto_directo` (mig 256). Atribución `buildAtribucionWaMessage` en `lib/wa-message.ts`. Rollback = `contacto_directo=false`. Memoria `project_plan_contacto_directo_b2c` |
+| **Contacto Directo B2C (bot) ✅ PROD** | `docs/broker/CONTACTO_DIRECTO_B2C_PLAN.md` — shortlists del bot `simon-asistente` contactan al captador vía flag `simon_brokers.contacto_directo` (mig 256). Atribución `buildAtribucionWaMessage` en `lib/wa-message.ts`. Rollback = `contacto_directo=false`. Memoria `project_plan_contacto_directo_b2c`. **Rediseño mobile + shadow-por-default:** el feed público de la shortlist `/b/[hash]` (mobile) usa el sheet rico del feed y lee data SHADOW por defecto (helper `rpcShadowFirst` en `pages/b/[hash].tsx` + `pages/api/shortlist-market.ts`, cutover-safe con fallback a prod). Memoria `project_shortlist_mobile_redesign` |
 | **Arquitectura SICI** | `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md` |
 | **Plataforma Híbrida Genérica (visión)** | `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md` — reemplazar n8n por plataforma genérica (tipo×operación×zona); casas ZN ya producidas por el híbrido |
 | **Simon Arquitectura Cognitiva** | `docs/simon/SIMON_ARQUITECTURA_COGNITIVA.md` |
