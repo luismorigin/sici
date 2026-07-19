@@ -47,6 +47,9 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
   const mapInstance = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null)
+  // Anillo de resalte (hover en la card): marca el punto EXACTO por encima de
+  // los clusters, así se ubica la propiedad aunque su pin esté agrupado.
+  const highlightRef = useRef<L.Marker | null>(null)
 
   const makeIcon = useCallback((price: string, isSelected: boolean) => {
     return L.divIcon({
@@ -80,6 +83,7 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
     }
     markersRef.current.clear()
     clusterGroupRef.current = null
+    highlightRef.current = null
 
     const validProps = properties.filter(p => p.latitud && p.longitud)
     if (validProps.length === 0) return
@@ -125,9 +129,22 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
       },
     })
 
+    // Mapa del modal de detalle (una sola propiedad): pin clásico de gota que
+    // apunta EXACTO al punto (la punta), en vez del bocadillo de precio.
+    const singleProperty = validProps.length === 1
+    const pinIcon = L.divIcon({
+      className: '',
+      html: `<svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 26 16 26s16-15 16-26C32 7.2 24.8 0 16 0z" fill="#3A6A48" stroke="#2C5138" stroke-width="1"/>
+        <circle cx="16" cy="16" r="5.5" fill="#FBFAF7"/>
+      </svg>`,
+      iconSize: [32, 42],
+      iconAnchor: [16, 42],
+    })
+
     validProps.forEach(p => {
       const priceLabel = formatPricePin(p.precio_usd)
-      const icon = makeIcon(priceLabel, false)
+      const icon = singleProperty ? pinIcon : makeIcon(priceLabel, false)
 
       const marker = L.marker([p.latitud!, p.longitud!], { icon })
         .on('click', () => onSelectProperty(p.id))
@@ -165,7 +182,15 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
     `
     mapRef.current.appendChild(style)
 
-    setTimeout(() => map.invalidateSize(), 100)
+    setTimeout(() => {
+      map.invalidateSize()
+      // Una sola propiedad (mapa del modal de detalle): tras recalcular el
+      // tamaño real del contenedor, re-centrar EXACTO en el pin y acercar un
+      // poco (si no, el invalidateSize deja el pin descentrado).
+      if (validProps.length === 1) {
+        map.setView([validProps[0].latitud!, validProps[0].longitud!], 16)
+      }
+    }, 100)
   }, [properties, onSelectProperty, makeIcon])
 
   useEffect(() => {
@@ -180,11 +205,38 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
   }, [buildMap])
 
   useEffect(() => {
+    // Una sola propiedad (modal): usa pin de gota fijo, no re-iconar con el
+    // bocadillo de precio al cambiar selectedId.
+    if (properties.filter(p => p.latitud && p.longitud).length <= 1) return
     markersRef.current.forEach((marker, id) => {
       const p = properties.find(x => x.id === id)
       if (!p) return
       marker.setIcon(makeIcon(formatPricePin(p.precio_usd), id === selectedId))
     })
+    // Ubicar la propiedad seleccionada (hover en la card): anillo de resalte en
+    // el punto EXACTO (por encima de clusters) + pan suave. Sin rebuild.
+    const map = mapInstance.current
+    if (!map) return
+    const sel = selectedId != null ? properties.find(x => x.id === selectedId) : null
+    if (sel && sel.latitud && sel.longitud) {
+      const ll: [number, number] = [sel.latitud, sel.longitud]
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="width:42px;height:42px;border-radius:50%;background:rgba(58,106,72,0.22);border:2px solid #3A6A48;box-shadow:0 0 0 5px rgba(58,106,72,0.12)"></div>`,
+        iconSize: [42, 42], iconAnchor: [21, 21],
+      })
+      if (!highlightRef.current) {
+        highlightRef.current = L.marker(ll, { icon, zIndexOffset: 2000, interactive: false }).addTo(map)
+      } else {
+        highlightRef.current.setLatLng(ll).setIcon(icon)
+        if (!map.hasLayer(highlightRef.current)) highlightRef.current.addTo(map)
+      }
+      // Solo re-centra si el punto está fuera de vista (evita paneos bruscos
+      // al recorrer la lista cuando la propiedad ya se ve en el mapa).
+      try { if (!map.getBounds().contains(ll)) map.panTo(ll, { animate: true, duration: 0.35 }) } catch { /* best-effort */ }
+    } else if (highlightRef.current && map.hasLayer(highlightRef.current)) {
+      map.removeLayer(highlightRef.current)
+    }
   }, [selectedId, properties, makeIcon])
 
   return <div ref={mapRef} className="venta-map" style={{ width: '100%', height: '100%' }} />

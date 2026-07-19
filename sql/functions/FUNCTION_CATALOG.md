@@ -1,8 +1,8 @@
 # Catálogo de Funciones SQL — SICI
 
 > 141 funciones custom únicas en producción (144 con overloads; schema public, excluye extensiones PostGIS/pg_trgm/fuzzystrmatch)
-> 43 archivos canónicos en `sql/functions/` (13 subdirectorios)
-> Actualizado: 28 Feb 2026 (auditoría cruzada BD vs catálogo)
+> 45 archivos canónicos en `sql/functions/` (13 subdirectorios)
+> Actualizado: 28 Feb 2026 (auditoría cruzada BD vs catálogo); conteo de archivos revisado 17 Jul 2026
 
 **Convención:** Las funciones con archivo canónico (`sql/functions/...`) tienen la definición actualizada exportada con `pg_get_functiondef()`. Las que solo indican migración fueron creadas/modificadas ahí y NO tienen archivo canónico.
 

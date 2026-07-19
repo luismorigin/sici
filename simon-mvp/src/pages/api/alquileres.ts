@@ -60,7 +60,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { filtros = {}, spotlightId } = req.body || {}
+    const { filtros = {}, spotlightId, shadow = false } = req.body || {}
+    // Feed shadow (preview pre-cutover): RPC del reader híbrido con el split de
+    // amenidades (cola larga + "lo que la hace especial") y equipamiento poblado.
+    const rpcName = shadow ? 'buscar_unidades_alquiler_shadow' : 'buscar_unidades_alquiler'
 
     // Build RPC params — clamp limite to 200 max (185 active inventory)
     const rpcFiltros: Record<string, any> = {
@@ -83,7 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (filtros.proyecto?.trim()) rpcFiltros.proyecto = filtros.proyecto.trim()
 
     // Fetch data
-    const dataResult = await supabase.rpc('buscar_unidades_alquiler', { p_filtros: rpcFiltros })
+    const dataResult = await supabase.rpc(rpcName, { p_filtros: rpcFiltros })
 
     if (dataResult.error) {
       console.error('RPC error:', dataResult.error)
@@ -101,7 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       // Need count query — only when results are full page (may have more)
       const countFiltros = { ...rpcFiltros, limite: 9999, offset: 0 }
-      const countResult = await supabase.rpc('buscar_unidades_alquiler', { p_filtros: countFiltros })
+      const countResult = await supabase.rpc(rpcName, { p_filtros: countFiltros })
       total = countResult.data?.length || data.length
     }
 
@@ -109,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let spotlight = null
     if (spotlightId && typeof spotlightId === 'number' && !data.find((d: any) => d.id === spotlightId)) {
       try {
-        const spotResult = await supabase.rpc('buscar_unidades_alquiler', {
+        const spotResult = await supabase.rpc(rpcName, {
           p_filtros: { limite: 200, solo_con_fotos: false, zonas_permitidas: ZONAS_EQUIPETROL_DB }
         })
         spotlight = spotResult.data?.find((d: any) => d.id === spotlightId) || null

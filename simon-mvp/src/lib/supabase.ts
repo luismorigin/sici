@@ -82,6 +82,11 @@ export interface UnidadReal {
   amenities_por_verificar: string[]  // Confianza baja o por_confirmar
   // v2.10: Equipamiento detectado en descripción
   equipamiento_detectado: string[]   // Items mencionados en publicación (A/C, Cocina equipada, etc.)
+  // "Cola larga" no canónica (reader híbrido, mig 271 → buscar_extras). Vacío en
+  // prod hasta el cutover shadow→prod; se llena solo cuando el reader escribe
+  // datos_json->amenities->{extra,equipamiento_otros}. Alimenta "Lo que la hace especial".
+  amenidades_extra?: string[]        // amenidades de EDIFICIO confirmadas no canónicas
+  equipamiento_otros?: string[]      // equipamiento de UNIDAD confirmado no canónico
   // v2.12: Descripción del anunciante
   descripcion: string | null
   // v2.13: Posición de mercado (comparación vs promedio zona)
@@ -245,6 +250,9 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       amenities_por_verificar: p.amenities_por_verificar || [],
       // v2.10: Equipamiento detectado
       equipamiento_detectado: p.equipamiento_detectado || [],
+      // Cola larga no canónica (se mergea vía buscar_extras; default [])
+      amenidades_extra: p.amenidades_extra || [],
+      equipamiento_otros: p.equipamiento_otros || [],
       // v2.12: Descripción del anunciante
       descripcion: p.descripcion || null,
       // v2.13: Posición de mercado
@@ -491,11 +499,25 @@ export interface UnidadAlquiler {
   agente_telefono: string | null
   agente_whatsapp: string | null
   dias_en_mercado: number | null
+  // Días desde la captura (fecha_creacion). Solo RPC shadow; en prod es null.
+  // Su presencia distingue "Nuevo" (capturado) de "Reciente" (publicado).
+  dias_desde_captura?: number | null
   estado_construccion: string
   id_proyecto_master: number | null
   amenities_lista: string[] | null
   equipamiento_lista: string[] | null
   descripcion: string | null
+  // Split del pipeline (solo RPC shadow, espejo de ventas): cola larga de
+  // amenidades de edificio + equipamiento de unidad no canónico + flags.
+  amenities_extra?: string[] | null
+  equipamiento_otros?: string[] | null
+  expensas_incluidas?: boolean | null
+  uso_inmueble?: string | null
+  equipado?: boolean | null
+  // pet_friendly = política del EDIFICIO (proyectos_master, derivado en el cron
+  // de acepta_mascotas de cualquier unidad). Chip dedicado. Distinto de
+  // acepta_mascotas (preferencia de la unidad). Ver CONTRATO_FRONTEND_SHADOW.md.
+  pet_friendly?: boolean | null
 }
 
 export interface FiltrosAlquiler {
@@ -1981,6 +2003,9 @@ export interface UnidadVenta {
   es_multiproyecto: boolean
   estado_construccion: string
   dias_en_mercado: number | null
+  // Días desde la captura (fecha_creacion). Solo RPC shadow; en prod es null.
+  // Su presencia distingue "Nuevo" (capturado) de "Reciente" (publicado).
+  dias_desde_captura?: number | null
   amenities_confirmados: string[]
   amenities_por_verificar: string[]
   equipamiento_detectado: string[]
@@ -2004,4 +2029,7 @@ export interface UnidadVenta {
   plan_pagos_texto: string | null
   fuente: string
   tc_sospechoso: boolean
+  // pet_friendly = política del EDIFICIO (proyectos_master, derivado en cron).
+  // Solo RPC shadow. Ver CONTRATO_FRONTEND_SHADOW.md.
+  pet_friendly?: boolean | null
 }

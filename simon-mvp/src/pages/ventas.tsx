@@ -20,9 +20,36 @@ import { firstName } from '@/lib/format-utils'
 import { buildAtribucionWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
+import { useTcParalelo } from '@/lib/useTcParalelo'
+import { useTypewriterPlaceholder } from '@/lib/useTypewriterPlaceholder'
+import PriceHistogram from '@/components/feed/PriceHistogram'
+import { AmenityIcon, SparkleIcon, hasCanonicalIcon } from '@/lib/amenity-icons'
+import { AMENIDADES_FILTRABLES } from '@/config/amenidades-mercado'
 import FeedDesktopNav from '@/components/feed/FeedDesktopNav'
+import ShortlistMobileHeader from '@/components/shortlist/ShortlistMobileHeader'
+import ShortlistContextSummary from '@/components/shortlist/ShortlistContextSummary'
+import ShortlistBottomBar from '@/components/shortlist/ShortlistBottomBar'
+import ShortlistMenu from '@/components/shortlist/ShortlistMenu'
+import ShortlistCardChip from '@/components/shortlist/ShortlistCardChip'
+import { computeVentaShortlistStats } from '@/lib/shortlist-context'
 // WhatsApp oficial de Simon (negocio) — NO el personal del fundador.
 const SIMON_WHATSAPP = '59177066308'
+
+// Ejemplos reales para el placeholder typewriter del buscador natural (ventas).
+const SEARCH_EXAMPLES_VENTA = [
+  '1 dorm en Sirari hasta 150 mil',
+  'preventa en Eq. Norte',
+  '2 dormitorios con piscina',
+  'monoambiente hasta 80 mil',
+  'depto en Equipetrol con parqueo',
+]
+
+// Nota de TC en el filtro de presupuesto: muestra el TC paralelo DEL DÍA
+// (config_global, vía /api/tc-actual) en vez del 6.96 oficial muerto hardcodeado.
+function TcNote() {
+  const tc = useTcParalelo()
+  return <div className="vf-tc-note">Precios en USD · TC Bs {tc.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+}
 
 // --- SEO types ---
 interface VentasSEO {
@@ -137,10 +164,13 @@ async function fetchFromAPI(
   filtros: FiltrosVentaSimple,
   spotlightId?: number
 ): Promise<{ data: UnidadVenta[]; total: number; spotlight?: UnidadVenta | null }> {
+  // ?shadow=1 → lee el feed shadow (propiedades_v2_shadow, reader híbrido con el
+  // split canónico/extra ya limpio). Preview del modelo antes del cutover.
+  const shadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
   const res = await fetch('/api/ventas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filtros, spotlightId }),
+    body: JSON.stringify({ filtros, spotlightId, shadow }),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
@@ -173,6 +203,56 @@ function buildFilters(
   return f
 }
 
+// ===== Badges de frescura =====
+// Dos conceptos distintos que antes estaban colapsados en uno:
+//  · "Nuevo"    = recién capturado por NOSOTROS (dias_desde_captura, derivado de
+//                 fecha_creacion: estable, no se pisa como fecha_discovery).
+//                 Solo viaja en el feed shadow; en prod es null y el badge no
+//                 aplica (dias_desde_captura ausente = gate del comportamiento).
+//  · "Reciente" = recién PUBLICADO en el portal (dias_en_mercado).
+// Excluyentes: si es nuevo gana "Nuevo"; el umbral de reciente baja a 30d en
+// shadow y conserva 60d en prod para no tocar el feed vivo hasta el cutover.
+const NUEVO_MAX_DIAS = 3
+const RECIENTE_MAX_DIAS_SHADOW = 30
+const RECIENTE_MAX_DIAS_PROD = 60
+function esNuevoCaptura(p: UnidadVenta): boolean {
+  return p.dias_desde_captura != null && p.dias_desde_captura <= NUEVO_MAX_DIAS
+}
+function esPublicacionReciente(p: UnidadVenta): boolean {
+  if (p.dias_en_mercado == null) return false
+  const umbral = p.dias_desde_captura != null ? RECIENTE_MAX_DIAS_SHADOW : RECIENTE_MAX_DIAS_PROD
+  return p.dias_en_mercado <= umbral
+}
+
+// ===== Filtro de amenidades (client-side, fiduciario) =====
+// Se parte en DOS pills alineadas con /alquileres:
+//  · Comodidades = SOLO amenidades diferenciadoras de EDIFICIO (esEstandar:false).
+//    Nunca las estándar (Ascensor, Seguridad, Terraza…) ni la cola larga.
+//  · Más filtros = ATRIBUTOS de la propiedad (Amoblado/Equipado/Parqueo/Baulera).
+//    Ventas NO tiene acepta_mascotas (dato de alquiler) y mascotas no es criterio
+//    de compra → sin filtro de mascotas (pet_friendly queda solo como chip de card).
+// El filtro no oculta a los que no la listan: parte los resultados en "confirmados"
+// y "no listados" (podrían tenerla sin mencionarla) — ver partición en la página.
+// Solo los diferenciadores BIEN listados en la data (≥29% confirman). Descartados
+// por dato: Estac. Visitas/Parque Infantil (raros), Pet Friendly (1.6%, subreportado), Jardín (0%).
+// Fuente de verdad única: config/amenidades-mercado.ts (flag `filtrable`). No hardcodear.
+const AMEN_DIFERENCIADORES = AMENIDADES_FILTRABLES
+const AMEN_ATRIBUTOS = ['Amoblado', 'Equipado', 'Parqueo', 'Baulera']
+const _DIACR_AMEN = new RegExp('[\\u0300-\\u036f]', 'g')
+const _normAmen = (s: string) => s.toLowerCase().normalize('NFD').replace(_DIACR_AMEN, '').trim()
+function propMatchesAmen(p: UnidadVenta, sel: Set<string>): boolean {
+  for (const a of sel) {
+    if (a === 'Amoblado') { if (!((p.equipamiento_detectado || []).some(e => /amoblad/i.test(e)))) return false; continue }
+    if (a === 'Equipado') { if (!((p.equipamiento_detectado || []).length > 0)) return false; continue }
+    if (a === 'Parqueo') { if (!(p.parqueo_incluido === true || (p.estacionamientos != null && p.estacionamientos > 0))) return false; continue }
+    if (a === 'Baulera') { if (p.baulera !== true) return false; continue }
+    const na = _normAmen(a)
+    const has = (p.amenities_confirmados || []).some(x => _normAmen(x) === na) || (p.amenidades_extra || []).some(x => _normAmen(x) === na)
+    if (!has) return false
+  }
+  return true
+}
+
 // ===== SVG Icons =====
 const HeartIcon = ({ filled }: { filled: boolean }) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill={filled ? '#E05555' : 'none'} stroke={filled ? '#E05555' : '#7A7060'} strokeWidth="1.5">
@@ -200,29 +280,24 @@ function PriceInputsVT({ minPrice, maxPrice, onMinPrice, onMaxPrice }: {
   minPrice: number; maxPrice: number
   onMinPrice: (v: number) => void; onMaxPrice: (v: number) => void
 }) {
-  const MIN_K = Math.round(MIN_PRICE / 1000)
-  const MAX_K = Math.round(MAX_PRICE / 1000)
-  const [minStr, setMinStr] = useState(String(Math.round(minPrice / 1000)))
-  const [maxStr, setMaxStr] = useState(String(Math.round(maxPrice / 1000)))
-  useEffect(() => { setMinStr(String(Math.round(minPrice / 1000))) }, [minPrice])
-  useEffect(() => { setMaxStr(String(Math.round(maxPrice / 1000))) }, [maxPrice])
+  // Montos en número COMPLETO (no "K" — confundía). Buffer string, commit en blur/Enter.
+  const [minStr, setMinStr] = useState(String(minPrice))
+  const [maxStr, setMaxStr] = useState(String(maxPrice))
+  useEffect(() => { setMinStr(String(minPrice)) }, [minPrice])
+  useEffect(() => { setMaxStr(String(maxPrice)) }, [maxPrice])
   function commitMin() {
     const n = parseInt(minStr)
-    if (!Number.isFinite(n)) { setMinStr(String(Math.round(minPrice / 1000))); return }
-    const maxK = Math.round(maxPrice / 1000)
-    const clampedK = Math.max(MIN_K, Math.min(n, maxK - Math.round(PRICE_STEP / 1000)))
-    setMinStr(String(clampedK))
-    const valPleno = clampedK * 1000
-    if (valPleno !== minPrice) onMinPrice(valPleno)
+    if (!Number.isFinite(n)) { setMinStr(String(minPrice)); return }
+    const clamped = Math.max(MIN_PRICE, Math.min(n, maxPrice - PRICE_STEP))
+    setMinStr(String(clamped))
+    if (clamped !== minPrice) onMinPrice(clamped)
   }
   function commitMax() {
     const n = parseInt(maxStr)
-    if (!Number.isFinite(n)) { setMaxStr(String(Math.round(maxPrice / 1000))); return }
-    const minK = Math.round(minPrice / 1000)
-    const clampedK = Math.min(MAX_K, Math.max(n, minK + Math.round(PRICE_STEP / 1000)))
-    setMaxStr(String(clampedK))
-    const valPleno = clampedK * 1000
-    if (valPleno !== maxPrice) onMaxPrice(valPleno)
+    if (!Number.isFinite(n)) { setMaxStr(String(maxPrice)); return }
+    const clamped = Math.min(MAX_PRICE, Math.max(n, minPrice + PRICE_STEP))
+    setMaxStr(String(clamped))
+    if (clamped !== maxPrice) onMaxPrice(clamped)
   }
   return (
     <div className="vf-price-inputs">
@@ -230,26 +305,24 @@ function PriceInputsVT({ minPrice, maxPrice, onMinPrice, onMaxPrice }: {
         <span className="vf-area-prefix">Min</span>
         <span className="vf-price-dollar">$</span>
         <input type="number" className="vf-area-input" inputMode="numeric"
-          min={MIN_K} max={MAX_K} step={5}
+          min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
           value={minStr}
-          aria-label="Precio mínimo en miles de USD"
+          aria-label="Precio mínimo en USD"
           onChange={e => setMinStr(e.target.value)}
           onBlur={commitMin}
           onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
-        <span className="vf-area-suffix">K</span>
       </label>
       <span className="vf-area-sep">—</span>
       <label className="vf-area-field">
         <span className="vf-area-prefix">Max</span>
         <span className="vf-price-dollar">$</span>
         <input type="number" className="vf-area-input" inputMode="numeric"
-          min={MIN_K} max={MAX_K} step={5}
+          min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
           value={maxStr}
-          aria-label="Precio máximo en miles de USD"
+          aria-label="Precio máximo en USD"
           onChange={e => setMaxStr(e.target.value)}
           onBlur={commitMax}
           onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
-        <span className="vf-area-suffix">K</span>
       </label>
     </div>
   )
@@ -319,12 +392,16 @@ function AreaInputsVT({ areaMin, areaMax, onAreaMin, onAreaMax }: {
   )
 }
 
-function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto, proyectoNames, onMinPrice, onMaxPrice, onToggleZona, onToggleDorm, onEntrega, onOrden, onProyecto, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax }: {
+function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto, proyectoNames, onMinPrice, onMaxPrice, onToggleZona, onToggleDorm, onEntrega, onOrden, onProyecto, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, amenSel, onAmenToggle, priceValues }: {
   minPrice: number; maxPrice: number; selectedDorms: Set<number>; selectedZonas: Set<string>; entrega: string; orden: FiltrosVentaSimple['orden']; proyecto: string; proyectoNames?: string[]
   onMinPrice: (v: number) => void; onMaxPrice: (v: number) => void; onToggleZona: (db: string) => void; onToggleDorm: (d: number) => void; onEntrega: (v: string) => void; onOrden: (v: FiltrosVentaSimple['orden']) => void; onProyecto: (v: string) => void
   brokerMode?: boolean
   areaMin?: number; areaMax?: number
   onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
+  // Comodidades (edificio) + Atributos (depto), client-side vía amenSel del padre.
+  amenSel?: Set<string>; onAmenToggle?: (a: string) => void
+  // Precios del feed cargado, para el histograma de distribución.
+  priceValues?: number[]
 }) {
   return (
     <>
@@ -346,6 +423,9 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
         </div>
       </div>
       <div className="vf-group"><div className="vf-label">PRESUPUESTO</div>
+        {priceValues && priceValues.length > 0 && (
+          <PriceHistogram values={priceValues} min={MIN_PRICE} max={MAX_PRICE} selMin={minPrice} selMax={maxPrice} dark />
+        )}
         <PriceInputsVT minPrice={minPrice} maxPrice={maxPrice} onMinPrice={onMinPrice} onMaxPrice={onMaxPrice} />
         <div className="vf-range-wrap">
           <input type="range" className="vf-slider vf-slider-min" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
@@ -353,7 +433,7 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
           <input type="range" className="vf-slider vf-slider-max" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
             value={maxPrice} aria-label="Precio máximo" onChange={e => onMaxPrice(parseInt(e.target.value))} />
         </div>
-        <div className="vf-tc-note">Precios en USD oficial · TC Bs 6.96</div>
+        <TcNote />
       </div>
       {brokerMode && onAreaMin && onAreaMax && (
         <div className="vf-group"><div className="vf-label">SUPERFICIE (m²)</div>
@@ -381,6 +461,25 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
           ))}
         </div>
       </div>
+      {amenSel && onAmenToggle && (
+        <div className="vf-group"><div className="vf-label">COMODIDADES</div>
+          <div className="vf-chips">
+            {AMEN_DIFERENCIADORES.map(a => (
+              <button key={a} className={`vf-chip ${amenSel.has(a) ? 'active' : ''}`} onClick={() => onAmenToggle(a)}>{a}</button>
+            ))}
+          </div>
+          <div className="vf-amen-note">Filtramos por lo que el anuncio confirma; algún depto podría tenerla sin listarla.</div>
+        </div>
+      )}
+      {amenSel && onAmenToggle && (
+        <div className="vf-group"><div className="vf-label">ATRIBUTOS DEL DEPARTAMENTO</div>
+          <div className="vf-chips">
+            {AMEN_ATRIBUTOS.map(a => (
+              <button key={a} className={`vf-chip ${amenSel.has(a) ? 'active' : ''}`} onClick={() => onAmenToggle(a)}>{a}</button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="vf-group"><div className="vf-label">ORDENAR POR</div>
         <div className="vf-btn-row">
           {ORDEN_OPTIONS.map(o => (
@@ -445,9 +544,11 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 // [Más filtros ▾] ... [Ordenar ▾]. MISMO motor que DesktopFilters (estado local
 // inicializado de currentFilters al montar + autoApply con debounce + remount
 // vía key={filterComponentVersion} cuando el filtro cambia desde afuera).
-function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proyectoNames }: {
+function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proyectoNames, amenSel, onAmenToggle, priceValues }: {
   currentFilters: FiltrosVentaSimple; isFiltered: boolean
   onApply: (f: FiltrosVentaSimple) => void; onReset: () => void; proyectoNames?: string[]
+  amenSel: Set<string>; onAmenToggle: (a: string) => void
+  priceValues?: number[]
 }) {
   const [minPrice, setMinPrice] = useState(currentFilters.precio_min || MIN_PRICE)
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_max || MAX_PRICE)
@@ -458,7 +559,11 @@ function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proye
   const [entrega, setEntrega] = useState(currentFilters.estado_entrega || '')
   const [orden, setOrden] = useState<FiltrosVentaSimple['orden']>(currentFilters.orden || 'recientes')
   const [proyecto, setProyecto] = useState(currentFilters.proyecto || '')
-  const [openPill, setOpenPill] = useState<null | 'zonas' | 'precio' | 'dorms' | 'estado' | 'mas' | 'orden'>(null)
+  const [openPill, setOpenPill] = useState<null | 'zonas' | 'precio' | 'dorms' | 'estado' | 'amen' | 'mas' | 'edificio' | 'orden'>(null)
+  // amenSel mezcla comodidades (edificio) y atributos (depto) en un solo Set;
+  // cada pill cuenta solo lo suyo para su badge.
+  const comodCount = [...amenSel].filter(a => !AMEN_ATRIBUTOS.includes(a)).length
+  const atribCount = [...amenSel].filter(a => AMEN_ATRIBUTOS.includes(a)).length
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -524,6 +629,9 @@ function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proye
         <button type="button" className={`vfp-pill ${precioActivo ? 'vfp-on' : ''} ${openPill === 'precio' ? 'open' : ''}`} onClick={() => toggle('precio')} aria-expanded={openPill === 'precio'}>{precioLabel} {caret}</button>
         {openPill === 'precio' && (
           <div className="vfp-pop vfp-pop-precio">
+            {priceValues && priceValues.length > 0 && (
+              <PriceHistogram values={priceValues} min={MIN_PRICE} max={MAX_PRICE} selMin={minPrice} selMax={maxPrice} dark />
+            )}
             <PriceInputsVT minPrice={minPrice} maxPrice={maxPrice} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice} />
             <div className="vf-range-wrap">
               <input type="range" className="vf-slider vf-slider-min" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
@@ -531,7 +639,7 @@ function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proye
               <input type="range" className="vf-slider vf-slider-max" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
                 value={maxPrice} aria-label="Precio máximo" onChange={e => handleMaxPrice(parseInt(e.target.value))} />
             </div>
-            <div className="vf-tc-note">Precios en USD oficial · TC Bs 6.96</div>
+            <TcNote />
           </div>
         )}
       </div>
@@ -562,15 +670,52 @@ function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proye
         )}
       </div>
       <div className="vfp-item">
-        <button type="button" className={`vfp-pill ${masActivo ? 'vfp-on' : ''} ${openPill === 'mas' ? 'open' : ''}`} onClick={() => toggle('mas')} aria-expanded={openPill === 'mas'}>
+        <button type="button" className={`vfp-pill ${comodCount > 0 ? 'vfp-on' : ''} ${openPill === 'amen' ? 'open' : ''}`} onClick={() => toggle('amen')} aria-expanded={openPill === 'amen'}>{comodCount > 0 ? `Comodidades · ${comodCount}` : 'Comodidades'} {caret}</button>
+        {openPill === 'amen' && (
+          <div className="vfp-pop vfp-pop-amen">
+            <div className="vf-label">DEL EDIFICIO</div>
+            <div className="vfp-amen-wrap">
+              {AMEN_DIFERENCIADORES.map(a => (
+                <button key={a} type="button" className={`vfp-amen-chip ${amenSel.has(a) ? 'active' : ''}`} onClick={() => onAmenToggle(a)}>{a}</button>
+              ))}
+            </div>
+            <div className="vfp-amen-note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+              <span>Filtramos por lo que el anuncio <b>confirma</b>. Algún depto podría tenerla sin haberla listado.</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="vfp-item">
+        <button type="button" className={`vfp-pill ${atribCount > 0 ? 'vfp-on' : ''} ${openPill === 'mas' ? 'open' : ''}`} onClick={() => toggle('mas')} aria-expanded={openPill === 'mas'}>
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
-          Más filtros {caret}
+          Más filtros{atribCount > 0 ? ` · ${atribCount}` : ''} {caret}
         </button>
         {openPill === 'mas' && (
+          <div className="vfp-pop vfp-pop-amen">
+            <div className="vf-label">ATRIBUTOS DEL DEPARTAMENTO</div>
+            <div className="vfp-amen-wrap">
+              {AMEN_ATRIBUTOS.map(a => (
+                <button key={a} type="button" className={`vfp-amen-chip ${amenSel.has(a) ? 'active' : ''}`} onClick={() => onAmenToggle(a)}>{a}</button>
+              ))}
+            </div>
+            <div className="vfp-amen-note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+              <span>Filtramos por lo que el anuncio <b>confirma</b>. Algún depto podría tenerlo sin haberlo listado.</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="vfp-item">
+        <button type="button" className={`vfp-pill vfp-edificio ${masActivo ? 'vfp-on' : ''} ${openPill === 'edificio' ? 'open' : ''}`} onClick={() => toggle('edificio')} aria-expanded={openPill === 'edificio'}>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/><path d="M8 14h.01"/><path d="M16 14h.01"/></svg>
+          {masActivo ? proyecto : 'Buscar edificio'} {caret}
+        </button>
+        {openPill === 'edificio' && (
           <div className="vfp-pop vfp-pop-mas">
-            <div className="vf-label">EDIFICIO</div>
-            <input type="text" className="vf-search" placeholder="Buscar edificio..." value={proyecto}
-              onChange={e => handleProyecto(e.target.value)} list="vfp-proyectos" autoComplete="off" />
+            <div className="vf-label">NOMBRE DEL EDIFICIO</div>
+            <input type="text" className="vf-search" placeholder="Ej. Sky Eclipse, Condominio Maré..." value={proyecto}
+              onChange={e => handleProyecto(e.target.value)} list="vfp-proyectos" autoComplete="off" autoFocus />
             {proyectoNames && proyectoNames.length > 0 && (
               <datalist id="vfp-proyectos">
                 {proyectoNames.map(n => <option key={n} value={n} />)}
@@ -705,7 +850,7 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
           </div>
         )}
         {!useCarousel && !hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
-        {p.tc_sospechoso && (!publicShareMode || contactoDirecto) && <div className="vc-tc-badge">Confirmar tipo de cambio</div>}
+        {p.tc_sospechoso && !publicShareMode && <div className="vc-tc-badge"><span className="vc-tc-badge-i">ⓘ</span>Confirmar tipo de cambio</div>}
         {brokerMode && !publicShareMode && (() => { const fb = fuenteBadge(p.fuente); return fb ? <div className="vc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null })()}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="vc-nav vc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); useCarousel ? navTo(photoIdx - 1) : setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
@@ -714,7 +859,7 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
         </>)}
       </div>
       <div className="vc-body">
-        <div className="vc-name">{p.proyecto}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="vc-reciente">Publicación reciente</span>}</div>
+        <div className="vc-name">{p.proyecto}{esNuevoCaptura(p) ? <span className="vc-nuevo">Nuevo</span> : esPublicacionReciente(p) && <span className="vc-reciente">Reciente</span>}</div>
         <div className="vc-zona">{displayZona(p.zona)} <span className="vc-id">#{p.id}</span></div>
         <div className="vc-price-block">
           <div className="vc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="vc-tc">(T.C. oficial)</span></div>
@@ -734,6 +879,9 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
+        {publicShareMode && p.precio_m2 > 0 && (
+          <ShortlistCardChip variant="venta" op="venta" dormitorios={p.dormitorios ?? 0} zonaDb={p.zona} precioComparable={p.precio_m2} />
+        )}
         {brokerComment && publicShareMode && (
           <div className="vc-comentario">
             <div className="vc-comentario-quote">&ldquo;</div>
@@ -757,7 +905,7 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
               </svg>
             )}
           </button>
-          {!brokerMode && (
+          {!brokerMode && !publicShareMode && (
             <button className="vc-act-btn" aria-label="Compartir" onClick={() => onShare(p)}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
@@ -825,11 +973,13 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
 // Card horizontal compacta para el layout desktop split (lista | mapa/side sheet).
 // Mesa de decisión: más propiedades por pantalla, tap abre el side sheet.
 // Lo transaccional (WA, compartir, ver original) vive en el sheet — acá solo corazón.
-const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isActive, onToggleFavorite, onOpen, marketChip = null }: {
+const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isActive, onToggleFavorite, onOpen, marketChip = null, onHover }: {
   property: UnidadVenta; isFavorite: boolean; isActive: boolean
   onToggleFavorite: (id: number) => void; onOpen: (p: UnidadVenta) => void
   // Posición fiduciaria vs rango típico de su tipología (null = sin base suficiente)
   marketChip?: { pos: 'bajo' | 'dentro' | 'sobre'; count: number } | null
+  // Hover → ubica el pin en el mapa del panel (split desktop)
+  onHover?: (id: number | null) => void
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
@@ -848,10 +998,25 @@ const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isA
   }, [])
 
   const esPreventa = p.estado_construccion === 'preventa'
+  const badgeNuevo = esNuevoCaptura(p)
+  const badgeReciente = !badgeNuevo && esPublicacionReciente(p)
+  // Prod (sin señal de captura) conserva el badge histórico "Nueva"; shadow separa
+  // "Nuevo" (capturado) de "Reciente" (publicado).
+  const badgeRecienteLabel = p.dias_desde_captura != null ? 'Reciente' : 'Nueva'
+  // Inclusiones (icono + label muteado, solo si están). Amoblado gana sobre Equipado.
+  const equipList = p.equipamiento_detectado || []
+  const amoblado = equipList.some(e => /amoblad/i.test(e))
+  const equipado = amoblado || equipList.length > 0
+  const conParqueo = p.parqueo_incluido === true || (p.estacionamientos != null && p.estacionamientos > 0)
+  const conBaulera = p.baulera === true
+  const hayIncl = equipado || conParqueo || conBaulera
   return (
     <div className={`vlc ${isActive ? 'vlc-active' : ''}`} ref={cardRef} onClick={() => onOpen(p)} role="button" tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter') onOpen(p) }}>
+      onKeyDown={(e) => { if (e.key === 'Enter') onOpen(p) }}
+      onMouseEnter={() => onHover?.(p.id)} onMouseLeave={() => onHover?.(null)}>
       <div className="vlc-photo" style={hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
+        {badgeNuevo && <span className="vlc-nueva">Nuevo</span>}
+        {badgeReciente && <span className="vlc-nueva vlc-reciente-badge">{badgeRecienteLabel}</span>}
         {!hasPhotos && <div className="vlc-nofoto">Sin fotos</div>}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="vlc-nav vlc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
@@ -860,30 +1025,46 @@ const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isA
         </>)}
       </div>
       <div className="vlc-body">
+        {/* Precio héroe + favorito */}
         <div className="vlc-toprow">
-          <span className={`vlc-estado ${esPreventa ? 'vlc-estado-pre' : ''}`}>{esPreventa ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa') : 'Entrega inmediata'}</span>
+          <div className="vlc-priceblock">
+            <div className="vlc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
+            <div className="vlc-pricesub">{p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m² · ` : ''}T.C. oficial</div>
+          </div>
           <button className={`vlc-fav ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={e => { e.stopPropagation(); onToggleFavorite(p.id) }}>
-            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 19, height: 19 }}>
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
         </div>
-        <div className="vlc-name">{p.proyecto}</div>
-        <div className="vlc-zona">{displayZona(p.zona)} <span className="vlc-id">#{p.id}</span></div>
-        <div className="vlc-specs">{[
-          p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
-          p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
-          p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
-        ].filter(Boolean).join(' · ')}</div>
-        {/* Chip fiduciario: posición vs rango típico — sin veredicto, con base contable */}
-        {marketChip && (
-          <div className={`vlc-mkt ${marketChip.pos === 'bajo' ? 'vlc-mkt-bajo' : ''}`}>
-            {marketChip.pos === 'bajo' ? 'Bajo el rango típico' : marketChip.pos === 'sobre' ? 'Sobre el rango típico' : 'Dentro del rango típico'} de su tipología · {marketChip.count} comparables
+        {/* Specs core (iconos) */}
+        <div className="vlc-specs">
+          {p.dormitorios !== null && <span className="vlc-spec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 012 2v10"/><path d="M2 17h20"/><path d="M6 8v3"/></svg>{p.dormitorios === 0 ? 'Mono' : p.dormitorios}</span>}
+          {p.area_m2 > 0 && <span className="vlc-spec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg>{Math.round(p.area_m2)} m²</span>}
+          {p.banos !== null && <span className="vlc-spec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 12h16a1 1 0 011 1v3a4 4 0 01-4 4H7a4 4 0 01-4-4v-3a1 1 0 011-1z"/><path d="M6 12V5a2 2 0 012-2h3v2.25"/></svg>{p.banos}</span>}
+          {p.piso != null && <span className="vlc-spec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/></svg>{p.piso === 0 ? 'PB' : `P${p.piso}`}</span>}
+        </div>
+        {/* Inclusiones muteadas (solo si están) */}
+        {hayIncl && (
+          <div className="vlc-incl">
+            {equipado && <span className="vlc-incl-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 11V7a2 2 0 012-2h12a2 2 0 012 2v4"/><path d="M2 13a2 2 0 012-2h16a2 2 0 012 2v4H2z"/><path d="M4 17v2M20 17v2"/></svg>{amoblado ? 'Amoblado' : 'Equipado'}</span>}
+            {conParqueo && <span className="vlc-incl-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>Parqueo</span>}
+            {conBaulera && <span className="vlc-incl-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Baulera</span>}
           </div>
         )}
-        <div className="vlc-bottomrow">
-          <span className="vlc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="vlc-tc">T.C. oficial</span></span>
-          {p.precio_m2 > 0 && <span className="vlc-m2">· $us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>}
+        {/* Nombre · zona · #id chiquito */}
+        <div className="vlc-name">{p.proyecto} <span className="vlc-zona">· {displayZona(p.zona)} · <span className="vlc-id">#{p.id}</span></span></div>
+        {/* Señales de decisión: estado (Preventa destacada) + fiduciario */}
+        <div className="vlc-signals">
+          {esPreventa
+            ? <span className="vlc-estado-pre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa'}</span>
+            : <span className="vlc-estado">Entrega inmediata</span>}
+          {marketChip && (
+            <span className={`vlc-mkt2 ${marketChip.pos === 'sobre' ? 'vlc-mkt2-sobre' : ''}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/></svg>
+              {marketChip.pos === 'bajo' ? 'Más barato que similares' : marketChip.pos === 'sobre' ? 'Más caro que similares' : 'En línea con similares'}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -892,7 +1073,7 @@ const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isA
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
 // memo + handlers estables — mismo patrón que VentaCard desktop.
-const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, onMap, isSpotlight, isFirst, showSwipeHint = false, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
+const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, onMap, isSpotlight, isFirst, showSwipeHint = false, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false, marketChip = null }: {
   property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
   onMap?: (p: UnidadVenta) => void
   // Hint "Desliza para más fotos" — se pasa true en las primeras posiciones del
@@ -909,6 +1090,8 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
   isDestacada?: boolean
   onReport?: (p: UnidadVenta) => void
   isReported?: boolean
+  // Chip fiduciario "vs. similares" (mismo dato que VentaListCard). null = sin base ≥6.
+  marketChip?: { pos: 'bajo' | 'dentro' | 'sobre'; count: number } | null
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -1004,18 +1187,18 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDetails(p) } }}>
         <div className="mc-name">{p.proyecto}</div>
         <div className="mc-meta-row">
-          {p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="mc-reciente">Publicación reciente</span>}
+          {esNuevoCaptura(p) ? <span className="mc-nuevo">Nuevo</span> : esPublicacionReciente(p) && <span className="mc-reciente">Reciente</span>}
           <span className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></span>
         </div>
         <div className="mc-price-block">
           <div className="mc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="mc-tc">(T.C. oficial)</span></div>
           {(() => { const b = priceChangeBadge(priceSnapshot, p.precio_usd); return b ? <div className={`mc-price-change mc-price-change-${b.kind}`}>{b.label}</div> : null })()}
-          <div className="mc-specs">{[
-            p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
-            p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
-            p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
-            p.piso ? `Piso ${p.piso}` : null,
-          ].filter(Boolean).join(' · ')}</div>
+          <div className="mc-specs">
+            {p.dormitorios !== null && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 12V7a1 1 0 011-1h16a1 1 0 011 1v5M3 12h18M3 12v6M21 12v6M6 12V9h5v3"/></svg>{p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}</span>}
+            {p.area_m2 > 0 && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>{Math.round(p.area_m2)} m²</span>}
+            {p.banos !== null && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 12V6a2 2 0 012-2 2 2 0 012 2M4 12h17v2a4 4 0 01-4 4H8a4 4 0 01-4-4zM6 18v2M18 18v2"/></svg>{p.banos} baño{p.banos !== 1 ? 's' : ''}</span>}
+            {p.piso && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="6" y="3" width="12" height="18" rx="1"/><circle cx="14.5" cy="12" r="1"/></svg>Piso {p.piso}</span>}
+          </div>
         </div>
         <div className="mc-specs-2">{[
           p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : null,
@@ -1025,6 +1208,12 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
+        {marketChip && (
+          <div className="mc-fidrow"><span className={`mc-fid ${marketChip.pos === 'sobre' ? 'mc-fid-sobre' : ''}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 21h18"/><rect x="5" y="12" width="3" height="6"/><rect x="10.5" y="8" width="3" height="10"/><rect x="16" y="4" width="3" height="14"/></svg>
+            {marketChip.pos === 'bajo' ? 'Más barato que similares' : marketChip.pos === 'sobre' ? 'Más caro que similares' : 'En línea con similares'}
+          </span></div>
+        )}
       </div>
     </div>
   )
@@ -1072,13 +1261,15 @@ function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onRe
 }
 
 // ===== Mobile Filter Overlay (TikTok/Airbnb style) =====
-function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax }: {
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, amenSel, onAmenToggle, priceValues }: {
   isOpen: boolean; onClose: () => void
   totalCount: number; filteredCount: number; isFiltered: boolean
   onApply: (f: FiltrosVentaSimple) => void; onReset: () => void; proyectoNames?: string[]
   brokerMode?: boolean
   areaMin?: number; areaMax?: number
   onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
+  amenSel?: Set<string>; onAmenToggle?: (a: string) => void
+  priceValues?: number[]
 }) {
   const [minPrice, setMinPrice] = useState(MIN_PRICE)
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE)
@@ -1171,9 +1362,9 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   return (
     <div className="fo-overlay">
       <div className="fo-header">
+        <span className="fo-logo" aria-hidden="true" />
+        <span className="fo-hcount">{displayCount} resultados</span>
         <button className="fo-close" aria-label="Cerrar filtros" onClick={onClose}>&times;</button>
-        <span className="fo-title">Filtros</span>
-        <span className="fo-count">{displayCount} deptos</span>
       </div>
       <div className="fo-body">
         {/* El buscador natural ahora vive en el header del feed; el overlay
@@ -1181,13 +1372,12 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
         <FilterControls minPrice={minPrice} maxPrice={maxPrice} selectedDorms={selectedDorms} selectedZonas={selectedZonas}
           entrega={entrega} orden={orden} proyecto={proyecto} proyectoNames={proyectoNames} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
           onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} onProyecto={v => setProyecto(v)}
-          brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax} onAreaMin={onAreaMin} onAreaMax={onAreaMax} />
+          brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax} onAreaMin={onAreaMin} onAreaMax={onAreaMax}
+          amenSel={amenSel} onAmenToggle={onAmenToggle} priceValues={priceValues} />
       </div>
       <div className="fo-footer">
-        {isFiltered && <button className="fo-reset" onClick={handleReset}>Quitar filtros</button>}
-        <button className="fo-apply" onClick={handleApply}>
-          VER {displayCount} RESULTADOS
-        </button>
+        <button className="fo-reset" onClick={handleReset}>Limpiar filtros</button>
+        <button className="fo-apply" onClick={handleApply}>Ver resultados</button>
       </div>
     </div>
   )
@@ -1310,8 +1500,10 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 // sideMode: render embebido como SIDE SHEET desktop (panel derecho del layout
 // split) — sin overlay, sin position:fixed, scroll interno y tabs
 // Resumen | Mercado | Compra | Similares. Mobile sigue siendo bottom sheet.
-function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist, publicShareBroker = null, contactoDirecto = false, brokerInfo = null, brokerComment = null, sideMode = false }: {
+function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist, publicShareBroker = null, contactoDirecto = false, brokerInfo = null, brokerComment = null, sideMode = false }: {
   property: UnidadVenta | null; isOpen: boolean; onClose: () => void; onShare?: () => void
+  // onCompare: agrega esta propiedad a favoritos y abre el comparador (modal desktop)
+  onCompare?: () => void
   isFavorite?: boolean; onToggleFavorite?: () => void
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; isDesktop: boolean
   properties?: UnidadVenta[]; onSwapProperty?: (p: UnidadVenta) => void
@@ -1330,17 +1522,49 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
   sideMode?: boolean
 }) {
   const publicShareMode = publicShareBroker !== null
+  // richLayout = las secciones "ricas" del modal desktop se muestran también en
+  // el sheet mobile del feed público (P3b). sideMode = desktop-split; el mobile
+  // público (no broker, no publicShare) también las recibe, tematizadas oscuro.
+  // Broker/publicShare (mobile o desktop-no-split) conservan las secciones viejas.
+  // publicShare mobile (shortlist /b/[hash]) también usa el layout rico: mismo
+  // sheet que el feed (lo que la hace especial · En el departamento · orden).
+  const richLayout = sideMode || (!isDesktop && !brokerMode)
+  // Shortlist (/b/[hash]): el mercado se compara contra el MERCADO real (cohort
+  // por zona+dorms de /api/shortlist-market), NO contra `properties` (que es la
+  // lista curada). Se arma el mismo objeto que el feed y se renderiza la sección
+  // nativa "Cómo está el precio".
+  const [slMarket, setSlMarket] = useState<null | { mediana: number; rangoLow: number; rangoHigh: number; totalLow: number; totalHigh: number; count: number; ampliado: boolean; mixto: boolean; segmento: string | null }>(null)
+  useEffect(() => {
+    if (!publicShareMode || !p) { setSlMarket(null); return }
+    let cancel = false
+    // El endpoint lee el cohort shadow-first (misma base que la propiedad).
+    const qs = `op=venta&dorms=${p.dormitorios ?? 0}&zona=${encodeURIComponent(p.zona || '')}`
+    fetch(`/api/shortlist-market?${qs}`)
+      .then(r => r.json())
+      .then(res => {
+        const d = res?.data
+        if (cancel || !d || !d.enough) { if (!cancel) setSlMarket(null); return }
+        setSlMarket({ mediana: d.mediana, rangoLow: d.p25, rangoHigh: d.p75, totalLow: d.secP25, totalHigh: d.secP75, count: d.count, ampliado: d.ampliado, mixto: false, segmento: null })
+      })
+      .catch(() => { if (!cancel) setSlMarket(null) })
+    return () => { cancel = true }
+  }, [publicShareMode, p?.id, p?.dormitorios, p?.zona])
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
   const [gateEmail, setGateEmail] = useState('')
   const [showGate, setShowGate] = useState(false)
   const [descExpanded, setDescExpanded] = useState(false)
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
+  const [showViewer, setShowViewer] = useState(false)
   const MAX_QS = 3
-  // Tabs del side sheet desktop. En mobile (sideMode=false) no aplican:
-  // showTab() devuelve true siempre y el sheet scrollea completo como hoy.
-  const [sideTab, setSideTab] = useState<'resumen' | 'mercado' | 'compra' | 'similares'>('resumen')
-  const showTab = (t: 'resumen' | 'mercado' | 'compra' | 'similares') => !sideMode || sideTab === t
+  // Desktop (sideMode) = modal estilo Zillow: un solo scroll con todas las
+  // secciones en orden, sin tabs. Mobile ya era un solo scroll — showTab()
+  // queda como marcador de sección por si se reintroducen cortes.
+  const showTab = (_t: 'resumen' | 'mercado' | 'compra' | 'similares') => true
+  // Riel derecho del modal: el mapa necesita identidades ESTABLES —
+  // VentaMap reconstruye el mapa entero si cambia properties/onSelect.
+  const railMapProps = useMemo(() => (p ? [p] : []), [p])
+  const railMapNoop = useCallback(() => {}, [])
 
   // Reset state when property changes
   const propId = p?.id
@@ -1348,7 +1572,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
     setDescExpanded(false)
     setShowGate(false)
     setSelectedQs(new Set())
-    setSideTab('resumen')
+    setShowViewer(false)
   }, [propId])
 
   const similarProps = useMemo(() => {
@@ -1365,7 +1589,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
   // barra. El precio depende de acabados/desarrollador (caveat en el render).
   // Cascada: zona (≥5 comparables) → todo Equipetrol DECLARADO como "zona
   // ampliada" (≥5) → null (el render muestra una línea de "sin comparables").
-  const marketData = useMemo(() => {
+  const marketDataMemo = useMemo(() => {
     if (!p || !p.precio_m2 || p.precio_m2 <= 0 || !properties || properties.length === 0) return null
     const pctl = (sorted: number[], pct: number) => {
       const idx = (sorted.length - 1) * pct
@@ -1376,10 +1600,15 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
     const build = (pool: UnidadVenta[], ampliado: boolean, mixto: boolean, segmento: string | null) => {
       if (pool.length < 5) return null
       const values = pool.map(q => q.precio_m2).sort((a, b) => a - b)
+      // Rango TOTAL (precio_usd) además del $/m², para el comparador que muestra
+      // ambos (total + por m²) por fila. precio_usd viene normalizado del RPC.
+      const totals = pool.map(q => q.precio_usd).sort((a, b) => a - b)
       return {
         mediana: pctl(values, 0.5),
         rangoLow: pctl(values, 0.25),
         rangoHigh: pctl(values, 0.75),
+        totalLow: pctl(totals, 0.25),
+        totalHigh: pctl(totals, 0.75),
         count: pool.length,
         ampliado,
         mixto,
@@ -1401,6 +1630,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
       ?? build(properties.filter(q => enZona(q) && mismaTipologia(q)), false, true, null)
       ?? build(properties.filter(mismaTipologia), true, true, null)
   }, [p?.id, p?.zona, p?.dormitorios, p?.precio_m2, p?.estado_construccion, properties])
+  // En la shortlist (publicShare) el mercado sale del cohort real (slMarket), no
+  // de la lista. En el feed, del cálculo local sobre `properties`.
+  const marketData = publicShareMode ? slMarket : marketDataMemo
 
   const brokerQuestions = useMemo(() => {
     if (!p) return []
@@ -1448,10 +1680,282 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
     setShowGate(false)
   }
 
+  // Bloques que en el modal desktop viven en el RIEL derecho y en mobile
+  // dentro del flujo — extraídos a consts para no duplicar JSX.
+  // Contexto de mercado: solo feed público/broker (en publicShare `properties`
+  // es la shortlist, no el mercado — cálculo inválido). La ausencia se explica
+  // (transparencia fiduciaria), no se disimula.
+  // Estado del precio vs. rango típico (lenguaje llano, sin veredictos)
+  const mktStatus = marketData ? (
+    p.precio_m2 < marketData.rangoLow
+      ? { txt: 'Más barato que deptos similares', path: 'M3 7l6 6 4-4 8 8M21 17v-4M21 17h-4' }
+      : p.precio_m2 > marketData.rangoHigh
+        ? { txt: 'Más caro que deptos similares', path: 'M3 17l6-6 4 4 8-8M21 7v4M21 7h-4' }
+        : { txt: 'En línea con deptos similares', path: 'M5 12l4 4L19 7' }
+  ) : null
+  const dormTxt = p.dormitorios === 0 ? 'monoambientes' : `${p.dormitorios} dormitorio${p.dormitorios !== 1 ? 's' : ''}`
+  const dormShort = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+
+  // richLayout (desktop-split + mobile público) = mercado v2 con medidor;
+  // broker/publicShare = la versión mktv anterior.
+  const mercadoSection = (marketData ? (richLayout ? (
+    <div className="bs-section" id="bsm-sec-mercado">
+      <div className="bs-sl"><span className="bs-sl-dot" />Cómo está el precio · {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
+      <div className="bs-mkt2">
+        <div className="bs-mkt2-verdict">
+          <span className="bs-mkt2-vico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={mktStatus!.path} /></svg></span>
+          <div>
+            <div className="bs-mkt2-vtitle">{mktStatus!.txt}</div>
+            <div className="bs-mkt2-vsub">para departamentos de {dormTxt} en la zona</div>
+          </div>
+        </div>
+        {(() => {
+          const lo = Math.min(marketData.rangoLow, p.precio_m2) * 0.94
+          const hi = Math.max(marketData.rangoHigh, p.precio_m2) * 1.06
+          const pos = (v: number) => Math.min(97, Math.max(3, ((v - lo) / (hi - lo)) * 100))
+          const bl = pos(marketData.rangoLow), bh = pos(marketData.rangoHigh), me = pos(p.precio_m2)
+          return (
+            <div className="bs-mkt2-gauge">
+              <div className="bs-mkt2-ends"><span>más accesible</span><span>más premium</span></div>
+              <div className="bs-mkt2-track">
+                <div className="bs-mkt2-band" style={{ left: `${bl}%`, width: `${bh - bl}%` }} />
+                <div className="bs-mkt2-pin" style={{ left: `${me}%` }}>
+                  <svg viewBox="0 0 32 42" width="15" height="20"><path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 26 16 26s16-15 16-26C32 7.2 24.8 0 16 0z" fill="currentColor" /><circle cx="16" cy="16" r="5.5" fill="#FBFAF7" /></svg>
+                </div>
+                <div className="bs-mkt2-here" style={{ left: `${me}%` }}>Este depto</div>
+                <div className="bs-mkt2-tick" style={{ left: `${bl}%` }}>$us {marketData.rangoLow.toLocaleString('en-US')}</div>
+                <div className="bs-mkt2-tick" style={{ left: `${bh}%` }}>$us {marketData.rangoHigh.toLocaleString('en-US')}</div>
+              </div>
+            </div>
+          )
+        })()}
+        <div className="bs-mkt2-compare">
+          <div className="bs-mkt2-crow">
+            <span>Este departamento</span>
+            <div className="bs-mkt2-cval"><b>$us {Math.round(p.precio_usd).toLocaleString('en-US')}</b><em>$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</em></div>
+          </div>
+          <div className="bs-mkt2-crow">
+            <span>Deptos similares ({dormShort})</span>
+            <div className="bs-mkt2-cval"><b>$us {marketData.totalLow.toLocaleString('en-US')} – {marketData.totalHigh.toLocaleString('en-US')}</b><em>$us {marketData.rangoLow.toLocaleString('en-US')} – {marketData.rangoHigh.toLocaleString('en-US')}/m²</em></div>
+          </div>
+        </div>
+        <div className="bs-mkt2-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>
+          <span>Comparamos el precio <b>total y por m²</b>. El precio por m² permite comparar aunque cambie el tamaño del depto. {marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye preventa y entrega inmediata. ' : ''}Basado en {marketData.count} deptos similares en venta.</span>
+        </div>
+        <div className="bs-mktv-summary">
+          {p.dias_en_mercado !== null && (
+            <div className="bs-mktv-sitem"><b>{p.dias_en_mercado} día{p.dias_en_mercado !== 1 ? 's' : ''}</b><span>publicado</span></div>
+          )}
+          <div className="bs-mktv-sitem"><b>{p.estado_construccion === 'preventa' ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa') : 'Entrega inmediata'}</b><span>estado</span></div>
+        </div>
+      </div>
+    </div>
+  ) : (
+    <div className="bs-section" id="bsm-sec-mercado">
+      <div className="bs-sl"><span className="bs-sl-dot" />Contexto de mercado · {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
+      <div className="bs-mktv">
+        <div className="bs-mktv-this">
+          <span className="bs-mktv-label">{sideMode ? 'Precio de este departamento' : 'Este depto'}</span>
+          <span className="bs-mktv-value">{p.precio_usd > 0 ? `$us ${Math.round(p.precio_usd).toLocaleString('en-US')} · ` : ''}$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>
+          <span className="bs-mktv-status">{p.precio_m2 < marketData.rangoLow ? 'Más barato que similares' : p.precio_m2 > marketData.rangoHigh ? 'Más caro que similares' : 'En línea con similares'}</span>
+        </div>
+        <div className="bs-mktv-zona">
+          Zona ({p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}{marketData.segmento ? ` · ${marketData.segmento}` : ''}): mediana <b>$us {marketData.mediana.toLocaleString('en-US')}/m²</b>
+          <span className="bs-mktv-rango">Rango típico $us {marketData.rangoLow.toLocaleString('en-US')} — {marketData.rangoHigh.toLocaleString('en-US')}/m²</span>
+        </div>
+        {(() => {
+          const lo = Math.min(marketData.rangoLow, p.precio_m2) * 0.94
+          const hi = Math.max(marketData.rangoHigh, p.precio_m2) * 1.06
+          const pos = (v: number) => Math.min(98, Math.max(2, ((v - lo) / (hi - lo)) * 100))
+          return (
+            <div className="bs-mktv-bar-wrap">
+              <div className="bs-mktv-bar">
+                <div className="bs-mktv-band" style={{ left: `${pos(marketData.rangoLow)}%`, width: `${pos(marketData.rangoHigh) - pos(marketData.rangoLow)}%` }} />
+                <div className="bs-mktv-marker" style={{ left: `${pos(p.precio_m2)}%` }} />
+              </div>
+              <div className="bs-mktv-scale">
+                <span style={{ left: `${pos(marketData.rangoLow)}%` }}>{marketData.rangoLow.toLocaleString('en-US')}</span>
+                <span style={{ left: `${pos(marketData.rangoHigh)}%` }}>{marketData.rangoHigh.toLocaleString('en-US')}</span>
+              </div>
+            </div>
+          )
+        })()}
+        <div className="bs-mktv-caveat">{marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye preventa y entrega inmediata. ' : ''}Basado en {marketData.count} deptos comparables activos. El precio por m² varía según acabados, amenidades y desarrollador.</div>
+        {/* Resumen días en el mercado + estado — solo modal desktop */}
+        {sideMode && (
+          <div className="bs-mktv-summary">
+            {p.dias_en_mercado !== null && (
+              <div className="bs-mktv-sitem"><b>{p.dias_en_mercado} día{p.dias_en_mercado !== 1 ? 's' : ''}</b><span>en el mercado</span></div>
+            )}
+            <div className="bs-mktv-sitem"><b>{p.estado_construccion === 'preventa' ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa') : 'Entrega inmediata'}</b><span>estado</span></div>
+          </div>
+        )}
+      </div>
+    </div>
+  )) : (p.precio_m2 > 0 ? (
+    <div className="bs-section">
+      <div className="bs-mktv-empty">Sin suficientes deptos comparables activos para mostrar contexto de mercado.</div>
+    </div>
+  ) : null))
+
+  // Similares: oculto en publicShareMode (cliente solo ve lo curado); en
+  // contactoDirecto (B2C) se muestran, igual que el feed (§6 dec.1)
+  const similaresSection = (!publicShareMode || contactoDirecto) && similarProps.length > 0 ? (
+    <div className="bs-section" id="bsm-sec-similares">
+      <div className="bs-sl"><span className="bs-sl-dot" />También en {displayZona(p.zona)}</div>
+      <div className="bs-sim-scroll">
+        {similarProps.map(sp => (
+          <button key={sp.id} className="bs-sim-card" aria-label={`Ver ${sp.proyecto}`} onClick={() => onSwapProperty?.(sp)}>
+            {sp.fotos_urls?.[0] ? (
+              <img src={sp.fotos_urls[0]}
+                   alt={sp.proyecto} className="bs-sim-thumb" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            ) : (
+              <div className="bs-sim-thumb bs-sim-nophoto" />
+            )}
+            <div className="bs-sim-info">
+              <div className="bs-sim-name">{sp.proyecto}</div>
+              <div className="bs-sim-price">$us {Math.round(sp.precio_usd).toLocaleString('en-US')}</div>
+              <div className="bs-sim-specs">{Math.round(sp.area_m2)}m² · {sp.dormitorios === 0 ? 'Mono' : `${sp.dormitorios} dorm`}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  ) : null
+
+  // Stats con iconos + chips de inclusión. Van en distinto lugar según el layout:
+  //  · modal desktop → DENTRO del header (grid de 2 columnas, al lado del precio)
+  //  · mobile rico    → sección propia DEBAJO de la foto, igual que alquileres
+  //                     (orden: nombre/precio/detalles → foto → iconos grandes)
+  const statsAndChips = !richLayout ? null : (
+    <>
+      {(
+        <div className="bsm-stats">
+          {p.dormitorios !== null && (
+            <div className="bsm-stat">
+              <svg className="bsm-stat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 012 2v10"/><path d="M2 17h20"/><path d="M6 8v3"/></svg>
+              <div className="bsm-stat-txt"><b>{p.dormitorios === 0 ? 'Mono' : p.dormitorios}</b><span>{p.dormitorios === 0 ? 'ambiente' : 'dorm'}</span></div>
+            </div>
+          )}
+          {p.area_m2 > 0 && (
+            <div className="bsm-stat">
+              <svg className="bsm-stat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg>
+              <div className="bsm-stat-txt"><b>{Math.round(p.area_m2)}</b><span>m²</span></div>
+            </div>
+          )}
+          {p.banos !== null && (
+            <div className="bsm-stat">
+              <svg className="bsm-stat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 12h16a1 1 0 011 1v3a4 4 0 01-4 4H7a4 4 0 01-4-4v-3a1 1 0 011-1z"/><path d="M6 12V5a2 2 0 012-2h3v2.25"/></svg>
+              <div className="bsm-stat-txt"><b>{p.banos}</b><span>baño{p.banos !== 1 ? 's' : ''}</span></div>
+            </div>
+          )}
+          {p.piso != null && (
+            <div className="bsm-stat">
+              <svg className="bsm-stat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/></svg>
+              <div className="bsm-stat-txt"><b>{p.piso === 0 ? 'PB' : p.piso}</b><span>piso</span></div>
+            </div>
+          )}
+        </div>
+      )}
+      {/* Inclusiones (modal desktop): lo INCLUIDO en el precio como chips
+          (equipado · N parqueo · baulera); lo OPCIONAL con costo extra (parqueo/
+          baulera NO incluidos pero con precio) en una línea aparte. Nunca se
+          muestra un ítem en los dos lados, ni se afirma ausencia. */}
+      {richLayout && (() => {
+        const amob = equipamiento.some(e => /amoblad/i.test(e))
+        const equip = amob || equipamiento.length > 0
+        const parqCount = (p.estacionamientos != null && p.estacionamientos > 0) ? p.estacionamientos : null
+        const parqIncl = p.parqueo_incluido === true || parqCount != null
+        const baulIncl = p.baulera === true || p.baulera_incluido === true
+        // Pet friendly = política del EDIFICIO (chip, como parqueo/equipado — NO
+        // una amenidad). Se saca de "Todas las comodidades" más abajo. Se deriva
+        // del flag pet_friendly O de la mención en amenidades (dato subreportado:
+        // a veces viene solo como texto "Pet Friendly" sin el flag).
+        const petMatch = (a: string) => /pet\s*friendly|mascota/i.test(a)
+        const petFriendly = p.pet_friendly === true
+          || (p.amenities_confirmados || []).some(petMatch)
+          || (p.amenidades_extra || []).some(petMatch)
+        const opcionales: string[] = []
+        if (!parqIncl && p.parqueo_precio_adicional != null && p.parqueo_precio_adicional > 0)
+          opcionales.push(`Parqueo +$us ${Math.round(p.parqueo_precio_adicional).toLocaleString('en-US')}`)
+        if (!baulIncl && p.baulera_precio_adicional != null && p.baulera_precio_adicional > 0)
+          opcionales.push(`Baulera +$us ${Math.round(p.baulera_precio_adicional).toLocaleString('en-US')}`)
+        if (!equip && !parqIncl && !baulIncl && !petFriendly && opcionales.length === 0) return null
+        return (
+          <>
+            {(equip || parqIncl || baulIncl || petFriendly) && (
+              <div className="bsm-incl">
+                {equip && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 11V7a2 2 0 012-2h12a2 2 0 012 2v4"/><path d="M2 13a2 2 0 012-2h16a2 2 0 012 2v4H2z"/><path d="M4 17v2M20 17v2"/></svg>{amob ? 'Amoblado' : 'Equipado'}</span>}
+                {parqIncl && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>{parqCount ? `${parqCount} parqueo${parqCount > 1 ? 's' : ''}` : 'Parqueo'}</span>}
+                {baulIncl && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Baulera</span>}
+                {petFriendly && <span className="bsm-incl-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10c-2 0-4 2-4 4 0 2 1 3 3 3 1 0 2-1 3-1s2 1 3 1c2 0 3-1 3-3 0-2-2-4-4-4-1 0-1.5.5-2.5.5S10 10 9 10z"/></svg>Pet friendly</span>}
+              </div>
+            )}
+            {opcionales.length > 0 && (
+              <div className="bsm-opcional">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                <span>Opcional: {opcionales.map((o, i) => <span key={i}>{i > 0 ? ' · ' : ''}<b>{o}</b></span>)}</span>
+              </div>
+            )}
+          </>
+        )
+      })()}
+    </>
+  )
+
+  // Header: nombre · zona · precio · detalles. En el modal desktop lleva además
+  // los stats adentro (grid 2 col); en mobile los stats van aparte, bajo la foto.
+  const headerBlock = (
+    <div className="bs-dark-header" id="bsm-sec-resumen">
+      <div className="bs-h-name">
+        {p.proyecto}
+        {esNuevoCaptura(p) ? <span className="bs-h-nuevo">Nuevo</span> : esPublicacionReciente(p) && <span className="bs-h-reciente">Reciente</span>}
+      </div>
+      <div className="bs-h-zona">{displayZona(p.zona)} · #{p.id}</div>
+      <div className="bs-h-price-block">
+        <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span>{p.tc_sospechoso && !publicShareMode && <span className="bs-tc-badge">Confirmar tipo de cambio</span>}</div>
+        <div className="bs-h-specs">{[
+          p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
+          p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
+          p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
+          p.piso ? `Piso ${p.piso}` : null,
+        ].filter(Boolean).join(' · ')}</div>
+        <div className="bs-h-sub">{[
+          p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : null,
+          p.estado_construccion === 'preventa'
+            ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa')
+            : 'Entrega inmediata',
+        ].filter(Boolean).join(' · ')}</div>
+      </div>
+      {sideMode && statsAndChips}
+    </div>
+  )
+
   return (
     <>
-      {!sideMode && <div className={`bs-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />}
-      <div className={`bs bs-venta ${isOpen ? 'open' : ''} ${sideMode ? 'bs-side' : (isDesktop ? 'bs-desktop' : '')}`}>
+      <div className={`bs-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />
+      <div className={`bs bs-venta ${isOpen ? 'open' : ''} ${sideMode ? 'bs-side' : (isDesktop ? 'bs-desktop' : '')} ${richLayout && !sideMode ? 'bs-rich' : ''}`}>
+        {/* Nav de anclas del modal desktop: saltan a secciones del MISMO
+            scroll (no ocultan contenido) + acciones fav/cerrar */}
+        {sideMode && (
+          <div className="bsm-nav">
+            {([['bsm-sec-resumen', 'Resumen'], ['bsm-sec-mercado', 'Mercado'], ['bsm-sec-similares', 'Similares']] as const).map(([id, label]) => (
+              <button key={id} type="button" className="bsm-nav-link"
+                onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{label}</button>
+            ))}
+            <div className="bsm-nav-actions">
+              {onToggleFavorite && (
+                <button className={`bs-fav ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={onToggleFavorite}>
+                  <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                </button>
+              )}
+              <button className="bs-close" aria-label="Cerrar detalles" onClick={onClose}>&times;</button>
+            </div>
+          </div>
+        )}
         {/* Floating close + fav — always visible */}
         <div className="bs-floating-actions">
           {onToggleFavorite && (
@@ -1469,44 +1973,46 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           )}
           <button className="bs-close" aria-label="Cerrar detalles" onClick={onClose}>&times;</button>
         </div>
-        {/* Header — styled like feed card */}
-        <div className="bs-dark-header">
-          <div className="bs-h-name">
-            {p.proyecto}
-            {p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="bs-h-reciente">Reciente</span>}
-          </div>
-          <div className="bs-h-zona">{displayZona(p.zona)} · #{p.id}</div>
-          <div className="bs-h-price-block">
-            <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span>{p.tc_sospechoso && (!publicShareMode || contactoDirecto) && <span className="bs-tc-badge">Confirmar tipo de cambio</span>}</div>
-            <div className="bs-h-specs">{[
-              p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
-              p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
-              p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
-              p.piso ? `Piso ${p.piso}` : null,
-            ].filter(Boolean).join(' · ')}</div>
-            <div className="bs-h-sub">{[
-              p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : null,
-              p.estado_construccion === 'preventa'
-                ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa')
-                : 'Entrega inmediata',
-            ].filter(Boolean).join(' · ')}</div>
-          </div>
-        </div>
-          {/* Tabs del side sheet — solo desktop split layout */}
-          {sideMode && (
-            <div className="bs-tabs" role="tablist" aria-label="Secciones del detalle">
-              {([['resumen', 'Resumen'], ['mercado', 'Mercado'], ['compra', 'Compra'], ['similares', 'Similares']] as const).map(([key, label]) => (
-                <button key={key} role="tab" aria-selected={sideTab === key}
-                  className={`bs-tab ${sideTab === key ? 'active' : ''}`}
-                  onClick={() => setSideTab(key)}>{label}</button>
-              ))}
+        {/* Header (nombre/precio/detalles) — en mobile va acá, antes de la foto.
+            En el modal desktop (sideMode) se mete dentro de la columna izquierda
+            (ver bsm-main). Los stats con iconos NO están acá en mobile: van en su
+            propia sección debajo de la foto, igual que alquileres. */}
+        {!sideMode && headerBlock}
+          {/* Modal desktop + UNA sola foto: no forzar el banner ancho (recorta
+              renders verticales). Foto completa (contain) sobre un fondo borroso
+              de sí misma — no recorta ni deja negro. Click → visor. */}
+          {showTab('resumen') && sideMode && p.fotos_urls && p.fotos_urls.length === 1 && (
+            <div className="bsm-photos bsm-photo-solo" onClick={() => setShowViewer(true)}>
+              <div className="bsm-photo-solo-bg" style={{ backgroundImage: `url('${p.fotos_urls[0]}')` }} />
+              <img src={p.fotos_urls[0]} alt={p.proyecto} className="bsm-photo-solo-img" loading="lazy" />
             </div>
           )}
-          {/* Galería de fotos horizontal */}
-          {showTab('resumen') && p.fotos_urls && p.fotos_urls.length > 0 && (
-            <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
+          {/* Galería: carrusel (mobile) / franja acotada + visor (modal desktop, 2+ fotos) */}
+          {showTab('resumen') && p.fotos_urls && p.fotos_urls.length > 0 && !(sideMode && p.fotos_urls.length === 1) && (
+            <div className={`bsm-photos bsm-photos-n${Math.min(p.fotos_urls.length, 5)}`}>
+              <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
+              {sideMode && p.fotos_urls.length > 3 && (
+                <button type="button" className="bsm-verfotos" onClick={() => setShowViewer(true)}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                  Ver las {p.fotos_urls.length} fotos
+                </button>
+              )}
+            </div>
+          )}
+          {/* Mobile rico: los iconos grandes + chips van DEBAJO de la foto
+              (nombre/precio/detalles → foto → iconos), espejo de alquileres. */}
+          {!sideMode && statsAndChips && (
+            <div className="bs-section bsm-stats-sec">{statsAndChips}</div>
           )}
 
+          {/* bsm-body/main/aside: en mobile son display:contents (no cambian
+              nada); en el modal desktop arman las 2 columnas debajo de las
+              fotos — contenido a la izquierda, tarjeta sticky a la derecha */}
+          <div className="bsm-body">
+          <div className="bsm-main">
+          {/* Header dentro de la columna izquierda (solo modal desktop) para que
+              la tarjeta WhatsApp del aside quede arriba, integrada al precio */}
+          {sideMode && headerBlock}
           {/* Comentario del broker — solo en publicShareMode */}
           {showTab('resumen') && publicShareMode && brokerComment && (
             <div className="bs-section bs-broker-comment-section" id="bs-broker-comment">
@@ -1519,8 +2025,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Características */}
-          {showTab('resumen') && (
+          {/* Características — oculta en layout rico (redundante con los números
+              grandes del header + las inclusiones); sigue en broker/publicShare */}
+          {showTab('resumen') && !richLayout && (
           <div className="bs-section">
             <div className="bs-sl"><span className="bs-sl-dot" />Características</div>
             <div className="bs-grid">
@@ -1563,8 +2070,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           </div>
           )}
 
-          {/* Badges */}
-          {showTab('resumen') && (
+          {/* Badges — oculto en layout rico (estado va a Mercado,
+              inclusiones al header); sigue en broker/publicShare */}
+          {showTab('resumen') && !richLayout && (
           <div className="bs-section">
             <div className="bs-badges">
               {p.estado_construccion === 'preventa' && <span className="bs-badge gold">{p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa'}</span>}
@@ -1582,25 +2090,93 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           {/* ACM inline — solo en modo broker */}
           {showTab('resumen') && brokerMode && <ACMInline propiedadId={p.id} tcSospechoso={p.tc_sospechoso} />}
 
-          {/* Amenidades */}
-          {showTab('resumen') && amenities.length > 0 && (
+          {/* Amenidades / Equipamiento — broker/publicShare: chips por categoría */}
+          {showTab('resumen') && !richLayout && amenities.length > 0 && (
             <div className="bs-section">
               <div className="bs-sl"><span className="bs-sl-dot" />Edificio</div>
               <div className="bs-aw">{amenities.map((a, i) => <span key={i} className="bs-at">{a}</span>)}</div>
             </div>
           )}
-
-          {/* Equipamiento */}
-          {showTab('resumen') && equipamiento.length > 0 && (
+          {showTab('resumen') && !richLayout && equipamiento.length > 0 && (
             <div className="bs-section">
               <div className="bs-sl"><span className="bs-sl-dot" />Departamento</div>
               <div className="bs-aw">{equipamiento.map((e, i) => <span key={i} className="bs-at">{e}</span>)}</div>
             </div>
           )}
 
+          {/* Comodidades — MODAL DESKTOP (patrón "What's special"):
+              · "Lo que la hace especial" = lo NO canónico (texto libre distintivo),
+                marcado con la chispita — escala a cualquier feature.
+              · "Todas las comodidades" = las canónicas, con su icono del catálogo,
+                agrupadas En el edificio / En el departamento. */}
+          {showTab('resumen') && richLayout && (() => {
+            // Split hecho por el PIPELINE (READER_SPEC), no por el cliente:
+            //  · especial = cola larga no-canónica (amenidades_extra + equipamiento_otros)
+            //  · canónico = amenities_confirmados (edificio) + equipamiento_detectado (depto)
+            // "Lo que la hace especial" = SOLO lo distintivo del EDIFICIO.
+            // amenidades_extra trae DOS clases: estándar que el reader sacó del
+            // canónico por texto explícito (Terraza, Ascensor, Área Social… — NO
+            // hacen especial a nadie) y verdaderamente fuera de catálogo (Rooftop,
+            // Cine, Sala de TV). Las estándar reconocidas (tienen icono canónico)
+            // van a "En el edificio"; solo lo NO reconocido queda en "especial".
+            // "Pet friendly" NO es una comodidad: ya se muestra como chip arriba
+            // (política del edificio). Se filtra de especial y de "En el edificio".
+            const isPet = (a: string) => /pet\s*friendly|mascota/i.test(a)
+            const extraRaw = (p.amenidades_extra || []).filter((a: string) => !isPet(a))
+            const especial = extraRaw.filter((a: string) => !hasCanonicalIcon(a))
+            const extraEstandar = extraRaw.filter((a: string) => hasCanonicalIcon(a))
+            const edificioSet = new Set<string>()
+            const edificioCanon = ([...amenities, ...extraEstandar] as string[]).filter((a) => !isPet(a)).filter((a) => {
+              const k = a.trim().toLowerCase()
+              if (edificioSet.has(k)) return false
+              edificioSet.add(k); return true
+            })
+            const deptoAll = [ ...equipamiento, ...(p.equipamiento_otros || []) ]
+            if (especial.length === 0 && edificioCanon.length === 0 && deptoAll.length === 0) return null
+            return (
+              <>
+                {especial.length > 0 && (
+                  <div className="bs-section" id="bsm-sec-especial">
+                    <div className="bs-sl"><span className="bs-sl-dot" />Lo que la hace especial</div>
+                    <div className="bsm-especial">
+                      {especial.map((x, i) => (
+                        <span key={i} className="bsm-especial-pill"><SparkleIcon className="bsm-especial-ico" />{x}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(edificioCanon.length > 0 || deptoAll.length > 0) && (
+                  <div className="bs-section" id="bsm-sec-comod">
+                    <div className="bs-sl"><span className="bs-sl-dot" />Todas las comodidades</div>
+                    {edificioCanon.length > 0 && (
+                      <div className="bsm-comod-group">
+                        <div className="bsm-comod-cat">En el edificio</div>
+                        <div className="bsm-comod-grid">
+                          {edificioCanon.map((a, i) => (
+                            <div key={i} className="bsm-comod-item"><AmenityIcon name={a} className="bsm-comod-ico" />{a}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {deptoAll.length > 0 && (
+                      <div className="bsm-comod-group">
+                        <div className="bsm-comod-cat">En el departamento</div>
+                        <div className="bsm-comod-grid">
+                          {deptoAll.map((e, i) => (
+                            <div key={i} className="bsm-comod-item"><AmenityIcon name={e} className="bsm-comod-ico" />{e}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )
+          })()}
+
           {/* Descripción (colapsable) */}
           {showTab('resumen') && p.descripcion && (
-            <div className="bs-section">
+            <div className="bs-section" id="bsm-sec-desc">
               <div className="bs-sl"><span className="bs-sl-dot" />Sobre esta propiedad</div>
               <div className={`bs-desc ${descExpanded ? 'expanded' : ''}`}>{p.descripcion}</div>
               {p.descripcion.length > 150 && !descExpanded && (
@@ -1609,9 +2185,12 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Agente info — oculto en publicShareMode (cliente solo contacta al broker);
-              en contactoDirecto (B2C) se muestra: el cliente contacta a ese captador */}
-          {showTab('resumen') && (!publicShareMode || contactoDirecto) && p.agente_nombre && (
+          {/* Agente info — el feed fiduciario NO muestra el captador (decisión Lucho).
+              En la shortlist B2C tampoco se muestra el nombre/oficina del captador
+              (decisión Lucho 18-jul): el contacto va al captador por WhatsApp con
+              atribución de Simón, pero Simón es la cara — no se expone al broker.
+              Antes se mostraba en contactoDirecto; ahora se oculta en publicShare. */}
+          {showTab('resumen') && !sideMode && contactoDirecto && !publicShareMode && p.agente_nombre && (
             <div className="bs-section">
               <div className="bs-agent">
                 <span className="bs-agent-name">{p.agente_nombre}</span>
@@ -1619,116 +2198,26 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
               </div>
             </div>
           )}
-
-          {/* Contexto de mercado — solo feed público/broker: en publicShare
-              `properties` es la shortlist, no el mercado (cálculo inválido). */}
-          {showTab('mercado') && !publicShareMode && marketData && (
-            <div className="bs-section">
-              <div className="bs-sl"><span className="bs-sl-dot" />Contexto de mercado · {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
-              <div className="bs-mktv">
-                <div className="bs-mktv-this">
-                  <span className="bs-mktv-label">Este depto</span>
-                  <span className="bs-mktv-value">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>
-                </div>
-                <div className="bs-mktv-zona">
-                  Zona ({p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}{marketData.segmento ? ` · ${marketData.segmento}` : ''}): mediana <b>$us {marketData.mediana.toLocaleString('en-US')}/m²</b>
-                  <span className="bs-mktv-rango">Rango típico $us {marketData.rangoLow.toLocaleString('en-US')} — {marketData.rangoHigh.toLocaleString('en-US')}/m²</span>
-                </div>
-                {(() => {
-                  const lo = Math.min(marketData.rangoLow, p.precio_m2) * 0.94
-                  const hi = Math.max(marketData.rangoHigh, p.precio_m2) * 1.06
-                  const pos = (v: number) => Math.min(98, Math.max(2, ((v - lo) / (hi - lo)) * 100))
-                  return (
-                    <div className="bs-mktv-bar-wrap">
-                      <div className="bs-mktv-bar">
-                        <div className="bs-mktv-band" style={{ left: `${pos(marketData.rangoLow)}%`, width: `${pos(marketData.rangoHigh) - pos(marketData.rangoLow)}%` }} />
-                        <div className="bs-mktv-marker" style={{ left: `${pos(p.precio_m2)}%` }} />
-                      </div>
-                      <div className="bs-mktv-scale">
-                        <span style={{ left: `${pos(marketData.rangoLow)}%` }}>{marketData.rangoLow.toLocaleString('en-US')}</span>
-                        <span style={{ left: `${pos(marketData.rangoHigh)}%` }}>{marketData.rangoHigh.toLocaleString('en-US')}</span>
-                      </div>
-                    </div>
-                  )
-                })()}
-                <div className="bs-mktv-caveat">{marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye preventa y entrega inmediata. ' : ''}Basado en {marketData.count} deptos comparables activos. El precio por m² varía según acabados, amenidades y desarrollador.</div>
-              </div>
-            </div>
-          )}
-          {/* Nivel 3 de la cascada: ni ampliando hay 5 comparables — la ausencia
-              se explica (transparencia fiduciaria), no se disimula. */}
-          {showTab('mercado') && !publicShareMode && !marketData && p.precio_m2 > 0 && (
-            <div className="bs-section">
-              <div className="bs-mktv-empty">Sin suficientes deptos comparables activos para mostrar contexto de mercado.</div>
-            </div>
-          )}
-          {/* Tab Mercado — precio de esta unidad como referencia arriba del contexto */}
-          {sideMode && sideTab === 'mercado' && p.precio_m2 > 0 && (
-            <div className="bs-section">
-              <div className="bs-sl"><span className="bs-sl-dot" />Precio por m² de esta unidad</div>
-              <div className="bs-compra-rows">
-                <div className="bs-compra-row"><span>Precio/m²</span><b>$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</b></div>
-                <div className="bs-compra-row"><span>Precio total</span><b>$us {Math.round(p.precio_usd).toLocaleString('en-US')}</b></div>
-              </div>
-            </div>
-          )}
-          {/* Tab Compra — datos de compra disponibles (solo side sheet desktop) */}
-          {sideMode && sideTab === 'compra' && (
-            <div className="bs-section">
-              <div className="bs-sl"><span className="bs-sl-dot" />Datos de compra</div>
-              <div className="bs-compra-rows">
-                <div className="bs-compra-row"><span>Precio total</span><b>$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span></b></div>
-                {p.precio_m2 > 0 && <div className="bs-compra-row"><span>Precio/m²</span><b>$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</b></div>}
-                <div className="bs-compra-row"><span>Estado</span><b>{p.estado_construccion === 'preventa' ? (p.fecha_entrega ? `Preventa · entrega ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa') : 'Entrega inmediata'}</b></div>
-                {p.precio_negociable && <div className="bs-compra-row"><span>Negociable</span><b>Sí, según el anuncio</b></div>}
-                {p.plan_pagos_desarrollador && <div className="bs-compra-row"><span>Plan de pagos</span><b>{p.plan_pagos_texto || 'Ofrece el desarrollador'}</b></div>}
-                {p.descuento_contado_pct && p.descuento_contado_pct > 0 ? <div className="bs-compra-row"><span>Descuento contado</span><b>-{p.descuento_contado_pct}%</b></div> : null}
-                {p.parqueo_incluido !== null && <div className="bs-compra-row"><span>Parqueo</span><b>{p.parqueo_incluido ? 'Incluido' : (p.parqueo_precio_adicional ? `Adicional · $us ${Math.round(p.parqueo_precio_adicional).toLocaleString('en-US')}` : 'No especificado')}</b></div>}
-                {p.baulera_incluido !== null && <div className="bs-compra-row"><span>Baulera</span><b>{p.baulera_incluido ? 'Incluida' : (p.baulera_precio_adicional ? `Adicional · $us ${Math.round(p.baulera_precio_adicional).toLocaleString('en-US')}` : 'No especificada')}</b></div>}
-                {p.acepta_permuta && <div className="bs-compra-row"><span>Permuta</span><b>Acepta, según el anuncio</b></div>}
-                {p.solo_tc_paralelo && <div className="bs-compra-row"><span>Tipo de cambio</span><b>Precio sujeto a TC paralelo</b></div>}
-              </div>
-              <div className="bs-compra-caveat">Datos declarados en el anuncio — confirmalos con el vendedor.</div>
-              <div className="bs-compra-soon">Simulador de crédito hipotecario <em>Próximamente</em></div>
+          {/* "Captado por" solo en contactoDirecto (B2C); el sheet normal no lo muestra. */}
+          {sideMode && contactoDirecto && p.agente_nombre && (
+            <div className="bs-section bsm-trust">
+              {`Captado por ${p.agente_nombre}${p.agente_oficina ? ` · ${p.agente_oficina}` : ''}`}
             </div>
           )}
 
-          {/* Propiedades similares — oculto en publicShareMode (cliente solo ve lo curado);
-              en contactoDirecto (B2C) se muestran, igual que el feed (§6 dec.1) */}
-          {showTab('similares') && (!publicShareMode || contactoDirecto) && similarProps.length > 0 && (
-            <div className="bs-section">
-              <div className="bs-sl"><span className="bs-sl-dot" />También en {displayZona(p.zona)}</div>
-              <div className="bs-sim-scroll">
-                {similarProps.map(sp => (
-                  <button key={sp.id} className="bs-sim-card" aria-label={`Ver ${sp.proyecto}`} onClick={() => onSwapProperty?.(sp)}>
-                    {sp.fotos_urls?.[0] ? (
-                      <img src={sp.fotos_urls[0]}
-                           alt={sp.proyecto} className="bs-sim-thumb" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    ) : (
-                      <div className="bs-sim-thumb bs-sim-nophoto" />
-                    )}
-                    <div className="bs-sim-info">
-                      <div className="bs-sim-name">{sp.proyecto}</div>
-                      <div className="bs-sim-price">$us {Math.round(sp.precio_usd).toLocaleString('en-US')}</div>
-                      <div className="bs-sim-specs">{Math.round(sp.area_m2)}m² · {sp.dormitorios === 0 ? 'Mono' : `${sp.dormitorios} dorm`}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Cómo está el precio — en la shortlist alimentado por el mercado
+              real (slMarket), en el feed por el cálculo local. Sección nativa. */}
+          {mercadoSection}
+          {/* "Datos de compra" se plegó dentro de Mercado (días + estado);
+              parqueo/baulera/equipado viven ahora como inclusiones en el header. */}
 
-          {/* Tab Similares vacío — la ausencia se explica, no se disimula */}
-          {sideMode && sideTab === 'similares' && similarProps.length === 0 && (
-            <div className="bs-section">
-              <div className="bs-mktv-empty">No hay unidades similares activas en {displayZona(p.zona)} con esta tipología.</div>
-            </div>
-          )}
+          {/* Propiedades similares */}
+          {similaresSection}
 
           {/* Preguntas para el vendedor — oculto en modo broker (el broker es el que responde)
               y en publicShare; en contactoDirecto (B2C) se muestran (van al captador) */}
           {showTab('compra') && !brokerMode && (!publicShareMode || contactoDirecto) && brokerQuestions.length > 0 && (
-            <div className="bs-section">
+            <div className="bs-section" id="bsm-sec-preguntas">
               <div className="bs-q-header">
                 <div className="bs-sl"><span className="bs-sl-dot" />Preguntas para el vendedor</div>
                 <span className="bs-q-hint">
@@ -1754,8 +2243,18 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           )}
 
           {/* Ubicación Google Maps */}
+          {/* Ubicación con mapa mediano — layout rico (desktop + mobile);
+              debajo va el link a Google Maps para todos */}
+          {richLayout && p.latitud && p.longitud && (
+            <div className="bs-section" id="bsm-sec-ubic">
+              <div className="bs-sl"><span className="bs-sl-dot" />Ubicación</div>
+              <div className="bsm-flow-map">
+                <VentaMap properties={railMapProps} onSelectProperty={railMapNoop} selectedId={p.id} />
+              </div>
+            </div>
+          )}
           {showTab('resumen') && p.latitud && p.longitud && (
-            <div className="bs-section">
+            <div className="bs-section bsm-ubic-link">
               <a href={`https://www.google.com/maps?q=${p.latitud},${p.longitud}`}
                 target="_blank" rel="noopener noreferrer" className="bs-gmaps-link">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18, flexShrink: 0 }}>
@@ -1781,8 +2280,13 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           {/* Ver original (con gate) — oculto en modo broker y en publicShare (cliente confía
               en el broker); en contactoDirecto (B2C) se muestra como el feed (§6 dec.3) */}
           {showTab('resumen') && !brokerMode && (!publicShareMode || contactoDirecto) && p.url && (
-            <div className="bs-section">
-              {!showGate ? (
+            <div className="bs-section bsm-sec-original">
+              {sideMode ? (
+                /* Modal desktop: anuncio original ABIERTO (sin gate) por ahora */
+                <a href={p.url} target="_blank" rel="noopener noreferrer" className="bs-ver-original">
+                  Ver anuncio original &#8599;
+                </a>
+              ) : !showGate ? (
                 <button className="bs-ver-original" onClick={handleVerOriginal}>
                   Ver anuncio original &#8599;
                 </button>
@@ -1808,7 +2312,11 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Sticky footer CTA */}
+          </div>
+          {/* Tarjeta sticky (desktop) / footer (mobile): SOLO lo esencial,
+              como el "Request a tour" de Zillow — WhatsApp + Compartir.
+              El precio ya vive en el bloque principal, no se repite. */}
+          <div className="bsm-aside">
           <div className="bs-sticky-footer">
             {publicShareMode && !contactoDirecto && publicShareBroker ? (
               <a href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${firstName(publicShareBroker.nombre)}, me interesa: ${p.proyecto} (${p.dormitorios === 0 ? 'Mono' : p.dormitorios + ' dorm'}, ${Math.round(p.area_m2)}m², $us ${Math.round(p.precio_usd).toLocaleString('en-US')}).`)}`}
@@ -1854,19 +2362,35 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                   openWhatsApp(p.agente_telefono!, buildSheetMsg())
                 }}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                Whatsapp
+                {selectedQs.size > 0 ? `${selectedQs.size} pregunta${selectedQs.size > 1 ? 's' : ''}` : 'WhatsApp'}
               </a>
               )
             })()}
+            {/* Comparar — layout rico (desktop + mobile): agrega a favoritos y abre el comparador */}
+            {richLayout && onCompare && !brokerMode && (
+              <button className="bs-compare-btn" onClick={onCompare}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" style={{ width: 16, height: 16 }}>
+                  <rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/>
+                </svg>
+                <span className="bs-btn-label">Comparar</span>
+              </button>
+            )}
             {onShare && !brokerMode && (
-              <button className="bs-share-btn" onClick={onShare}>
+              <button className="bs-share-btn" onClick={onShare} aria-label="Compartir">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
                   <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
                 </svg>
-                Compartir
+                <span className="bs-btn-label">Compartir</span>
               </button>
             )}
           </div>
+          </div>
+          </div>
+        {/* Visor de fotos a pantalla completa (botón "Ver las N fotos") */}
+        {sideMode && showViewer && p.fotos_urls && p.fotos_urls.length > 0 && (
+          <PhotoViewer photos={p.fotos_urls} initialIndex={0} buildingName={p.proyecto}
+            subtitle={`${displayZona(p.zona)} · #${p.id}`} onClose={() => setShowViewer(false)} />
+        )}
       </div>
     </>
   )
@@ -2031,6 +2555,8 @@ export interface PublicShareData {
   // del broker cuando foto_url es null. Otros affordances de demo
   // (intercept WA, intro sheet, watermark) viven en pages/b/[hash].tsx.
   isDemo?: boolean
+  // Nombre del cliente de la shortlist — header mobile "Selección para {nombre}".
+  clienteNombre?: string | null
 }
 
 // ===== Page =====
@@ -2041,15 +2567,29 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   // lleva). Cuando es true, los CTA por propiedad contactan al captador como en
   // el feed en vez del broker dueño. Default false ⇒ comportamiento B2B intacto.
   const contactoDirecto = publicShare?.broker?.contacto_directo === true
+  // Rediseño mobile de la shortlist (/b/[hash]): aplica a shortlists reales, NO a
+  // la demo de broker (/b/demo), que conserva su header + intro + watermark. La
+  // demo se detecta por publicShare.isDemo. SSR-safe (sin isDesktop).
+  const shortlistRedesign = publicShareMode && !!publicShare && !publicShare.isDemo
   const publicShareBrokerProp: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null = publicShare ? publicShare.broker : null
   const priceSnapshotsMap: Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }> | null = publicShare && publicShare.priceSnapshots ? publicShare.priceSnapshots : null
   const itemCommentsMap: Record<number, string | null> | null = publicShare && publicShare.itemComments ? publicShare.itemComments : null
   const itemsDestacadaMap: Record<number, boolean> | null = publicShare && publicShare.itemsDestacada ? publicShare.itemsDestacada : null
   const initialProps = publicShareMode ? publicShare!.items : initialProperties
   const [properties, setProperties] = useState<UnidadVenta[]>(initialProps)
+  // Precios del feed cargado, para el histograma de distribución del filtro.
+  const priceValues = useMemo(() => properties.map(p => p.precio_usd).filter(v => v > 0), [properties])
   const [loading, setLoading] = useState(publicShareMode ? false : initialProperties.length === 0)
   const [loadError, setLoadError] = useState(false)
   const [filters, setFilters] = useState<FiltrosVentaSimple>({ orden: 'recientes' })
+  // Filtro de amenidades: client-side (no toca el RPC). Parte los resultados en
+  // confirmados / no-listados (fiduciario). Ver AMEN_DIFERENCIADORES.
+  const [amenSel, setAmenSel] = useState<Set<string>>(new Set())
+  const toggleAmen = useCallback((a: string) => setAmenSel(prev => { const n = new Set(prev); if (n.has(a)) n.delete(a); else n.add(a); return n }), [])
+  // Hover sobre una card de la lista (split desktop) → ubica su pin en el mapa
+  // del panel (centra + resalta). null = sin hover.
+  const [hoveredId, setHoveredId] = useState<number | null>(null)
+  const onCardHover = useCallback((id: number | null) => setHoveredId(id), [])
   const [isFiltered, setIsFiltered] = useState(false)
   // Bump para re-montar el sidebar desktop (DesktopFilters) cuando los filtros
   // cambian por una fuente EXTERNA (buscador natural, deep-link, menú) — así los
@@ -2080,6 +2620,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const [sheetProperty, setSheetProperty] = useState<UnidadVenta | null>(null)
   const [gateCompleted, setGateCompleted] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
+  // Chrome mobile de la shortlist: menú hamburguesa + señal para reabrir el resumen
+  const [shortlistMenuOpen, setShortlistMenuOpen] = useState(false)
+  const [contextExpandSignal, setContextExpandSignal] = useState(0)
   // Modo "solo lista" del layout split: oculta el panel derecho y la lista
   // pasa a 2 columnas (densidad máxima). Con el side sheet abierto vuelve
   // al split mientras dure, y al cerrarlo retoma la lista pura.
@@ -2092,6 +2635,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const [natQuery, setNatQuery] = useState('')
   const [natChips, setNatChips] = useState<string[]>([])
   const [natAviso, setNatAviso] = useState<'alquiler' | 'moneda' | null>(null)
+  // Placeholder typewriter del buscador natural (mobile + desktop). Escribe por
+  // ref (sin re-render del feed). Ver useTypewriterPlaceholder.
+  const mSearchRef = useRef<HTMLInputElement>(null)
+  const dSearchRef = useRef<HTMLInputElement>(null)
+  useTypewriterPlaceholder(mSearchRef, SEARCH_EXAMPLES_VENTA, 'Buscá "', '"')
+  useTypewriterPlaceholder(dSearchRef, SEARCH_EXAMPLES_VENTA, 'Buscá "', '"')
   const [menuOpen, setMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   // Filter nudge pill (show once per session after 6+ cards without interaction)
@@ -2460,27 +3009,36 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     return list
   }, [brokerMode, onlySelectedFilter, properties, favorites, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax])
 
+  // Filtro DURO por amenidades: solo diferenciadores bien listados (son
+  // argumentos de venta → se listan cuando existen). Con la aclaración honesta
+  // de que filtramos por lo confirmado. NO se filtra por estándar ni cola larga.
+  const amenActivo = amenSel.size > 0
+  const confirmados = useMemo(() =>
+    amenActivo ? displayedProperties.filter(p => propMatchesAmen(p, amenSel)) : displayedProperties
+  , [displayedProperties, amenSel, amenActivo])
+
   // Resumen de mercado del filtro actual — panel derecho del layout split
   // (estado sin propiedad seleccionada). Client-side sobre la lista visible;
   // lenguaje fiduciario: mediana + rango observado + base declarada.
   const panelMarketSummary = useMemo(() => {
     if (!splitDesktop) return null
-    const conM2 = displayedProperties.filter(q => q.precio_m2 > 0).map(q => q.precio_m2).sort((a, b) => a - b)
-    if (conM2.length < 5) return { count: displayedProperties.length, mediana: null, rangoLow: null, rangoHigh: null, preventaPct: null }
+    const base = confirmados
+    const conM2 = base.filter(q => q.precio_m2 > 0).map(q => q.precio_m2).sort((a, b) => a - b)
+    if (conM2.length < 5) return { count: base.length, mediana: null, rangoLow: null, rangoHigh: null, preventaPct: null }
     const pctl = (pct: number) => {
       const idx = (conM2.length - 1) * pct
       const lo = Math.floor(idx), hi = Math.ceil(idx)
       return lo === hi ? conM2[lo] : Math.round(conM2[lo] * (hi - idx) + conM2[hi] * (idx - lo))
     }
-    const preventa = displayedProperties.filter(q => q.estado_construccion === 'preventa').length
+    const preventa = base.filter(q => q.estado_construccion === 'preventa').length
     return {
-      count: displayedProperties.length,
+      count: base.length,
       mediana: pctl(0.5),
       rangoLow: pctl(0.25),
       rangoHigh: pctl(0.75),
-      preventaPct: displayedProperties.length > 0 ? Math.round((preventa / displayedProperties.length) * 100) : null,
+      preventaPct: base.length > 0 ? Math.round((preventa / base.length) * 100) : null,
     }
-  }, [splitDesktop, displayedProperties])
+  }, [splitDesktop, confirmados])
 
   // Chip fiduciario por card — posición del precio/m² vs el rango típico
   // (p25-p75) de su tipología. Misma filosofía de cascada que el sheet:
@@ -2489,7 +3047,6 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   // contable, verificable en el tab Mercado. Map estable por id para no
   // romper el memo de las cards.
   const cardChips = useMemo(() => {
-    if (!splitDesktop) return null
     const pools = new Map<string, number[]>()
     const push = (k: string, v: number) => { const a = pools.get(k); if (a) a.push(v); else pools.set(k, [v]) }
     for (const q of properties) {
@@ -2514,7 +3071,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       m.set(p.id, { pos: p.precio_m2 < lo ? 'bajo' : p.precio_m2 > hi ? 'sobre' : 'dentro', count: pool.length - 1 })
     }
     return m
-  }, [splitDesktop, properties])
+  }, [properties])
 
   const visibleNotMarked = useMemo(() => {
     if (!brokerMode) return []
@@ -2760,7 +3317,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   //   ya filtró (disparó su propio fetch), el diferido no lo pisa.
   useEffect(() => {
     if (publicShareMode) return
-    if (initialProperties.length === 0 || spotlightId) { fetchProperties(); return }
+    // ?shadow=1: la data SSG es PROD (el build no conoce el query param). Forzar
+    // el fetch shadow INMEDIATO para no mostrar precios prod en el preview shadow
+    // (ej. #3580 = $275k prod vs $180k shadow). Sin esto, el refetch shadow se
+    // difería a idle y el sheet quedaba con el snapshot prod.
+    const isShadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
+    if (initialProperties.length === 0 || spotlightId || isShadow) { fetchProperties(); return }
     const idle = typeof window.requestIdleCallback === 'function'
       ? (cb: () => void) => window.requestIdleCallback(cb, { timeout: 3000 })
       : (cb: () => void) => window.setTimeout(cb, 1500)
@@ -2786,6 +3348,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   async function resetFilters() {
     const defaults: FiltrosVentaSimple = {}
     setFilters(defaults); setIsFiltered(false)
+    setAmenSel(new Set())
     const count = await fetchProperties(defaults)
     showToast(`${count} departamentos · sin filtros`)
     if (feedRef.current) feedRef.current.scrollTo({ top: 0 })
@@ -2854,6 +3417,56 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     </div>
   )
 
+  // ===== Chrome mobile de la shortlist (/b/[hash]) — solo publicShare mobile =====
+  const shortlistStats = useMemo(
+    () => (publicShareMode ? computeVentaShortlistStats(properties) : null),
+    [publicShareMode, properties]
+  )
+  // Mensaje "Más opciones"/"Pedir parecidas" al bot (simon-asistente). Misma
+  // lógica que el header de broker; centralizado para header + barra + menú.
+  const buildShortlistBotMsg = (): string => {
+    if (!publicShare) return ''
+    const hearted = properties.filter(p => favorites.has(p.id))
+    let msg: string
+    if (hearted.length > 0) {
+      const lines = hearted.map(p => {
+        const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+        return `• ${p.proyecto} (${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+      }).join('\n')
+      if (contactoDirecto) {
+        msg = `Hola ${firstName(publicShare.broker.nombre)}, de las que me pasaste me interesaron:\n\n${lines}\n\n¿Tenés otras parecidas?`
+      } else {
+        const plural = hearted.length === 1 ? 'esta' : 'estas'
+        const noun = hearted.length === 1 ? 'propiedad' : `${hearted.length} propiedades`
+        msg = `Hola ${firstName(publicShare.broker.nombre)}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
+      }
+    } else if (contactoDirecto) {
+      msg = `Hola ${firstName(publicShare.broker.nombre)}, vi la selección que me mandaste. ¿Me mostrás otras opciones?`
+    } else {
+      msg = `Hola ${firstName(publicShare.broker.nombre)}, vi las propiedades que me enviaste.`
+    }
+    if (contactoDirecto && REF_ALTERNATIVAS_ENABLED) {
+      msg += `\n\n${buildAlternativasRefLine(publicShare.hash, hearted.map(p => p.id))}`
+    }
+    return msg
+  }
+  const openShortlistBotWhatsApp = () => {
+    if (publicShare) openWhatsApp(publicShare.broker.telefono, buildShortlistBotMsg())
+  }
+  const shareShortlist = () => {
+    const url = typeof window !== 'undefined' ? window.location.href : ''
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({ title: 'Selección en Simon', url }).catch(() => {})
+    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => showToast('Link copiado', 'success')).catch(() => {})
+    }
+  }
+  const reportarDatoShortlist = () => {
+    if (!publicShare) return
+    const msg = `Hola, quiero reportar un dato de mi selección en Simon.\n\n${buildAlternativasRefLine(publicShare.hash, properties.filter(p => favorites.has(p.id)).map(p => p.id))}`
+    openWhatsApp(publicShare.broker.telefono, msg)
+  }
+
   return (
     <>
       <VentasHead
@@ -2876,6 +3489,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       {!splitDesktop && <BottomSheet property={sheetProperty} isOpen={sheetOpen}
         onClose={() => { setSheetOpen(false); setSheetProperty(null) }}
         onShare={sheetProperty ? () => shareProperty(sheetProperty) : undefined}
+        onCompare={(sheetProperty && !brokerMode && !publicShareMode) ? () => { setFavorites(prev => { const n = new Set(prev); n.add(sheetProperty.id); return n }); openCompare() } : undefined}
         isFavorite={sheetProperty ? favorites.has(sheetProperty.id) : false}
         onToggleFavorite={(sheetProperty && !publicShareMode) ? () => toggleFavorite(sheetProperty.id) : undefined}
         gateCompleted={gateCompleted} onGate={handleGate} isDesktop={isDesktop}
@@ -2886,6 +3500,21 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         contactoDirecto={contactoDirecto}
         brokerInfo={brokerInfoProp}
         brokerComment={sheetProperty && itemCommentsMap ? itemCommentsMap[sheetProperty.id] || null : null} />}
+
+      {/* Modal de propiedad (estilo Zillow) para el feed público desktop.
+          Fuera del gate de viewMode: se abre igual desde la lista, el mixto
+          o el mapa completo ("Ver detalles" de la mini-card del mapa). Es
+          position:fixed, así que su lugar en el DOM no importa. */}
+      {splitDesktop && sheetOpen && sheetProperty && (
+        <BottomSheet property={sheetProperty} isOpen sideMode
+          onClose={() => { setSheetOpen(false); setSheetProperty(null) }}
+          onShare={() => shareProperty(sheetProperty)}
+          onCompare={() => { setFavorites(prev => { const n = new Set(prev); n.add(sheetProperty.id); return n }); openCompare() }}
+          isFavorite={favorites.has(sheetProperty.id)}
+          onToggleFavorite={() => toggleFavorite(sheetProperty.id)}
+          gateCompleted={gateCompleted} onGate={handleGate} isDesktop
+          properties={properties} onSwapProperty={(sp) => setSheetProperty(sp)} />
+      )}
 
       {/* Banner inferior — modo broker: Enviar shortlist (1+) | público: Comparar (2+) */}
       {brokerMode && broker && favorites.size >= 1 && (
@@ -2974,6 +3603,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       <CompareSheet
         open={compareOpen}
         properties={favoriteProperties}
+        chips={cardChips}
         onClose={() => setCompareOpen(false)}
         publicShareBroker={publicShareBrokerProp}
         contactoDirecto={contactoDirecto}
@@ -3104,22 +3734,44 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         </div>
       )}
 
-      {/* FAB mapa en publicShareMode mobile — el toggle Grid|Mapa text se pierde con scroll */}
-      {publicShareMode && !isDesktop && viewMode === 'grid' && properties.length > 0 && (
-        <button
-          className="vt-public-map-fab"
-          onClick={() => setViewMode('map')}
-          aria-label="Ver mapa"
-        >
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
-          </svg>
-          Mapa
-        </button>
+      {/* Chrome mobile de la shortlist (/b/[hash]) — reemplaza el header de broker
+          + FAB mapa en mobile. Header compacto + barra inferior + menú hamburguesa. */}
+      {shortlistRedesign && publicShare && !isDesktop && (
+        <>
+          <ShortlistMobileHeader
+            variant="venta"
+            clienteNombre={publicShare.clienteNombre ? firstName(publicShare.clienteNombre) : null}
+            onMenu={() => setShortlistMenuOpen(true)}
+          />
+          {viewMode === 'grid' && properties.length > 0 && (
+            <ShortlistBottomBar
+              variant="venta"
+              favCount={favorites.size}
+              onVerMapa={() => setViewMode('map')}
+              onComparar={openCompare}
+              onMasOpciones={openShortlistBotWhatsApp}
+            />
+          )}
+          <ShortlistMenu
+            variant="venta"
+            open={shortlistMenuOpen}
+            onClose={() => setShortlistMenuOpen(false)}
+            favCount={favorites.size}
+            destinoNuevaBusqueda="/ventas"
+            onMasOpciones={openShortlistBotWhatsApp}
+            onComparar={openCompare}
+            onVerMapa={() => setViewMode('map')}
+            onContextoSeleccion={() => setContextExpandSignal(s => s + 1)}
+            onCompartir={shareShortlist}
+            onReportar={reportarDatoShortlist}
+            onIrWebapp={(d) => { window.location.href = d }}
+          />
+        </>
       )}
 
-      {/* Header modo public share — header del broker que comparte la shortlist */}
-      {publicShareMode && publicShare && (
+      {/* Header modo public share — header del broker (desktop siempre; y mobile en
+          la demo de broker, que conserva su experiencia original). */}
+      {publicShareMode && publicShare && (isDesktop || publicShare.isDemo) && (
         <div className="vt-public-share-header">
           <div className="vpsh-broker">
             {publicShare.broker.foto_url
@@ -3186,11 +3838,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
         brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax}
         onAreaMin={setAreaMin}
-        onAreaMax={setAreaMax} />
+        onAreaMax={setAreaMax}
+        amenSel={amenSel} onAmenToggle={toggleAmen} priceValues={priceValues} />
 
       {(isDesktop || publicShareMode || brokerMode) ? (
         /* ===== DESKTOP (o public share / broker en cualquier device — feed con grid simple) ===== */
-        <div className={`ventas-desktop ${splitDesktop ? 'ventas-desktop-split' : ''} ${publicShareMode ? 'ventas-desktop-public' : ''} ${(brokerMode && !isDesktop) ? 'ventas-desktop-broker-mobile' : ''} ${brokerMode ? 'ventas-desktop-broker' : ''}`}>
+        <div className={`ventas-desktop ${splitDesktop ? 'ventas-desktop-split' : ''} ${publicShareMode ? 'ventas-desktop-public' : ''} ${shortlistRedesign ? 'vt-shortlist-redesign' : ''} ${(brokerMode && !isDesktop) ? 'ventas-desktop-broker-mobile' : ''} ${brokerMode ? 'ventas-desktop-broker' : ''}`}>
           {/* Nav superior desktop — solo feed público (broker/public-share tienen sus banners) */}
           {splitDesktop && (
             <FeedDesktopNav active="ventas" variant="dark"
@@ -3272,14 +3925,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             )}
             {/* ===== Layout split: buscador+pills+lista densa | panel derecho (mapa+mercado ↔ side sheet) ===== */}
             {splitDesktop && viewMode === 'grid' && !loadError && (
-              <div className={`vd-cols ${listOnly && !(sheetOpen && sheetProperty) ? 'vd-cols-solo' : ''}`}>
+              <div className={`vd-cols ${listOnly ? 'vd-cols-solo' : ''}`}>
                 <div className="vd-left">
                   {/* Buscador natural ancho — arriba de la lista, como la referencia */}
                   <div className="dsk-search vd-search">
                     <form className="dsk-search-box" onSubmit={(e) => { e.preventDefault(); handleNaturalSearch(natQuery, true); (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.blur() }}>
                       <svg className="dsk-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                      <input className="dsk-search-input" type="search" enterKeyHint="search" value={natQuery}
-                        placeholder={'Buscá "preventa en Eq. Norte hasta 100 mil"'}
+                      <input className="dsk-search-input" type="search" enterKeyHint="search" value={natQuery} ref={dSearchRef}
                         onChange={(e) => handleNaturalSearch(e.target.value, false)} />
                       {natQuery && <button type="button" className="dsk-search-clear" aria-label="Limpiar" onClick={() => { setNatQuery(''); setNatChips([]); setNatAviso(null) }}>&times;</button>}
                     </form>
@@ -3301,11 +3953,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   <div className="vd-sticky">
                   {/* Fila de pills de filtros */}
                   <FilterPillsVentas key={`fp-${filterComponentVersion}`} currentFilters={filters} isFiltered={isFiltered}
-                    onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
+                    onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
+                    amenSel={amenSel} onAmenToggle={toggleAmen} priceValues={priceValues} />
                   {/* Título + contador + toggle lista|mixto|mapa */}
                   <div className="vd-count-row">
                     <h1 className="vd-h1">Departamentos en venta en {filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : 'Equipetrol'}</h1>
-                    <span className="vd-count-num2"><b>{displayedProperties.length}</b> {isFiltered ? `de ${unfilteredCount}` : 'activos'}</span>
+                    <span className="vd-count-num2"><b>{amenActivo ? confirmados.length : displayedProperties.length}</b> {amenActivo ? `de ${displayedProperties.length}` : isFiltered ? `de ${unfilteredCount}` : 'activos'}</span>
                     <div className="vd-viewtoggle" role="tablist" aria-label="Modo de vista">
                       <button type="button" title="Solo lista" aria-selected={listOnly} className={`vd-vt-btn ${listOnly ? 'active' : ''}`}
                         onClick={() => { setListOnly(true); trackEvent('switch_view_venta', { view_mode: 'lista' }) }}>
@@ -3334,38 +3987,34 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                       <VentaListCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
                         isActive={sheetOpen && sheetProperty?.id === spotlightProperty.id}
                         marketChip={cardChips?.get(spotlightProperty.id) ?? null}
-                        onToggleFavorite={onCardToggleFavorite} onOpen={onCardOpenSheet} />
+                        onToggleFavorite={onCardToggleFavorite} onOpen={onCardOpenSheet} onHover={onCardHover} />
                     </div>
                   )}
-                  {(spotlightProperty ? displayedProperties.filter(p => p.id !== spotlightId) : displayedProperties).map(p => (
+                  {amenActivo && (
+                    <div className="vd-amen-note">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+                      <span>Mostramos los {confirmados.length} que {confirmados.length === 1 ? 'confirma' : 'confirman'} <b>{[...amenSel].join(' · ')}</b> en el aviso. Algún depto podría tenerla sin listarla.</span>
+                    </div>
+                  )}
+                  {(spotlightProperty ? confirmados.filter(p => p.id !== spotlightId) : confirmados).map(p => (
                     <VentaListCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
                       isActive={sheetOpen && sheetProperty?.id === p.id}
                       marketChip={cardChips?.get(p.id) ?? null}
-                      onToggleFavorite={onCardToggleFavorite} onOpen={onCardOpenSheet} />
+                      onToggleFavorite={onCardToggleFavorite} onOpen={onCardOpenSheet} onHover={onCardHover} />
                   ))}
                 </div>
                 </div>
-                {(!listOnly || (sheetOpen && sheetProperty)) && (
+                {!listOnly && (
                 <div className="vd-panel">
-                  {/* Estado con propiedad seleccionada: side sheet scrolleable.
-                      El bloque mapa+resumen NO se desmonta (se oculta con CSS):
-                      desmontar Leaflet en plena animación de zoom crashea
-                      (_leaflet_pos undefined en _onZoomTransitionEnd). */}
-                  {sheetOpen && sheetProperty && (
-                    <BottomSheet property={sheetProperty} isOpen sideMode
-                      onClose={() => { setSheetOpen(false); setSheetProperty(null) }}
-                      onShare={() => shareProperty(sheetProperty)}
-                      isFavorite={favorites.has(sheetProperty.id)}
-                      onToggleFavorite={() => toggleFavorite(sheetProperty.id)}
-                      gateCompleted={gateCompleted} onGate={handleGate} isDesktop
-                      properties={properties} onSwapProperty={(sp) => setSheetProperty(sp)} />
-                  )}
-                  {/* Estado sin selección: mapa + resumen de mercado del filtro actual */}
-                  <div className={`vd-panel-home ${sheetOpen && sheetProperty ? 'vd-panel-hidden' : ''}`}>
+                  {/* Mapa + resumen de mercado del filtro actual. El detalle de
+                      propiedad ya NO vive en esta columna: es un modal centrado
+                      (BottomSheet sideMode) renderizado aparte, con overlay.
+                      El mapa nunca se desmonta (crash Leaflet _leaflet_pos). */}
+                  <div className="vd-panel-home">
                       <div className="vd-map">
-                        <VentaMap properties={displayedProperties}
+                        <VentaMap properties={confirmados}
                           onSelectProperty={onPanelMapSelect}
-                          selectedId={null} />
+                          selectedId={hoveredId} />
                         <button className="vd-map-full" onClick={() => { setViewMode('map'); trackEvent('switch_view_venta', { view_mode: 'map', source: 'panel' }) }}>
                           Ver mapa completo
                           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -3412,6 +4061,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             )}
             {!splitDesktop && displayedProperties.length > 0 && viewMode === 'grid' && (
               <div className="ventas-grid">
+                {shortlistRedesign && !isDesktop && shortlistStats && (
+                  <ShortlistContextSummary
+                    variant="venta"
+                    stats={shortlistStats}
+                    hasFavorites={favorites.size > 0}
+                    expandSignal={contextExpandSignal}
+                  />
+                )}
                 {(spotlightProperty ? displayedProperties.filter(p => p.id !== spotlightId) : displayedProperties).map((p, idx) => (
                   <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)} isFirst={idx === 0}
                     onToggleFavorite={onCardToggleFavorite} onShare={onCardShare}
@@ -3435,7 +4092,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             )}
             {displayedProperties.length > 0 && viewMode === 'map' && (
               <div className="ventas-map-container">
-                <VentaMap properties={displayedProperties} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
+                <VentaMap properties={confirmados} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
                 {mapSelectedId && (() => {
                   const sp = properties.find(x => x.id === mapSelectedId)
                   if (!sp) return null
@@ -3471,8 +4128,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             <div className="mfh-search-row">
               <form className="mfh-search" onSubmit={(e) => { e.preventDefault(); handleNaturalSearch(natQuery, true); (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.blur() }}>
                 <svg className="mfh-search-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input className="mfh-search-input" type="search" enterKeyHint="search" value={natQuery}
-                  placeholder={'Buscá "1 dorm en Sirari hasta 150 mil"'}
+                <input className="mfh-search-input" type="search" enterKeyHint="search" value={natQuery} ref={mSearchRef}
                   onChange={(e) => handleNaturalSearch(e.target.value, false)} />
                 {natQuery && <button type="button" className="mfh-search-clear" aria-label="Limpiar búsqueda" onClick={() => { setNatQuery(''); setNatChips([]); setNatAviso(null) }}>&times;</button>}
               </form>
@@ -3512,7 +4168,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 <button className="mt-map-close" aria-label="Cerrar mapa" onClick={() => { setMobileMapOpen(false); setMapSelectedId(null) }}>&times;</button>
               </div>
               <div className="mt-map-body">
-                <VentaMap properties={displayedProperties} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
+                <VentaMap properties={confirmados} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
                 {mapSelectedId && (() => {
                   const sp = displayedProperties.find(x => x.id === mapSelectedId)
                   if (!sp) return null
@@ -3543,7 +4199,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
                 isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false}
                 onReport={brokerMode && !publicShareMode && brokerSlug ? onCardReport : undefined}
-                isReported={reportedIds.has(p.id)} />
+                isReported={reportedIds.has(p.id)} marketChip={cardChips?.get(p.id) ?? null} />
             })}
           </div>
 
@@ -3604,6 +4260,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-desktop { display:flex; min-height:100vh; font-family:'DM Sans',sans-serif; color:#EDE8DC }
         .ventas-desktop-public .ventas-main { margin-left:0 !important; padding-top:80px !important }
         .ventas-desktop-public .ventas-grid { grid-template-columns:repeat(auto-fill,minmax(280px,1fr)) }
+        /* Shortlist mobile (rediseño, NO demo): header compacto 56px + barra
+           inferior. El resumen (primer item del grid) queda bajo el header. */
+        @media (max-width:767px) {
+          .vt-shortlist-redesign.ventas-desktop-public .ventas-main { padding-top:56px !important; padding-bottom:calc(84px + env(safe-area-inset-bottom)) !important }
+          .vt-shortlist-redesign.ventas-desktop-public .ventas-grid { gap:14px; padding-left:12px; padding-right:12px }
+        }
         /* Broker en mobile: mismo layout que public share — grid simple sin sidebar */
         .ventas-desktop-broker-mobile .ventas-main { margin-left:0 !important; padding-top:144px !important; padding:144px 12px 24px !important }
         .ventas-desktop-broker-mobile .ventas-grid { grid-template-columns:1fr; gap:14px }
@@ -3715,6 +4377,25 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vfp-pop { position:absolute; top:calc(100% + 8px); left:0; z-index:80; min-width:250px; background:#1e1e1e; border:1px solid rgba(237,232,220,0.14); border-radius:14px; padding:14px; box-shadow:0 12px 34px rgba(0,0,0,0.45) }
         .vfp-pop-precio { min-width:300px }
         .vfp-pop-mas { min-width:280px }
+        .vfp-pop-amen { min-width:320px; max-width:360px }
+        /* "Buscar edificio" — pill destacado (diferenciador de Simon) */
+        .vfp-edificio { background:rgba(123,179,137,0.12); border-color:rgba(123,179,137,0.4); color:#9FC7AB; max-width:220px; overflow:hidden; text-overflow:ellipsis }
+        .vfp-edificio:hover { border-color:rgba(123,179,137,0.6); color:#B9D9C2 }
+        .vfp-edificio.vfp-on { background:#3A6A48; border-color:#3A6A48; color:#F4F1E9 }
+        .vfp-edificio svg { flex-shrink:0 }
+        .vfp-amen-wrap { display:flex; flex-wrap:wrap; gap:8px }
+        .vfp-amen-chip { padding:7px 13px; border-radius:100px; border:1px solid rgba(237,232,220,0.14); background:transparent; color:#9A8E7A; font-size:13px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s }
+        .vfp-amen-chip:hover { border-color:rgba(237,232,220,0.32); color:#EDE8DC }
+        .vfp-amen-chip.active { background:#3A6A48; border-color:#3A6A48; color:#EDE8DC }
+        .vfp-amen-note { display:flex; gap:8px; margin-top:14px; padding-top:12px; border-top:1px solid rgba(237,232,220,0.1); color:#9A8E7A }
+        .vfp-amen-note svg { width:15px; height:15px; flex-shrink:0; margin-top:1px }
+        .vfp-amen-note span { font-size:11.5px; line-height:1.5 }
+        .vfp-amen-note b { font-weight:600; color:#B8AD9E }
+        /* Aclaración fiduciaria del filtro de amenidades (lista densa, feed oscuro) */
+        .vd-amen-note { display:flex; align-items:flex-start; gap:8px; padding:11px 14px; background:rgba(237,232,220,0.04); border:1px solid rgba(237,232,220,0.1); border-radius:12px; color:#9A8E7A; font-family:'DM Sans',sans-serif }
+        .vd-amen-note svg { width:15px; height:15px; flex-shrink:0; margin-top:1px }
+        .vd-amen-note span { font-size:12.5px; line-height:1.5 }
+        .vd-amen-note b { font-weight:600; color:#B8AD9E }
         .vfp-pop-right { left:auto; right:0 }
         .vfp-pop .vf-label { margin-bottom:8px }
         .vfp-reset { background:none; border:none; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:12.5px; text-decoration:underline; cursor:pointer; padding:8px 6px; white-space:nowrap }
@@ -3745,30 +4426,42 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vlc-nav-prev { left:6px }
         .vlc-nav-next { right:6px }
         .vlc-count { position:absolute; bottom:6px; left:6px; background:rgba(20,20,20,0.75); color:rgba(255,255,255,0.85); font-size:10px; padding:2px 7px; border-radius:100px; font-family:'DM Sans',sans-serif }
+        /* "Nueva" sobre la foto (solo recientes) — señal de atención */
+        .vlc-nueva { position:absolute; top:10px; left:10px; z-index:3; font-family:'DM Sans',sans-serif; font-size:10.5px; font-weight:600; color:#0A3D1E; background:#7BB389; padding:3px 9px; border-radius:100px; letter-spacing:0.2px }
+        .vlc-reciente-badge { background:rgba(255,255,255,0.92); color:#3A6A48 }
         .vlc-body { flex:1; min-width:0; padding:14px 18px; display:flex; flex-direction:column; font-family:'DM Sans',sans-serif }
-        .vlc-toprow { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px }
-        .vlc-estado { font-size:11px; font-weight:600; letter-spacing:0.3px; color:#9A8E7A; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.12); padding:2px 9px; border-radius:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-        .vlc-estado-pre { color:#7BB389; background:rgba(58,106,72,0.16); border-color:rgba(123,179,137,0.3) }
-        .vlc-fav { width:32px; height:32px; min-width:32px; border-radius:50%; background:none; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#9A8E7A }
+        /* Precio héroe + favorito */
+        .vlc-toprow { display:flex; align-items:flex-start; justify-content:space-between; gap:8px }
+        .vlc-price { font-family:'Figtree',sans-serif; font-size:22px; font-weight:600; color:#F2EEE4; font-variant-numeric:tabular-nums; line-height:1; white-space:nowrap }
+        .vlc-pricesub { font-size:12.5px; color:#A99E8C; margin-top:3px; font-variant-numeric:tabular-nums }
+        .vlc-fav { width:32px; height:32px; min-width:32px; border-radius:50%; background:none; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#A99E8C }
         .vlc-fav:hover { color:#EDE8DC }
-        .vlc-name { font-family:'Figtree',sans-serif; font-size:19px; font-weight:500; color:#EDE8DC; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-        .vlc-zona { font-size:12.5px; color:#9A8E7A; letter-spacing:0.3px; margin:3px 0 8px }
-        .vlc-id { color:rgba(237,232,220,0.3) }
-        .vlc-specs { font-size:14px; color:#B8AD9E; font-weight:300 }
-        /* Precio + $/m² juntos a la izquierda (sin hueco central) — card compacta */
-        .vlc-bottomrow { display:flex; align-items:baseline; flex-wrap:wrap; gap:8px; margin-top:auto; padding-top:8px }
-        .vlc-m2 { font-size:13px; color:#9A8E7A; font-variant-numeric:tabular-nums }
-        .vlc-price { font-size:20px; font-weight:600; color:#EDE8DC; font-variant-numeric:tabular-nums; white-space:nowrap }
-        .vlc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.35) }
+        /* Specs core — iconos muteados legibles (estructura, no señal) */
+        .vlc-specs { display:flex; gap:16px; margin-top:12px; font-size:13.5px; color:#D0C6B4 }
+        .vlc-spec { display:inline-flex; align-items:center; gap:5px; font-variant-numeric:tabular-nums }
+        .vlc-spec svg { width:16px; height:16px; color:#A99E8C; flex-shrink:0 }
+        /* Inclusiones muteadas legibles (icono + label) */
+        .vlc-incl { display:flex; gap:14px; margin-top:8px; font-size:12px; color:#A99E8C }
+        .vlc-incl-item { display:inline-flex; align-items:center; gap:5px }
+        .vlc-incl-item svg { width:15px; height:15px; color:#9BAF9F; flex-shrink:0 }
+        /* Nombre · zona · #id — con piso de contraste (todo legible) */
+        .vlc-name { font-family:'Figtree',sans-serif; font-size:15px; font-weight:500; color:#EDE8DC; line-height:1.3; margin-top:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+        .vlc-zona { font-family:'DM Sans',sans-serif; font-size:12.5px; font-weight:400; color:#9A8E7A }
+        .vlc-id { font-size:11px; color:#877C6C }
+        /* Señales de decisión: estado (texto, sin pill) + UN pill fiduciario */
+        .vlc-signals { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-top:auto; padding-top:10px }
+        .vlc-estado { font-size:11.5px; color:#A99E8C }
+        .vlc-estado-pre { display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:500; color:#D3AE6E }
+        .vlc-estado-pre svg { width:13px; height:13px; flex-shrink:0 }
+        .vlc-mkt2 { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:#A9CDB4; background:rgba(123,179,137,0.13); padding:4px 11px; border-radius:100px }
+        .vlc-mkt2 svg { width:14px; height:14px; flex-shrink:0 }
+        .vlc-mkt2-sobre { color:#C4BAA8; background:rgba(237,232,220,0.08) }
         /* Panel derecho */
         .vd-panel { position:sticky; top:76px; height:calc(100vh - 76px - 20px); display:flex; flex-direction:column; gap:16px; min-width:0 }
-        /* El bloque mapa+resumen se OCULTA (no se desmonta) cuando el side sheet
-           está abierto — desmontar Leaflet en plena animación de zoom crashea. */
         .vd-panel-home { flex:1; min-height:0; display:flex; flex-direction:column; gap:16px }
-        /* visibility (no display:none): el contenedor conserva su tamaño y
-           Leaflet no queda en 0x0 si se reconstruye mientras está oculto */
-        .vd-panel-hidden { visibility:hidden; position:absolute; inset:0; z-index:0; pointer-events:none }
-        .vd-map { flex:1; min-height:260px; border-radius:14px; overflow:hidden; border:1px solid rgba(237,232,220,0.08); position:relative }
+        /* isolation: los z-index internos de Leaflet (panes 200-700) quedan
+           encapsulados y no compiten con el overlay/modal del detalle */
+        .vd-map { flex:1; min-height:260px; border-radius:14px; overflow:hidden; border:1px solid rgba(237,232,220,0.08); position:relative; z-index:1; isolation:isolate }
         .vd-map .venta-map { position:absolute; inset:0 }
         .vd-map-full { position:absolute; top:12px; right:12px; z-index:1100; display:inline-flex; align-items:center; gap:6px; background:#141414; color:#EDE8DC; border:1px solid rgba(237,232,220,0.15); padding:8px 14px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.35) }
         .vd-map-full:hover { background:#1e1e1e }
@@ -3783,33 +4476,339 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vd-mkt-num { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; font-variant-numeric:tabular-nums; line-height:1.1 }
         .vd-mkt-label { font-size:11.5px; color:#9A8E7A; line-height:1.35 }
         .vd-mkt-caveat { font-size:11.5px; color:#7A7060; line-height:1.45; border-top:1px solid rgba(237,232,220,0.06); padding-top:10px }
-        /* Side sheet ANCLADO al viewport (fixed): entre el nav (76) y el borde
-           inferior. Así el sheet nunca excede la pantalla y el footer sticky
-           bottom:0 queda SIEMPRE visible, sin importar el scroll de la página.
-           El .vd-panel mantiene su height fija → la columna no colapsa aunque
-           el sheet salga del flujo. Ancho = columna derecha del grid (~52%). */
-        .bs-venta.bs-side { position:fixed; inset:auto; left:auto; top:76px; right:24px; bottom:20px; width:calc((100vw - 68px) * 0.52); max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:14px; border:1px solid rgba(237,232,220,0.08); z-index:40; padding-bottom:84px; transform:none }
-        /* Footer WhatsApp/Compartir FIJO a la pantalla (misma columna que el
-           sheet), garantiza que quede siempre abajo sin depender del scroll
-           interno. El sheet reserva 84px abajo (padding) para no taparlo. */
-        .bs-venta.bs-side .bs-sticky-footer { position:fixed; box-sizing:border-box; left:auto; right:24px; bottom:20px; width:calc((100vw - 68px) * 0.52); z-index:60; border-radius:0 0 14px 14px }
-        .bs-venta.bs-side.open { transform:none }
-        /* fav+close: fijos en la esquina del sheet (absolute sobre el sheet
-           fixed), siempre visibles, sin ocupar flujo ni chocar con las tabs. */
-        .bs-venta.bs-side .bs-floating-actions { position:absolute; top:10px; right:12px; z-index:50; background:transparent; padding:0 }
-        /* Contenido acotado a medida de lectura (~640px) centrado — el panel es
-           ancho para el mapa, pero leer el detalle a 710px cansa. La galería
-           queda full-bleed (no lleva este padding). Padding dinámico: crece a
-           los lados cuando el panel es más ancho que 640. */
+        /* ===== MODAL DE PROPIEDAD (desktop, estilo Zillow v4) =====
+           Ventana grande centrada sobre el feed oscurecido (bs-overlay, z 500).
+           Estructura fiel a Zillow: nav de anclas → FOTOS a todo el ancho
+           (nada las tapa) → precio+números → dos columnas: contenido | tarjeta
+           STICKY con solo lo esencial (WhatsApp + Compartir). Los wrappers
+           bsm-body/main/aside son display:contents en mobile (cero cambio). */
+        .bsm-body, .bsm-main, .bsm-aside { display:contents }
+        .bs-venta.bs-side { position:fixed; inset:auto; top:3vh; bottom:3vh; left:50%; right:auto; transform:translateX(-50%); width:min(1120px, 94vw); max-height:none; overflow-y:auto; overflow-x:hidden; max-width:none; border-radius:16px; border:1px solid rgba(237,232,220,0.1); z-index:501; padding-bottom:32px; display:flex; flex-direction:column }
+        .bs-venta.bs-side.open { transform:translateX(-50%) }
+        .bs-venta.bs-side > * { order:3; flex-shrink:0 }
+        .bs-venta.bs-side > .bsm-nav { order:0 }
+        .bs-venta.bs-side > .bsm-photos { order:1 }
+        .bs-venta.bs-side > .bs-dark-header { order:2 }
+        /* Dos columnas debajo de las fotos: contenido | tarjeta sticky */
+        .bs-venta.bs-side .bsm-body { display:flex; align-items:flex-start; gap:0 }
+        .bs-venta.bs-side .bsm-main { display:block; flex:1; min-width:0 }
+        /* align-self:stretch: la columna derecha mide lo mismo que el
+           contenido — sin eso la tarjeta sticky no tiene recorrido */
+        .bs-venta.bs-side .bsm-aside { display:block; width:312px; flex-shrink:0; padding:16px 20px 0 0; align-self:stretch }
+        /* Nav de anclas sticky */
+        .bsm-nav { position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:4px; background:#141414; border-bottom:1px solid rgba(237,232,220,0.1); padding:8px 20px }
+        .bsm-nav-link { background:none; border:none; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:7px 10px; cursor:pointer; border-radius:8px; transition:color 0.15s }
+        .bsm-nav-link:hover { color:#EDE8DC; background:rgba(237,232,220,0.05) }
+        .bsm-nav-actions { margin-left:auto; display:flex; align-items:center; gap:6px }
+        .bsm-nav-actions .bs-fav, .bsm-nav-actions .bs-close { width:32px; height:32px; border-radius:50%; background:rgba(237,232,220,0.07); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#EDE8DC }
+        .bsm-nav-actions .bs-close { font-size:20px; line-height:1 }
+        .bsm-nav-actions .bs-fav:hover, .bsm-nav-actions .bs-close:hover { background:rgba(237,232,220,0.14) }
+        .bs-venta.bs-side .bs-floating-actions { display:none }
+        /* Franja de fotos a TODO el ancho: 1 grande + 4 chicas (como Zillow),
+           altura fija. "Ver las N fotos" abre el visor a pantalla completa. */
+        .bs-venta.bs-side .bsm-photos { position:relative; padding:14px 20px 6px }
+        .bs-venta.bs-side .bsm-photos .bsg-scroll { display:grid; grid-template-columns:2fr 1fr 1fr; grid-template-rows:183px 183px; gap:8px; overflow:visible; scroll-snap-type:none }
+        .bs-venta.bs-side .bsm-photos .bsg-slide { aspect-ratio:auto; height:100%; min-height:0; border-radius:10px; overflow:hidden }
+        .bs-venta.bs-side .bsm-photos .bsg-slide:first-child { grid-row:1 / 3 }
+        .bs-venta.bs-side .bsm-photos .bsg-slide:nth-child(n+6) { display:none }
+        /* Pocas fotos: adaptar el grid para NO dejar celdas vacías (fondo).
+           object-fit:cover ya evita deformar; acá evitamos los huecos. */
+        .bs-venta.bs-side .bsm-photos-n1 .bsg-scroll { grid-template-columns:1fr; grid-template-rows:380px }
+        .bs-venta.bs-side .bsm-photos-n1 .bsg-slide:first-child { grid-row:auto }
+        .bs-venta.bs-side .bsm-photos-n2 .bsg-scroll { grid-template-columns:1fr 1fr; grid-template-rows:374px }
+        .bs-venta.bs-side .bsm-photos-n2 .bsg-slide:first-child { grid-row:auto }
+        .bs-venta.bs-side .bsm-photos-n3 .bsg-scroll { grid-template-columns:2fr 1fr; grid-template-rows:187px 187px }
+        .bs-venta.bs-side .bsm-photos-n4 .bsg-scroll { grid-template-columns:1fr 1fr; grid-template-rows:187px 187px }
+        .bs-venta.bs-side .bsm-photos-n4 .bsg-slide:first-child { grid-row:auto }
+        /* Una sola foto: foto completa (contain) sobre fondo borroso de sí misma */
+        .bs-venta.bs-side .bsm-photo-solo { position:relative; height:400px; padding:0; margin:14px 20px 6px; border-radius:12px; overflow:hidden; cursor:pointer; background:#EDE8DC }
+        .bsm-photo-solo-bg { position:absolute; inset:0; background-size:cover; background-position:center; filter:blur(26px) brightness(0.9); transform:scale(1.2) }
+        .bsm-photo-solo-img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; z-index:1 }
+        .bs-venta.bs-side .bsm-photos .bsg-arrow, .bs-venta.bs-side .bsm-photos .bsg-counter, .bs-venta.bs-side .bsm-photos .bsg-dots { display:none }
+        .bsm-verfotos { position:absolute; right:32px; bottom:18px; display:inline-flex; align-items:center; gap:7px; background:#141414; color:#EDE8DC; border:1px solid rgba(237,232,220,0.25); padding:8px 14px; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:12.5px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.4) }
+        .bsm-verfotos:hover { background:#1e1e1e }
+        /* Header: precio a la izquierda + números grandes a la derecha */
+        .bs-venta.bs-side .bs-dark-header { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:24px; align-items:center }
+        .bs-venta.bs-side .bsm-stats { grid-column:2; grid-row:1 / span 3; display:flex; gap:26px }
+        .bsm-stat { text-align:center }
+        .bsm-stat b { display:block; font-family:'Figtree',sans-serif; font-size:26px; font-weight:600; color:#EDE8DC; line-height:1.1; font-variant-numeric:tabular-nums }
+        .bsm-stat span { display:block; font-size:11.5px; color:#9A8E7A; margin-top:2px }
+        .bs-venta.bs-side .bs-h-specs { display:none }
+        .bs-venta.bs-side .bs-h-price { font-size:24px }
+        /* Tarjeta sticky (el "Request a tour" de Zillow): arranca DEBAJO de
+           las fotos y se queda pegada al scrollear. Solo WhatsApp+Compartir. */
+        .bs-venta.bs-side .bs-sticky-footer { position:sticky; top:56px; bottom:auto; flex-direction:column; align-items:stretch; gap:8px; padding:16px; background:#1a1a1a; border:1px solid rgba(237,232,220,0.14); border-radius:14px; border-top:1px solid rgba(237,232,220,0.14); z-index:5 }
+        /* Mapa mediano en la sección Ubicación del flujo */
+        .bsm-flow-map { height:230px; border-radius:12px; overflow:hidden; border:1px solid rgba(237,232,220,0.1); position:relative; isolation:isolate }
+        .bsm-flow-map .venta-map { position:absolute; inset:0 }
+        /* Contenido izquierdo acotado a medida de lectura (~640px) centrado.
+           La franja de fotos queda full-bleed (no lleva este padding). */
         .bs-venta.bs-side .bs-dark-header,
         .bs-venta.bs-side .bs-section {
           padding-left:max(24px, calc((100% - 640px) / 2));
           padding-right:max(24px, calc((100% - 640px) / 2));
         }
-        /* Tabs full-width con espacio a la derecha para el botón cerrar */
-        .bs-venta.bs-side .bs-tabs { padding-left:16px; padding-right:56px }
-        /* Precio menos gigante en el side sheet ancho */
-        .bs-venta.bs-side .bs-h-price { font-size:24px }
+        .bs-venta.bs-side .bs-section, .bs-venta.bs-side .bs-dark-header { scroll-margin-top:54px }
+        .bs-venta.bs-side .bsm-trust { font-size:12.5px; color:#9A8E7A; font-family:'DM Sans',sans-serif }
+        /* Secciones compactas (el contenido base es de mobile) */
+        .bs-venta.bs-side .bs-section { padding-top:13px; padding-bottom:13px }
+        .bs-venta.bs-side .bs-sl { margin-bottom:8px }
+        .bs-venta.bs-side .bs-grid { gap:8px; grid-template-columns:repeat(4,1fr) }
+        .bs-venta.bs-side .bs-feat { flex-direction:row; justify-content:flex-start; gap:9px; padding:9px 12px; border-radius:10px }
+        .bs-venta.bs-side .bs-fi { width:16px; height:16px; flex-shrink:0 }
+        .bs-venta.bs-side .bs-fv { font-size:13.5px }
+        /* Etiquetas fuera: "51m²", "1 dorm", "1 baño", "Piso 12" se explican
+           solos. Excepción: parqueo ("1 incl.") necesita su etiqueta. */
+        .bs-venta.bs-side .bs-fl { display:none }
+        .bs-venta.bs-side .bs-feat.hl .bs-fl { display:block; font-size:11.5px }
+        @media (max-width:1180px) {
+          /* Angosto: columnas fuera, la tarjeta vuelve a ser barra inferior */
+          .bs-venta.bs-side .bsm-body, .bs-venta.bs-side .bsm-main, .bs-venta.bs-side .bsm-aside { display:contents }
+          .bs-venta.bs-side .bs-sticky-footer { position:sticky; top:auto; bottom:0; flex-direction:row; border-radius:0; border:none; border-top:1px solid rgba(237,232,220,0.08) }
+        }
+
+        /* ===== MODAL DESKTOP — TEMA CLARO (arena/salvia, como /alquileres) =====
+           Todo scopeado a .bs-side → el sheet mobile sigue oscuro e intacto.
+           Mayor especificidad que las reglas oscuras base, así que ganan. */
+        .bs-venta.bs.bs-side { background:#FBFAF7; color:#3D3A33; border:1px solid #E0DACB; box-shadow:0 24px 80px rgba(20,20,20,0.30) }
+        .bs-venta.bs-side .bsm-nav { background:#FBFAF7; border-bottom:1px solid #E7E1D3 }
+        .bs-venta.bs-side .bsm-nav-link { color:#6B6862 }
+        .bs-venta.bs-side .bsm-nav-link:hover { color:#141414; background:rgba(20,20,20,0.05) }
+        .bs-venta.bs-side .bsm-nav-actions .bs-fav, .bs-venta.bs-side .bsm-nav-actions .bs-close { background:rgba(20,20,20,0.05); color:#55524A }
+        .bs-venta.bs-side .bsm-nav-actions .bs-fav:hover, .bs-venta.bs-side .bsm-nav-actions .bs-close:hover { background:rgba(20,20,20,0.10) }
+        .bs-venta.bs-side .bsm-verfotos { background:#FBFAF7; color:#3D3A33; border:1px solid rgba(20,20,20,0.18); box-shadow:0 4px 14px rgba(20,20,20,0.16) }
+        .bs-venta.bs-side .bsm-verfotos:hover { background:#fff }
+        /* Header claro — ahora vive en la columna izquierda (sin grid),
+           los stats van con iconos debajo del precio */
+        .bs-venta.bs-side .bs-dark-header { background:transparent; display:block; padding-top:26px }
+        .bs-venta.bs-side .bsm-stats { display:flex; flex-wrap:wrap; gap:24px; grid-column:auto; grid-row:auto; margin-top:16px; padding-top:16px; border-top:1px solid #E7E1D3 }
+        .bs-venta.bs-side .bsm-stat { display:flex; align-items:center; gap:9px; text-align:left }
+        .bsm-stat-ico { width:22px; height:22px; color:#3A6A48; flex-shrink:0 }
+        .bs-venta.bs-side .bsm-stat b { font-size:22px }
+        .bs-venta.bs-side .bs-h-name { color:#141414; font-size:28px }
+        .bs-venta.bs-side .bs-h-reciente { color:#3A6A48 }
+        .bs-venta.bs-side .bs-h-zona { color:#6B6862 }
+        .bs-venta.bs-side .bs-h-price { color:#141414 }
+        .bs-venta.bs-side .bs-h-tc { color:#9A9384 }
+        .bs-venta.bs-side .bs-h-sub { color:#6B6862; font-weight:400 }
+        .bs-venta.bs-side .bs-tc-badge { background:#EDE8DC; color:#55524A }
+        .bs-venta.bs-side .bsm-stat b { color:#141414 }
+        .bs-venta.bs-side .bsm-stat span { color:#6B6862 }
+        /* Inclusiones (equipado/parqueo/baulera) */
+        .bsm-incl { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px }
+        .bsm-incl-chip { display:inline-flex; align-items:center; gap:8px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; background:#EAF0EC; color:#2C5138; padding:7px 13px; border-radius:20px }
+        .bsm-incl-chip svg { width:20px; height:20px; flex-shrink:0 }
+        .bsm-opcional { display:flex; align-items:center; gap:8px; margin-top:12px; color:#6B6862; font-family:'DM Sans',sans-serif }
+        .bsm-opcional svg { width:15px; height:15px; flex-shrink:0; color:#9A9384 }
+        .bsm-opcional span { font-size:13px }
+        .bsm-opcional b { font-weight:500; color:#141414; font-variant-numeric:tabular-nums }
+        /* Secciones + etiquetas + chips */
+        .bs-venta.bs-side .bs-section { background:transparent; border-bottom:1px solid #E7E1D3 }
+        .bs-venta.bs-side .bs-sl { color:#3A6A48 }
+        .bs-venta.bs-side .bs-sl-dot { background:#3A6A48 }
+        .bs-venta.bs-side .bs-at { background:#EDE8DC; border:1px solid transparent; color:#55524A }
+        .bs-venta.bs-side .bs-desc { color:#3D3A33 }
+        .bs-venta.bs-side .bs-desc-more { color:#3A6A48 }
+        .bs-venta.bs-side .bsm-trust { color:#9A9384 }
+        /* Mercado claro */
+        .bs-venta.bs-side .bs-mktv { background:#F4F1E9; border:1px solid #E7E1D3 }
+        .bs-venta.bs-side .bs-mktv-label { color:#6B6862 }
+        .bs-venta.bs-side .bs-mktv-value { color:#141414 }
+        .bs-venta.bs-side .bs-mktv-this { flex-wrap:wrap }
+        .bs-mktv-status { font-size:12px; background:#EAF0EC; color:#2C5138; padding:3px 10px; border-radius:20px; align-self:center }
+        .bs-venta.bs-side .bs-mktv-zona { color:#3D3A33 }
+        .bs-venta.bs-side .bs-mktv-zona b { color:#141414 }
+        .bs-venta.bs-side .bs-mktv-bar { background:#E7E1D3 }
+        .bs-venta.bs-side .bs-mktv-band { background:#3A6A48; opacity:0.28 }
+        .bs-venta.bs-side .bs-mktv-marker { background:#141414; box-shadow:0 0 0 2px #F4F1E9 }
+        .bs-venta.bs-side .bs-mktv-scale span { color:#9A9384 }
+        .bs-venta.bs-side .bs-mktv-caveat { color:#9A9384; border-top:1px solid rgba(20,20,20,0.08) }
+        .bs-venta.bs-side .bs-mktv-empty { color:#6B6862 }
+        .bs-mktv-summary { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; padding-top:14px; border-top:1px solid rgba(20,20,20,0.08) }
+        /* ===== Mercado v2 — versión clara para usuario común (modal desktop) ===== */
+        .bs-mkt2 { font-family:'DM Sans',sans-serif }
+        .bs-mkt2-verdict { display:flex; align-items:center; gap:11px; margin-bottom:4px }
+        .bs-mkt2-vico { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:#EAF0EC; color:#3A6A48; flex-shrink:0 }
+        .bs-mkt2-vico svg { width:16px; height:16px }
+        .bs-mkt2-vtitle { font-family:'Figtree',sans-serif; font-size:18px; font-weight:500; color:#141414; line-height:1.2 }
+        .bs-mkt2-vsub { font-size:13px; color:#6B6862; margin-top:2px }
+        .bs-mkt2-gauge { margin:22px 0 4px }
+        .bs-mkt2-ends { display:flex; justify-content:space-between; font-size:11px; color:#9A9384; margin-bottom:7px }
+        .bs-mkt2-track { position:relative; height:52px }
+        .bs-mkt2-track::before { content:''; position:absolute; top:20px; left:0; right:0; height:8px; background:#E7E1D3; border-radius:5px }
+        .bs-mkt2-band { position:absolute; top:20px; height:8px; background:#BFD3C6; border-radius:5px }
+        .bs-mkt2-pin { position:absolute; top:0; transform:translateX(-50%); line-height:0 }
+        .bs-mkt2-here { position:absolute; top:22px; transform:translateX(-50%); font-size:12px; font-weight:500; color:#141414; white-space:nowrap }
+        .bs-mkt2-tick { position:absolute; top:38px; transform:translateX(-50%); font-size:11px; color:#9A9384; white-space:nowrap }
+        .bs-mkt2-compare { background:#F4F1E9; border-radius:10px; padding:12px 14px; margin-top:14px }
+        .bs-mkt2-crow { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:4px 0 }
+        .bs-mkt2-crow + .bs-mkt2-crow { border-top:0.5px solid #E7E1D3; margin-top:5px; padding-top:9px }
+        .bs-mkt2-crow span { font-size:13px; color:#6B6862; padding-top:1px }
+        .bs-mkt2-crow b { font-size:15px; font-weight:500; color:#141414; text-align:right; font-variant-numeric:tabular-nums }
+        .bs-mkt2-crow em { font-style:normal; font-size:12px; font-weight:400; color:#6B6862 }
+        .bs-mkt2-cval { display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-variant-numeric:tabular-nums }
+        .bs-mkt2-cval em { font-size:12px; color:#6B6862 }
+        .bs-mkt2-note { display:flex; gap:8px; margin-top:14px; color:#9A9384 }
+        .bs-mkt2-note svg { width:15px; height:15px; flex-shrink:0; margin-top:1px }
+        .bs-mkt2-note span { font-size:12px; line-height:1.55 }
+        .bs-mkt2-note b { font-weight:500; color:#6B6862 }
+        .bs-venta.bs-side .bs-mkt2-summary, .bs-mkt2 .bs-mktv-summary { border-top-color:#E7E1D3 }
+        .bs-mktv-sitem b { display:block; font-family:'Figtree',sans-serif; font-size:16px; font-weight:500; color:#141414; line-height:1.2 }
+        .bs-mktv-sitem span { display:block; font-size:11px; color:#6B6862; margin-top:2px }
+        /* Similares claro */
+        .bs-venta.bs-side .bs-sim-card { background:#FFFFFF; border:1px solid #E7E1D3 }
+        .bs-venta.bs-side .bs-sim-card:hover { border-color:#3A6A48 }
+        .bs-venta.bs-side .bs-sim-thumb, .bs-venta.bs-side .bs-sim-nophoto { background:#E4DFD2 }
+        .bs-venta.bs-side .bs-sim-name { color:#141414 }
+        .bs-venta.bs-side .bs-sim-price { color:#3A6A48 }
+        .bs-venta.bs-side .bs-sim-specs { color:#6B6862 }
+        /* Preguntas claro */
+        .bs-venta.bs-side .bs-q-hint { color:#9A9384 }
+        .bs-venta.bs-side .bs-q-item { background:#FFFFFF; border:1px solid #E0DACB }
+        .bs-venta.bs-side .bs-q-item.selected { border-color:#3A6A48; background:#EAF0EC }
+        .bs-venta.bs-side .bs-q-check { border:1.5px solid #C9C1B0 }
+        .bs-venta.bs-side .bs-q-check.checked { background:#3A6A48; border-color:#3A6A48 }
+        .bs-venta.bs-side .bs-q-text { color:#141414 }
+        /* Google Maps + Ver original claros */
+        .bs-venta.bs-side .bs-gmaps-link { background:transparent; border:1px solid #D9D2C2; color:#141414 }
+        .bs-venta.bs-side .bs-ver-original { background:transparent; border:none; color:#3A6A48; justify-content:center }
+        /* Tarjeta sticky clara: WhatsApp salvia + Comparar + Compartir */
+        .bs-venta.bs-side .bs-sticky-footer { background:#FFFFFF; border:1px solid #E0DACB; border-top:1px solid #E0DACB }
+        .bs-venta.bs-side .bs-wsp-cta { background:#3A6A48; color:#F4F1E9 }
+        .bs-venta.bs-side .bs-wsp-cta svg { fill:#F4F1E9 }
+        .bs-compare-btn { display:flex; align-items:center; justify-content:center; gap:8px; padding:11px; background:transparent; border:1px solid #B9CDBF; border-radius:10px; color:#3A6A48; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:background 0.15s }
+        .bs-compare-btn:hover { background:#EAF0EC }
+        .bs-venta.bs-side .bs-share-btn { border:1px solid #D9D2C2; color:#55524A }
+        .bs-venta.bs-side .bsm-flow-map { height:420px; border:1px solid #E0DACB }
+        /* ===== Pasada UX de tipografía (modal claro) — escala consistente =====
+           Body 14px (el modal es amplio, 13px se leía chico), meta 13px,
+           fine print 12px. Botones: mismo tamaño/caja, jerarquía por peso. */
+        .bs-venta.bs-side .bs-h-tc { font-size:12px }
+        .bs-venta.bs-side .bs-h-sub { font-size:14px }
+        .bs-venta.bs-side .bs-at { font-size:13px }
+        .bs-venta.bs-side .bsm-incl-chip { font-size:13px }
+        /* "Lo que la hace especial" (no canónicas) — pills con chispita */
+        .bsm-especial { display:flex; flex-wrap:wrap; gap:10px }
+        .bsm-especial-pill { display:inline-flex; align-items:center; gap:8px; background:#FFFFFF; border:0.5px solid #D7CDB8; border-radius:12px; padding:10px 14px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; color:#141414 }
+        .bsm-especial-ico { width:17px; height:17px; color:#3A6A48; flex-shrink:0 }
+        /* "Todas las comodidades" (canónicas) — grilla icono + label */
+        .bsm-comod-group + .bsm-comod-group { margin-top:16px }
+        .bsm-comod-cat { font-size:13px; color:#3D3A33; margin-bottom:12px; font-family:'DM Sans',sans-serif }
+        .bsm-comod-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px 18px }
+        .bsm-comod-item { display:flex; align-items:center; gap:11px; font-family:'DM Sans',sans-serif; font-size:14px; color:#141414 }
+        .bsm-comod-ico { width:20px; height:20px; color:#3A6A48; flex-shrink:0 }
+        .bs-venta.bs-side .bs-desc { font-size:14px; line-height:1.6 }
+        .bs-venta.bs-side .bs-mktv-label { font-size:14px }
+        .bs-venta.bs-side .bs-mktv-zona { font-size:13.5px }
+        .bs-venta.bs-side .bs-q-text { font-size:14px; font-weight:400 }
+        .bs-venta.bs-side .bs-q-hint { font-size:12px }
+        .bs-venta.bs-side .bs-sim-name { font-size:14px; font-weight:500 }
+        .bs-venta.bs-side .bs-sim-price { font-size:14px; font-weight:600 }
+        .bs-venta.bs-side .bs-sim-specs { font-size:12.5px }
+        /* Botones de la tarjeta sticky: misma caja; jerarquía por peso */
+        .bs-venta.bs-side .bs-sticky-footer .bs-wsp-cta,
+        .bs-venta.bs-side .bs-sticky-footer .bs-compare-btn,
+        .bs-venta.bs-side .bs-sticky-footer .bs-share-btn { font-size:14px; padding:12px; min-height:46px; gap:8px; border-radius:10px }
+        .bs-venta.bs-side .bs-sticky-footer .bs-wsp-cta { font-weight:600 }
+        .bs-venta.bs-side .bs-sticky-footer .bs-compare-btn,
+        .bs-venta.bs-side .bs-sticky-footer .bs-share-btn { font-weight:500 }
+        /* Enlaces-acción del flujo: mismo tamaño (Google Maps, Ver original) */
+        .bs-venta.bs-side .bs-gmaps-link { font-size:14px; font-weight:500; padding:13px }
+        .bs-venta.bs-side .bs-ver-original { font-size:14px; font-weight:500; padding:12px }
+
+        /* Reorden del modal desktop (mobile = display:contents, ignora order):
+           Edificio → Departamento → Sobre → Ubicación → Mercado → Similares
+           → Preguntas → Ver original */
+        .bs-venta.bs-side .bsm-main { display:flex; flex-direction:column }
+        .bs-venta.bs-side #bsm-sec-especial { order:1 }
+        .bs-venta.bs-side #bsm-sec-comod { order:2 }
+        .bs-venta.bs-side #bsm-sec-desc { order:3 }
+        .bs-venta.bs-side .bsm-trust { order:4 }
+        .bs-venta.bs-side #bsm-sec-ubic { order:5 }
+        .bs-venta.bs-side .bsm-ubic-link { order:6 }
+        .bs-venta.bs-side #bsm-sec-mercado { order:7 }
+        .bs-venta.bs-side #bsm-sec-similares { order:8 }
+        .bs-venta.bs-side #bsm-sec-preguntas { order:9 }
+        .bs-venta.bs-side .bsm-sec-original { order:10 }
+
+        /* ===== P3b — Sheet mobile RICO (tema OSCURO ventas) =====
+           Las secciones ricas del modal desktop (bsm-stats, inclusiones, split
+           de comodidades, mercado v2 con medidor) ahora se renderizan también
+           en el sheet mobile público (clase bs-rich) — acá se re-tematizan sobre
+           el fondo oscuro (#1a1a1a). Preguntas/Similares/Maps/Ver-original/sticky
+           ya tenían base oscura mobile, no necesitan override. */
+        /* Header: nombre + precio en blanco puro (ancla); specs de texto ocultos
+           (los reemplazan los stats con iconos) */
+        .bs-venta.bs-rich .bs-h-name { color:#FFFFFF }
+        .bs-venta.bs-rich .bs-h-reciente { color:#7BB389 }
+        .bs-venta.bs-rich .bs-h-price { color:#FFFFFF }
+        .bs-venta.bs-rich .bs-h-specs { display:none }
+        /* Stats con iconos — sección propia debajo de la foto (la separación la
+           da el padding de .bs-section, no un borde suelto) */
+        .bs-venta.bs-rich .bsm-stats { display:flex; gap:0 }
+        .bs-venta.bs-rich .bsm-stats-sec { padding-top:16px; padding-bottom:16px }
+        .bs-venta.bs-rich .bsm-stat { flex:1; display:flex; flex-direction:column; align-items:flex-start; gap:5px; text-align:left }
+        .bs-venta.bs-rich .bsm-stat-ico { width:19px; height:19px; color:#7BB389 }
+        .bs-venta.bs-rich .bsm-stat b { font-size:17px; color:#FFFFFF }
+        .bs-venta.bs-rich .bsm-stat span { font-size:11px; color:#9A8E7A }
+        /* Inclusiones (chips) — sutiles sobre oscuro */
+        .bs-venta.bs-rich .bsm-incl-chip { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.1); color:#ECE6D8 }
+        .bs-venta.bs-rich .bsm-incl-chip svg { color:#7BB389 }
+        .bs-venta.bs-rich .bsm-opcional { color:#9A8E7A }
+        .bs-venta.bs-rich .bsm-opcional b { color:#ECE6D8 }
+        /* "Lo que la hace especial" — pills oscuras */
+        .bs-venta.bs-rich .bsm-especial-pill { background:rgba(237,232,220,0.05); border:0.5px solid rgba(237,232,220,0.14); color:#ECE6D8 }
+        .bs-venta.bs-rich .bsm-especial-ico { color:#7BB389 }
+        /* "Todas las comodidades" — grilla icono + label */
+        .bs-venta.bs-rich .bsm-comod-cat { color:#9A8E7A }
+        .bs-venta.bs-rich .bsm-comod-item { color:#ECE6D8 }
+        .bs-venta.bs-rich .bsm-comod-ico { color:#7BB389 }
+        /* Cómo está el precio (mercado v2 con medidor) */
+        .bs-venta.bs-rich .bs-mkt2-vico { background:rgba(123,179,137,0.16); color:#7BB389 }
+        .bs-venta.bs-rich .bs-mkt2-vtitle { color:#FFFFFF }
+        .bs-venta.bs-rich .bs-mkt2-vsub { color:#9A8E7A }
+        .bs-venta.bs-rich .bs-mkt2-ends { color:#7A7060 }
+        .bs-venta.bs-rich .bs-mkt2-track::before { background:rgba(237,232,220,0.1) }
+        .bs-venta.bs-rich .bs-mkt2-band { background:rgba(123,179,137,0.3) }
+        .bs-venta.bs-rich .bs-mkt2-pin { color:#7BB389 }
+        .bs-venta.bs-rich .bs-mkt2-here { color:#ECE6D8 }
+        .bs-venta.bs-rich .bs-mkt2-tick { color:#7A7060 }
+        .bs-venta.bs-rich .bs-mkt2-compare { background:rgba(237,232,220,0.05) }
+        .bs-venta.bs-rich .bs-mkt2-crow span { color:#9A8E7A }
+        .bs-venta.bs-rich .bs-mkt2-crow b { color:#FFFFFF }
+        .bs-venta.bs-rich .bs-mkt2-crow em { color:#9A8E7A }
+        .bs-venta.bs-rich .bs-mkt2-crow + .bs-mkt2-crow { border-top-color:rgba(237,232,220,0.1) }
+        .bs-venta.bs-rich .bs-mkt2-note { color:#9A8E7A }
+        .bs-venta.bs-rich .bs-mkt2-note b { color:#B8AD9E }
+        .bs-venta.bs-rich .bs-mktv-summary { border-top-color:rgba(237,232,220,0.1) }
+        .bs-venta.bs-rich .bs-mktv-sitem b { color:#FFFFFF }
+        .bs-venta.bs-rich .bs-mktv-sitem span { color:#9A8E7A }
+        /* Sticky: Comparar tematizado oscuro (par de Compartir) */
+        .bs-venta.bs-rich .bs-compare-btn { border:1px solid rgba(237,232,220,0.15); color:#ECE6D8; background:transparent }
+        .bs-venta.bs-rich .bs-compare-btn:hover { background:rgba(237,232,220,0.06) }
+        /* Compartir = SOLO ícono (como el mockup). Con los 3 botones + texto el
+           sticky desbordaba a lo ancho en equipos <=360px (Fold/S8/12 mini) y el
+           sheet scrolleaba en horizontal. Padding lateral menor por la misma razón. */
+        .bs-venta.bs-rich .bs-sticky-footer { padding-left:14px; padding-right:14px; gap:8px }
+        .bs-venta.bs-rich .bs-share-btn .bs-btn-label { display:none }
+        .bs-venta.bs-rich .bs-share-btn { padding:12px; flex:0 0 auto; min-width:46px; justify-content:center }
+        .bs-venta.bs-rich .bs-wsp-cta { min-width:0 }
+        .bs-venta.bs-rich .bs-compare-btn { flex:0 0 auto; white-space:nowrap }
+        /* Orden de secciones en mobile rico = mismo que el modal desktop:
+           especial → comodidades → sobre → ubicación → mercado → similares →
+           preguntas → ver original (bsm-main pasa de display:contents a flex col) */
+        .bs-venta.bs-rich .bsm-main { display:flex; flex-direction:column }
+        .bs-venta.bs-rich #bsm-sec-especial { order:1 }
+        .bs-venta.bs-rich #bsm-sec-comod { order:2 }
+        .bs-venta.bs-rich #bsm-sec-desc { order:3 }
+        .bs-venta.bs-rich .bsm-trust { order:4 }
+        .bs-venta.bs-rich #bsm-sec-ubic { order:5 }
+        .bs-venta.bs-rich .bsm-ubic-link { order:6 }
+        .bs-venta.bs-rich #bsm-sec-mercado { order:7 }
+        .bs-venta.bs-rich #bsm-sec-similares { order:8 }
+        .bs-venta.bs-rich #bsm-sec-preguntas { order:9 }
+        .bs-venta.bs-rich .bsm-sec-original { order:10 }
+
         .bs-tabs { position:sticky; top:0; z-index:9; display:flex; gap:2px; background:#141414; border-bottom:1px solid rgba(237,232,220,0.1); padding:0 16px }
         .bs-tab { flex:1; background:none; border:none; border-bottom:2px solid transparent; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:11px 4px; cursor:pointer; transition:color 0.15s }
         .bs-tab:hover { color:#EDE8DC }
@@ -3888,10 +4887,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* ===== FILTER OVERLAY (full-screen takeover) ===== */
         .fo-overlay { position:fixed; inset:0; z-index:200; background:#141414; display:flex; flex-direction:column; animation:foSlideUp 0.3s ease-out }
         @keyframes foSlideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
-        .fo-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; padding-top:max(16px, calc(env(safe-area-inset-top) + 8px)); border-bottom:1px solid rgba(237,232,220,0.08) }
-        .fo-close { width:44px; height:44px; border-radius:50%; border:none; background:rgba(237,232,220,0.08); color:#B8AD9E; font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer }
-        .fo-title { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC }
-        .fo-count { font-size:14px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-variant-numeric:tabular-nums }
+        .fo-header { position:relative; display:flex; align-items:center; justify-content:center; padding:16px 20px; padding-top:max(16px, calc(env(safe-area-inset-top) + 8px)); border-bottom:1px solid rgba(237,232,220,0.08) }
+        .fo-hcount { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; font-variant-numeric:tabular-nums }
+        .fo-logo { position:absolute; left:20px; top:50%; transform:translateY(-50%); width:24px; height:24px; border-radius:50%; background:#EDE8DC }
+        .fo-logo::after { content:''; position:absolute; top:5px; left:5px; width:9px; height:9px; border-radius:50%; background:#3A6A48 }
+        .fo-close { position:absolute; right:16px; top:50%; transform:translateY(-50%); width:38px; height:38px; border-radius:50%; border:none; background:rgba(237,232,220,0.08); color:#B8AD9E; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer }
         .fo-body { flex:1; overflow-y:auto; padding:20px }
         /* Búsqueda en lenguaje natural (bnv-*) */
         .bnv-group { margin-bottom:22px }
@@ -4014,7 +5014,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-placeholder { height:calc(100dvh - var(--mfh-h, 0px)); scroll-snap-align:start; background:#141414 }
 
         /* Photo zone (60%) */
-        .mc-photo-zone { flex:0 0 60%; position:relative; overflow:hidden }
+        /* La foto ABSORBE la diferencia: base 60%, pero puede crecer (sin dejar
+           hueco) y encoger (si el contenido necesita más). Antes era 0 0 60% fijo
+           y el contenido —con overflow:hidden— se recortaba: en el S8 (360x740)
+           los specs envolvían a 2 líneas y el chip fiduciario quedaba tapado. */
+        .mc-photo-zone { flex:1 1 60%; min-height:130px; position:relative; overflow:hidden }
         .mc-photo-zone::after { content:''; position:absolute; bottom:0; left:0; right:0; height:80px; background:linear-gradient(transparent, #141414); pointer-events:none; z-index:2 }
         .mc-photo-zone::before { content:''; position:absolute; top:0; left:0; right:0; height:70px; background:linear-gradient(rgba(0,0,0,0.35), transparent); pointer-events:none; z-index:3 }
         .mc-photo-scroll { display:flex; height:100%; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
@@ -4058,7 +5062,15 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ds-spotlight-text { font-size:12px; color:#9A8E7A; font-family:'DM Sans',sans-serif; letter-spacing:0.5px; white-space:nowrap; text-transform:uppercase }
 
         /* Content zone (45%) */
-        .mc-content { flex:1; padding:14px 24px 8px; padding-bottom:max(8px, calc(env(safe-area-inset-bottom) + 4px)); display:flex; flex-direction:column; overflow:hidden; cursor:pointer; -webkit-tap-highlight-color:transparent }
+        /* flex:0 0 auto → el contenido toma SU alto real y nunca se recorta */
+        .mc-content { flex:0 0 auto; padding:14px 24px 8px; padding-bottom:max(8px, calc(env(safe-area-inset-bottom) + 4px)); display:flex; flex-direction:column; overflow:hidden; cursor:pointer; -webkit-tap-highlight-color:transparent }
+        /* Equipos muy angostos (Galaxy Fold plegado, 280px): el texto envuelve
+           más y la foto ya no puede achicarse. Menos padding lateral = menos
+           wrap, y se le permite a la foto bajar un poco más. */
+        @media (max-width: 340px) {
+          .mc-content { padding-left:14px; padding-right:14px }
+          .mc-photo-zone { min-height:96px }
+        }
         /* Corazón dentro de la foto (rediseño tanda 2) */
         .mc-heart { position:absolute; top:14px; right:14px; z-index:6; width:44px; height:44px; border-radius:50%; background:rgba(20,20,20,0.35); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent }
         .mc-heart.active { background:rgba(58,106,72,0.22) }
@@ -4084,12 +5096,19 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-name { font-family:'Figtree',sans-serif; font-size:22px; font-weight:500; color:#EDE8DC; line-height:1.3; margin:0; padding:0; max-height:2.6em; overflow:hidden; flex-shrink:0 }
         .mc-meta-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:5px 0 12px; flex-shrink:0 }
         .mc-reciente { font-size:11px; font-weight:600; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:rgba(58,106,72,0.15); padding:2px 8px; border-radius:4px }
+        .mc-nuevo { font-size:11px; font-weight:700; color:#0A3D1E; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:#7BB389; padding:2px 8px; border-radius:4px }
         .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; font-family:'DM Sans',sans-serif }
         .mc-price-block { border-left:3px solid #3A6A48; padding-left:14px; margin-bottom:8px; flex-shrink:0 }
         .mc-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
         .mc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
-        .mc-specs { font-size:15px; color:#C8C0B0; font-family:'DM Sans',sans-serif; font-weight:400; line-height:1.4 }
+        .mc-specs { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:15px; color:#C8C0B0; font-family:'DM Sans',sans-serif; font-weight:400; line-height:1.4 }
+        .mc-sp { display:inline-flex; align-items:center; gap:6px }
+        .mc-sp svg { width:16px; height:16px; color:#8B8272; flex-shrink:0 }
         .mc-specs-2 { font-size:15px; color:#EDE8DC; font-family:'DM Sans',sans-serif; margin-bottom:auto; font-weight:300 }
+        .mc-fidrow { margin-top:10px }
+        .mc-fid { display:inline-flex; align-items:center; gap:7px; padding:7px 12px; border-radius:9px; background:rgba(58,106,72,0.18); color:#7BB389; font-size:13px; font-weight:600; font-family:'DM Sans',sans-serif }
+        .mc-fid svg { width:15px; height:15px; flex-shrink:0 }
+        .mc-fid.mc-fid-sobre { background:rgba(216,138,90,0.16); color:#E79A6A }
         .mc-wsp-inline { display:flex; align-items:center; gap:5px; text-decoration:none; color:#fff; font-size:12px; font-weight:600; background:#1EA952; border-radius:10px; padding:8px 14px }
         .mc-actions { display:flex; align-items:center; justify-content:space-between; padding-top:8px; border-top:1px solid rgba(237,232,220,0.1); margin-top:auto; min-height:36px }
         .mc-branding { display:block; text-align:center; font-family:'DM Sans',sans-serif; font-size:11px; color:rgba(237,232,220,0.25); text-decoration:none; padding-top:6px; letter-spacing:0.3px }
@@ -4124,6 +5143,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vf-zona-btn.active { border:2px solid #3A6A48; color:#EDE8DC; background:rgba(58,106,72,0.15); font-weight:600 }
         .vf-btn-row { display:flex; gap:8px }
         .vf-btn { flex:1; padding:12px 8px; border-radius:10px; border:1px solid rgba(237,232,220,0.12); background:transparent; color:#9A8E7A; font-size:13px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s; text-align:center; min-height:44px }
+        .vf-chips { display:flex; flex-wrap:wrap; gap:9px }
+        .vf-chip { border:1px solid rgba(237,232,220,0.14); background:transparent; border-radius:11px; padding:10px 14px; font-size:13px; color:#B8AD9E; font-family:'DM Sans',sans-serif; cursor:pointer }
+        .vf-chip.active { border-color:#5c8a68; background:rgba(58,106,72,0.16); color:#EDE8DC; font-weight:600 }
+        .vf-amen-note { font-size:11.5px; color:#7A7060; line-height:1.45; margin-top:10px; font-family:'DM Sans',sans-serif }
         .vf-btn:hover { border-color:rgba(237,232,220,0.25); color:#EDE8DC }
         .vf-btn.active { border:2px solid #3A6A48; color:#EDE8DC; background:rgba(58,106,72,0.15); font-weight:600 }
         .vf-range-display { font-size:14px; color:#EDE8DC; margin-bottom:10px; text-align:right; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
@@ -4175,7 +5198,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vc-nav-prev { left:8px }
         .vc-nav-next { right:8px }
         .vc-photo-count { position:absolute; top:10px; right:10px; background:rgba(20,20,20,0.75); color:rgba(255,255,255,0.8); font-size:11px; padding:3px 8px; border-radius:100px; font-family:'DM Sans',sans-serif }
-        .vc-tc-badge { position:absolute; bottom:10px; left:10px; background:rgba(70,130,200,0.9); color:#fff; font-size:11px; font-weight:500; padding:4px 10px; border-radius:4px; font-family:'DM Sans',sans-serif; letter-spacing:0.2px; z-index:3 }
+        .vc-tc-badge { position:absolute; bottom:10px; left:10px; display:inline-flex; align-items:center; gap:5px; background:rgba(20,20,20,0.62); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); color:rgba(237,232,220,0.92); font-size:10.5px; font-weight:500; padding:4px 9px; border-radius:100px; border:1px solid rgba(237,232,220,0.22); font-family:'DM Sans',sans-serif; letter-spacing:0.2px; z-index:3 }
+        .vc-tc-badge-i { font-size:11px; opacity:0.85 }
         .vc-fuente-badge { position:absolute; top:10px; left:10px; font-size:10px; font-weight:700; padding:4px 9px; border-radius:4px; font-family:'DM Sans',sans-serif; letter-spacing:0.4px; text-transform:uppercase; z-index:4; box-shadow:0 2px 4px rgba(0,0,0,0.2) }
         .vc-fav { position:absolute; top:10px; left:10px; width:40px; height:40px; border-radius:50%; background:rgba(20,20,20,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s; z-index:3 }
         .vc-fav:hover { transform:scale(1.1) }
@@ -4185,6 +5209,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vc-body { padding:16px; flex:1; display:flex; flex-direction:column }
         .vc-name { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; line-height:1.2; margin-bottom:2px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap }
         .vc-reciente { font-size:11px; font-weight:500; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px }
+        .vc-nuevo { font-size:11px; font-weight:700; color:#0A3D1E; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:#7BB389; padding:1px 7px; border-radius:4px; margin-left:6px }
         .vc-zona { font-size:12px; color:#9A8E7A; letter-spacing:0.5px; margin-bottom:10px }
         .vc-id { color:rgba(237,232,220,0.3); font-size:12px; margin-left:4px; letter-spacing:0 }
         .vc-price-block { border-left:3px solid #3A6A48; padding-left:12px; margin-bottom:8px }
@@ -4223,11 +5248,21 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-toast-success { border-left:4px solid #7BB389; padding-left:14px; text-align:left }
 
         /* ===== BOTTOM SHEET (ventas dark theme — .bs-venta overrides alquileres.css) ===== */
-        .bs-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:500; opacity:0; pointer-events:none; transition:opacity 0.3s }
+        /* 0.78: el fondo tiene superficies claras (mapa OSM) que con 0.5
+           seguían compitiendo con el modal — apagado fuerte estilo Zillow */
+        .bs-overlay { position:fixed; inset:0; background:rgba(10,10,10,0.78); z-index:500; opacity:0; pointer-events:none; transition:opacity 0.3s }
         .bs-overlay.open { opacity:1; pointer-events:auto }
 
         /* Base structure (ventas-specific, not in alquileres.css) */
         .bs-venta.bs { background:#1a1a1a; color:#EDE8DC; padding-bottom:72px }
+        /* El sticky (bottom:0) se pega al borde del CONTENT box: con el
+           padding-bottom quedaba flotando 72px sobre el fondo. En el sheet rico
+           el sticky es la última fila → flush abajo, como alquileres. */
+        .bs-venta.bs.bs-rich { padding-bottom:0 }
+        /* Tope de altura de la foto por viewport: en equipos cortos (SE) el 16/9
+           dejaba el precio/stats abajo del pliegue. dvh (fallback vh) = alto
+           VISIBLE real; el vh mide con la barra de URL oculta. */
+        .bs-venta.bs-rich .bsg-slide { max-height:32vh; max-height:32dvh }
         .bs-venta .bs-floating-actions { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:flex-end; gap:4px; padding:8px 16px; padding-top:max(8px, calc(env(safe-area-inset-top) + 4px)) }
         .bs-venta .bs-fav { width:40px; height:40px; border-radius:50%; border:none; background:rgba(20,20,20,0.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#9A8E7A; display:flex; align-items:center; justify-content:center; cursor:pointer }
         .bs-venta .bs-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
@@ -4237,6 +5272,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta .bs-dark-header { background:#141414; padding:0 24px 20px }
         .bs-venta .bs-h-name { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1.1; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap }
         .bs-venta .bs-h-reciente { font-size:11px; font-weight:500; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px }
+        .bs-venta .bs-h-nuevo { font-size:11px; font-weight:700; color:#0A3D1E; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:#7BB389; padding:1px 8px; border-radius:4px; margin-left:8px }
         .bs-venta .bs-h-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; margin-bottom:12px; font-family:'DM Sans',sans-serif; margin-top:2px }
         .bs-venta .bs-h-price-block { border-left:3px solid #3A6A48; padding-left:14px }
         .bs-venta .bs-h-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
@@ -4283,7 +5319,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta .bs-share-btn { display:flex; align-items:center; justify-content:center; gap:6px; padding:12px 16px; background:transparent; border:1px solid rgba(237,232,220,0.15); border-radius:10px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:400; cursor:pointer; transition:opacity 0.2s }
 
         /* Broker questions (dark) */
-        .bs-venta .bs-q-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px }
+        /* wrap: el hint es nowrap y en equipos muy angostos (Fold 280px) no entra
+           al lado del título → desbordaba el sheet. Ahora baja a su propia línea. */
+        .bs-venta .bs-q-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:4px 10px }
         .bs-venta .bs-q-header .bs-sl { margin-bottom:0 }
         .bs-venta .bs-q-hint { font-size:11px; color:#9A8E7A; font-family:'DM Sans',sans-serif; white-space:nowrap }
         .bs-venta .bs-q-list { display:flex; flex-direction:column; gap:6px }
@@ -4597,6 +5635,9 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
         amenities_confirmados: p.amenities_confirmados || [],
         amenities_por_verificar: p.amenities_por_verificar || [],
         equipamiento_detectado: p.equipamiento_detectado || [],
+        amenidades_extra: p.amenidades_extra || [],
+        equipamiento_otros: p.equipamiento_otros || [],
+        pet_friendly: p.pet_friendly ?? null,
         // Solo un EXTRACTO viaja en el payload SSG (la card muestra ~110 chars);
         // el texto completo llega con el fetch diferido del cliente.
         descripcion: p.descripcion ? String(p.descripcion).slice(0, 160) : null,
@@ -4620,6 +5661,21 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
         fuente: p.fuente || '',
         tc_sospechoso: p.tc_sospechoso ?? false,
       }))
+      // Merge cola larga no canónica (buscar_extras, mig 271). Graceful: si el
+      // SQL no está aplicado o no hay data (prod pre-cutover), queda [].
+      try {
+        const ids = initialProperties.map(pp => pp.id)
+        if (ids.length) {
+          const { data: extras } = await supabase.rpc('buscar_extras', { p_ids: ids })
+          if (Array.isArray(extras)) {
+            const byId = new Map(extras.map((e: any) => [e.id, e]))
+            for (const pp of initialProperties) {
+              const e: any = byId.get(pp.id)
+              if (e) { pp.amenidades_extra = e.amenidades_extra || []; pp.equipamiento_otros = e.equipamiento_otros || [] }
+            }
+          }
+        }
+      } catch { /* helper opcional: no rompe el feed si no existe aún */ }
     }
   } catch (err) {
     console.error('getStaticProps: error fetching initial properties', err)
