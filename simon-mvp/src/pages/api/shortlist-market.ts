@@ -51,9 +51,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const op = String(req.query.op) === 'alquiler' ? 'alquiler' : 'venta'
   const dorms = parseInt(String(req.query.dorms), 10)
   const zona = typeof req.query.zona === 'string' ? req.query.zona : ''
+  // Preview shadow: leer el cohort de la vista SHADOW (marco de normalización
+  // nuevo) para que el cohort quede en la MISMA base que la propiedad (que en
+  // ?shadow=1 viene shadow-normalizada). Sin esto se compararían bases distintas.
+  const useShadow = req.query.shadow === '1'
   if (Number.isNaN(dorms)) return res.status(400).json({ error: 'Missing or invalid dorms' })
 
-  const view = op === 'alquiler' ? 'v_mercado_alquiler' : 'v_mercado_venta'
+  const view = op === 'alquiler'
+    ? (useShadow ? 'v_mercado_alquiler_shadow' : 'v_mercado_alquiler')
+    : (useShadow ? 'v_mercado_venta_shadow' : 'v_mercado_venta')
   const cols = op === 'alquiler'
     ? 'precio_mensual_bob, area_total_m2, zona, dormitorios'
     : 'precio_m2, precio_norm, zona, dormitorios'
@@ -100,11 +106,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       enough: main.length >= MIN_COHORT,
       ampliado,
       count: main.length,
-      mediana: pctl(main, 0.5),
-      p25: pctl(main, 0.25),
-      p75: pctl(main, 0.75),
-      secP25: pctl(sec, 0.25),
-      secP75: pctl(sec, 0.75),
+      mediana: Math.round(pctl(main, 0.5)),
+      p25: Math.round(pctl(main, 0.25)),
+      p75: Math.round(pctl(main, 0.75)),
+      secP25: Math.round(pctl(sec, 0.25)),
+      secP75: Math.round(pctl(sec, 0.75)),
     }
 
     res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300')

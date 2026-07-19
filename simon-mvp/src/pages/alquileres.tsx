@@ -4094,7 +4094,8 @@ function BottomSheet({
   useEffect(() => {
     if (!publicShareMode || !property) { setSlMarket(null); return }
     let cancel = false
-    const qs = `op=alquiler&dorms=${property.dormitorios ?? 0}&zona=${encodeURIComponent(property.zona || '')}`
+    const shadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
+    const qs = `op=alquiler&dorms=${property.dormitorios ?? 0}&zona=${encodeURIComponent(property.zona || '')}${shadow ? '&shadow=1' : ''}`
     fetch(`/api/shortlist-market?${qs}`)
       .then(r => r.json())
       .then(res => {
