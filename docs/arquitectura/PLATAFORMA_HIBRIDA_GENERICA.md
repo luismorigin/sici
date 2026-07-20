@@ -240,6 +240,18 @@ traés deptos —el adaptador con la especificidad ya resuelta— como el movimi
 
 ## 11. El cron: orquestación + modelo del MOAT (decisión 25-jun-2026)
 
+> ⚠️ **CORREGIDO 20-jul-2026 con corridas reales — leer antes que el resto de §11.** Esta sección
+> (25-jun) concluyó que la routine sin API "no es viable" y que el camino era "n8n trigger + modelo por
+> API (OpenRouter)". **Dos matices cambiaron:** (1) La routine `/schedule` es **LOCAL, no cloud** (corre en
+> la máquina del founder, con `.env`/`node_modules`/skills ya presentes) → los subagentes-lectores del MOAT
+> **SÍ funcionan en ella**, bajo cuota Max, sin API. Eso es la **Fase 0** (ya probada end-to-end; desbloquea
+> apagar n8n para Equipetrol). (2) El **proxy residencial IPRoyal ya está integrado** en `fetchRetry`
+> (opt-in por `PROXY_URL`) → el bloqueo de IP desde la nube dejó de ser el muro que asumía §11.1. **El
+> `reader-api` + modelo barato por API de abajo NO es el plan central — es el BACKLOG de ESCALA** (para
+> independizarse de la máquina + crecer a más zonas/Bolivia, donde Max no da la cuota). Detalle:
+> `scripts/deptos-equipetrol/CUTOVER_DATA_PLAN.md` §Automatización · memoria `project_motor_hibrido_routine_local`.
+>
+> _(Texto original 25-jun, ahora leído como "el plan de la FASE COMPLETA / escala", no de la Fase 0:)_
 > Esta sección reemplaza la idea original ("routine de Claude Code `/schedule`, MOAT sin API").
 > Se probó empíricamente y NO es viable; abajo el porqué y el plan real.
 
@@ -332,7 +344,7 @@ barata hoy, self-host mañana.
 | **Robustez** (n8n es infra dedicada; el híbrido es scripts+agente) | El híbrido es código versionado/testeable, lo que compensa. Por eso deptos (producción) se migra al final. |
 | **Dos paradigmas durante la transición** | Frontera nítida y estable (deptos vs no-deptos) mientras dura; el contrato común los hace convivir sin fricción; n8n tiene fecha de defunción (Bloque 3), no es permanente. |
 | **Migrar deptos rompe el producto vivo** | Correr en paralelo + validar contra n8n (mismas columnas/conteos) antes de cortar. Nunca un corte ciego. |
-| **Bloqueo de IP al crawlear** (pasó 26-jun: C21 dropeó la IP de casa tras apilar cron+sondeos+tests) | **El lever real es VOLUMEN + RITMO, no el IP.** El IP del server NO es inmune (un datacenter hasta es *más* detectable que uno residencial); deptos no se bloquea por correr **pausado, 1 vez/noche, repartido**, no por la IP. Mitigaciones, en orden: (1) los scripts ya se **autoprotegen** — `fetcher.mjs` tiene cooldown anti-stacking, circuit breaker (corta si 5 fallos seguidos), jitter y backoff; (2) **crawlear desde el server** (no desde tu laptop) **aísla** el riesgo de tu conexión y corre pausado; (3) throttle más agresivo / repartir en más horas si hace falta; (4) **proxies pagos** (Firecrawl/ScraperAPI) **solo** a escala muy grande donde un IP pausado no alcanza (lejos hoy). **El discovery NO necesita Firecrawl** — son endpoints JSON baratos (C21 `?json=true`, Remax `/api/search`, BI `procesos.php`), fetch directo $0. Ver `docs/proyectos/zona-norte/operacion.md` (anti-bloqueo). |
+| **Bloqueo de IP al crawlear** (pasó 26-jun: C21 dropeó la IP de casa tras apilar cron+sondeos+tests) | **El lever real es VOLUMEN + RITMO, no el IP.** El IP del server NO es inmune (un datacenter hasta es *más* detectable que uno residencial); deptos no se bloquea por correr **pausado, 1 vez/noche, repartido**, no por la IP. Mitigaciones, en orden: (1) los scripts ya se **autoprotegen** — `fetcher.mjs` tiene cooldown anti-stacking, circuit breaker (corta si 5 fallos seguidos), jitter y backoff; (2) **crawlear desde el server** (no desde tu laptop) **aísla** el riesgo de tu conexión y corre pausado; (3) throttle más agresivo / repartir en más horas si hace falta; (4) **proxy residencial rotativo** — ✅ **ya integrado 20-jul** (IPRoyal, opt-in por `PROXY_URL` en `fetchRetry`, geo Bolivia, ~$12/2GB no vence, medido ~15MB/noche); rota IP → complementa al circuit breaker. (Antes este ítem decía "proxies pagos solo a escala, lejos hoy" — se adelantó.) **El discovery NO necesita Firecrawl** — son endpoints JSON baratos (C21 `?json=true`, Remax `/api/search`, BI `procesos.php`), fetch directo $0. Ver `docs/proyectos/zona-norte/operacion.md` (anti-bloqueo). |
 
 ---
 
@@ -367,7 +379,7 @@ solo es frontend) — producto nuevo sin tocar pipeline.
 
 ---
 
-## 15. Mapa del cutover — estado 10-jul-2026 (rama `feat/deptos-hibrido-shadow`)
+## 15. Mapa del cutover — estado 20-jul-2026 (backend en `main` vía PR #22; motor Fase 0 en `feat/hibrido-proxy-rotativo-y-discovery-shadow`)
 
 > Consolidado del due-diligence de cutover. **Deptos-VENTA es la punta de lanza**: acá se resuelve el
 > proceso completo; después escala a alquiler/terrenos reusando el esqueleto. Memorias:
@@ -377,7 +389,7 @@ solo es frontend) — producto nuevo sin tocar pipeline.
 ### 15.1 Estado real por pipeline (estrangular n8n = migrar los 4, no solo venta)
 | Pipeline | Estado del híbrido |
 |---|---|
-| Deptos **venta** | 🟡 en curso — comando `/cron-deptos` (discovery propio + reader 12+ campos + apply resiliente + incremento 2 "empalme de nuevas" + tabla `proyectos_detectados` para multiproyectos). Reader **maduro** (test ciego de 50). |
+| Deptos **venta** | ✅ **cerrado en shadow** (act. 20-jul) — comando `/cron-deptos-ventas` (discovery propio SHADOW-RELATIVO + reader v4.2 + apply resiliente + `--nuevas` + `proyectos_detectados` + verificador). Motor Fase 0 probado (routine local + subagentes + Max + proxy). Reader convergido. Resta: cutover (founder). |
 | Deptos **alquiler** | ✅ **CON híbrido (cerrado en shadow, 19-jul)** — reader propio `READER_SPEC_ALQUILER.md`, `discovery-alquiler.mjs`, `cargar-alquiler-shadow.mjs`, skill `/cron-deptos-alquiler`; ~216 props en shadow. Precio `precio_mensual_bob` (Bs crudo+tag), `uso_inmueble`, depósito/mascotas/servicios/expensas. Funciones `_alquiler` (Regla 6: nunca tocar venta). |
 | **Casas ZN** | ✅ híbrido (`/cron-casas`) |
 | **Terrenos** / anticrético | ⚫ no empezados |

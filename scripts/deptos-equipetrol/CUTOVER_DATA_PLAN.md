@@ -44,8 +44,9 @@ n8n, intacto**. No hay conflicto de captura; ZN no se toca.
    - **Complejo:** aislar Equipetrol con su propia función; ZN sigue con la vieja. Dos regímenes conviviendo.
 
 ### Las 4 fases
-1. **Motor automático** (desbloquea la captura diaria): construir `reader-api` → medir modelos baratos
-   contra el ground truth → montar routine + proxy → probar el ciclo end-to-end.
+1. **Motor automático** (desbloquea la captura diaria): ✅ **FASE 0 HECHA (20-jul)** — routine LOCAL +
+   subagentes-lectores + cuota Max + proxy IPRoyal integrado. NO requiere `reader-api` (eso es backlog de
+   escala). Ver §Automatización. Resta solo lo operativo (máquina prendida / catch-up al arranque).
 2. **Normalización + consumidores (Paquete TC):** auditar el crudo de ZN → swappear `precio_normalizado()`
    + re-apuntar snapshots/vistas/estudios a la data híbrida.
 3. **Switch de Equipetrol:** feed público + snapshots de Equipetrol leen la data híbrida (absorción sin
@@ -76,25 +77,46 @@ n8n, intacto**. No hay conflicto de captura; ZN no se toca.
 - **Antes del swap global:** (a) **auditar el crudo de ZN** (deptos + casas) como en Equipetrol, o (b) **migrar
   ZN por shadow** primero (más limpio, más lento).
 
-## Automatización (pre-requisito de apagar n8n) — hallazgos 17-jul
-Hoy el híbrido corre **a mano, en sesión bajo Max** (subagentes-lectores). Para reemplazar el MOTOR de n8n
-(captura diaria automática) faltan 3 ladrillos:
-1. **`reader-api.mjs`** (hoy stub): el MOAT llamando a un LLM por API con el READER_SPEC como system-prompt,
-   en un loop (sin subagentes — su viabilidad en routine cloud no está documentada). Desacopla el modelo.
-2. **Fetch sin bloqueo desde la nube:** **proxy residencial ROTATIVO** (IPRoyal ~$1,75-7/GB, tráfico no
-   expira; Decodo/BrightData más caros). Solo rota IP — el bajar+parsear ya lo hace el híbrido → mucho más
-   barato que Firecrawl (que cobra por página). Se enchufa en `fetchRetry` (una capa; ya hay `lib/firecrawl.mjs`
-   de precedente). Tráfico liviano: **las fotos NO se descargan** (solo se guarda la URL → hotlinking del CDN
-   del portal, $0 storage/bandwidth; riesgo: fotos rotas si el portal las borra). Estimación Equipetrol
-   ~1,5 GB/mes ≈ pocos dólares (MEDIR bytes reales en una corrida).
-3. **Routine cloud de Claude Code:** corre en la nube (sin tu compu), **bajo tu suscripción Max, NO API**
-   (draws down subscription usage). Consume cuota; hay tope diario. **Modelo elegible** (recomendado barato).
-- **Costo del LLM (medido hoy, 69 anuncios, Opus):** ~667k tokens = **~10k tokens/anuncio**. En $: **~$14 con
-  Opus por API (no escala) vs ~$0,25 con modelo barato** (DeepSeek/GLM/Qwen). **Opus quema demasiada cuota/plata
-  a escala → el camino es reader-api + modelo barato medido contra el ground truth.** Haiku ya se probó y no
-  alcanzó; con el spec v4.2 (más complejo) daría peor.
-- **Escala (ciudad → Bolivia):** Max NO escala (cuota). A ese volumen: API + modelo barato + proxy bulk. El
-  presupuesto = (requests × $/GB proxy) + (anuncios × $/anuncio LLM), lineal con el volumen.
+## Automatización — FASE 0 resuelta (20-jul), automatización completa = después
+
+> ⚠️ **Corregido 20-jul con corridas reales.** El texto viejo (17-jul) decía "faltan 3 ladrillos:
+> reader-api + proxy + routine CLOUD". Dos de esas premisas eran falsas. Lo que sigue es lo medido.
+
+### Fase 0 (HECHA, 20-jul) — desbloquea apagar n8n para Equipetrol, con límites conocidos
+El híbrido corre **autónomo en una routine LOCAL** (scheduled-task de Claude Code, `C:\Users\...\.claude\
+scheduled-tasks\`), bajo la cuota **Max** (Opus), sin API. Probado end-to-end (~5 min): discovery → prep →
+MOAT (subagentes-lectores) → apply → verificador. **Los subagentes SÍ funcionan en routine** (era la
+incógnita "no documentada"). Ladrillos de la Fase 0:
+1. **Routine LOCAL, no cloud.** Corre en la máquina de Lucho, con su repo/`.env`/`node_modules`/skills ya
+   presentes. **`reader-api.mjs` NO hace falta** acá — el MOAT son subagentes en la sesión de la routine.
+2. **Proxy residencial rotativo** — ✅ **integrado y medido.** IPRoyal, geo Bolivia, 2 GB ~$11-12 (no vence).
+   Opt-in por `PROXY_URL` en `fetchRetry` (una capa; sin la var = fetch directo). Un `ProxyAgent` nuevo por
+   request = rota IP (2 IPs/4 reutilizado vs 4/4 nuevo). Cubre TODO el fetching (ventas+alquiler+drift audit+
+   casas ZN). **Medido real:** ~123 KB/página, ~15 MB/nocturna → **2 GB ≈ 4 meses** (el viejo 1,5 GB/mes
+   sobreestimaba). Las fotos NO se bajan (solo URL → hotlinking CDN, $0 storage; riesgo: fotos rotas si el
+   portal las borra). Suma ~6-7s/request (conexión nueva) → 112 req ≈ 15 min (irrelevante de noche; ojo si
+   los audits fetchean cientos → concurrencia).
+
+**Límites REALES de la Fase 0 (por qué NO es la automatización final):**
+- **Depende de la máquina de Lucho prendida.** n8n corre 24/7 en un servidor con la compu apagada; la routine
+  local NO. Si la máquina está apagada a la hora, corre al **siguiente arranque** (salva la captura, NO
+  reconstruye días perdidos → la absorción, que no se reconstruye, se degrada si hay huecos largos).
+- **Depende de la cuota Max con Opus.** Da para la nocturna de Equipetrol (~8 nuevas/noche × ~10k tokens),
+  NO para re-barridos masivos ni para escalar a más zonas.
+
+### Fase completa (DESPUÉS — el objetivo real de automatización) = BACKLOG
+Para independizarse de la máquina de Lucho y **escalar (más zonas → Santa Cruz → Bolivia)** hace falta lo que
+la Fase 0 NO necesita:
+1. **`reader-api.mjs`** (hoy stub): el MOAT por LLM **externo** (OpenRouter), READER_SPEC como system-prompt,
+   salida JSON forzada. Desacopla el modelo de la cuota Max. Costura ya lista (`cargarSpec()`).
+2. **Modelo barato medido contra el ground truth** (las ~460 props leídas por el MOAT en shadow = eval set
+   gratis). **Costo LLM medido:** Opus ~10k tokens/anuncio ≈ **$14/69 anuncios por API (no escala)** vs
+   **~$0,25 con modelo barato** (DeepSeek/GLM/Qwen). Haiku ya se probó y NO alcanzó; con spec v4.2 daría peor.
+3. **Servidor/nube 24/7** (no la máquina de Lucho). Ahí el reader corre por API (no subagentes) → la routine
+   solo orquesta. **Ojo arquitectura:** si el reader corre con subagentes DENTRO de una routine cloud, su
+   viabilidad no está probada; por API es el camino claro.
+- **Presupuesto a escala** = (requests × $/GB proxy) + (anuncios × $/anuncio LLM), lineal con el volumen.
+  Max NO escala (cuota) → a volumen de ciudad/país: API + modelo barato + proxy bulk.
 
 ## Qué pasa con cada activo de data
 
@@ -259,9 +281,13 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
 
 ## Checklist de cutover de DATA (para EJECUTAR cuando el founder decida — no ahora)
 
-0. [ ] **Motor automático (pre-requisito de apagar n8n):** `reader-api` + medir modelo barato vs ground
-       truth + routine cloud + proxy rotativo. Sin captura diaria automática, la absorción de Equipetrol se
-       corta al apagar su workflow. Ver §Automatización.
+0. [~] **Motor automático — FASE 0 HECHA (20-jul), automatización completa = después.** ✅ Fase 0: routine
+       LOCAL + subagentes-lectores + cuota Max (Opus) + proxy IPRoyal integrado y medido → ciclo autónomo
+       end-to-end probado. Desbloquea apagar n8n para Equipetrol. **Límites:** depende de la máquina de Lucho
+       prendida (si no, corre al siguiente arranque, no reconstruye huecos) y de la cuota Max (no escala).
+       🔜 **Fase completa (BACKLOG, para independizar de la máquina + escalar a más zonas/Bolivia):**
+       `reader-api` (LLM por API) + modelo barato medido vs ground truth + servidor/nube 24/7. Ver
+       §Automatización. Memoria: `project_motor_hibrido_routine_local`.
 1. [ ] **Archivar** `propiedades_v2` (NO borrar — respaldo del crudo histórico). Apagar **solo el workflow
        deptos-venta Equipetrol** en n8n (ZN/casas/alquiler siguen). El shadow de Equipetrol pasa a base.
 2. [ ] **Paquete TC junto:** swappear `precio_normalizado()` a la versión nueva + re-apuntar snapshots,
