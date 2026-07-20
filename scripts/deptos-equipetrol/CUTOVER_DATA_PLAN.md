@@ -69,9 +69,10 @@ n8n, intacto**. No hay conflicto de captura; ZN no se toca.
 - **No se borra ni queda colgada:** el híbrido, al expandirse a ZN, la **re-lee y corrige fila por fila** (como
   Equipetrol). `propiedades_v2` es la misma tabla; cada fila se mejora cuando el híbrido la re-mira.
 - **🔴 El Paquete TC (swap de `precio_normalizado()`) toca TODA `propiedades_v2` — deptos ZN Y casas ZN.**
-  `v_mercado_casas` usa `precio_normalizado()` (mig 262, líneas 69-70) → el swap recalcula también las 117 casas.
-  El dark-launch NO protege (la función es global). Si swapeás antes de re-procesar ZN, ~670 props v16.5
-  (crudo sin auditar) se re-normalizan con la lógica nueva → **riesgo de des-normalizar mal ~670 props**.
+  `v_mercado_casas` usa `precio_normalizado()` (mig 262, líneas 69-70) → el swap recalcula también las casas ZN.
+  El dark-launch NO protege (la función es global). Si swapeás antes de re-procesar ZN, TODAS las props ZN v16.5
+  (crudo sin auditar) se re-normalizan con la lógica nueva → **riesgo de des-normalizar mal** (feed ~650; el
+  BRUTO que la función toca es mayor — dimensionar sobre el bruto).
 - **Antes del swap global:** (a) **auditar el crudo de ZN** (deptos + casas) como en Equipetrol, o (b) **migrar
   ZN por shadow** primero (más limpio, más lento).
 
@@ -210,13 +211,16 @@ misma tabla → en dev ya conviven). **Lo que falta unir es el CÓDIGO.** Puntos
 - ✅ **Consolidado (PR #22):** las dos ramas se mergearon a main. Conflictos resueltos (`CLAUDE.md`,
   `MIGRATION_INDEX.md`, `ventas.tsx`→gana el frontend). **Renumerar migs 268/276 sigue PENDIENTE** (paso de cutover).
 
-### Consumidores del feed shadow — ⚠️ REVISAR (feed vs shortlists difieren)
-> ⚠️ **18-jul (pendiente decisión founder):** esta sección dice "todos leen prod por default", pero el CÓDIGO
-> deployado difiere: el **feed** (`/ventas`,`/alquileres`) SÍ lee prod por default (`?shadow=1` opt-in), pero las
-> **SHORTLISTS `/b/[hash]` leen SHADOW-FIRST siempre** (`rpcShadowFirst`, sin `?shadow=1`; fallback a prod solo si
-> la vista `_shadow` desaparece). O sea: los links de shortlist ya muestran precios shadow (~34% menos) para
-> Equipetrol. Decidir: dejarlo shadow-first, o volver a prod-default hasta el cutover. El checklist "quitar
-> `?shadow=1` en shortlists" NO aplica (no tienen ese toggle).
+### Consumidores: el FEED lee prod por default; las SHORTLISTS leen SHADOW-first (decidido 19-jul)
+> ✅ **Decisión del founder (19-jul): se deja como está.** Son dos comportamientos DISTINTOS y deliberados:
+> - **Feed** (`/ventas`, `/alquileres`): **PROD** por default; `?shadow=1` es opt-in (modo prueba).
+> - **Shortlists `/b/[hash]`**: **SHADOW-first** siempre (`rpcShadowFirst` en `b/[hash].tsx` + vista `_shadow` en
+>   `shortlist-market.ts`), con fallback a prod. Los links que circulan por WhatsApp ya muestran la data nueva
+>   (precio ~34% menor = el correcto). Verificado en código 19-jul; el founder lo aceptó explícitamente.
+>
+> **Consecuencia para el cutover (importante): las shortlists NO hay que tocarlas.** Ya leen la data nueva, y
+> cuando prod pase a ser igual a shadow el fallback lo resuelve solo. El ítem del checklist "quitar `?shadow=1`
+> en shortlists" **NO aplica** (no tienen ese toggle). Lo único que hay que switchear al cutover es el **FEED**.
 
 El modelo es: los consumidores leen **prod**; `?shadow=1` es solo el modo de PRUEBA para ver la data híbrida
 antes del cutover. El cutover **migra la data buena a prod** — NO apunta los consumidores a shadow. Consumidores
@@ -229,9 +233,9 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
   (amenidades_extra) + amoblado en VENTA (la RPC principal de venta mig 277 NO los expone). Al cutover, cuando
   las shortlists lean prod con data nueva, ese helper (o su equivalente en prod) **tiene que existir** o esas
   secciones salen vacías. Refuerza: **NO dropear `buscar_extras_shadow`** (ver `CONTRATO_FRONTEND_SHADOW.md`).
-- **Escalón de precio en links activos:** al cutover, los links de shortlist ya enviados por WhatsApp pasan de
-  precio viejo (prod) a nuevo (~34% menos, TC). Un cliente con un link viejo verá el precio bajar ese día →
-  comunicarlo o aceptarlo.
+- **Escalón de precio en links de shortlist: YA OCURRIÓ** (desde el deploy del PR #22 las shortlists leen
+  shadow-first) → los links de WhatsApp **ya muestran** el precio nuevo (~34% menos). **NO hay un segundo escalón
+  al cutover para shortlists.** El escalón que SÍ queda pendiente es el del **FEED público**, que hoy sigue en prod.
 
 ## Checklist de cutover de DATA (para EJECUTAR cuando el founder decida — no ahora)
 
