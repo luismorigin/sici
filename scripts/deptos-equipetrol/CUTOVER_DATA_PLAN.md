@@ -307,6 +307,26 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
        Al apagar los workflows n8n de deptos Equipetrol: (a) el health check los reporta caídos/ausentes y el conteo
        de workflows queda mal, y (b) **`/admin/salud` pierde la señal de salud de esa vertical**. Decidir: que el cron
        híbrido escriba `workflow_executions`, o adaptar el health check. Ver `docs/modulo_2/AUDITORIA_DIARIA_SPEC.md`.
+2c-bis.[ ] **Manejo de PORTAL CAÍDO — aislar el circuit breaker por portal** (detectado 20-jul: C21 se cayó
+       —DNS ENOTFOUND global, no bloqueo de IP— y el breaker GLOBAL abortó TODA la corrida, arrastrando a Remax
+       que estaba vivo). **Ya funciona bien la parte de DATOS:** el discovery aborta ANTES de escribir un diff
+       parcial → 0 bajas falsas; y el discovery shadow-relativo **recupera solo la noche siguiente** (lo no
+       capturado sigue siendo "nuevo"/se re-chequea) → una noche caída se pospone, NO se pierde (solo 1 día de
+       granularidad de absorción). Faltan DOS mejoras (para operación desatendida):
+       - **(a) Aislar el breaker por portal** (hoy es global, 1 contador en `fetcher.mjs`): C21 caído NO debe
+         apagar Remax. Implementación SIMPLE (sin breakers separados): correr C21 → si trips, `circuit.reset()` →
+         correr Remax con breaker fresco → guardar `{c21_ok, remax_ok}` en el discovery. **Regla de seguridad
+         (clave):** el verificador solo da bajas para una fuente cuyo discovery terminó OK. Una fuente con
+         `_ok=false` → NO arranca contador de ausencia, NO se chequea individualmente (si el portal está caído,
+         el fallo HTTP tiene la MISMA causa que la ausencia del crawl → NO es la 2da señal independiente que el
+         verificador exige).
+       - **(b) Clasificar + registrar la incidencia** (junto al ítem 2c): al abortar, distinguir *portal caído*
+         (¿resuelve DNS? ¿anda un tercero/Remax?) de *IP bloqueada* de *red propia* — hoy el mensaje dice "IP
+         probablemente bloqueada" y el 20-jul fue engañoso (era C21 DNS-down). Escribir el motivo a
+         `workflow_executions`/estado → `/admin/salud` muestra "anoche: C21 caído, abortado" sin abrir logs.
+         Si un portal cae N noches seguidas → avisar fuerte (puede haber MUDADO de dominio). Reintentos: 2/request,
+         5 fallos → abrir circuito de esa fuente, no insistir esa corrida, reintentar la próxima (opcional: 1
+         reintento general horas después). Análisis validado en corrida real 20-jul.
 2d.[ ] **Reescribir los docs del pipeline viejo** (ya tienen banner de alcance puesto, falta el contenido):
        `docs/canonical/{merge_canonical,pipeline_alquiler_canonical}.md`, `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md`
        (muy desactualizado), el runbook `docs/proyectos/zona-norte/operacion.md` (kill-switch ya no aplica a deptos Eq),
