@@ -17,10 +17,51 @@ export const circuit = {
   reset() { consecFails = 0; },
 };
 
+// PROXY OPT-IN: si existe PROXY_URL en el entorno, todo el fetch sale por ahí (IP rotativa);
+// si NO existe, se comporta exactamente como antes (fetch directo). Lectura PEREZOSA a propósito:
+// los scripts llaman dotenv.config() DESPUÉS de los imports, así que leer la env al cargar el
+// módulo daría undefined siempre. Se resuelve en el primer fetch y se memoiza.
+// ⚠️ UN AGENTE NUEVO POR REQUEST — no es derroche, es lo que hace que la IP ROTE.
+// Medido (20-jul, 4 requests): agente reutilizado → 2 IPs · sin keep-alive → 1 IP ·
+// agente nuevo por request → 4 IPs. undici poolea la conexión TCP y el proxy le sostiene
+// la misma IP de salida a esa sesión; conexión nueva = IP nueva. El costo (un handshake TLS
+// por request) es irrelevante acá: entre requests ya hay pace() de ~1,5s.
+let _ProxyAgent, _avisado = false;
+// EXPORTADA: el verificador la usa para su fetch propio (necesita `redirect: manual` + ver el status
+// crudo → no puede pasar por fetchRetry). Así sus chequeos salen por el MISMO proxy rotativo, no por la
+// IP real. Devuelve un agente nuevo por llamada (rotación) o null si no hay proxy. Cerralo con .close().
+export async function crearAgente() {
+  const proxy = process.env.PROXY_URL;
+  if (!proxy) return null;
+  if (!_ProxyAgent) ({ ProxyAgent: _ProxyAgent } = await import('undici'));
+  if (!_avisado) { console.log(`  🔀 proxy activo (${new URL(proxy).host})`); _avisado = true; }  // host:puerto, NUNCA credenciales
+  return new _ProxyAgent(proxy);
+}
+
+// CONTADOR DE TRÁFICO: los proxies residenciales se cobran por GB → medir cuánto consume una
+// corrida real es lo que dice qué paquete comprar. Siempre activo (contar no cuesta nada).
+export const trafico = {
+  bytes: 0,
+  requests: 0,
+  get mb() { return +(this.bytes / 1048576).toFixed(2); },
+  resumen() { return `${this.requests} requests · ${this.mb} MB`; },
+  reset() { this.bytes = 0; this.requests = 0; },
+};
+
 async function intentar(url, { json, headers }) {
-  const res = await fetch(url, { headers: { 'user-agent': UA, ...headers }, signal: AbortSignal.timeout(30000) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return json ? res.json() : res.text();
+  const opts = { headers: { 'user-agent': UA, ...headers }, signal: AbortSignal.timeout(30000) };
+  const agente = await crearAgente();
+  if (agente) opts.dispatcher = agente;
+  try {
+    const res = await fetch(url, opts);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const texto = await res.text();                  // texto SIEMPRE: para pesar la respuesta (y leerla ENTERA antes de cerrar el agente)
+    trafico.bytes += Buffer.byteLength(texto);
+    trafico.requests++;
+    return json ? JSON.parse(texto) : texto;
+  } finally {
+    if (agente) await agente.close().catch(() => {});  // cerrar SIEMPRE (incluso si falló) — si no, quedan conexiones colgadas
+  }
 }
 
 export async function fetchRetry(url, { json = false, headers = {}, retries = 2 } = {}) {

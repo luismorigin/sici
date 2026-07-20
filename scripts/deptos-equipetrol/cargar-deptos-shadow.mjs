@@ -24,7 +24,7 @@ import dotenv from 'dotenv';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pace, circuit } from '../sonda-suelo/lib/fetcher.mjs';
+import { pace, circuit, trafico } from '../sonda-suelo/lib/fetcher.mjs';
 import { fetchDetalleDepto } from './lib/detalle-deptos.mjs';
 import { matchearPorNombre } from './lib/matcher.mjs';
 import { reBucket } from './lib/canonicalizar.mjs';
@@ -157,6 +157,7 @@ async function prep() {
   const file = join(OUT, `material-${TS}.json`);
   writeFileSync(file, JSON.stringify({ generado: TS, spec: 'READER_SPEC.md', total: entradas.length, entradas }, null, 2));
   console.log(`\n💾 ${file}`);
+  console.log(`   📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
   console.log(`   → LÉELO y llená "veredicto" en cada depto (READER_SPEC.md), después: node cargar-deptos-shadow.mjs --apply ${file}\n`);
 }
 

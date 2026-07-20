@@ -27,7 +27,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { c21Listado, remaxListadoSC } from '../sonda-suelo/lib/portales.mjs';
 import { enZona } from '../sonda-suelo/lib/zonas.mjs';
-import { circuit } from '../sonda-suelo/lib/fetcher.mjs';
+import { circuit, trafico } from '../sonda-suelo/lib/fetcher.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -118,19 +118,34 @@ for (let from = 0; ; from += 1000) {
   shadowRows.push(...data);
   if (data.length < 1000) break;
 }
+// MULTIPROYECTO YA CLASIFICADOS: los avisos-proyecto (brochures) NO van a shadow — van a
+// `proyectos_detectados` (mig 273). Sin excluirlos acá reaparecen como "nuevas" TODAS las noches,
+// para siempre, y el conteo crece solo (medido 20-jul: 38 de 40 "nuevas" eran esto → el reporte
+// mentía 20×). El CARGADOR ya los excluía (cargar-deptos-shadow.mjs, --nuevas); el discovery no.
+const { data: proyRows, error: errProy } = await sb.from('proyectos_detectados')
+  .select('url').eq('macrozona', 'equipetrol');
+if (errProy) { console.error('   ERROR leyendo proyectos_detectados:', errProy.message); process.exit(1); }
+const proyUrls = new Set((proyRows || []).map((r) => r.url));
+
 const dbUrls = new Set(dbRows.map((r) => r.url));
 const shadowUrls = new Set(shadowRows.map((r) => r.url));
 const portalUrls = new Set(portal.map((p) => p.url));
-// NUEVAS = en el portal, ni en prod NI en shadow (excluir shadow evita el reproceso infinito)
-const nuevas = portal.filter((p) => !dbUrls.has(p.url) && !shadowUrls.has(p.url));
+// NUEVAS = en el portal y NO en shadow (ni multiproyecto ya clasificado). SHADOW-RELATIVO: prod NO
+// participa de la clasificación. El portal es la fuente de verdad; el híbrido captura todo lo que el
+// portal muestra y shadow no tiene todavía — sin depender del inventario viejo de n8n. Antes se excluía
+// `!dbUrls` (en prod) → los ~18 que estaban en prod pero no en shadow quedaban huérfanos, esperando al
+// `--prep`. Al sacar esa exclusión, entran por `--nuevas` y el drenado desde prod se retira. (20-jul)
+const nuevas = portal.filter((p) => !shadowUrls.has(p.url) && !proyUrls.has(p.url));
+// existentes-en-prod: informativo (no afecta la captura; prod ya no clasifica). Útil solo para ver
+// cuánto del portal coincide con el inventario viejo mientras n8n siga vivo.
 const existentes = portal.filter((p) => dbUrls.has(p.url));
 // DESAPARECIDAS = activas en SHADOW no vistas en el portal (lo del híbrido; NO la stale de prod)
 const desaparecidas = shadowRows.filter((r) => r.es_activa && !portalUrls.has(r.url));
 const dbActivas = dbRows.filter((r) => r.es_activa).length;
 const shadowActivas = shadowRows.filter((r) => r.es_activa).length;
-log(`   → prod (deptos Eq): ${dbRows.length} (${dbActivas} activas) · shadow venta: ${shadowRows.length} (${shadowActivas} activas)`);
-log(`   → NUEVAS (portal, ni prod ni shadow): ${nuevas.length}`);
-log(`   → existentes (en prod): ${existentes.length}`);
+log(`   → shadow venta: ${shadowRows.length} (${shadowActivas} activas) · multiproyecto ya clasificados: ${proyUrls.size} · [info] prod: ${dbRows.length} (${dbActivas} activas)`);
+log(`   → NUEVAS (portal, NO en shadow ni multiproyecto → se capturan): ${nuevas.length}`);
+log(`   → [info] del portal ya en prod (no afecta la captura): ${existentes.length}`);
 log(`   → desaparecidas (activas en SHADOW, no vistas → verificar): ${desaparecidas.length}\n`);
 
 // ---------- 4. SALIDA ----------
@@ -156,4 +171,5 @@ log('='.repeat(64));
 log(`  DRY-RUN listo. NO se escribió nada a la BD.`);
 log(`  Portal: ${portal.length} (6 microzonas) · shadow venta activas: ${shadowActivas}`);
 log(`  Nuevas (ni prod ni shadow): ${nuevas.length} · Desaparecidas del híbrido a verificar: ${desaparecidas.length}`);
-log(`  💾 ${outPath}\n`);
+log(`  💾 ${outPath}`);
+log(`  📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy — se descuenta de los GB)' : ' (IP directa, $0)'}\n`);

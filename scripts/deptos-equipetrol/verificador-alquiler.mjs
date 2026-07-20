@@ -27,7 +27,7 @@ import dotenv from 'dotenv';
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sleep } from '../sonda-suelo/lib/fetcher.mjs';
+import { sleep, crearAgente, trafico } from '../sonda-suelo/lib/fetcher.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -45,14 +45,17 @@ const fuenteDeUrl = (u) => (String(u).includes('remax.bo') ? 'remax' : 'century2
 
 // HTTP check: SOLO status code. 'caida'=borrado (C21 4xx · Remax redirect) · 'viva'=200 · 'ambiguo'=5xx/timeout
 async function chequear(url, fuente) {
+  const agente = await crearAgente();   // proxy rotativo si PROXY_URL está (mismo camino que el resto), null si no
   try {
     const signal = AbortSignal.timeout(15000);
-    const r = await fetch(fuente === 'remax' ? url : `${url}?json=true`, { headers: UA, redirect: 'manual', signal });
+    const r = await fetch(fuente === 'remax' ? url : `${url}?json=true`, { headers: UA, redirect: 'manual', signal, ...(agente ? { dispatcher: agente } : {}) });
+    trafico.requests++;                  // cuenta el request (status-check, no lee body → bytes ~0)
     if (r.status >= 300 && r.status < 400) return fuente === 'remax' ? 'caida' : 'ambiguo'; // Remax borra→redirect
     if (r.status >= 400 && r.status < 500) return 'caida';   // 404/410 = aviso borrado
     if (r.status === 200) return 'viva';
     return 'ambiguo';                                         // 5xx u otros → transitorio
   } catch { return 'ambiguo'; }
+  finally { if (agente) await agente.close().catch(() => {}); }
 }
 
 // --- Señal 1: desaparecidas del discovery-alquiler de hoy (las calcula y guarda el discovery) ---
@@ -102,6 +105,7 @@ console.log(`  → normalizadas a feed (estaban pending):             ${normaliz
 console.log(`  → BAJA confirmada (>${GRACE_DAYS}d, 2 señales → sale del feed): ${confirma.length}`);
 if (defer.length) console.log(`  → bajas DIFERIDAS por disyuntor:                     ${defer.length}`);
 confirma.forEach(c => console.log(`     baja id ${c.id} (${c.fuente || fuenteDeUrl(c.url)}) — ${c.url}`));
+console.log(`  📊 Tráfico verificador: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
 
 if (!APPLY) { console.log(`\n  (DRY-RUN: no se escribió nada. Correr con --apply.)\n`); process.exit(0); }
 

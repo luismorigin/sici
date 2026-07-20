@@ -151,6 +151,26 @@ Ya que se toca el snapshot para re-apuntarlo, conviene aprovechar la data más r
 - Consolidar los filtros de calidad (hoy duplicados en la función Y en las vistas → se desincronizan;
   origen del ticket #15 de contaminación ZN).
 
+**D) Asimetría venta/alquiler + el yield (detectado 20-jul, al revisar `snapshot_absorcion_mercado.sql`):**
+El snapshot es UNO solo con dos niveles: **global** (`zona='global'`) mide venta + alquiler + **ROI cruzado**
+(4 filas/día); **por zona** mide **solo venta** (~20 filas/día). Consecuencias para el snapshot shadow:
+- **Leer las DOS vistas shadow, no solo venta.** El ROI/yield (alquiler mensual ÷ precio de venta) vive en
+  el cruce → el snapshot shadow debe leer `v_mercado_venta_shadow` **Y** `v_mercado_alquiler_shadow`
+  alineadas. Portar solo la parte de venta perdería el yield, que es la métrica del analista de inversión.
+- **Alquiler NO tiene serie POR ZONA hoy** (solo global). Si el objetivo es "yields por zona × tipología",
+  el snapshot shadow debería agregar el detalle por zona a alquiler (prod nunca lo tuvo). **Decisión de
+  producto (founder), no técnica** — qué medir. Anotado, sin resolver.
+- **TC:** el nivel global usa `precio_normalizado()` (venta) para el ROI. En shadow va `precio_normalizado_shadow`
+  (régimen TC nuevo). El alquiler NO usa esa normalización (es `precio_mensual_bob`→USD por TC oficial; ver
+  regla 10) → verificar que el ROI shadow cruce con la base correcta de cada operación, no una sola.
+- **🔴 Serie SEPARADA (no corromper la de prod):** el snapshot de prod (n8n, 9:00) escribe
+  `market_absorption_snapshots` en vivo → el shadow debe escribir con un `filter_version` propio (p. ej.
+  `'shadow'`) o tabla aparte, JAMÁS mezclado. Mismo patrón que las series v1/v2/v3 que ya conviven.
+- **Valor de arrancar TEMPRANO:** la absorción es la ÚNICA métrica no reconstruible hacia atrás
+  (`fecha_discovery` se pisa, regla 11) → cada noche sin snapshot shadow = historia perdida al cutover.
+  Arrancar la serie shadow apenas el cron nocturno sea confiable (no antes: una serie gappy sirve para
+  tendencia, no para niveles).
+
 ## Métricas para analista de inversión — qué sale y qué no
 
 Objetivo del founder: pasar de "ver el mercado" a **yields y proyecciones**. Cada métrica lleva su
@@ -272,7 +292,10 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
        en el re-normalizado automático — **en Equipetrol Y en TODAS las props ZN v16.5 que el swap global toca**
        (feed activo ~650; pero el BRUTO de deptos+casas ZN es mayor — casas: feed ~103 vs bruto ~298 → dimensionar
        la auditoría sobre el bruto, no el feed). Alternativa: migrar ZN por shadow antes.
-4. [ ] **Mejoras del snapshot** (mismo movimiento): leer de vista + dedup + absorción por 2 señales.
+4. [ ] **Mejoras del snapshot** (mismo movimiento): leer de vista shadow + dedup + absorción por 2 señales
+       (§A/C). **+ construir el snapshot shadow leyendo las DOS vistas (venta+alquiler) para no perder el ROI,
+       en serie SEPARADA (`filter_version='shadow'`), arrancando temprano** (§D). Decisión abierta: detalle
+       por zona para alquiler (hoy solo global).
 5. [ ] **Serie de precios/yields:** decidir corte declarado (recomendado) vs recompute aproximado.
 6. [ ] **Métricas de inversión** nuevas: cada una con su etiqueta de la matriz fiduciaria.
 7. [ ] Cortes ricos nuevos (amoblado/estado/piso) → pueden esperar, se agregan después sin rehacer.
