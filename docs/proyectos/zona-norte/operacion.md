@@ -1,6 +1,11 @@
 # Operación — Proyecto Zona Norte
 
 > Cómo operar el sistema día a día y, si algo sale mal, cómo apagar/revertir cada componente.
+>
+> ⚠️ **ALCANCE (19-jul-2026):** este runbook asume que **todo** lo captura n8n. Sigue siendo válido para **ZN y
+> casas**, pero **NO** para **deptos Equipetrol**, que al cutover pasan al flujo híbrido (`/cron-deptos-ventas`,
+> `/cron-deptos-alquiler`) → el kill-switch "apagar el workflow en n8n" y el throttle del verificador **dejan de
+> aplicar** a esa vertical. Actualizar este doc es un ítem del cutover (`scripts/deptos-equipetrol/CUTOVER_DATA_PLAN.md`).
 
 **Última actualización:** 29 May 2026 (post-aplicación #8 microzonas, mig 254).
 

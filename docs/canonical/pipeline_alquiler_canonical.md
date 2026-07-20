@@ -1,5 +1,11 @@
 # Pipeline Alquiler — Canonical Reference v2.0
 
+> ⚠️ **ALCANCE (19-jul-2026):** describe el pipeline **n8n** de alquiler. Los **deptos de alquiler de Equipetrol**
+> ya tienen un productor alternativo cerrado en shadow (**flujo híbrido**: `discovery-alquiler.mjs`,
+> `cargar-alquiler-shadow.mjs`, skill `/cron-deptos-alquiler`, ~216 props). Al cutover esta descripción deja de
+> aplicar a esa vertical. Ojo: el **"TC oficial fijo 6.96"** de este doc **ya no es el marco vigente** (Bolivia
+> unificó oficial≈paralelo) — ver `scripts/deptos-equipetrol/TC_NUEVO_DECISION.md`.
+
 **Actualizado:** 28 Feb 2026
 **Estado:** PRODUCCION (activado 12 Feb 2026)
 **Tabla:** `propiedades_v2` (compartida con venta)

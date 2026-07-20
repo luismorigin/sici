@@ -1,5 +1,11 @@
 # SICI / Simón - Arquitectura Maestra
 
+> 🔴 **DESACTUALIZADO (revisado 19-jul-2026).** Este doc es la v3.0 del 28-feb y **no incluye el flujo híbrido ni
+> el entorno shadow** (que ya están en main, PR #22). Además arrastra datos vencidos: hay **6 zonas canónicas**
+> (acá dice 5), el **TC paralelo hoy es ~10.2** (acá 7.30-7.80) y el índice de migraciones va por **282** (acá 171).
+> **Para el estado real usá `CLAUDE.md` + `scripts/deptos-equipetrol/{ESTADO_MIGRACION,CUTOVER_DATA_PLAN}.md`.**
+> Se reescribe al cutover.
+
 **Documento:** Arquitectura completa del sistema
 **Versión:** 3.0
 **Fecha:** 28 Febrero 2026

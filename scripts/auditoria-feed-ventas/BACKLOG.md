@@ -1,5 +1,10 @@
 # Backlog — Auditoría de descripciones drift
 
+> ⚠️ **ALCANCE (19-jul-2026):** este backlog existe porque el pipeline **n8n nunca lee el anuncio**. El **flujo
+> híbrido SÍ lo lee al ingerir** y ya trae sus propias skills (`/audit-deptos-shadow` = drift, `/audit-cola-shadow`
+> = matching+dedup). Al cutover, buena parte de lo planificado acá queda **redundante para deptos-Equipetrol**
+> (sigue valiendo para ZN, casas y otras zonas). **Revisar antes de invertir horas.**
+
 Pendientes detectados en la sesión del 2026-05-08. Ordenados por valor / urgencia.
 
 ---

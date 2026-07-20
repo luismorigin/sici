@@ -315,6 +315,12 @@ Las tablas `broker_shortlists` tienen lectura pública via `/b/[hash]` sin auth.
 - Display usa `precio_norm_snapshot` (lo que el cliente vio originalmente) — no marea con números mezclados
 - **Sin confusión por normalización**: el cliente siempre ve el precio normalizado actual; el badge solo agrega contexto sobre qué causó el delta
 
+> 🔴 **ROTO HOY (19-jul-2026):** `/b/[hash]` lee **shadow-first** (régimen TC-nuevo), pero el `precio_norm_snapshot`
+> de las shortlists **viejas** se capturó con la normalización **PROD** → toda shortlist armada antes del 18-jul
+> dispara un badge espurio **"el TC paralelo bajó"** enorme (ej. $140.805 prod → $93.084 shadow). El RAW sigue
+> comparándose prod-vs-prod, así que **solo miente el badge de TC**. Fix pendiente: re-snapshotear al cutover, o
+> gatear el badge de TC hasta entonces.
+
 **Aislamiento confirmado:** todos los cambios condicionados a `brokerMode` o `publicShareMode` (que es `true` solo cuando viene el prop `publicShare` desde `/b/[hash]`). El feed público `/ventas` y la página `/broker/[slug]` desktop mantienen su comportamiento original — no se rompió nada.
 
 **Hito de demo:** final de S2 ya hay producto demo-able (broker arma shortlist, manda link, cliente lo abre).

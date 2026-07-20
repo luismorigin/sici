@@ -631,6 +631,11 @@ components/
 
 **Motivación:** Hoy agregar una macrozona o microzona requiere tocar **7 lugares diferentes**: CHECK constraint, lib/zonas.ts, workflows n8n, snapshot, HITL trigger, operacion.md, scripts. No escala a partir de 3-4 macrozonas.
 
+> ⚠️ **(19-jul-2026) Este mapa CAMBIA con el cutover:** para las verticales que pasen al **flujo híbrido**,
+> "workflows n8n" **sale** de la lista y **entran** el discovery propio + `READER_SPEC` + el entorno de escritura
+> (`scripts/deptos-equipetrol/`). Si arrancás este refactor, diseñá contra la arquitectura **post-cutover**, no la
+> vieja. Ver `scripts/deptos-equipetrol/CUTOVER_DATA_PLAN.md`.
+
 **Trigger para activar este ticket:** cuando se confirme la siguiente macrozona (Urubó/Polanco/otras). Antes de eso, este ticket es OPCIONAL — el modelo plano actual aguanta 1-2 macrozonas más con esfuerzo aceptable.
 
 **Scope** (~1 semana, dividido en sesiones):

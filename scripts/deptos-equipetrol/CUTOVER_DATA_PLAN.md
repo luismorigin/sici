@@ -257,6 +257,17 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
        Renumerar es cosmético (las migs ya están aplicadas; la BD no trackea el filename). Apuntar el feed
        PÚBLICO a la data del híbrido. **Frontend y backend se
        activan JUNTOS, no por separado.**
+2c.[ ] **Observabilidad — hueco detectado 19-jul:** el híbrido corre en sesión y **NO escribe `workflow_executions`**.
+       Al apagar los workflows n8n de deptos Equipetrol: (a) el health check los reporta caídos/ausentes y el conteo
+       de workflows queda mal, y (b) **`/admin/salud` pierde la señal de salud de esa vertical**. Decidir: que el cron
+       híbrido escriba `workflow_executions`, o adaptar el health check. Ver `docs/modulo_2/AUDITORIA_DIARIA_SPEC.md`.
+2d.[ ] **Reescribir los docs del pipeline viejo** (ya tienen banner de alcance puesto, falta el contenido):
+       `docs/canonical/{merge_canonical,pipeline_alquiler_canonical}.md`, `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md`
+       (muy desactualizado), el runbook `docs/proyectos/zona-norte/operacion.md` (kill-switch ya no aplica a deptos Eq),
+       y revisar los backlogs que quedan redundantes (`scripts/auditoria-feed-ventas/BACKLOG.md`, ticket #11 de
+       `docs/proyectos/zona-norte/BACKLOG.md`).
+2e.[ ] **Badge de precio en shortlists viejas** (`docs/broker/PRD.md`): re-snapshotear `precio_norm_snapshot` o
+       gatear el badge de TC — hoy las shortlists previas al 18-jul muestran un "el TC bajó" espurio.
 3. [ ] **Auditar crudo sucio** (props `tc=paralelo` con `precio_usd`=oficial inflado) antes de confiar
        en el re-normalizado automático — **en Equipetrol Y en TODAS las props ZN v16.5 que el swap global toca**
        (feed activo ~650; pero el BRUTO de deptos+casas ZN es mayor — casas: feed ~103 vs bruto ~298 → dimensionar

@@ -1,5 +1,11 @@
 # MERGE - DOCUMENTO CANONICO
 
+> ⚠️ **ALCANCE (19-jul-2026):** describe el productor **n8n** (`merge_discovery_enrichment()`). Los **deptos de
+> Equipetrol (venta+alquiler)** tienen un productor alternativo — el **flujo híbrido** — que escribe el consolidado
+> DIRECTO a `propiedades_v2_shadow` **sin pasar por estas fases**. Al cutover esta descripción deja de aplicar a esa
+> vertical (el resto sigue en n8n). Ojo: el **"TC oficial 6.96"** de este doc **ya no es el marco vigente** — ver
+> `scripts/deptos-equipetrol/TC_NUEVO_DECISION.md`. Mapa: `scripts/deptos-equipetrol/CUTOVER_DATA_PLAN.md`.
+
 **Version doc:** 3.1.0
 **Funcion en produccion:** `merge_discovery_enrichment()` **v2.6.0** (verificar con `pg_get_functiondef`)
 **Fecha:** 22 Mayo 2026

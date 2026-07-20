@@ -1,5 +1,11 @@
 # Auditoria Diaria SICI - Especificacion
 
+> ⚠️ **HUECO CONOCIDO (19-jul-2026):** el **flujo híbrido corre en sesión y NO escribe `workflow_executions`.**
+> Al cutover, cuando se apaguen los workflows n8n de deptos Equipetrol: (a) el health check los va a reportar como
+> caídos/ausentes y el conteo de workflows queda mal, y (b) **se pierde la señal de salud de esa vertical en
+> `/admin/salud`**. Hay que resolverlo AL cutover — está en el checklist de
+> `scripts/deptos-equipetrol/CUTOVER_DATA_PLAN.md`.
+
 > **Version:** 3.1 (multi-vertical)
 > **Fecha:** 21 May 2026 (actualizado a v3.1; el núcleo de venta es de la v2.4-2.5, ene-2026)
 > **Workflow:** `n8n/workflows/modulo_2/auditoria_diaria_sici_v3.0.json` (nombre interno "v3.0", footer Slack "v3.1")
