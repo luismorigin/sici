@@ -28,7 +28,7 @@ import dotenv from 'dotenv';
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sleep, crearAgente, trafico } from '../sonda-suelo/lib/fetcher.mjs';
+import { sleep, crearAgente, cerrarProxy, rotarSesion, trafico } from '../sonda-suelo/lib/fetcher.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -46,7 +46,7 @@ const fuenteDeUrl = (u) => (String(u).includes('remax.bo') ? 'remax' : 'century2
 
 // HTTP check: SOLO status code. 'caida'=borrado (C21 4xx · Remax redirect) · 'viva'=200 · 'ambiguo'=5xx/timeout
 async function chequear(url, fuente) {
-  const agente = await crearAgente();   // proxy rotativo si PROXY_URL está (mismo camino que el resto), null si no
+  const agente = await crearAgente();   // agente del LOTE sticky (reusado); NO cerrar acá — lo gestiona el lote
   try {
     const signal = AbortSignal.timeout(15000);
     const r = await fetch(fuente === 'remax' ? url : `${url}?json=true`, { headers: UA, redirect: 'manual', signal, ...(agente ? { dispatcher: agente } : {}) });
@@ -55,8 +55,7 @@ async function chequear(url, fuente) {
     if (r.status >= 400 && r.status < 500) return 'caida';   // 404/410 = aviso borrado
     if (r.status === 200) return 'viva';
     return 'ambiguo';                                         // 5xx u otros → transitorio
-  } catch { return 'ambiguo'; }
-  finally { if (agente) await agente.close().catch(() => {}); }
+  } catch { rotarSesion(); return 'ambiguo'; }   // IP mala → nueva en el próximo chequeo
 }
 
 // --- Señal 1: desaparecidas del discovery-deptos de hoy (las calcula y guarda el discovery) ---
@@ -115,6 +114,7 @@ console.log(`  → BAJA confirmada (>${GRACE_DAYS}d, 2 señales → sale del fee
 if (defer.length) console.log(`  → bajas DIFERIDAS por disyuntor:                     ${defer.length}`);
 confirma.forEach(c => console.log(`     baja id ${c.id} (${c.fuente || fuenteDeUrl(c.url)}) — ${c.url}`));
 console.log(`  📊 Tráfico verificador: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
+await cerrarProxy();   // cierra la conexión del último lote (todos los chequeos ya corrieron arriba)
 
 if (!APPLY) { console.log(`\n  (DRY-RUN: no se escribió nada. Correr con --apply.)\n`); process.exit(0); }
 
