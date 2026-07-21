@@ -103,6 +103,14 @@ tiene alguna unidad con `acepta_mascotas=true` o amenidad "Pet Friendly" (solo s
 determinístico → mantiene el chip al día cuando entran props nuevas. Escribe SOLO esa columna (prod la ignora; no es
 juicio → se automatiza). Las RPCs shadow (migs 279/280) la exponen como chip y sacan "Pet Friendly" de las amenidades.
 
+### 5c. Snapshot diario shadow (serie de mercado, mig 283)
+```
+node snapshot-shadow.mjs
+```
+Re-fresca la foto del día en `market_absorption_snapshots_shadow` con el alquiler recién capturado
+(la primera pasada la hizo el cron de venta ~1:17; el upsert por fecha es idempotente). Incluye el
+yield venta×alquiler del día. Si falla avisa por Slack él mismo.
+
 ### 6. Verificar el feed shadow
 ```
 node verificar-shadow-alquiler.mjs       # gratis, sin browser: conteo + anti-doble-norm + matching + mediana + pendientes
