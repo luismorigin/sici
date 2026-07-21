@@ -93,3 +93,34 @@ Mitigantes (por qué es menos riesgoso de lo que suena):
 
 Contexto: `CUTOVER_DATA_PLAN.md` (el cutover completo, del que esto es un subconjunto anticipado) ·
 `project_tc_marco_nuevo_shadow` · `CONTRATO_FRONTEND_SHADOW.md`.
+
+## Prompt de arranque para la conversación nueva (copiar y pegar)
+
+> El lanzamiento son cambios de APP (simon-mvp + lab-kapso), NO de la rama backend `feat/hibrido-*`.
+
+```
+Voy a ejecutar el lanzamiento del TC nuevo en la app (mostrar precios reales
+leyendo shadow, SIN el cutover completo).
+
+PRIMERO: creá una rama nueva desde main (ej. feat/lanzamiento-tc-nuevo). El
+lanzamiento son cambios de app, NO de la rama backend feat/hibrido-*.
+
+ANTES DE TOCAR NADA:
+1. Leé scripts/deptos-equipetrol/LANZAMIENTO_TC_NUEVO.md + la memoria
+   project_lanzamiento_tc_nuevo. Ahí está todo el mapeo.
+2. RE-VERIFICÁ el repo antes de actuar: archivos/líneas/migs/grants pueden haber
+   cambiado. No confíes en el doc a ciegas — confirmá contra el código y la BD.
+
+DISCIPLINA (no negociable):
+- Una superficie a la vez (feed → landing → bot → /mercado), verificando cada una.
+- NO ejecutes el GRANT ni commits/pushes sin mi OK explícito. Generá SQL / mostrame
+  diffs y esperá.
+- El bot está en OTRO repo: C:\Users\LUCHO\Desktop\Censo inmobiliario\lab-kapso
+- NO toques: función global precio_normalizado(), ZN, snapshots, n8n. Si algo te
+  empuja ahí, PARÁ y preguntame.
+- Surface hallazgos y dudas. Si el repo no coincide con el doc, avisá antes de improvisar.
+
+DONE: las 4 superficies muestran el MISMO precio (TC nuevo) por propiedad.
+
+Empezá leyendo el doc + memoria, después re-verificá el feed y contame antes de cambiar nada.
+```
