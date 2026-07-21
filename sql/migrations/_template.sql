@@ -56,6 +56,15 @@ BEGIN;
 -- Elegir UNO de los presets de abajo (descomentar el que corresponda) y borrar
 -- los otros. Si la tabla NO encaja en ninguno, escribir los grants a mano y
 -- documentar el "por qué" en el COMMENT de la tabla.
+--
+-- 🔴 PRIMERO REVOCAR (aprendido en la mig 283→284, 21-jul-2026): toda tabla
+-- nueva en `public` nace con `anon` y `authenticated` en **ALL** por los DEFAULT
+-- PRIVILEGES del schema. Los GRANT de abajo SUMAN permisos, NO quitan los
+-- heredados → sin este REVOKE, una tabla interna queda escribible desde el
+-- browser con la anon key. Obligatorio salvo Preset A (data pública):
+-- REVOKE ALL ON public.MI_TABLA FROM anon, authenticated;
+-- REVOKE ALL ON SEQUENCE public.MI_TABLA_id_seq FROM anon, authenticated;  -- si hay BIGSERIAL
+-- Verificar después: SELECT relacl::text FROM pg_class WHERE relname='MI_TABLA';
 
 -- Preset A — Data pública (propiedades, proyectos, vistas mercado)
 -- GRANT SELECT                         ON public.MI_TABLA TO anon;
