@@ -1715,25 +1715,15 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
   }
 
   try {
-    // Fetch TC paralelo for normalization
-    const { data: tcData } = await supabase
-      .from('config_global')
-      .select('valor')
-      .eq('clave', 'tipo_cambio_paralelo')
-      .single()
-    const tcPar = parseFloat(tcData?.valor) || 0
-
-    // Query con filtros limpios (mismos que admin dashboard)
+    // Lanzamiento TC nuevo: la vista SHADOW ya trae precio_norm normalizado
+    // (régimen nuevo, sin TC en JS) y aplica los filtros de calidad canónicos.
+    // Al cutover se repointea a v_mercado_venta (CUTOVER_DATA_PLAN).
     const { data, error } = await supabase
-      .from('propiedades_v2')
-      .select('microzona, precio_usd, area_total_m2, tipo_cambio_detectado, id_proyecto_master')
-      .eq('status', 'completado')
-      .eq('tipo_operacion', 'venta')
-      .gt('precio_usd', 30000)
+      .from('v_mercado_venta_shadow')
+      .select('microzona, precio_norm, area_total_m2, id_proyecto_master')
+      .gt('precio_norm', 20000)
       .gte('area_total_m2', 20)
       .not('microzona', 'is', null)
-      .is('duplicado_de', null)
-      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     if (error || !data || data.length === 0) {
       console.warn('Error o sin datos en microzonas, usando demo:', error?.message)
@@ -1768,8 +1758,8 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
         zonaMap[zonaDisplay] = { total: 0, precios: [], m2: [], proyectos: new Set() }
       }
       zonaMap[zonaDisplay].total++
-      if (p.precio_usd) {
-        const precioNorm = normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar)
+      const precioNorm = p.precio_norm ? parseFloat(String(p.precio_norm)) : 0
+      if (precioNorm > 0) {
         zonaMap[zonaDisplay].precios.push(precioNorm)
         if (p.area_total_m2 > 0) {
           zonaMap[zonaDisplay].m2.push(precioNorm / p.area_total_m2)
@@ -1808,8 +1798,10 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
 }
 
 function categorizarZona(precioM2: number): 'premium' | 'standard' | 'value' {
-  if (precioM2 >= 2200) return 'premium'
-  if (precioM2 >= 1800) return 'standard'
+  // Umbrales del régimen TC nuevo (mediana shadow ~$1.650/m², p95 ~$2.230).
+  // Los viejos (2200/1800) estaban calibrados al dólar-oficial inflado.
+  if (precioM2 >= 1500) return 'premium'
+  if (precioM2 >= 1200) return 'standard'
   return 'value'
 }
 
@@ -1827,7 +1819,8 @@ export async function obtenerZonasAlquiler(): Promise<ZonaAlquilerData[]> {
 
   try {
     const { data, error } = await supabase
-      .from('v_mercado_alquiler')
+      // Lanzamiento TC nuevo: vista shadow (display Bs igual; misma base que el feed)
+      .from('v_mercado_alquiler_shadow')
       .select('zona, precio_mensual_bob')
       // Aislamiento macrozona (mig 257): la home muestra SOLO Equipetrol.
       .eq('zona_general', 'Equipetrol')

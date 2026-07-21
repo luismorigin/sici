@@ -198,9 +198,9 @@ export interface RawPropiedadRango {
 
 export interface RawPropiedadMicrozona {
   microzona: string | null
-  precio_usd: number
+  // precio_norm: ya normalizado por la vista (v_mercado_venta_shadow / v_mercado_venta)
+  precio_norm: number | string | null
   area_total_m2: number
-  tipo_cambio_detectado: string | null
   id_proyecto_master: number | null
 }
 
