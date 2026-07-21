@@ -1,5 +1,16 @@
 # /cron-deptos-ventas — Captura híbrida de deptos Equipetrol → SHADOW (bajo Max, gratis)
 
+> ⏰ **AGENDADO (21-jul-2026): corre SOLO todas las noches a la ~1:17 AM** como routine local
+> (`~/.claude/scheduled-tasks/cron-deptos-equipetrol/`). Gemelos: **alquiler ~2:11** y
+> **`/audit-cola-shadow` ~3:10** (escalonados: el audit audita lo que la captura cargó, y nunca hay dos
+> crawls simultáneos). Avisan por **Slack** al terminar (`notificar-slack.mjs`).
+> ⚠️ **Las routines NO están en git** — viven en `~/.claude/scheduled-tasks/`, como las skills de
+> `.claude/commands/`. Son config de la máquina del founder. Si migrás de máquina, hay que recrearlas.
+> ⚠️ **Corren en la máquina del founder, no en un servidor.** Si está apagada/dormida a esa hora, la
+> corrida se ejecuta **al siguiente arranque de la app** (no se pierde el día; el discovery es
+> shadow-relativo → lo no capturado sigue siendo "nuevo" la corrida siguiente). Ver
+> `CUTOVER_DATA_PLAN.md` §Automatización (Fase 0 vs Fase completa).
+>
 > **Fuente de verdad** de este comando. Copiar a `.claude/commands/cron-deptos-ventas.md` para usarlo
 > como `/cron-deptos-ventas` (las skills viven gitignored en `.claude/commands/`; el repo guarda el `.command.md`).
 >
