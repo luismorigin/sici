@@ -49,7 +49,10 @@ async function chequear(url, fuente) {
   try {
     const signal = AbortSignal.timeout(15000);
     const r = await fetch(fuente === 'remax' ? url : `${url}?json=true`, { headers: UA, redirect: 'manual', signal, ...(agente ? { dispatcher: agente } : {}) });
-    trafico.requests++;                  // cuenta el request (status-check, no lee body → bytes ~0)
+    // Cuenta el request + ESTIMA los bytes por `content-length` (el status-check NO lee el body, así que
+    // sin esto el 📊 reportaba "0 MB" aunque el proxy sí transfiere → medición engañosa de los GB).
+    trafico.requests++;
+    trafico.bytes += Number(r.headers.get('content-length')) || 0;
     if (r.status >= 300 && r.status < 400) return fuente === 'remax' ? 'caida' : 'ambiguo'; // Remax borra→redirect
     if (r.status >= 400 && r.status < 500) return 'caida';   // 404/410 = aviso borrado
     if (r.status === 200) return 'viva';
@@ -104,7 +107,11 @@ console.log(`  → normalizadas a feed (estaban pending):             ${normaliz
 console.log(`  → BAJA confirmada (>${GRACE_DAYS}d, 2 señales → sale del feed): ${confirma.length}`);
 if (defer.length) console.log(`  → bajas DIFERIDAS por disyuntor:                     ${defer.length}`);
 confirma.forEach(c => console.log(`     baja id ${c.id} (${c.fuente || fuenteDeUrl(c.url)}) — ${c.url}`));
-console.log(`  📊 Tráfico verificador: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
+// 📊 status-code-only NO lee el body y los portales usan chunked (sin `content-length`) → los bytes no son
+// medibles sin descargarlo (lo que sumaría tráfico real y anularía el sentido del check). Se reporta lo que
+// SÍ se sabe (requests) y se dice explícitamente que los bytes no se miden — antes decía "0 MB", engañoso.
+const _bytesNota = trafico.bytes > 0 ? `${trafico.mb} MB` : 'bytes no medidos (status-only, sin content-length)';
+console.log(`  📊 Tráfico verificador: ${trafico.requests} requests · ${_bytesNota}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
 await cerrarProxy();   // cierra la conexión del último lote (todos los chequeos ya corrieron arriba)
 
 if (!APPLY) { console.log(`\n  (DRY-RUN: no se escribió nada. Correr con --apply.)\n`); process.exit(0); }

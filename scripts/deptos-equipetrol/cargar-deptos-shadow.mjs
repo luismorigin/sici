@@ -230,7 +230,9 @@ async function prepNuevas(discoveryFile, n) {
   }
   const file = join(OUT, `material-nuevas-${TS}.json`);
   writeFileSync(file, JSON.stringify({ generado: TS, spec: 'READER_SPEC.md', origen: 'discovery-nuevas', total: entradas.length, entradas }, null, 2));
-  console.log(`\n💾 ${file}\n   → LÉELO y llená "veredicto" (READER_SPEC.md), después: node cargar-deptos-shadow.mjs --apply ${file}\n`);
+  console.log(`\n💾 ${file}`);
+  console.log(`   📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
+  console.log(`   → LÉELO y llená "veredicto" (READER_SPEC.md), después: node cargar-deptos-shadow.mjs --apply ${file}\n`);
 }
 
 // ===========================================================================
