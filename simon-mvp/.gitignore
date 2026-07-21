@@ -35,3 +35,10 @@ next-env.d.ts
 
 # screenshots temporales generados por scripts de test
 .tmp-screenshots/
+
+# scripts de verificación DESCARTABLES (Playwright ad-hoc, screenshots puntuales).
+# Convención: prefijo `_` = temporal, no es herramienta. Suelen tener rutas de
+# scratchpad hardcodeadas de una sesión y quedan obsoletos apenas cambia la feature
+# (ej. `_verify-sat.mjs` verificaba el modo satélite, que después se RETIRÓ).
+# El método de verificación reusable vive en docs/design/VERIFICAR_FEEDS_DESKTOP.md.
+_*.mjs
