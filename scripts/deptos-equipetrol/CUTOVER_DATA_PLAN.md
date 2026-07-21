@@ -376,7 +376,13 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
        hasta ~20-ago. 🔜 Pendiente del CUTOVER (no de ahora): re-apuntar el snapshot de PROD / decidir si
        esta serie pasa a ser LA serie.
 5. [ ] **Serie de precios/yields:** decidir corte declarado (recomendado) vs recompute aproximado.
-6. [ ] **Métricas de inversión** nuevas: cada una con su etiqueta de la matriz fiduciaria.
+6. [~] **Métricas de inversión** nuevas: cada una con su etiqueta de la matriz fiduciaria.
+       ⚠️ **Límite del yield ya identificado y declarado (mig 285, 21-jul):** el ROI cruza mix distinto —
+       numerador dominado por alquileres AMOBLADOS (107/201) ÷ denominador = precio de venta general (se
+       vende sin muebles; solo 76/406 declaran amoblado → el precio NO se puede segmentar). El yield es
+       **optimista** y NO es corregible con data de portal → se declara en el COMMENT de la tabla y debe
+       declararse al publicar. Los ROI segmentados salen NULL con n<5 (gate). Un yield realmente segmentado
+       requeriría precio de venta por condición de amoblado, que el origen no publica.
 7. [ ] Cortes ricos nuevos (amoblado/estado/piso) → pueden esperar, se agregan después sin rehacer.
 
 ## Apéndice — datos verificados 17-jul-2026 (con qué material se cuenta)
