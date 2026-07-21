@@ -39,6 +39,7 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
   "tipo_cambio_detectado": "oficial",// "paralelo" | "oficial" | "no_especificado" | "oficial_viejo" (6.96/7 explícito) | "bob" (crudo en bolivianos)
   "dormitorios": 1,                  // 0 = monoambiente (válido). Corregir 0→N solo si el texto dice N.
   "banos": 1,                        // base estructurada; el texto corrige si dice otra cosa. null si no hay señal.
+  "area_m2": 74.5,                   // superficie de LA UNIDAD si el TEXTO la declara. null si el texto no la dice (→ queda la del portal). Ver regla.
   "piso": 3,                         // piso de LA UNIDAD (ver regla). null si no se declara / solo hay pisos de amenidades.
   "estado_construccion": "preventa", // "preventa" | "entrega_inmediata" | null (ver regla; port de prod)
   "fecha_entrega_estimada": "Diciembre 2026", // solo si preventa y el texto la da. null si no.
@@ -160,6 +161,20 @@ Cascada de fuentes (en orden), la descripción SIEMPRE pisa:
    habitación-con-baño.
 5. `null` solo si **multi-dorm (≥2)** SIN número, SIN suite, SIN estructurado NI discovery. Honesto: no adivinar
    (poner "1" en un 2+ dorm haría creer que hay uno solo cuando es "no sé").
+
+### ÁREA (`area_m2`) — el TEXTO pisa al portal (v4.3, 21-jul)
+**Reportá la superficie de LA UNIDAD si el TEXTO la declara. `null` si el texto no la dice.**
+- Fuentes en el texto: *"74,5 m²"*, *"superficie 63 m²"*, *"área construida 120 m2"*, *"consta de 31,83 m²"*.
+- **`null` NO es "no sé cuánto mide"** — es "el aviso no lo declara" → el cargador deja la del portal. No
+  inventar ni estimar por dormitorios/precio.
+- **Qué NO es:** el área del LOTE/terreno del condominio, la del área social, ni un rango ("desde 60 m²" en
+  un aviso-proyecto → eso es señal de multiproyecto, ver GATE, no `area_m2` de unidad).
+- **Por qué existe esta regla (caso real, 21-jul):** el portal dio `1700 m²` para un depto cuyo texto dice
+  **177 m²** (error ×10 de carga del captador). Entró al feed y cualquier $/m² de esa unidad sale absurdo.
+  Era el ÚNICO campo donde la lectura del texto se descartaba: el cargador tomaba `a.area` (estructurado)
+  mientras baños/piso/parqueo sí respetan el veredicto. Con esta regla el texto pisa, como en todo el spec.
+- **Cero falsos positivos por diseño:** no es una heurística de rangos (que perdería un penthouse de 450 m²
+  legítimo) — es el aviso hablando. Si el texto calla, no se toca nada.
 
 ### AMENIDADES + EQUIPAMIENTO (solo lo CONFIRMADO — NUNCA inferir/asumir/curar)
 Regla madre (de prod `prompt-ventas.md`): **solo lo CONFIRMADO. NUNCA inferir** Pet Friendly, Sauna,

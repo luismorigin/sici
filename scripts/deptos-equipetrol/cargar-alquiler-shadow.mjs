@@ -286,7 +286,10 @@ function construirFila(e, v, match) {
     // v2: el veredicto manda; fallback al checkbox del portal (mascotas_portal) si el lector no trajo señal
     acepta_mascotas: v.acepta_mascotas ?? (typeof a.mascotas_portal === 'boolean' ? a.mascotas_portal : null),
     servicios_incluidos: Array.isArray(v.servicios_incluidos) ? v.servicios_incluidos : [],
-    area_total_m2: a.area, dormitorios: v.dormitorios,
+    // ÁREA: el VEREDICTO pisa (v3.2) — gemelo de venta. El portal dio 1700 m² para un depto cuyo texto
+    // dice 177 (Lateris, 21-jul) y entró al feed. Si el aviso no declara superficie, `v.area_m2` es null
+    // y queda la del portal, como antes.
+    area_total_m2: v.area_m2 ?? a.area, dormitorios: v.dormitorios,
     banos: v.banos ?? a.banos ?? (v.dormitorios != null && v.dormitorios <= 1 ? 1 : null),  // red: ≤1 dorm sin señal → 1 (definicional); 2+ → null (honesto)
     piso: v.piso != null ? Number(v.piso) : (a.piso != null && /^\d+$/.test(String(a.piso)) ? Number(a.piso) : null),
     estacionamientos: estac,

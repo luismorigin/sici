@@ -265,7 +265,11 @@ function construirFila(e, v, match) {
     // tag "bob" → el crudo (precio_usd) está en BOLIVIANOS; moneda_original lo documenta y la normalización divide vivo.
     precio_usd: v.precio_usd, tipo_cambio_detectado: v.tipo_cambio_detectado,
     moneda_original: v.tipo_cambio_detectado === 'bob' ? 'BOB' : (a.moneda || null),
-    area_total_m2: a.area, dormitorios: v.dormitorios,
+    // ÁREA: el VEREDICTO pisa (v4.3) — era el ÚNICO campo donde la lectura del texto se descartaba,
+    // mientras baños/piso/parqueo sí la respetan. Caso real 21-jul: el portal dio 1700 m² para un depto
+    // cuyo texto dice 177 (error ×10 del captador) → entró al feed y su $/m² salía absurdo. Si el aviso
+    // no declara superficie, `v.area_m2` viene null y queda la del portal, como antes.
+    area_total_m2: v.area_m2 ?? a.area, dormitorios: v.dormitorios,
     banos: v.banos ?? a.banos ?? (v.dormitorios != null && v.dormitorios <= 1 ? 1 : null),  // ← veredicto manda; red: ≤1 dorm sin señal → 1 (definicional); 2+ → null (honesto)
     piso: v.piso != null ? Number(v.piso)
           : (a.piso != null && /^\d+$/.test(String(a.piso)) ? Number(a.piso) : null),   // ← veredicto manda
