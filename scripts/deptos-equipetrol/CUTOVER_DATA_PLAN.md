@@ -298,6 +298,11 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
 > 4. **Bot WhatsApp** (repo `lab-kapso`): las 3 RPCs (`buscar_propiedades`, `resumen_mercado`,
 >    `buscar_similares`) leen vistas `_shadow` (`sql/lanzamiento-tc-nuevo-apply.sql`) → re-crearlas contra
 >    prod al cutover. + `src/sici.js` (prototipo) + GRANT `bot_kapso_readonly` sobre vistas shadow (revocar).
+> 5. **Snapshots de precio de shortlists** (`api/broker/shortlists/index.ts`, fix 21-jul): la CREACIÓN toma
+>    el snapshot de las vistas `_shadow` (shadow-first con fallback prod) — sin esto el chip de cambio de
+>    precio atribuía la brecha de régimen a "TC paralelo bajó" (falso). Al cutover el fallback lo resuelve
+>    solo, pero limpiar el shadow-first. Los snapshots pre-lanzamiento fueron re-basados a la base nueva
+>    (`rebase-snapshots-shortlists.sql`, aplicado 21-jul) — NO re-basar de nuevo al cutover (prod = shadow).
 
 ## Checklist de cutover de DATA (para EJECUTAR cuando el founder decida — no ahora)
 

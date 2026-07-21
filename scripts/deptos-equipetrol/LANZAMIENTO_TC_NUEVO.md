@@ -104,7 +104,18 @@ Contexto: `CUTOVER_DATA_PLAN.md` (el cutover completo, del que esto es un subcon
 
 ## Estado de ejecución (21-jul-2026)
 
-**Implementado en código, pendiente de deploy + SQL del bot:**
+> 🚀 **LANZADO el 21-jul-2026.** PR #27 mergeado → deploy Vercel verificado en prod (feed/home//mercado con
+> precios shadow; ZN intacto; API sin flag sigue prod) + SQL del bot aplicado en Supabase (mediana
+> `resumen_mercado('venta')` $142.832 → **$97.304**) + GRANT opcional aplicado + **consistencia 6/6**
+> precios idénticos bot↔vista shadow + E2E por WhatsApp real OK (founder).
+>
+> **Post-lanzamiento (mismo día):** fix del chip falso "↓ TC paralelo bajó ~$us X" en shortlists — la API
+> de creación guardaba `precio_norm_snapshot` desde prod (régimen viejo) mientras `/b/[hash]` muestra shadow
+> → el chip atribuía la brecha de régimen a un movimiento del TC. Corregido: snapshot desde vista shadow
+> (shadow-first) + re-base de los snapshots existentes (`rebase-snapshots-shortlists.sql`, aplicado — 0/418
+> desalineados) + legibilidad (chips 12px, "(T.C. oficial)" 12px/50%, subtítulo header 13px).
+
+**Detalle de la implementación (lo que quedó en cada superficie):**
 
 | Superficie | Estado | Dónde |
 |---|---|---|
