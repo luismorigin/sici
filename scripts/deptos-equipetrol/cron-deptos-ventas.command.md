@@ -117,6 +117,16 @@ tiene alguna unidad con `acepta_mascotas=true` o amenidad "Pet Friendly" (solo s
 determinístico → mantiene el chip al día cuando entran props nuevas. Escribe SOLO esa columna (prod la ignora; no es
 juicio → se automatiza). Las RPCs shadow (migs 279/280) la exponen como chip y sacan "Pet Friendly" de las amenidades.
 
+### 5c. Snapshot diario shadow (serie de mercado, mig 283)
+```
+node snapshot-shadow.mjs
+```
+Guarda la foto del día en `market_absorption_snapshots_shadow` (tabla APARTE de la serie prod — su
+UNIQUE no distingue versiones): inventario, precios TC-nuevo, absorción, spread preventa/entrega,
+cortes amoblado/equipado/parqueo y yield venta×alquiler. **Idempotente** (upsert por fecha): también
+corre en el cron de alquiler (~2:11) y esa segunda pasada re-fresca la foto con el alquiler del día —
+verlo dos veces NO es un error. Si falla avisa por Slack él mismo (la foto de un día no se reconstruye).
+
 ### 6. Verificar el feed shadow (que la data rica renderice)
 Levantá el dev y mirá `localhost:3000/ventas?shadow=1` (hard-reload si ves prod por el SSG):
 ```

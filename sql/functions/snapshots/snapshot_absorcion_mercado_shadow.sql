@@ -1,0 +1,21 @@
+-- ============================================================================
+-- snapshot_absorcion_mercado_shadow() — serie diaria SHADOW (régimen TC nuevo)
+-- ============================================================================
+-- FUENTE CANÓNICA: sql/migrations/286_snapshot_shadow_concentracion_dom.sql
+-- (última versión de la función). Historia: mig 283 (tabla + función + grants) ·
+-- 284 (fix de grants: REVOKE anon/authenticated) · 285 (ROI honesto: conteos del
+-- mix de amoblado + gate n>=5) · 286 (concentración de edificios + días en mercado).
+--
+-- Resumen: foto diaria de Equipetrol en el régimen TC nuevo, escrita a
+-- `market_absorption_snapshots_shadow` (tabla APARTE de la serie prod).
+-- NO es espejo de snapshot_absorcion_mercado() — diferencias deliberadas
+-- (normalización shadow, alquiler USD = precio_mensual, pending = gracia del
+-- verificador, filtros en las vistas, cortes preventa/entrega + amoblado/
+-- equipado/parqueo) documentadas en el header de la mig 283.
+--
+-- La ejecuta el cron híbrido nocturno: scripts/deptos-equipetrol/snapshot-shadow.mjs
+-- (paso 5c de /cron-deptos-ventas y /cron-deptos-alquiler; upsert idempotente).
+--
+-- Regla 7 de CLAUDE.md: antes de modificarla, exportar SIEMPRE la versión de
+-- producción con pg_get_functiondef().
+-- ============================================================================

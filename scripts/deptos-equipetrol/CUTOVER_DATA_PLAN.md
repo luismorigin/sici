@@ -363,12 +363,26 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
        en el re-normalizado automático — **en Equipetrol Y en TODAS las props ZN v16.5 que el swap global toca**
        (feed activo ~650; pero el BRUTO de deptos+casas ZN es mayor — casas: feed ~103 vs bruto ~298 → dimensionar
        la auditoría sobre el bruto, no el feed). Alternativa: migrar ZN por shadow antes.
-4. [ ] **Mejoras del snapshot** (mismo movimiento): leer de vista shadow + dedup + absorción por 2 señales
-       (§A/C). **+ construir el snapshot shadow leyendo las DOS vistas (venta+alquiler) para no perder el ROI,
-       en serie SEPARADA (`filter_version='shadow'`), arrancando temprano** (§D). Decisión abierta: detalle
-       por zona para alquiler (hoy solo global).
+4. [~] **Mejoras del snapshot** — ✅ **SNAPSHOT SHADOW CONSTRUIDO Y ARRANCADO (21-jul, mig 283):**
+       `market_absorption_snapshots_shadow` (tabla APARTE — el UNIQUE de la de prod no distingue
+       `filter_version`, escribir ahí pisaría la v3; se usa `filter_version=4` numérico, la columna es
+       smallint, no acepta `'shadow'`) + `snapshot_absorcion_mercado_shadow()` corriendo cada noche en el
+       cron híbrido (paso 5c, `snapshot-shadow.mjs`, idempotente venta+alquiler). Lee las DOS vistas (ROI
+       incluido), dedup+2-señales+filtros-en-vista (§A/C) y suma cortes nuevos: spread preventa/entrega del
+       inventario ACTIVO + amoblado/equipado/parqueo declarados. La "decisión abierta" de alquiler por zona
+       resultó NO abierta: la función de prod YA lo tenía (LOOP 3 "A2") — el doc estaba desactualizado
+       (regla 7: exportar de prod). NO-espejos deliberados (alquiler USD=`precio_mensual`, pending=gracia
+       del verificador) en el header de la mig 283. Caveats: absorción arranca en 0; `nuevas_30d` inflada
+       hasta ~20-ago. 🔜 Pendiente del CUTOVER (no de ahora): re-apuntar el snapshot de PROD / decidir si
+       esta serie pasa a ser LA serie.
 5. [ ] **Serie de precios/yields:** decidir corte declarado (recomendado) vs recompute aproximado.
-6. [ ] **Métricas de inversión** nuevas: cada una con su etiqueta de la matriz fiduciaria.
+6. [~] **Métricas de inversión** nuevas: cada una con su etiqueta de la matriz fiduciaria.
+       ⚠️ **Límite del yield ya identificado y declarado (mig 285, 21-jul):** el ROI cruza mix distinto —
+       numerador dominado por alquileres AMOBLADOS (107/201) ÷ denominador = precio de venta general (se
+       vende sin muebles; solo 76/406 declaran amoblado → el precio NO se puede segmentar). El yield es
+       **optimista** y NO es corregible con data de portal → se declara en el COMMENT de la tabla y debe
+       declararse al publicar. Los ROI segmentados salen NULL con n<5 (gate). Un yield realmente segmentado
+       requeriría precio de venta por condición de amoblado, que el origen no publica.
 7. [ ] Cortes ricos nuevos (amoblado/estado/piso) → pueden esperar, se agregan después sin rehacer.
 
 ## Apéndice — datos verificados 17-jul-2026 (con qué material se cuenta)
