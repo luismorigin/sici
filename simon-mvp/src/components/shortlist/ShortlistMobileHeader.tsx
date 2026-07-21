@@ -61,7 +61,7 @@ export default function ShortlistMobileHeader({ variant, clienteNombre, onMenu }
           letter-spacing: 0.2px; color: ${t.text};
         }
         .slh-sub {
-          font-size: 12px; color: ${t.textMuted}; font-weight: 500;
+          font-size: 13px; color: ${t.textMuted}; font-weight: 500;
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 62vw;
         }
         .slh-menu {

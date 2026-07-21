@@ -144,42 +144,60 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Snapshot de precio. Depende del tipo_operacion de la shortlist:
       //
       // VENTA (migraciones 229 + 230):
-      //  - precio_usd_snapshot  = RAW (propiedades_v2.precio_usd) → detecta cambio del agente
-      //  - precio_norm_snapshot = NORMALIZADO (v_mercado_venta.precio_norm) → comparable USD oficial
-      // OJO: en v_mercado_venta `precio_usd` es el RAW y `precio_norm` es el normalizado.
+      //  - precio_usd_snapshot  = RAW (precio_usd de la vista) → detecta cambio del agente
+      //  - precio_norm_snapshot = NORMALIZADO (precio_norm de la vista) → comparable
+      // OJO: en las vistas de mercado `precio_usd` es el RAW y `precio_norm` el normalizado.
       // El RPC `buscar_unidades_reales` retorna `precio_normalizado() AS precio_usd` — distinto contrato.
       // El badge dispara solo si el RAW cambió (cambio del agente, no movimiento TC).
       //
       // ALQUILER (migración 233):
-      //  - precio_mensual_bob_snapshot = BOB directo (propiedades_v2.precio_mensual_bob)
+      //  - precio_mensual_bob_snapshot = BOB directo
       // En alquiler el BOB es la fuente de verdad (regla 10 CLAUDE.md), no hay split
-      // raw/norm porque el USD se deriva como bob/6.96.
+      // raw/norm porque el USD se deriva del BOB por TC.
       const tipoOperacion: 'venta' | 'alquiler' = payload.tipo_operacion === 'alquiler' ? 'alquiler' : 'venta'
       const rawByPropId = new Map<number, number | null>()
       const normByPropId = new Map<number, number | null>()
       const bobByPropId = new Map<number, number | null>()
+      // Lanzamiento TC nuevo (21-jul): el snapshot se toma de la vista SHADOW —
+      // la MISMA base que muestra /b/[hash] (shadow-first). Si se tomara de prod,
+      // el chip de cambio de precio ve la brecha de régimen y la atribuye mal
+      // ("TC paralelo bajó ~$us X" falso). Además las props solo-shadow (ids
+      // 8000xxx) no existen en prod → snapshot null. Fallback prod cutover-safe:
+      // si la vista _shadow deja de existir, cae a la fuente vieja.
       try {
         if (tipoOperacion === 'alquiler') {
-          const bobRes = await supabase
-            .from('propiedades_v2')
+          let bobRes = await supabase
+            .from('v_mercado_alquiler_shadow')
             .select('id, precio_mensual_bob')
             .in('id', payload.propiedad_ids)
+          if (bobRes.error) {
+            bobRes = await supabase
+              .from('propiedades_v2')
+              .select('id, precio_mensual_bob')
+              .in('id', payload.propiedad_ids)
+          }
           for (const r of (bobRes.data || []) as Array<{ id: number; precio_mensual_bob: string | number | null }>) {
             const v = r.precio_mensual_bob != null ? parseFloat(String(r.precio_mensual_bob)) : null
             bobByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
           }
         } else {
-          const [rawRes, normRes] = await Promise.all([
-            supabase.from('propiedades_v2').select('id, precio_usd').in('id', payload.propiedad_ids),
-            supabase.from('v_mercado_venta').select('id, precio_norm').in('id', payload.propiedad_ids),
-          ])
-          for (const r of (rawRes.data || []) as Array<{ id: number; precio_usd: string | number | null }>) {
-            const v = r.precio_usd != null ? parseFloat(String(r.precio_usd)) : null
-            rawByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
+          // La vista shadow expone RAW (precio_usd) y NORMALIZADO (precio_norm)
+          // juntos — un solo query reemplaza el par propiedades_v2 + v_mercado_venta.
+          let vRes = await supabase
+            .from('v_mercado_venta_shadow')
+            .select('id, precio_usd, precio_norm')
+            .in('id', payload.propiedad_ids)
+          if (vRes.error) {
+            vRes = await supabase
+              .from('v_mercado_venta')
+              .select('id, precio_usd, precio_norm')
+              .in('id', payload.propiedad_ids)
           }
-          for (const r of (normRes.data || []) as Array<{ id: number; precio_norm: string | number | null }>) {
-            const v = r.precio_norm != null ? parseFloat(String(r.precio_norm)) : null
-            normByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
+          for (const r of (vRes.data || []) as Array<{ id: number; precio_usd: string | number | null; precio_norm: string | number | null }>) {
+            const raw = r.precio_usd != null ? parseFloat(String(r.precio_usd)) : null
+            const norm = r.precio_norm != null ? parseFloat(String(r.precio_norm)) : null
+            rawByPropId.set(r.id, Number.isFinite(raw as number) ? (raw as number) : null)
+            normByPropId.set(r.id, Number.isFinite(norm as number) ? (norm as number) : null)
           }
         }
       } catch (snapErr) {
