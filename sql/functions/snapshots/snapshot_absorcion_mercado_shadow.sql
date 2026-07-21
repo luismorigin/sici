@@ -1,10 +1,10 @@
 -- ============================================================================
 -- snapshot_absorcion_mercado_shadow() — serie diaria SHADOW (régimen TC nuevo)
 -- ============================================================================
--- FUENTE CANÓNICA: sql/migrations/285_snapshot_shadow_roi_honesto.sql
--- (última versión de la función). Origen: mig 283 (tabla + función + grants) ·
--- mig 284 (fix de grants: REVOKE anon/authenticated) · mig 285 (ROI honesto:
--- conteos del mix de amoblado + gate n>=5 en los ROI segmentados).
+-- FUENTE CANÓNICA: sql/migrations/286_snapshot_shadow_concentracion_dom.sql
+-- (última versión de la función). Historia: mig 283 (tabla + función + grants) ·
+-- 284 (fix de grants: REVOKE anon/authenticated) · 285 (ROI honesto: conteos del
+-- mix de amoblado + gate n>=5) · 286 (concentración de edificios + días en mercado).
 --
 -- Resumen: foto diaria de Equipetrol en el régimen TC nuevo, escrita a
 -- `market_absorption_snapshots_shadow` (tabla APARTE de la serie prod).
