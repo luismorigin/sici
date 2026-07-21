@@ -103,9 +103,24 @@ node verificar-shadow-alquiler.mjs       # gratis, sin browser: conteo + anti-do
 O el feed real: `npm run dev --prefix ../../simon-mvp` → `localhost:3000/alquileres?shadow=1` (Playwright, no el
 preview headless). Chequeá: precio Bs display + USD normalizado (Binance vivo, no ÷6.96), condiciones, amenidades.
 
-### 7. Reportar + log
+### 7. Reportar + log + **avisar por Slack**
 Reportá: escritos/rechazados/bajas, correcciones notables vs n8n (moneda Remax corregida, TC re-clasificado,
 match recuperado), y la cola de excepciones (PM_NUEVO, ambiguos, sin-match). Log en `output/cron-deptos-alquiler-log.md`.
+
+**Y mandá el aviso a Slack** — el cron corre de noche sin nadie mirando; sin esto el founder queda ciego
+(y n8n, que hoy sí avisa, se va a apagar):
+```
+node notificar-slack.mjs "<resumen>"
+```
+Corto y accionable, distinguiendo el caso:
+- **✅ OK** — `✅ Cron deptos-ALQUILER · <min> min` + `N nuevas → X escritas · Y rechazadas` +
+  `Verificador: A bajas · B revividas` + `📊 MB` + (si hay cola) `🔔 PARA VOS: …`; si no hay,
+  **`Sin cola pendiente`** explícito.
+- **⚠️ con observación** — mismo resumen + la observación en una línea.
+- **🛑 abortada** — si el discovery muere por circuit breaker, `discovery-alquiler.mjs` avisa solo
+  (con diagnóstico DNS: portal caído vs bloqueo). Si abortás en un paso posterior, mandá vos el `🛑`.
+
+Regla del mensaje: que se entienda **si hay algo para hacer o no**.
 
 ## Reglas
 - **SHADOW, prod intacto.** `--apply` y el verificador solo mutan `propiedades_v2_shadow`. A prod: solo SELECT

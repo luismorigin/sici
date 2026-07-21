@@ -80,6 +80,7 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 
   "dormitorios": 1,                  // 0 = monoambiente (válido). Corregir 0→N solo si el texto dice N.
   "banos": 1,                        // base estructurada; el texto corrige. null si no hay señal.
+  "area_m2": 74.5,                   // superficie de LA UNIDAD si el TEXTO la declara. null si el texto no la dice (→ queda la del portal).
   "piso": 3,                         // piso de LA UNIDAD. null si no se declara.
   "amoblado_confianza": "alta",      // opcional, si querés dejar traza
   "nombre_edificio_canonico": "Green Tower", // el nombre CANÓNICO (romano→arábigo, sin ruido). El matcher lo usa.
@@ -260,6 +261,12 @@ es SEPARADO de esta lista: acá van los ítems concretos, allá la señal filtra
 - `parqueo_precio_adicional_bob`: si el parqueo es APARTE, su costo **mensual en Bs**. **APARTE ⟺ incluidos=0**.
 - `baulera_incluida`: true/false del texto/estructurado. null si no hay señal.
 - Sin señal → null, NO true. No inventar parqueo incluido.
+
+### ÁREA (`area_m2`) — igual que venta (v3.2, 21-jul): el TEXTO pisa al portal
+Reportá la superficie de LA UNIDAD si el TEXTO la declara; `null` si no la dice (→ queda la del portal).
+NO es el área del lote/condominio ni un rango. Motivo (caso real 21-jul, alquiler): el portal dio
+**1.700 m²** para un depto cuyo texto dice **177 m²** (error ×10 del captador) y entró al feed. Detalle
+completo de la regla en `READER_SPEC.md` §ÁREA.
 
 ### PISO — igual que venta
 Base = `piso` estructurado (null seguido). El texto lo llena ("Nivel 3", "Piso 3"). NO confundir con pisos de

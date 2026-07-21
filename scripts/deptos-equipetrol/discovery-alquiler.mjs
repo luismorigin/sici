@@ -27,7 +27,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { c21Listado, remaxListadoSC } from '../sonda-suelo/lib/portales.mjs';
 import { enZona } from '../sonda-suelo/lib/zonas.mjs';
-import { circuit } from '../sonda-suelo/lib/fetcher.mjs';
+import { circuit, trafico } from '../sonda-suelo/lib/fetcher.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -81,8 +81,28 @@ const portalBbox = [...byUrl.values()];
 log(`   → ${portalBbox.length} deptos únicos por URL dentro del bbox (${listings.length} listings crudos)\n`);
 
 if (circuit.tripped) {
-  console.error(`🛑 Discovery INCOMPLETO: circuit breaker (${circuit.fails} fallos) — IP probablemente bloqueada.`);
-  console.error(`   Aborto para NO escribir un diff parcial (metería falsas "desaparecidas"). Reintentá en unas horas.\n`);
+  // CLASIFICAR antes de avisar (ítem 2c-bis del CUTOVER_DATA_PLAN) — gemelo de discovery-deptos.
+  // "IP bloqueada" a secas fue ENGAÑOSO el 20-jul (C21 estaba caído, DNS ENOTFOUND global).
+  const dns = await import('node:dns');
+  const resuelve = async (h) => { try { await dns.promises.lookup(h); return true; } catch { return false; } };
+  const [c21Ok, remaxOk] = await Promise.all([resuelve('c21.com.bo'), resuelve('remax.bo')]);
+  const diag = !c21Ok && !remaxOk ? 'NINGUNO de los dos portales resuelve DNS → caídos o problema de red propia'
+    : !c21Ok ? 'C21 NO resuelve DNS → C21 caído (no es bloqueo de IP)'
+    : !remaxOk ? 'Remax NO resuelve DNS → Remax caído (no es bloqueo de IP)'
+    : 'ambos portales resuelven DNS → probable bloqueo de IP/proxy o rate-limit';
+
+  console.error(`🛑 Discovery INCOMPLETO: circuit breaker (${circuit.fails} fallos seguidos).`);
+  console.error(`   Diagnóstico: ${diag}`);
+  console.error(`   Aborto para NO escribir un diff parcial (metería falsas "desaparecidas"). Reintentá más tarde.\n`);
+
+  const { notificarSlack } = await import('./notificar-slack.mjs');
+  await notificarSlack(
+    `🛑 *Cron deptos-ALQUILER ABORTADO* (discovery)\n` +
+    `Circuit breaker: ${circuit.fails} fallos seguidos.\n` +
+    `Diagnóstico: ${diag}\n` +
+    `*NO se escribió nada* — se aborta a propósito para no meter bajas falsas.\n` +
+    `Se reintenta en la próxima corrida; el inventario no se pierde (el discovery es shadow-relativo).`
+  );
   process.exit(1);
 }
 
@@ -115,17 +135,26 @@ for (let from = 0; ; from += 1000) {
   shadowRows.push(...data);
   if (data.length < 1000) break;
 }
+// Multiproyecto ya clasificados (mismo criterio que el cargador, línea ~192): van a
+// `proyectos_detectados`, NO a shadow. Sin excluirlos reaparecen como "nuevas" cada corrida. (20-jul)
+const { data: proyRows, error: errProy } = await sb.from('proyectos_detectados')
+  .select('url').eq('macrozona', 'equipetrol');
+if (errProy) { console.error('   ERROR leyendo proyectos_detectados:', errProy.message); process.exit(1); }
+const proyUrls = new Set((proyRows || []).map((r) => r.url));
+
 const dbUrls = new Set(dbRows.map((r) => r.url));
 const shadowUrls = new Set(shadowRows.map((r) => r.url));
 const portalUrls = new Set(portal.map((p) => p.url));
-const nuevas = portal.filter((p) => !dbUrls.has(p.url) && !shadowUrls.has(p.url));   // ni prod ni shadow
-const existentes = portal.filter((p) => dbUrls.has(p.url));
+// NUEVAS = en el portal y NO en shadow (ni multiproyecto). SHADOW-RELATIVO: prod NO clasifica (mismo
+// criterio que ventas, 20-jul). El portal es la fuente de verdad; se captura todo lo que shadow no tiene.
+const nuevas = portal.filter((p) => !shadowUrls.has(p.url) && !proyUrls.has(p.url));
+const existentes = portal.filter((p) => dbUrls.has(p.url));  // informativo (prod ya no clasifica)
 const desaparecidas = shadowRows.filter((r) => r.es_activa && !portalUrls.has(r.url)); // activas en SHADOW
 const dbActivas = dbRows.filter((r) => r.es_activa).length;
 const shadowActivas = shadowRows.filter((r) => r.es_activa).length;
-log(`   → prod (alquiler Eq): ${dbRows.length} (${dbActivas} activas) · shadow alquiler: ${shadowRows.length} (${shadowActivas} activas)`);
-log(`   → NUEVAS (portal, ni prod ni shadow): ${nuevas.length}`);
-log(`   → existentes (en prod): ${existentes.length}`);
+log(`   → shadow alquiler: ${shadowRows.length} (${shadowActivas} activas) · multiproyecto ya clasificados: ${proyUrls.size} · [info] prod: ${dbRows.length} (${dbActivas} activas)`);
+log(`   → NUEVAS (portal, NO en shadow ni multiproyecto → se capturan): ${nuevas.length}`);
+log(`   → [info] del portal ya en prod (no afecta la captura): ${existentes.length}`);
 log(`   → desaparecidas (activas en SHADOW, no vistas → verificar): ${desaparecidas.length}\n`);
 
 // ---------- 4. SALIDA ----------
@@ -152,4 +181,5 @@ log('='.repeat(64));
 log(`  DRY-RUN listo. NO se escribió nada a la BD.`);
 log(`  Portal: ${portal.length} (6 microzonas) · shadow alquiler activas: ${shadowActivas}`);
 log(`  Nuevas (ni prod ni shadow): ${nuevas.length} · Desaparecidas del híbrido a verificar: ${desaparecidas.length}`);
-log(`  💾 ${outPath}\n`);
+log(`  💾 ${outPath}`);
+log(`  📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy — se descuenta de los GB)' : ' (IP directa, $0)'}\n`);

@@ -101,10 +101,25 @@ solo tras verificación humana (el founder da el GPS en Google Maps). NO inventa
   hace COMMIT/ROLLBACK. **PM_NUEVO**: si el catálogo es prod (read-only en fase shadow), los alias/PM
   nuevos se REGISTRAN para el cutover — NO se escriben a `proyectos_master` ahora (invariante shadow).
 
-### 5. Reportar + preguntar
+### 5. Reportar + preguntar + **avisar por Slack**
 Tabla ejecutiva: `prop | superficie | pm sugerido/actual | veredicto | pm final | evidencia`. Totales por
 veredicto. **NUNCA aplicar UPDATEs sin OK.** Ofrecé correr con `ROLLBACK` primero; pedí los GPS de los
 PM_NUEVO al founder. Log en `output/audit-cola-shadow-log.md`.
+
+**Y mandá el aviso a Slack:**
+```
+node notificar-slack.mjs "<resumen>"
+```
+> ⚠️ **Acá el aviso importa MÁS que en el cron.** El cron escribe a shadow solo (su trabajo queda hecho
+> aunque nadie mire); **la salida de este audit es 100% pendientes del humano** — SQL que alguien tiene
+> que aplicar. Si corre de noche y nadie lo ve, **la cola crece en silencio y el matching se degrada**.
+
+El mensaje debe decir **qué hay para aplicar y dónde**:
+- **🔔 con pendientes** — `🔔 *Audit cola shadow* · N revisados` + `X corregir · Y PM_NUEVO · Z alias` +
+  **dónde está el SQL** (`output/audit-cola-shadow-log.md`) + si hay PM_NUEVO, que **faltan los GPS del
+  founder** (los bloquea).
+- **✅ sin pendientes** — `✅ Audit cola shadow · N revisados · nada que aplicar`. Decirlo **explícitamente**:
+  sin esto no se distingue "corrió y está limpio" de "no corrió".
 
 ## Reglas (heredadas + propias de shadow)
 1. **Score/nombre-único ≠ juez.** El número del cluster y la lectura mandan. `nombre_unico_zona_dif` con

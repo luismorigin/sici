@@ -24,7 +24,7 @@ import dotenv from 'dotenv';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pace, circuit } from '../sonda-suelo/lib/fetcher.mjs';
+import { pace, circuit, trafico } from '../sonda-suelo/lib/fetcher.mjs';
 import { fetchDetalleDepto } from './lib/detalle-deptos.mjs';
 import { matchearPorNombre } from './lib/matcher.mjs';
 import { reBucket } from './lib/canonicalizar.mjs';
@@ -157,6 +157,7 @@ async function prep() {
   const file = join(OUT, `material-${TS}.json`);
   writeFileSync(file, JSON.stringify({ generado: TS, spec: 'READER_SPEC.md', total: entradas.length, entradas }, null, 2));
   console.log(`\n💾 ${file}`);
+  console.log(`   📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
   console.log(`   → LÉELO y llená "veredicto" en cada depto (READER_SPEC.md), después: node cargar-deptos-shadow.mjs --apply ${file}\n`);
 }
 
@@ -229,7 +230,9 @@ async function prepNuevas(discoveryFile, n) {
   }
   const file = join(OUT, `material-nuevas-${TS}.json`);
   writeFileSync(file, JSON.stringify({ generado: TS, spec: 'READER_SPEC.md', origen: 'discovery-nuevas', total: entradas.length, entradas }, null, 2));
-  console.log(`\n💾 ${file}\n   → LÉELO y llená "veredicto" (READER_SPEC.md), después: node cargar-deptos-shadow.mjs --apply ${file}\n`);
+  console.log(`\n💾 ${file}`);
+  console.log(`   📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
+  console.log(`   → LÉELO y llená "veredicto" (READER_SPEC.md), después: node cargar-deptos-shadow.mjs --apply ${file}\n`);
 }
 
 // ===========================================================================
@@ -262,7 +265,11 @@ function construirFila(e, v, match) {
     // tag "bob" → el crudo (precio_usd) está en BOLIVIANOS; moneda_original lo documenta y la normalización divide vivo.
     precio_usd: v.precio_usd, tipo_cambio_detectado: v.tipo_cambio_detectado,
     moneda_original: v.tipo_cambio_detectado === 'bob' ? 'BOB' : (a.moneda || null),
-    area_total_m2: a.area, dormitorios: v.dormitorios,
+    // ÁREA: el VEREDICTO pisa (v4.3) — era el ÚNICO campo donde la lectura del texto se descartaba,
+    // mientras baños/piso/parqueo sí la respetan. Caso real 21-jul: el portal dio 1700 m² para un depto
+    // cuyo texto dice 177 (error ×10 del captador) → entró al feed y su $/m² salía absurdo. Si el aviso
+    // no declara superficie, `v.area_m2` viene null y queda la del portal, como antes.
+    area_total_m2: v.area_m2 ?? a.area, dormitorios: v.dormitorios,
     banos: v.banos ?? a.banos ?? (v.dormitorios != null && v.dormitorios <= 1 ? 1 : null),  // ← veredicto manda; red: ≤1 dorm sin señal → 1 (definicional); 2+ → null (honesto)
     piso: v.piso != null ? Number(v.piso)
           : (a.piso != null && /^\d+$/.test(String(a.piso)) ? Number(a.piso) : null),   // ← veredicto manda

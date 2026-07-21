@@ -83,6 +83,19 @@ Con los `veredicto_audit` mergeados, armá el reporte ejecutivo:
 
 Registrá una línea en `output/audit-shadow-log.md` (fecha + op + números).
 
+**Y mandá el aviso a Slack:**
+```
+node notificar-slack.mjs "<resumen>"
+```
+> ⚠️ Igual que `/audit-cola-shadow`: **la salida de este audit son pendientes del humano** (SQL de
+> corrección que alguien tiene que aplicar). Si corre de noche y nadie lo ve, **el drift queda sin
+> corregir** — los precios/estados del feed se quedan viejos aunque el anuncio haya cambiado.
+
+- **🔔 con drift detectado** — `🔔 *Audit drift shadow* (<op>) · N re-leídos` + `X correcciones ·
+  Y matching sospechoso · Z posibles bajas` + dónde está el SQL (`output/audit-shadow-log.md`).
+- **✅ sin drift** — `✅ Audit drift shadow (<op>) · N re-leídos · sin cambios en los anuncios`.
+  Explícito, para distinguir "corrió y está limpio" de "no corrió".
+
 ## Reglas
 - **SHADOW, read-only.** El `.mjs` no escribe nada. El SQL de corrección va contra `propiedades_v2_shadow`
   y lo aplica el humano. Cero escritura a prod.
