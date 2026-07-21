@@ -47,6 +47,7 @@ const STUB_ALQUILER_SEO = {
   zonas: [] as Array<{ zonaDisplay: string; unidades: number; bsM2Promedio: number; rentaMedianaBs: number }>,
 }
 import { getBrokerBySlug } from '@/lib/simon-brokers'
+import { rpcShadowFirst } from '@/lib/rpc-shadow'
 import {
   getShortlistByHashWithStatus,
   fingerprintExists,
@@ -353,17 +354,6 @@ function mapRowAlquiler(r: RawUnidadAlquilerRow): UnidadAlquiler {
     expensas_incluidas: (r as { expensas_incluidas?: boolean | null }).expensas_incluidas ?? null,
     pet_friendly: (r as { pet_friendly?: boolean | null }).pet_friendly ?? null,
   }
-}
-
-// Shadow-first con fallback a prod. La shortlist muestra el marco de
-// normalización nuevo (shadow) de una. CUTOVER-SAFE: si la RPC `_shadow` deja de
-// existir cuando shadow→prod, cae automáticamente a la RPC prod (que para
-// entonces YA es igual a shadow) → nada se rompe, sin tocar código.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function rpcShadowFirst(supabase: any, base: string, params: any) {
-  const s = await supabase.rpc(`${base}_shadow`, params)
-  if (!s.error) return s
-  return supabase.rpc(base, params)
 }
 
 function blockedProps(

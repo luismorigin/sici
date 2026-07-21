@@ -164,9 +164,10 @@ async function fetchFromAPI(
   filtros: FiltrosVentaSimple,
   spotlightId?: number
 ): Promise<{ data: UnidadVenta[]; total: number; spotlight?: UnidadVenta | null }> {
-  // ?shadow=1 → lee el feed shadow (propiedades_v2_shadow, reader híbrido con el
-  // split canónico/extra ya limpio). Preview del modelo antes del cutover.
-  const shadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
+  // Lanzamiento TC nuevo (pre-cutover): el feed lee SHADOW por defecto
+  // (propiedades_v2_shadow, reader híbrido, precios reales). ?shadow=0 = escape
+  // a prod para debug/comparación.
+  const shadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') !== '0'
   const res = await fetch('/api/ventas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -3317,12 +3318,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   //   ya filtró (disparó su propio fetch), el diferido no lo pisa.
   useEffect(() => {
     if (publicShareMode) return
-    // ?shadow=1: la data SSG es PROD (el build no conoce el query param). Forzar
-    // el fetch shadow INMEDIATO para no mostrar precios prod en el preview shadow
-    // (ej. #3580 = $275k prod vs $180k shadow). Sin esto, el refetch shadow se
-    // difería a idle y el sheet quedaba con el snapshot prod.
-    const isShadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
-    if (initialProperties.length === 0 || spotlightId || isShadow) { fetchProperties(); return }
+    // ?shadow=0: la data SSG es SHADOW (default del lanzamiento TC nuevo; el
+    // build no conoce el query param). Forzar el fetch prod INMEDIATO para no
+    // mostrar precios shadow en el escape a prod (ej. #3580 = $180k shadow vs
+    // $275k prod). Sin esto, el refetch se difería a idle y el sheet quedaba
+    // con el snapshot shadow.
+    const wantsProd = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '0'
+    if (initialProperties.length === 0 || spotlightId || wantsProd) { fetchProperties(); return }
     const idle = typeof window.requestIdleCallback === 'function'
       ? (cb: () => void) => window.requestIdleCallback(cb, { timeout: 3000 })
       : (cb: () => void) => window.setTimeout(cb, 1500)
@@ -5606,7 +5608,9 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
     // Payload SSG mínimo: solo el primer viewport. El listado completo lo trae
     // el cliente con el fetch diferido a idle (ver useEffect de mount). Con 500
     // props completas el __NEXT_DATA__ pesaba ~800KB y hundía LCP/TTI mobile.
-    const { data: rows } = await supabase.rpc('buscar_unidades_simple', {
+    // Lanzamiento TC nuevo: shadow-first con fallback prod (cutover-safe).
+    const { rpcShadowFirst } = await import('@/lib/rpc-shadow')
+    const { data: rows } = await rpcShadowFirst(supabase, 'buscar_unidades_simple', {
       p_filtros: { limite: 24, solo_con_fotos: true, orden: 'recientes', zonas_permitidas: ZONAS_EQUIPETROL_DB }
     })
     if (rows) {
@@ -5666,7 +5670,7 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
       try {
         const ids = initialProperties.map(pp => pp.id)
         if (ids.length) {
-          const { data: extras } = await supabase.rpc('buscar_extras', { p_ids: ids })
+          const { data: extras } = await rpcShadowFirst(supabase, 'buscar_extras', { p_ids: ids })
           if (Array.isArray(extras)) {
             const byId = new Map(extras.map((e: any) => [e.id, e]))
             for (const pp of initialProperties) {

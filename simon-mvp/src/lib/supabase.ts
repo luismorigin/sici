@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { innegociablesToAmenidades } from '@/config/amenidades-mercado'
 import { normalizarPrecio } from './precio-utils'
+import { rpcShadowFirst } from './rpc-shadow'
 import { ZONAS_EQUIPETROL_DB } from './zonas'
 import type { RawUnidadRealRow, RawUnidadAlquilerRow, RawPropiedadMercado, RawPropiedadRango, RawPropiedadMicrozona } from '@/types/db-responses'
 
@@ -538,7 +539,13 @@ export interface FiltrosAlquiler {
   proyecto?: string
 }
 
-export async function buscarUnidadesAlquiler(filtros: FiltrosAlquiler): Promise<UnidadAlquiler[]> {
+export async function buscarUnidadesAlquiler(
+  filtros: FiltrosAlquiler,
+  // Lanzamiento TC nuevo: el feed Equipetrol pide shadow (precios/split del
+  // reader híbrido) con fallback prod cutover-safe. Default prod: ZN NO tiene
+  // data en shadow y debe seguir leyendo la RPC vieja.
+  opts?: { shadow?: boolean }
+): Promise<UnidadAlquiler[]> {
   if (!supabase) {
     console.warn('Supabase no configurado')
     return []
@@ -567,9 +574,9 @@ export async function buscarUnidadesAlquiler(filtros: FiltrosAlquiler): Promise<
       rpcFiltros.zonas_permitidas = filtros.zonas_permitidas
     }
 
-    const { data, error } = await supabase.rpc('buscar_unidades_alquiler', {
-      p_filtros: rpcFiltros
-    })
+    const { data, error } = opts?.shadow
+      ? await rpcShadowFirst(supabase, 'buscar_unidades_alquiler', { p_filtros: rpcFiltros })
+      : await supabase.rpc('buscar_unidades_alquiler', { p_filtros: rpcFiltros })
 
     if (error) {
       console.error('Error en RPC buscar_unidades_alquiler:', error)
