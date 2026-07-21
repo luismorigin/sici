@@ -96,31 +96,48 @@ Contexto: `CUTOVER_DATA_PLAN.md` (el cutover completo, del que esto es un subcon
 
 ## Prompt de arranque para la conversación nueva (copiar y pegar)
 
-> El lanzamiento son cambios de APP (simon-mvp + lab-kapso), NO de la rama backend `feat/hibrido-*`.
+> Pensado para correr en **plan mode**: el primer entregable es un PLAN COMPLETO y ejecutable, no un resumen.
+> El lanzamiento son cambios de **APP** (`simon-mvp` + `lab-kapso`) → un merge a main **dispara deploy en Vercel**.
 
 ```
-Voy a ejecutar el lanzamiento del TC nuevo en la app (mostrar precios reales
-leyendo shadow, SIN el cutover completo).
+Voy a ejecutar el lanzamiento del TC nuevo en la app: que el feed, la landing, el bot de
+WhatsApp y /mercado muestren los precios reales (leyendo shadow), SIN el cutover completo.
+Contexto y checklist: scripts/deptos-equipetrol/LANZAMIENTO_TC_NUEVO.md + la memoria
+project_lanzamiento_tc_nuevo.
 
-PRIMERO: creá una rama nueva desde main (ej. feat/lanzamiento-tc-nuevo). El
-lanzamiento son cambios de app, NO de la rama backend feat/hibrido-*.
+TU PRIMER ENTREGABLE ES UN PLAN LISTO PARA IMPLEMENTAR. No escribas código todavía.
 
-ANTES DE TOCAR NADA:
-1. Leé scripts/deptos-equipetrol/LANZAMIENTO_TC_NUEVO.md + la memoria
-   project_lanzamiento_tc_nuevo. Ahí está todo el mapeo.
-2. RE-VERIFICÁ el repo antes de actuar: archivos/líneas/migs/grants pueden haber
-   cambiado. No confíes en el doc a ciegas — confirmá contra el código y la BD.
+Para armarlo:
+1. LEÉ el doc y la memoria — ahí está el mapeo (superficies, archivos, líneas, SQL del GRANT).
+2. RE-VERIFICÁ contra el repo y la BD reales: archivos, líneas, migraciones y grants pueden
+   haber cambiado desde que se escribió el doc. NO confíes en él a ciegas. Si algo no coincide,
+   eso va en el plan como hallazgo.
 
-DISCIPLINA (no negociable):
-- Una superficie a la vez (feed → landing → bot → /mercado), verificando cada una.
-- NO ejecutes el GRANT ni commits/pushes sin mi OK explícito. Generá SQL / mostrame
-  diffs y esperá.
-- El bot está en OTRO repo: C:\Users\LUCHO\Desktop\Censo inmobiliario\lab-kapso
-- NO toques: función global precio_normalizado(), ZN, snapshots, n8n. Si algo te
-  empuja ahí, PARÁ y preguntame.
-- Surface hallazgos y dudas. Si el repo no coincide con el doc, avisá antes de improvisar.
+EL PLAN DEBE TRAER (si falta algo de esto, no está listo):
+- Las 4 superficies, con el cambio EXACTO en cada una (archivo + línea + qué se reemplaza).
+- El SQL del GRANT, verificado contra los permisos que existen hoy.
+- El ORDEN de ejecución y por qué.
+- Cómo se VERIFICA cada superficie (que muestre el precio nuevo, y que no se rompió nada).
+- Cómo se REVIERTE si sale mal.
+- Qué necesitás de mí y en qué momento.
+- Los riesgos reales, incluido el escalón de precio visible al usuario.
 
-DONE: las 4 superficies muestran el MISMO precio (TC nuevo) por propiedad.
+REGLAS (no negociables, también durante la implementación):
+- NO ejecutes el GRANT ni commits/pushes sin mi OK explícito en el momento.
+- El bot vive en OTRO repo: C:\Users\LUCHO\Desktop\Censo inmobiliario\lab-kapso
+- NO toques: la función global precio_normalizado(), ZN, los snapshots, n8n. Eso es el CUTOVER,
+  no esto. Si algo te empuja ahí, PARÁ y preguntame.
+- Al implementar: rama nueva desde main, UNA superficie a la vez, verificando cada una.
+- Esto SÍ toca simon-mvp → el merge a main dispara deploy. Avisame antes.
 
-Empezá leyendo el doc + memoria, después re-verificá el feed y contame antes de cambiar nada.
+DONE: las 4 superficies muestran el MISMO precio para una misma propiedad. Si una queda con
+el precio viejo, NO se lanza — la inconsistencia (misma prop a dos precios) rompe la confianza
+fiduciaria, que es el activo del producto.
+
+Arrancá leyendo y verificando, y volvé con el plan.
 ```
+
+> **Por qué el plan primero** (aprendido el 20-21 jul): el mapeo original decía "flipear el feed" y al
+> verificar aparecieron **4 superficies en 2 repos + un GRANT** — el bot ni siquiera estaba en este repo y
+> su usuario `bot_kapso_readonly` no tenía permiso sobre shadow. Improvisar superficie por superficie habría
+> dejado precios inconsistentes en producción a mitad de camino.
