@@ -25,7 +25,7 @@ import dotenv from 'dotenv';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pace, circuit } from '../sonda-suelo/lib/fetcher.mjs';
+import { pace, circuit, trafico } from '../sonda-suelo/lib/fetcher.mjs';
 import { fetchDetalleDepto, num, numOrZero } from './lib/detalle-deptos.mjs';
 import { matchearPorNombre } from './lib/matcher.mjs';
 import { reBucket } from './lib/canonicalizar.mjs';
@@ -174,6 +174,7 @@ async function prep() {
   const file = join(OUT, `material-alq-${TS}.json`);
   writeFileSync(file, JSON.stringify({ generado: TS, spec: 'READER_SPEC_ALQUILER.md', total: entradas.length, entradas }, null, 2));
   console.log(`\n💾 ${file}`);
+  console.log(`   📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
   console.log(`   → LÉELO y llená "veredicto" (READER_SPEC_ALQUILER.md), después: node cargar-alquiler-shadow.mjs --apply ${file}\n`);
 }
 
@@ -244,7 +245,9 @@ async function prepNuevas(discoveryFile, n) {
   }
   const file = join(OUT, `material-alq-nuevas-${TS}.json`);
   writeFileSync(file, JSON.stringify({ generado: TS, spec: 'READER_SPEC_ALQUILER.md', origen: 'discovery-nuevas', total: entradas.length, entradas }, null, 2));
-  console.log(`\n💾 ${file}\n   → LÉELO y llená "veredicto" (READER_SPEC_ALQUILER.md), después: node cargar-alquiler-shadow.mjs --apply ${file}\n`);
+  console.log(`\n💾 ${file}`);
+  console.log(`   📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
+  console.log(`   → LÉELO y llená "veredicto" (READER_SPEC_ALQUILER.md), después: node cargar-alquiler-shadow.mjs --apply ${file}\n`);
 }
 
 // ===========================================================================

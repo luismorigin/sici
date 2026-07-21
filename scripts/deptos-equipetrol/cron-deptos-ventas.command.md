@@ -115,10 +115,28 @@ Verificá con **Playwright** (mejor que el preview Chrome headless para este fee
 nuevo (paralelo a valor de cara, `oficial_viejo` descontado, `bob` live), equipamiento canónico + extra,
 amoblado/equipado. Alternativa gratis sin browser: comparar por SQL `buscar_unidades_simple_shadow` vs prod.
 
-### 7. Reportar + log
+### 7. Reportar + log + **avisar por Slack**
 Reportá al usuario: cuántos escritos/rechazados/retenidos, las correcciones notables vs n8n (precio
 corrupto cazado, TC re-clasificado, match recuperado), y **la cola de excepciones** (PM_NUEVO a crear,
 ambiguos, sin-match). Registrá una línea en `output/cron-deptos-ventas-log.md` (fecha + números).
+
+**Y mandá el aviso a Slack** — el cron corre de noche sin nadie mirando; sin esto el founder queda ciego
+(y n8n, que hoy sí avisa, se va a apagar):
+```
+node notificar-slack.mjs "<resumen>"
+```
+El mensaje va **corto y accionable**, y DEBE distinguir el caso:
+- **✅ corrida OK** — `✅ Cron deptos-VENTA · <min> min` + `N nuevas → X escritas · Y rechazadas por gate` +
+  `Verificador: A bajas · B revividas` + `📊 MB` + (si hay cola) `🔔 PARA VOS: <n> con nombre sin match ·
+  <n> alias sugeridos · <PM_NUEVO si hay>`; si no hay cola, decir **`Sin cola pendiente`** explícitamente.
+- **⚠️ con observación** — corrió bien pero algo llama la atención (dato sospechoso, patrón raro de un
+  captador, etc.): mismo resumen + la observación en una línea.
+- **🛑 abortada** — NO hace falta acá: si el discovery muere por circuit breaker, `discovery-deptos.mjs`
+  manda el aviso él mismo (con diagnóstico DNS: portal caído vs bloqueo de IP) antes de salir. Si abortás
+  por otro motivo (paso posterior), mandá vos el aviso con `🛑` y qué NO se escribió.
+
+Regla del mensaje: que se entienda **si hay algo para hacer o no**. Un aviso que no diferencia "todo bien"
+de "te espera trabajo" vuelve a dejar ciego al founder.
 
 ## Reglas
 

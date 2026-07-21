@@ -84,8 +84,32 @@ const portalBbox = [...byUrl.values()];
 log(`   → ${portalBbox.length} deptos únicos por URL dentro del bbox (${listings.length} listings crudos)\n`);
 
 if (circuit.tripped) {
-  console.error(`🛑 Discovery INCOMPLETO: circuit breaker (${circuit.fails} fallos) — IP probablemente bloqueada.`);
-  console.error(`   Aborto para NO escribir un diff parcial (metería falsas "desaparecidas"). Reintentá en unas horas.\n`);
+  // CLASIFICAR antes de avisar (ítem 2c-bis del CUTOVER_DATA_PLAN): un fallo puede ser (a) el portal
+  // CAÍDO, (b) nuestra IP/proxy bloqueada, o (c) la red propia. Decir "IP bloqueada" a secas fue
+  // ENGAÑOSO el 20-jul (C21 estaba caído: DNS ENOTFOUND global, no era la IP). Un lookup DNS lo
+  // distingue gratis: si el dominio no resuelve, el portal está caído y no hay nada que reintentar.
+  const dns = await import('node:dns');
+  const resuelve = async (h) => { try { await dns.promises.lookup(h); return true; } catch { return false; } };
+  const [c21Ok, remaxOk] = await Promise.all([resuelve('c21.com.bo'), resuelve('remax.bo')]);
+  const diag = !c21Ok && !remaxOk ? 'NINGUNO de los dos portales resuelve DNS → caídos o problema de red propia'
+    : !c21Ok ? 'C21 NO resuelve DNS → C21 caído (no es bloqueo de IP)'
+    : !remaxOk ? 'Remax NO resuelve DNS → Remax caído (no es bloqueo de IP)'
+    : 'ambos portales resuelven DNS → probable bloqueo de IP/proxy o rate-limit';
+
+  console.error(`🛑 Discovery INCOMPLETO: circuit breaker (${circuit.fails} fallos seguidos).`);
+  console.error(`   Diagnóstico: ${diag}`);
+  console.error(`   Aborto para NO escribir un diff parcial (metería falsas "desaparecidas"). Reintentá más tarde.\n`);
+
+  // Aviso AUTOMÁTICO: si el cron muere acá nunca llega al paso 7, así que el aviso tiene que salir
+  // desde el script — es justo el caso donde más se necesita y más fácil se pierde.
+  const { notificarSlack } = await import('./notificar-slack.mjs');
+  await notificarSlack(
+    `🛑 *Cron deptos-VENTA ABORTADO* (discovery)\n` +
+    `Circuit breaker: ${circuit.fails} fallos seguidos.\n` +
+    `Diagnóstico: ${diag}\n` +
+    `*NO se escribió nada* — se aborta a propósito para no meter bajas falsas.\n` +
+    `Se reintenta en la próxima corrida; el inventario no se pierde (el discovery es shadow-relativo).`
+  );
   process.exit(1);
 }
 
