@@ -92,9 +92,11 @@ export async function fetchDestacadosHome(): Promise<DestacadoHome[]> {
   try {
     if (!supabase) return []
 
+    // Lanzamiento TC nuevo: las vistas SHADOW (precios reales, misma base que
+    // el feed). Al cutover se repointea a las vistas prod (CUTOVER_DATA_PLAN).
     const [alq, vta] = await Promise.all([
       supabase
-        .from('v_mercado_alquiler')
+        .from('v_mercado_alquiler_shadow')
         .select('id, nombre_edificio, zona, precio_mensual_bob, dormitorios, area_total_m2, amoblado, datos_json, fecha_publicacion, fecha_creacion')
         .eq('zona_general', 'Equipetrol')
         .eq('fuente', 'remax')
@@ -102,7 +104,7 @@ export async function fetchDestacadosHome(): Promise<DestacadoHome[]> {
         .order('fecha_publicacion', { ascending: false, nullsFirst: false })
         .limit(15),
       supabase
-        .from('v_mercado_venta')
+        .from('v_mercado_venta_shadow')
         .select('id, nombre_edificio, zona, precio_norm, dormitorios, area_total_m2, datos_json, fecha_publicacion, fecha_creacion')
         .in('zona', ZONAS_EQUIPETROL_DB)
         .eq('fuente', 'remax')
@@ -168,8 +170,9 @@ export async function fetchContextoVenta(
     if (!supabase) return null
 
     // La vista ya aplica filtros de calidad; macrozona se filtra acá (ticket #15)
+    // Shadow = precios TC nuevo, misma base que el feed (lanzamiento TC nuevo).
     const { data, error } = await supabase
-      .from('v_mercado_venta')
+      .from('v_mercado_venta_shadow')
       .select('zona, precio_norm, area_total_m2, dormitorios')
       .in('zona', ZONAS_EQUIPETROL_DB)
       .not('precio_norm', 'is', null)
@@ -183,7 +186,8 @@ export async function fetchContextoVenta(
         dorms: r.dormitorios as number | null,
         m2: parseFloat(r.precio_norm) / parseFloat(r.area_total_m2),
       }))
-      .filter(r => r.m2 >= 800 && r.m2 <= 5000) // saneo, mismo criterio que landing-data
+      // Saneo recalibrado al régimen TC nuevo (p05 shadow ~$1.080/m², min ~$740)
+      .filter(r => r.m2 >= 500 && r.m2 <= 5000)
 
     const segLabel = dormitorios === 0 ? 'Mono' : dormitorios ? `${dormitorios} dorm` : 'todas las tipologías'
 
@@ -218,15 +222,12 @@ export async function fetchSuperficiesData(): Promise<SuperficiesMarketData> {
   try {
     if (!supabase) throw new Error('Supabase not initialized')
 
-    // Ventas activas — mismo patrón que fetchLandingData (grants anon verificados)
+    // Ventas activas — cuenta sobre la vista SHADOW para que el número cuadre
+    // con lo que el feed muestra (lanzamiento TC nuevo). La vista ya aplica los
+    // filtros de calidad canónicos; macrozona se filtra acá (ticket #15).
     const { count: ventasCount } = await supabase
-      .from('propiedades_v2')
+      .from('v_mercado_venta_shadow')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'completado')
-      .eq('tipo_operacion', 'venta')
-      .gte('area_total_m2', 20)
-      .is('duplicado_de', null)
-      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
       .in('zona', ZONAS_EQUIPETROL_DB)
 
     // Alquileres + medianas por zona (v_mercado_alquiler ya filtra calidad y ≤150d)

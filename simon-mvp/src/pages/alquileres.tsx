@@ -237,9 +237,10 @@ function mapRawToUnidad(p: any): UnidadAlquiler {
 
 async function fetchFromAPI(filtros: FiltrosAlquiler & { offset?: number }, spotlightId?: number): Promise<{ data: UnidadAlquiler[]; total: number; spotlight?: UnidadAlquiler | null }> {
   try {
-    // ?shadow=1 → lee el feed shadow (buscar_unidades_alquiler_shadow, reader
-    // híbrido con el split de amenidades y equipamiento poblado). Preview pre-cutover.
-    const shadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
+    // Lanzamiento TC nuevo (pre-cutover): el feed lee SHADOW por defecto
+    // (buscar_unidades_alquiler_shadow, reader híbrido con el split de amenidades
+    // y equipamiento poblado). ?shadow=0 = escape a prod para debug/comparación.
+    const shadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') !== '0'
     const body: Record<string, any> = { filtros, shadow }
     if (spotlightId) body.spotlightId = spotlightId
     const res = await fetch('/api/alquileres', {
@@ -728,11 +729,12 @@ export default function AlquileresPage({
         setTimeout(() => { programmaticScrollRef.current = false }, 100)
       })
     }
-    // ?shadow=1: la data ISR es PROD (el build no conoce el query param). Forzar
-    // el fetch shadow INMEDIATO (no diferido) para no mostrar precios prod en el
-    // preview shadow — mismo motivo que en ventas.tsx (#3580 $275k vs $180k).
-    const isShadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
-    if (isShadow) { doFetch(); return }
+    // ?shadow=0: la data ISR es SHADOW (default del lanzamiento TC nuevo; el
+    // build no conoce el query param). Forzar el fetch prod INMEDIATO (no
+    // diferido) para no mostrar precios shadow en el escape a prod — mismo
+    // motivo que en ventas.tsx.
+    const wantsProd = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '0'
+    if (wantsProd) { doFetch(); return }
     if (typeof requestIdleCallback !== 'undefined') {
       const id = requestIdleCallback(doFetch, { timeout: 3000 })
       return () => cancelIdleCallback(id)
@@ -5085,7 +5087,9 @@ function AlquileresHead({ seo, brokerSlug = null, publicShareHash = null }: {
 export const getStaticProps: GetStaticProps<{ seo: AlquileresSEO; initialProperties: UnidadAlquiler[] }> = async () => {
   const [data, initialProperties] = await Promise.all([
     fetchMercadoAlquilerData(),
-    buscarUnidadesAlquiler({ orden: 'recientes', limite: 8, solo_con_fotos: true, zonas_permitidas: ZONAS_EQUIPETROL_DB }).catch(() => [] as UnidadAlquiler[]),
+    // Lanzamiento TC nuevo: el SSG del feed Equipetrol lee shadow (con fallback
+    // prod cutover-safe). ZN sigue en prod (no tiene data en shadow).
+    buscarUnidadesAlquiler({ orden: 'recientes', limite: 8, solo_con_fotos: true, zonas_permitidas: ZONAS_EQUIPETROL_DB }, { shadow: true }).catch(() => [] as UnidadAlquiler[]),
   ])
   return {
     props: {

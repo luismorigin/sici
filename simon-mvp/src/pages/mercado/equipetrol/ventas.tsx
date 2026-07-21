@@ -6,7 +6,6 @@ import { fetchMercadoData, type MercadoData } from '@/lib/mercado-data'
 import { MarketHeader } from '@/components/mercado/MarketHeader'
 import { TipologiaTable } from '@/components/mercado/TipologiaTable'
 import { ZonaTable } from '@/components/mercado/ZonaTable'
-import { HistoricalChart } from '@/components/mercado/HistoricalChart'
 import { Metodologia } from '@/components/mercado/Metodologia'
 
 const cormorant = Cormorant_Garamond({
@@ -47,7 +46,6 @@ export default function MercadoEquipetrol({
   kpis,
   tipologias,
   zonas,
-  historico,
   generatedAt,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   const mesAnio = formatMesAnio(kpis.fechaActualizacion)
@@ -273,8 +271,28 @@ export default function MercadoEquipetrol({
           <TipologiaTable tipologias={tipologias} />
           <ZonaTable zonas={zonas} />
 
-          {/* Chart */}
-          <HistoricalChart historico={historico} />
+          {/* Chart de precio histórico — EN CONSTRUCCIÓN durante el lanzamiento
+              TC nuevo: la serie venta_usd_m2 de los snapshots quedó en el régimen
+              viejo y NO se fabrica historia (nada de ×0.66). Vuelve cuando el
+              snapshot del régimen nuevo acumule datos (ver CUTOVER_DATA_PLAN). */}
+          <section className="mb-12">
+            <h2
+              className="text-2xl font-light mb-1"
+              style={{ fontFamily: 'var(--font-cormorant)' }}
+            >
+              Evolución del mercado
+            </h2>
+            <p className="text-xs text-gray-400 mb-4">
+              Precio promedio/m² (fuente: snapshots diarios de absorción)
+            </p>
+            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+              <p className="text-sm text-gray-500">
+                Sección en construcción: estamos recalculando la serie histórica
+                con la nueva base de normalización de precios. Los indicadores de
+                arriba ya reflejan precios del mercado real.
+              </p>
+            </div>
+          </section>
 
           {/* Methodology */}
           <Metodologia />

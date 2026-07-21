@@ -279,6 +279,26 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
   shadow-first) → los links de WhatsApp **ya muestran** el precio nuevo (~34% menos). **NO hay un segundo escalón
   al cutover para shortlists.** El escalón que SÍ queda pendiente es el del **FEED público**, que hoy sigue en prod.
 
+### 🆕 LANZAMIENTO TC NUEVO (21-jul-2026) — el modelo de consumidores CAMBIÓ
+
+> ⚠️ **Supersede parcialmente la sección anterior.** Desde el lanzamiento (rama `feat/lanzamiento-tc-nuevo` +
+> SQL del bot), las superficies públicas de Equipetrol leen **SHADOW por default** (el escalón del feed
+> YA OCURRIÓ). `?shadow=0` es el escape a prod para debug. Detalle: `LANZAMIENTO_TC_NUEVO.md`.
+>
+> **Repoints VIGENTES que el cutover debe deshacer** (volver a vistas/RPCs prod cuando prod = shadow):
+> 1. **Feed**: `ventas.tsx` / `alquileres.tsx` — flag cliente default shadow (`!== '0'`) + SSG vía
+>    `rpcShadowFirst` (`lib/rpc-shadow.ts`) + `buscarUnidadesAlquiler(..., {shadow:true})`. El fallback
+>    cutover-safe hace que NO se rompa al dropear las RPCs `_shadow`, pero hay que limpiar los flags.
+> 2. **Landing/home**: `lib/superficies-data.ts` (destacados ×2, contexto, count) + `lib/supabase.ts`
+>    (`obtenerMicrozonas`, `obtenerZonasAlquiler`) → vistas `_shadow` SIN fallback → repointear ANTES de
+>    dropear las vistas shadow.
+> 3. **/mercado**: `lib/mercado-data.ts` + `lib/mercado-alquiler-data.ts` → vistas `_shadow` SIN fallback.
+>    Además: reponer `<HistoricalChart>` en `pages/mercado/equipetrol/ventas.tsx` (hoy "en construcción")
+>    cuando el snapshot del régimen nuevo acumule serie.
+> 4. **Bot WhatsApp** (repo `lab-kapso`): las 3 RPCs (`buscar_propiedades`, `resumen_mercado`,
+>    `buscar_similares`) leen vistas `_shadow` (`sql/lanzamiento-tc-nuevo-apply.sql`) → re-crearlas contra
+>    prod al cutover. + `src/sici.js` (prototipo) + GRANT `bot_kapso_readonly` sobre vistas shadow (revocar).
+
 ## Checklist de cutover de DATA (para EJECUTAR cuando el founder decida — no ahora)
 
 0. [~] **Motor automático — FASE 0 HECHA (20-jul), automatización completa = después.** ✅ Fase 0: routine

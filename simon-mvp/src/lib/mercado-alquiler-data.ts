@@ -112,9 +112,10 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
   try {
     if (!supabase) throw new Error('Supabase not initialized')
 
-    // Fetch alquiler properties from the view
+    // Lanzamiento TC nuevo: vista SHADOW (display Bs igual; misma base que el
+    // feed). Al cutover se repointea a v_mercado_alquiler (CUTOVER_DATA_PLAN).
     const { data: rawProps } = await supabase
-      .from('v_mercado_alquiler')
+      .from('v_mercado_alquiler_shadow')
       .select('precio_mensual_bob, precio_mensual_usd, area_total_m2, dormitorios, zona, id_proyecto_master, es_multiproyecto, tipo_propiedad_original')
 
     if (!rawProps || rawProps.length === 0) {
@@ -201,8 +202,10 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
     // --- Yield (cruce con venta) ---
     let yieldData: YieldZonaRow[] = []
     try {
+      // Shadow: el $/m² de venta baja al régimen nuevo → el yield bruto sube
+      // (~×1.45). Coherente con el marco TC nuevo, no es un bug.
       const { data: ventaProps } = await supabase
-        .from('v_mercado_venta')
+        .from('v_mercado_venta_shadow')
         .select('zona, precio_m2')
 
       if (ventaProps && ventaProps.length > 0) {

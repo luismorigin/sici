@@ -1,5 +1,4 @@
 import { supabase } from './supabase'
-import { normalizarPrecio } from './precio-utils'
 import { ZONAS_EQUIPETROL_DB } from './zonas'
 
 // --- Types ---
@@ -96,9 +95,9 @@ const FALLBACK_DATA: MercadoData = {
 // --- Data fetching ---
 
 interface RawProp {
-  precio_usd: number
+  // precio_norm: ya normalizado por la vista (régimen TC nuevo en shadow)
+  precio_norm: number | string | null
   area_total_m2: number
-  tipo_cambio_detectado: string | null
   dormitorios: number | null
   zona: string | null
   estado_construccion: string | null
@@ -114,7 +113,8 @@ function applyQualityFilters(props: RawProp[]): RawProp[] {
 
   return props.filter(p => {
     if (!p.zona || !ZONAS_EQUIPETROL_DB.includes(p.zona)) return false
-    if (p.precio_usd <= 0 || p.area_total_m2 < 20) return false
+    const precio = p.precio_norm ? parseFloat(String(p.precio_norm)) : 0
+    if (precio <= 0 || p.area_total_m2 < 20) return false
     if (p.es_multiproyecto === true) return false
     if (p.tipo_propiedad_original && excludeTypes.includes(p.tipo_propiedad_original)) return false
 
@@ -131,23 +131,14 @@ export async function fetchMercadoData(): Promise<MercadoData> {
   try {
     if (!supabase) throw new Error('Supabase not initialized')
 
-    // Fetch TC paralelo
-    const { data: tcData } = await supabase
-      .from('config_global')
-      .select('valor')
-      .eq('clave', 'tipo_cambio_paralelo')
-      .single()
-    const tcPar = parseFloat(tcData?.valor) || 0
-
-    // Fetch all qualifying properties in one query
+    // Lanzamiento TC nuevo: la vista SHADOW ya normaliza (precio_norm, régimen
+    // nuevo) y aplica los filtros de calidad canónicos. Al cutover se repointea
+    // a v_mercado_venta (CUTOVER_DATA_PLAN). Macrozona se filtra acá (ticket #15).
     const { data: rawProps } = await supabase
-      .from('propiedades_v2')
-      .select('precio_usd, area_total_m2, tipo_cambio_detectado, dormitorios, zona, estado_construccion, fecha_publicacion, fecha_discovery, es_multiproyecto, tipo_propiedad_original')
-      .eq('tipo_operacion', 'venta')
-      .in('status', ['completado', 'actualizado'])
-      .is('duplicado_de', null)
+      .from('v_mercado_venta_shadow')
+      .select('precio_norm, area_total_m2, dormitorios, zona, estado_construccion, fecha_publicacion, fecha_discovery, es_multiproyecto, tipo_propiedad_original')
       .gte('area_total_m2', 20)
-      .gt('precio_usd', 0)
+      .gt('precio_norm', 0)
       .in('zona', ZONAS_EQUIPETROL_DB)
 
     if (!rawProps || rawProps.length === 0) throw new Error('No properties found')
@@ -155,9 +146,9 @@ export async function fetchMercadoData(): Promise<MercadoData> {
     const props = applyQualityFilters(rawProps as RawProp[])
     if (props.length === 0) throw new Error('No properties after filtering')
 
-    // Normalize prices
+    // precio_norm ya viene normalizado de la vista — sin TC en JS
     const enriched = props.map(p => {
-      const precioNorm = normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar)
+      const precioNorm = parseFloat(String(p.precio_norm))
       return { ...p, precioNorm, precioM2: precioNorm / p.area_total_m2 }
     })
 

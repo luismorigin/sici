@@ -1,9 +1,17 @@
 # Lanzamiento del TC nuevo — mostrar precios correctos en la app (SIN el cutover completo)
 
-> Mapeado 20-jul-2026. **Esto NO es el cutover** (`CUTOVER_DATA_PLAN.md`). Es lo MÍNIMO para que la app
-> pública (web + bot WhatsApp) muestre los precios del **régimen TC nuevo** (los reales), en vez del TC viejo
-> inflado que muestra prod hoy. El cutover (apagar n8n, Paquete TC, audit ZN) queda para después y NO bloquea
-> esto. Verificado en código + BD; ver "Cómo se verificó" al final.
+> Mapeado 20-jul-2026 · **IMPLEMENTADO 21-jul-2026** (rama `feat/lanzamiento-tc-nuevo` en sici + commit en
+> lab-kapso + SQL del bot listo para aplicar). Ver §"Estado de ejecución" al final. **Esto NO es el cutover**
+> (`CUTOVER_DATA_PLAN.md`). Es lo MÍNIMO para que la app pública (web + bot WhatsApp) muestre los precios del
+> **régimen TC nuevo** (los reales), en vez del TC viejo inflado que muestra prod hoy. El cutover (apagar n8n,
+> Paquete TC, audit ZN) queda para después y NO bloquea esto.
+>
+> ⚠️ **Corrección al mapeo original (verificado 21-jul):** el bot de producción NO es `src/sici.js` (eso es el
+> prototipo Node). El bot vivo corre en Kapso y llama 3 RPCs de Supabase (`buscar_propiedades`,
+> `resumen_mercado`, `buscar_similares`), SECURITY DEFINER → el cambio del bot es re-crear esas RPCs contra las
+> vistas shadow (`lab-kapso/sql/lanzamiento-tc-nuevo-apply.sql`) y **NO necesita GRANT** (el GRANT quedó como
+> opcional, solo para el prototipo). Además el SSG de los feeds y `obtenerMicrozonas`/conteos de la landing
+> también leían prod — incluidos en la implementación.
 
 ## La idea (por qué es chico)
 
@@ -93,6 +101,23 @@ Mitigantes (por qué es menos riesgoso de lo que suena):
 
 Contexto: `CUTOVER_DATA_PLAN.md` (el cutover completo, del que esto es un subconjunto anticipado) ·
 `project_tc_marco_nuevo_shadow` · `CONTRATO_FRONTEND_SHADOW.md`.
+
+## Estado de ejecución (21-jul-2026)
+
+**Implementado en código, pendiente de deploy + SQL del bot:**
+
+| Superficie | Estado | Dónde |
+|---|---|---|
+| 1. Feed venta+alquiler | ✅ código en rama | `feat/lanzamiento-tc-nuevo`: flag cliente default shadow (`?shadow=0` = escape a prod), SSG vía `rpcShadowFirst` (`lib/rpc-shadow.ts`), `buscarUnidadesAlquiler {shadow:true}`. `/api/ventas` y `/api/alquileres` NO se tocaron (ZN los comparte con default prod). |
+| 2. Landing/home | ✅ código en rama | `superficies-data.ts` (destacados/contexto/count) + `supabase.ts` (`obtenerMicrozonas` con `precio_norm` directo, `obtenerZonasAlquiler`) → vistas `_shadow`. Umbrales recalibrados (categorizarZona 1500/1200; saneo m² 500). |
+| 3. Bot WhatsApp | 🔶 SQL listo, lo aplica el humano | `lab-kapso/sql/lanzamiento-tc-nuevo-apply.sql` (3 RPCs → `_shadow`, desde pg_get_functiondef de prod) + `-rollback.sql`. GRANT solo opcional (prototipo). `src/sici.js` ya repointeado. |
+| 4. /mercado | ✅ código en rama | `mercado-data.ts` + `mercado-alquiler-data.ts` → `_shadow`; gráfico de precio histórico = "en construcción" (sin fabricar historia). Inventario/absorción intactos. |
+
+**Secuencia de lanzamiento:** merge a main (deploy Vercel) → verificar web → aplicar SQL del bot → verificar
+bot (mediana `resumen_mercado('venta')` ~97k) → check de consistencia: misma prop, mismo precio en feed +
+home + bot + `/b/[hash]`. Repoints a deshacer al cutover: registrados en `CUTOVER_DATA_PLAN.md` §"Lanzamiento
+TC nuevo". Números medidos al implementar: shadow 406 venta / 202 alquiler, mediana $97.304 vs prod $141.403
+(−31%); alquiler Bs 4.500 idéntico.
 
 ## Prompt de arranque para la conversación nueva (copiar y pegar)
 
