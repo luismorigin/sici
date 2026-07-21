@@ -1,5 +1,12 @@
 # /cron-deptos-alquiler — Captura híbrida de deptos ALQUILER Equipetrol → SHADOW (bajo Max, gratis)
 
+> ⏰ **AGENDADO (21-jul-2026): corre SOLO todas las noches a la ~2:11 AM** como routine local
+> (`~/.claude/scheduled-tasks/cron-deptos-alquiler-nocturno/`), escalonado tras ventas (~1:17) y seguido
+> por `/audit-cola-shadow` (~3:10). Avisa por **Slack** al terminar. **Las routines NO están en git** ni
+> corren en un servidor: viven en `~/.claude/scheduled-tasks/` de la máquina del founder; si está apagada,
+> la corrida se ejecuta al siguiente arranque (no se pierde el día — el discovery es shadow-relativo).
+> Ver `cron-deptos-ventas.command.md` (gemelo) y `CUTOVER_DATA_PLAN.md` §Automatización.
+>
 > **Fuente de verdad** de este comando. Copiar a `.claude/commands/cron-deptos-alquiler.md` para usarlo
 > como `/cron-deptos-alquiler` (las skills viven gitignored en `.claude/commands/`; el repo guarda el `.command.md`).
 >

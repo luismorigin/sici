@@ -4,6 +4,13 @@ description: Audita MATCHING + DUPLICADOS del feed SHADOW del híbrido (venta + 
 
 # /audit-cola-shadow — Audit de matching del feed SHADOW (híbrido)
 
+> ⏰ **AGENDADO (21-jul-2026): corre SOLO todas las noches a la ~3:10 AM** como routine local
+> (`~/.claude/scheduled-tasks/audit-cola-shadow-nocturno/`), **después** de los dos crons de captura
+> (ventas ~1:17 · alquiler ~2:11) — audita lo que se cargó esa noche. Avisa por **Slack** con lo que
+> quedó para aplicar. En la corrida agendada **NO aplica NADA** (nadie puede dar OK): deja el SQL escrito
+> en `output/audit-cola-shadow-log.md`. **Las routines NO están en git** — viven en
+> `~/.claude/scheduled-tasks/` de la máquina del founder; si está apagada, corre al siguiente arranque.
+>
 > **Fuente de verdad** de este comando. Copiar a `.claude/commands/audit-cola-shadow.md`
 > (skills gitignored en `.claude/commands/`; el repo guarda el `.command.md`).
 >
