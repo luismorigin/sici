@@ -5102,7 +5102,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; font-family:'DM Sans',sans-serif }
         .mc-price-block { border-left:3px solid #3A6A48; padding-left:14px; margin-bottom:8px; flex-shrink:0 }
         .mc-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
-        .mc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
+        .mc-tc { font-size:12px; font-weight:400; color:rgba(237,232,220,0.5); letter-spacing:0.2px }
         .mc-specs { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:15px; color:#C8C0B0; font-family:'DM Sans',sans-serif; font-weight:400; line-height:1.4 }
         .mc-sp { display:inline-flex; align-items:center; gap:6px }
         .mc-sp svg { width:16px; height:16px; color:#8B8272; flex-shrink:0 }
@@ -5215,16 +5215,16 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vc-zona { font-size:12px; color:#9A8E7A; letter-spacing:0.5px; margin-bottom:10px }
         .vc-id { color:rgba(237,232,220,0.3); font-size:12px; margin-left:4px; letter-spacing:0 }
         .vc-price-block { border-left:3px solid #3A6A48; padding-left:12px; margin-bottom:8px }
-        .vc-price-change { font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.3px; margin-top:4px; display:inline-block; padding:3px 8px; border-radius:4px }
+        .vc-price-change { font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; letter-spacing:0.3px; margin-top:4px; display:inline-block; padding:3px 8px; border-radius:4px }
         .vc-price-change-agent-down { background:rgba(58,106,72,0.15); color:#5fb074 }
         .vc-price-change-agent-up { background:rgba(237,232,220,0.08); color:rgba(237,232,220,0.55) }
-        .vc-price-change-tc-down, .vc-price-change-tc-up { background:rgba(125,160,200,0.15); color:#9DBFE0; font-weight:500; font-size:10px }
-        .mc-price-change { font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.3px; margin-top:6px; display:inline-block; padding:3px 8px; border-radius:4px }
+        .vc-price-change-tc-down, .vc-price-change-tc-up { background:rgba(125,160,200,0.15); color:#9DBFE0; font-weight:500 }
+        .mc-price-change { font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; letter-spacing:0.3px; margin-top:6px; display:inline-block; padding:3px 8px; border-radius:4px }
         .mc-price-change-agent-down { background:rgba(58,106,72,0.15); color:#5fb074 }
         .mc-price-change-agent-up { background:rgba(237,232,220,0.08); color:rgba(237,232,220,0.55) }
-        .mc-price-change-tc-down, .mc-price-change-tc-up { background:rgba(125,160,200,0.15); color:#9DBFE0; font-weight:500; font-size:10px }
+        .mc-price-change-tc-down, .mc-price-change-tc-up { background:rgba(125,160,200,0.15); color:#9DBFE0; font-weight:500 }
         .vc-price { font-family:'DM Sans',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:4px; font-variant-numeric:tabular-nums }
-        .vc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
+        .vc-tc { font-size:12px; font-weight:400; color:rgba(237,232,220,0.5); letter-spacing:0.2px }
         .vc-specs { font-size:15px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300 }
         .vc-specs-2 { font-size:15px; color:#EDE8DC; font-family:'DM Sans',sans-serif; margin-bottom:10px; font-weight:300 }
         .vc-actions { border-top:1px solid rgba(237,232,220,0.08); padding-top:8px; margin-top:auto; display:flex; align-items:center; justify-content:space-between; min-height:36px }
