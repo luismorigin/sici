@@ -51,44 +51,48 @@ Ver paso 4. El diseño ya existe; falta confirmar que el plan contratado de Kaps
 
 ### 5. Activar el webhook de Kapso — **pendiente, es lo único que falta**
 
-⚠️ **Dos cosas que NO son como parecían** (verificadas en la doc real de Kapso,
-`lab-kapso/.agents/skills/integrate-whatsapp/references/`):
+> Fuente: doc oficial `docs.kapso.ai` → *Webhooks overview* (la doc local de `lab-kapso` es más
+> vieja y omite el formato de lote y la opción de fijar el secreto).
 
-1. **El secreto lo genera Kapso, no se elige.** Al crear el webhook, Kapso muestra un
-   `webhook_secret_key` auto-generado. Ese valor es el que hay que copiar a Vercel — no al revés.
-2. **Tiene que ser un webhook de NÚMERO (config-level), no de proyecto.** `webhooks-reference.md`:
-   *"WhatsApp message/conversation events are **not** delivered via project webhooks"*. Si se crea a
-   nivel proyecto, no llega ningún mensaje y no hay error visible. Y el bot tiene **dos números**
-   (`597907523413541` y `998245303375051`, en `lab-kapso/workflows/simon/workflow.js`) → **un webhook
-   por número**.
+**Tiene que ser un webhook de WhatsApp (por número), NO de proyecto.** Textual de la doc:
+*"Project webhooks … No message or conversation events here. Use a WhatsApp webhook per phone
+number."* Si se crea a nivel proyecto no llega ningún mensaje y **no hay error visible**. El bot
+tiene **dos números** (`597907523413541` y `998245303375051`, en `lab-kapso/workflows/simon/workflow.js`)
+→ **un webhook por número**.
 
-**Orden correcto** (importa: si Kapso empieza a mandar antes de que Vercel tenga el secreto, el
-endpoint responde 401, Kapso reintenta 3 veces —10s/40s/90s— y después descarta esos mensajes):
+#### Opción A — por API (permite FIJAR el secreto, así que es la más simple)
 
-1. En Kapso → **Webhooks → pestaña del número** (no "Project webhooks") → **Add Webhook**
-   - URL: `https://simonbo.com/api/kapso/webhook`
-   - Eventos: `whatsapp.message.received` + `whatsapp.message.sent`
-   - Payload version: **v2**
-   - Dejarlo **inactivo** por ahora, si la UI lo permite.
-2. **Copiar el secreto** que muestra Kapso.
-3. En Vercel → Settings → Environment Variables → `KAPSO_WEBHOOK_SECRET` = ese valor (Production).
-4. **Redeploy** — Vercel no toma variables nuevas sin volver a deployar.
-5. Recién ahí **activar** el webhook en Kapso y repetir para el segundo número.
-
-Equivalente por CLI desde `lab-kapso` (requiere `KAPSO_API_KEY` y `KAPSO_API_BASE_URL`):
+```bash
+curl -X POST https://api.kapso.ai/platform/v1/whatsapp/phone_numbers/<PHONE_NUMBER_ID>/webhooks   -H "X-API-Key: $KAPSO_API_KEY" -H "Content-Type: application/json"   -d '{"whatsapp_webhook":{"kind":"kapso",
+       "url":"https://simonbo.com/api/kapso/webhook",
+       "events":["whatsapp.message.received","whatsapp.message.sent"],
+       "secret_key":"<EL SECRETO QUE ELIJAS>"}}'
 ```
-node scripts/create.js --phone-number-id <id>   --url https://simonbo.com/api/kapso/webhook   --events whatsapp.message.received,whatsapp.message.sent   --payload-version v2
-```
+Con el secreto elegido de antemano, se puede poner primero en Vercel y no hay ventana de 401.
 
-**Verificar** con una conversación real de prueba (escribirle al bot desde otro teléfono):
+#### Opción B — por la UI (Kapso genera el secreto)
+
+**Integrations → Webhooks → pestaña *WhatsApp webhooks*** (no *Platform webhooks*) → Add Webhook →
+URL `https://simonbo.com/api/kapso/webhook`, eventos `whatsapp.message.received` +
+`whatsapp.message.sent`, payload version **v2**. Kapso muestra un secreto auto-generado: copiarlo.
+
+#### En los dos casos
+
+1. `KAPSO_WEBHOOK_SECRET` en Vercel (Production) con ese valor.
+2. **Redeploy** — Vercel no toma variables nuevas sin volver a deployar.
+3. Recién entonces dejar el webhook activo, y repetir para el segundo número.
+
+Si se activa Kapso antes de que Vercel tenga el secreto: el endpoint responde 401, Kapso reintenta
+a los 10s/40s/90s y después **descarta** esos mensajes.
+
+**Verificar** escribiéndole al bot desde otro teléfono:
 ```sql
 SELECT COUNT(*) FROM simon_mensajes;                        -- > 0
 SELECT pieza, COUNT(*) FROM v_atribucion_contactos
   WHERE atribuido GROUP BY 1 ORDER BY 2 DESC;               -- qué pieza trajo la conversación
 ```
-Si `simon_mensajes` queda vacío: revisar en Kapso el historial de entregas del webhook
-(skill `observe-whatsapp`, `scripts/webhook-deliveries.js`). Un **401** = el secreto no coincide
-entre Kapso y Vercel; un **503** = falta la variable o el redeploy.
+Si queda vacío: en Kapso, historial de entregas del webhook. **401** = el secreto no coincide ·
+**503** = falta la variable o el redeploy · **sin intentos** = se creó a nivel proyecto.
 
 ### 4. Aplicar la migración 290 en Supabase — **pendiente, bloquea el registro de `/ir`**
 `sql/migrations/290_mkt_clicks_puente.sql` desde Supabase UI o psql (el MCP es readonly).

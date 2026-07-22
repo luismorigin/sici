@@ -78,6 +78,28 @@ interface MensajeNormalizado {
   enviado_at: string
 }
 
+/**
+ * Saca la lista de eventos del body, en cualquiera de las formas en que Kapso lo manda.
+ *
+ * ⚠️ Con buffering activado el lote NO viene como array plano: viene envuelto en
+ *     { type, batch: true, data: [ ...eventos... ], batch_info }
+ * (doc oficial: docs.kapso.ai → Webhooks overview §1). Asumir un array plano hace
+ * que el envelope se trate como UN evento, no encuentre `message.id`, y el lote
+ * entero se descarte devolviendo 200 — o sea, se pierden mensajes en silencio y
+ * Kapso ni siquiera reintenta porque recibió el 200.
+ *
+ * Se aceptan las tres formas por robustez: envelope, array plano y evento suelto.
+ */
+function extraerEventos(payload: unknown): EventoKapso[] {
+  if (Array.isArray(payload)) return payload as EventoKapso[]
+  if (payload && typeof payload === 'object') {
+    const p = payload as { batch?: boolean; data?: unknown }
+    if (Array.isArray(p.data)) return p.data as EventoKapso[]
+    return [payload as EventoKapso]
+  }
+  return []
+}
+
 function normalizarEvento(ev: EventoKapso): MensajeNormalizado | null {
   const wamid = ev?.message?.id
   const crudo = ev?.conversation?.phone_number
@@ -143,10 +165,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'json_invalido' })
   }
 
-  // Kapso puede mandar los mensajes en lote (X-Webhook-Batch).
-  const eventos: EventoKapso[] = Array.isArray(payload)
-    ? (payload as EventoKapso[])
-    : [payload as EventoKapso]
+  const eventos = extraerEventos(payload)
 
   const mensajes = eventos.map(normalizarEvento).filter((m): m is MensajeNormalizado => m !== null)
   if (mensajes.length === 0) return res.status(200).json({ ok: true, guardados: 0 })
