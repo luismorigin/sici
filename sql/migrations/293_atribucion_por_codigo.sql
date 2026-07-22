@@ -43,14 +43,19 @@ SELECT
   COALESCE(p_nombre.num, p_codigo.num)            AS pieza_num,
   COALESCE(p_nombre.nombre, p_codigo.nombre)      AS pieza,
   (COALESCE(p_nombre.num, p_codigo.num) IS NOT NULL) AS atribuido,
+  cc.texto                                        AS primer_mensaje,
+  -- ⚠️ `via` va AL FINAL a propósito: CREATE OR REPLACE VIEW solo permite
+  -- AGREGAR columnas al final — meterla en el medio Postgres lo interpreta como
+  -- renombrar la que estaba en esa posición y aborta con 42P16. Mismo principio
+  -- que la mig 276 ("append no rompe el orden posicional").
+  --
   -- De dónde salió la atribución: sirve para saber cuánto está actuando el
   -- fallback (si `codigo` sube mucho, algo anda lento en el endpoint).
   CASE
     WHEN p_nombre.num IS NOT NULL THEN 'nombre'
     WHEN p_codigo.num IS NOT NULL THEN 'codigo'
     ELSE NULL
-  END                                             AS via,
-  cc.texto                                        AS primer_mensaje
+  END                                             AS via
 FROM con_codigo cc
 LEFT JOIN public.mkt_piezas p_nombre
   ON cc.texto ILIKE '%"' || p_nombre.nombre || '"%'
