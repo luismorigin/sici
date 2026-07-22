@@ -292,9 +292,17 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
 > 2. **Landing/home**: `lib/superficies-data.ts` (destacados ×2, contexto, count) + `lib/supabase.ts`
 >    (`obtenerMicrozonas`, `obtenerZonasAlquiler`) → vistas `_shadow` SIN fallback → repointear ANTES de
 >    dropear las vistas shadow.
-> 3. **/mercado**: `lib/mercado-data.ts` + `lib/mercado-alquiler-data.ts` → vistas `_shadow` SIN fallback.
->    Además: reponer `<HistoricalChart>` en `pages/mercado/equipetrol/ventas.tsx` (hoy "en construcción")
->    cuando el snapshot del régimen nuevo acumule serie.
+> 3. **/mercado — las TRES páginas rediseñadas (22-jul, PRs #30/#31/#32)**: `lib/mercado-data.ts` +
+>    `lib/mercado-alquiler-data.ts` → vistas `_shadow` SIN fallback. **+ `lib/mercado-shadow-data.ts`**
+>    (nuevo, server-only con service role): lee `market_price_reexpresado` (serie histórica),
+>    `market_absorption_snapshots_shadow` (yields) y las vistas `_shadow` (cortes vivos) — lo consumen
+>    `mercado/equipetrol/{index,ventas,alquileres}.tsx`. Al cutover, decidir el **destino de esas dos tablas**:
+>    si la serie shadow pasa a ser LA serie y si la reexpresada se congela como archivo histórico
+>    (su razón de existir era cubrir el hueco hasta que la medida madurara). El `<HistoricalChart>` viejo
+>    quedó **sin uso** (`components/mercado/HistoricalChart.tsx`, dead code deliberado): la curva ahora la
+>    dibuja `EvolucionSerie` desde la serie reexpresada, con USD/Bs/TC. Ojo: `mercado-data.ts` **sigue
+>    leyendo `market_absorption_snapshots` (prod)** para el `historico` de inventario/absorción, que ya NO
+>    viaja en props — al cutover, apuntar eso a la serie que quede como canónica.
 > 4. **Bot WhatsApp** (repo `lab-kapso`): las 3 RPCs (`buscar_propiedades`, `resumen_mercado`,
 >    `buscar_similares`) leen vistas `_shadow` (`sql/lanzamiento-tc-nuevo-apply.sql`) → re-crearlas contra
 >    prod al cutover. + `src/sici.js` (prototipo) + GRANT `bot_kapso_readonly` sobre vistas shadow (revocar).
