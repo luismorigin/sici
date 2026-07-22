@@ -292,15 +292,15 @@ export default function MercadoEquipetrolHub({
           .hub-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0; border-bottom: 1px solid rgba(237,232,220,0.09); flex-wrap: wrap; }
           .hub-brand { display: flex; align-items: center; gap: 8px; color: #EDE8DC; text-decoration: none; font-weight: 500; font-size: 15px; }
           .hub-dot { width: 10px; height: 10px; border-radius: 50%; background: #3A6A48; }
-          .hub-crumb { color: rgba(237,232,220,0.4); font-size: 13px; font-weight: 400; margin-left: 8px; }
-          .hub-meta { display: flex; align-items: center; gap: 14px; font-size: 11.5px; color: rgba(237,232,220,0.55); flex-wrap: wrap; }
+          .hub-crumb { color: rgba(237,232,220,0.58); font-size: 13px; font-weight: 400; margin-left: 8px; }
+          .hub-meta { display: flex; align-items: center; gap: 14px; font-size: 12px; color: rgba(237,232,220,0.62); flex-wrap: wrap; }
           .hub-meta strong { font-weight: 500; color: #EDE8DC; }
           .hub-vivo { display: inline-flex; align-items: center; gap: 6px; }
           .hub-pulse { width: 7px; height: 7px; border-radius: 50%; background: #7FB08A; animation: hubPulse 2.2s ease-in-out infinite; }
           .hub-hero { padding: 30px 0 6px; text-align: center; }
-          .hub-kicker { margin: 0 0 8px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: rgba(237,232,220,0.45); }
+          .hub-kicker { margin: 0 0 8px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: rgba(237,232,220,0.62); }
           .hub-h1 { margin: 0 auto; font-family: var(--font-figtree), 'Figtree', sans-serif; font-size: clamp(21px, 4vw, 26px); font-weight: 600; color: #EDE8DC; max-width: 480px; line-height: 1.3; }
-          .hub-lead { margin: 10px auto 0; font-size: 12.5px; color: rgba(237,232,220,0.45); max-width: 440px; line-height: 1.65; }
+          .hub-lead { margin: 10px auto 0; font-size: 13px; color: rgba(237,232,220,0.62); max-width: 440px; line-height: 1.65; }
           .hub-doors { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; padding: 22px 0; }
           .hub-card { display: block; border-radius: 14px; padding: 20px; text-decoration: none; transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s; }
           .hub-card:hover { transform: translateY(-4px); }
@@ -308,19 +308,19 @@ export default function MercadoEquipetrolHub({
           .hub-card-dark:hover { border-color: rgba(237,232,220,0.28); }
           .hub-card-arena { background: #EDE8DC; border: 1px solid #EDE8DC; }
           .hub-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-          .hub-card-tag { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(237,232,220,0.5); }
-          .hub-card-n { font-size: 11px; color: rgba(237,232,220,0.4); }
-          .hub-t-dark { color: rgba(20,20,20,0.55); }
-          .hub-t-dark2 { color: rgba(20,20,20,0.5); }
+          .hub-card-tag { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(237,232,220,0.68); }
+          .hub-card-n { font-size: 12px; color: rgba(237,232,220,0.6); }
+          .hub-t-dark { color: rgba(20,20,20,0.68); }
+          .hub-t-dark2 { color: rgba(20,20,20,0.66); }
           .hub-num { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
           .hub-big { font-family: var(--font-figtree), 'Figtree', sans-serif; font-size: 38px; font-weight: 600; color: #EDE8DC; letter-spacing: -1px; }
           .hub-big-dark { color: #141414; }
-          .hub-big-sub { font-size: 13px; color: rgba(237,232,220,0.5); }
+          .hub-big-sub { font-size: 13px; color: rgba(237,232,220,0.68); }
           .hub-spark-box { display: block; width: 100%; height: 64px; margin: 12px 0 6px; }
           .hub-draw { stroke-dasharray: 340; stroke-dashoffset: 340; animation: hubDraw 1.6s cubic-bezier(0.4, 0, 0.2, 1) 0.5s forwards; }
           .hub-draw-2 { animation-delay: 0.8s; }
           .hub-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-          .hub-chip { font-size: 11px; padding: 3px 9px; border-radius: 100px; }
+          .hub-chip { font-size: 12px; padding: 4px 10px; border-radius: 100px; }
           .hub-chip-crema { color: #EDE8DC; background: rgba(237,232,220,0.08); }
           .hub-chip-verde { color: #9DBF9E; background: rgba(58,106,72,0.18); }
           .hub-chip-salvia { color: #2E5539; background: rgba(58,106,72,0.14); }
@@ -330,13 +330,13 @@ export default function MercadoEquipetrolHub({
           .hub-yield { margin: 0 0 20px; background: rgba(58,106,72,0.13); border-radius: 12px; padding: 16px 18px; }
           .hub-yield-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
           .hub-yield-t { font-size: 13px; font-weight: 500; color: #B9CDB9; }
-          .hub-yield-s { font-size: 11.5px; color: rgba(237,232,220,0.45); }
-          .hub-yield-bar { display: flex; align-items: center; gap: 10px; font-size: 12px; color: rgba(237,232,220,0.55); }
+          .hub-yield-s { font-size: 12px; color: rgba(237,232,220,0.62); }
+          .hub-yield-bar { display: flex; align-items: center; gap: 10px; font-size: 12px; color: rgba(237,232,220,0.68); }
           .hub-track { flex: 1; height: 10px; background: rgba(237,232,220,0.08); border-radius: 5px; overflow: hidden; }
           .hub-fill { height: 100%; background: #3A6A48; border-radius: 5px; animation: hubGrow 1.2s cubic-bezier(0.16, 1, 0.3, 1) 1s backwards; }
           .hub-yield-max { font-weight: 500; color: #9DBF9E; }
-          .hub-yield-note { margin: 8px 0 0; font-size: 11.5px; color: rgba(237,232,220,0.4); line-height: 1.6; }
-          .hub-foot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 11px; color: rgba(237,232,220,0.35); padding-top: 4px; }
+          .hub-yield-note { margin: 8px 0 0; font-size: 12px; color: rgba(237,232,220,0.6); line-height: 1.6; }
+          .hub-foot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12px; color: rgba(237,232,220,0.58); padding-top: 4px; }
           @media (prefers-reduced-motion: reduce) {
             .hub-in, .hub-fill { animation: none; opacity: 1; }
             .hub-draw, .hub-draw-2 { animation: none; stroke-dashoffset: 0; }

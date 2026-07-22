@@ -408,28 +408,28 @@ export default function MercadoEquipetrol({
           .mkt-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0; border-bottom: 1px solid rgba(237,232,220,0.09); flex-wrap: wrap; }
           .mkt-brand { display: flex; align-items: center; gap: 8px; color: #EDE8DC; text-decoration: none; font-weight: 500; font-size: 15px; letter-spacing: 0.3px; }
           .mkt-dot { width: 10px; height: 10px; border-radius: 50%; background: #3A6A48; }
-          .mkt-crumb { color: rgba(237,232,220,0.4); font-size: 13px; font-weight: 400; margin-left: 8px; }
-          .mkt-badge { font-size: 11px; color: #9DBF9E; border: 1px solid rgba(58,106,72,0.5); padding: 3px 10px; border-radius: 100px; white-space: nowrap; }
+          .mkt-crumb { color: rgba(237,232,220,0.58); font-size: 13px; font-weight: 400; margin-left: 8px; }
+          .mkt-badge { font-size: 12px; color: #9DBF9E; border: 1px solid rgba(58,106,72,0.5); padding: 3px 10px; border-radius: 100px; white-space: nowrap; }
           .mkt-hero { padding: 34px 0 22px; }
-          .mkt-kicker { margin: 0 0 8px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(237,232,220,0.45); }
+          .mkt-kicker { margin: 0 0 8px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(237,232,220,0.62); }
           .mkt-h1 { margin: 0; font-family: var(--font-figtree), 'Figtree', sans-serif; font-size: clamp(38px, 8vw, 54px); font-weight: 600; letter-spacing: -1px; line-height: 1.05; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
           .mkt-h1-sub { font-family: var(--font-dm), 'DM Sans', sans-serif; font-size: 15px; font-weight: 400; letter-spacing: 0; color: rgba(237,232,220,0.55); }
-          .mkt-lead { margin: 12px 0 0; font-size: 13.5px; color: rgba(237,232,220,0.5); line-height: 1.65; max-width: 560px; }
+          .mkt-lead { margin: 12px 0 0; font-size: 13.5px; color: rgba(237,232,220,0.66); line-height: 1.65; max-width: 560px; }
           .mkt-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; padding-bottom: 26px; }
           .mkt-card { background: rgba(237,232,220,0.05); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
-          .mkt-card-l { font-size: 11px; color: rgba(237,232,220,0.45); }
+          .mkt-card-l { font-size: 12px; color: rgba(237,232,220,0.62); }
           .mkt-card-v { font-size: 20px; font-weight: 500; color: #EDE8DC; }
-          .mkt-card-v em { font-style: normal; font-size: 13px; color: rgba(237,232,220,0.45); }
-          .mkt-card-s { font-size: 11px; color: rgba(237,232,220,0.4); }
+          .mkt-card-v em { font-style: normal; font-size: 13px; color: rgba(237,232,220,0.62); }
+          .mkt-card-s { font-size: 12px; color: rgba(237,232,220,0.6); }
           .mkt-sec { padding: 22px 0; border-top: 1px solid rgba(237,232,220,0.09); }
           .mkt-h2 { margin: 0 0 3px; font-family: var(--font-figtree), 'Figtree', sans-serif; font-size: 18px; font-weight: 600; color: #EDE8DC; }
-          .mkt-sub { margin: 0 0 14px; font-size: 12px; color: rgba(237,232,220,0.5); line-height: 1.5; }
-          .mkt-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; font-size: 11.5px; color: rgba(237,232,220,0.6); }
+          .mkt-sub { margin: 0 0 14px; font-size: 12.5px; color: rgba(237,232,220,0.66); line-height: 1.5; }
+          .mkt-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; font-size: 12px; color: rgba(237,232,220,0.7); }
           .mkt-legend span { display: inline-flex; align-items: center; gap: 5px; }
           .mkt-sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; }
           .mkt-note { margin-top: 12px; background: rgba(58,106,72,0.16); border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #B9CDB9; line-height: 1.6; }
           .mkt-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
-          .mkt-table th { text-align: left; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(237,232,220,0.45); padding: 8px 10px; border-bottom: 1px solid rgba(237,232,220,0.12); }
+          .mkt-table th { text-align: left; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(237,232,220,0.62); padding: 8px 10px; border-bottom: 1px solid rgba(237,232,220,0.12); }
           .mkt-table td { padding: 9px 10px; border-bottom: 1px solid rgba(237,232,220,0.06); color: rgba(237,232,220,0.85); }
           .mkt-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
           .mkt-bar { display: block; height: 6px; background: rgba(237,232,220,0.1); border-radius: 3px; margin-top: 8px; overflow: hidden; }
@@ -443,10 +443,10 @@ export default function MercadoEquipetrol({
           .mkt-faq { display: flex; flex-direction: column; gap: 10px; }
           .mkt-qa { background: rgba(237,232,220,0.04); border-radius: 8px; padding: 12px 14px; }
           .mkt-q { margin: 0 0 4px; font-size: 13.5px; font-weight: 500; color: #EDE8DC; font-family: var(--font-dm), 'DM Sans', sans-serif; }
-          .mkt-a { margin: 0; font-size: 12.5px; color: rgba(237,232,220,0.55); line-height: 1.65; }
+          .mkt-a { margin: 0; font-size: 13px; color: rgba(237,232,220,0.68); line-height: 1.65; }
           .mkt-foot { border-top: 1px solid rgba(237,232,220,0.09); padding-top: 18px; margin-top: 4px; }
-          .mkt-foot p { margin: 0 0 10px; font-size: 11.5px; color: rgba(237,232,220,0.4); line-height: 1.7; }
-          .mkt-links { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12.5px; color: rgba(237,232,220,0.35); }
+          .mkt-foot p { margin: 0 0 10px; font-size: 12px; color: rgba(237,232,220,0.6); line-height: 1.7; }
+          .mkt-links { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: rgba(237,232,220,0.6); }
           .mkt-links :global(a) { color: #9DBF9E; text-decoration: underline; text-underline-offset: 3px; }
         `}</style>
       </div>

@@ -252,7 +252,7 @@ export default function MercadoAlquileres({
             </div>
             <table className="mka-table" aria-label="Rentas por tipología">
               <thead>
-                <tr><th>Tipología</th><th>Unidades</th><th>Mediana</th><th>Rango típico</th><th>Bs/m²</th></tr>
+                <tr><th>Tipología</th><th>Unidades</th><th>Mediana</th><th>Rango típico (Bs)</th><th>Bs/m²</th></tr>
               </thead>
               <tbody>
                 {tipologias.map(t => (
@@ -260,7 +260,7 @@ export default function MercadoAlquileres({
                     <td>{DORM_LABELS[t.dormitorios] || `${t.dormitorios}D`}</td>
                     <td>{t.unidades}</td>
                     <td>{fmtBs(t.rentaMedianaBs)}</td>
-                    <td>{fmtBs(t.rentaP25Bs)} – {fmtBs(t.rentaP75Bs)}</td>
+                    <td className="mka-nowrap">{t.rentaP25Bs.toLocaleString('es-BO')} – {t.rentaP75Bs.toLocaleString('es-BO')}</td>
                     <td>{t.bsM2Mediana}</td>
                   </tr>
                 ))}
@@ -371,41 +371,42 @@ export default function MercadoAlquileres({
           .mka-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0; border-bottom: 1px solid rgba(20,20,20,0.1); flex-wrap: wrap; }
           .mka-brand { display: flex; align-items: center; gap: 8px; color: #141414; text-decoration: none; font-weight: 500; font-size: 15px; letter-spacing: 0.3px; }
           .mka-dot { width: 10px; height: 10px; border-radius: 50%; background: #3A6A48; }
-          .mka-crumb { color: rgba(20,20,20,0.45); font-size: 13px; font-weight: 400; margin-left: 8px; }
-          .mka-badge { font-size: 11px; color: #2E5539; border: 1px solid rgba(58,106,72,0.4); padding: 3px 10px; border-radius: 100px; white-space: nowrap; }
+          .mka-crumb { color: rgba(20,20,20,0.62); font-size: 13px; font-weight: 400; margin-left: 8px; }
+          .mka-badge { font-size: 12px; color: #2E5539; border: 1px solid rgba(58,106,72,0.4); padding: 3px 10px; border-radius: 100px; white-space: nowrap; }
           .mka-hero { padding: 34px 0 22px; }
-          .mka-kicker { margin: 0 0 8px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(20,20,20,0.5); }
+          .mka-kicker { margin: 0 0 8px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(20,20,20,0.66); }
           .mka-h1 { margin: 0; font-family: var(--font-figtree), 'Figtree', sans-serif; font-size: clamp(36px, 8vw, 52px); font-weight: 600; letter-spacing: -1px; line-height: 1.05; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; color: #141414; }
-          .mka-h1-sub { font-family: var(--font-dm), 'DM Sans', sans-serif; font-size: 15px; font-weight: 400; letter-spacing: 0; color: rgba(20,20,20,0.55); }
-          .mka-lead { margin: 12px 0 0; font-size: 13.5px; color: rgba(20,20,20,0.55); line-height: 1.65; max-width: 560px; }
+          .mka-h1-sub { font-family: var(--font-dm), 'DM Sans', sans-serif; font-size: 15px; font-weight: 400; letter-spacing: 0; color: rgba(20,20,20,0.68); }
+          .mka-lead { margin: 12px 0 0; font-size: 13.5px; color: rgba(20,20,20,0.68); line-height: 1.65; max-width: 560px; }
           .mka-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; padding-bottom: 26px; }
           .mka-card { background: #F7F4EC; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
-          .mka-card-l { font-size: 11px; color: rgba(20,20,20,0.5); }
+          .mka-card-l { font-size: 12px; color: rgba(20,20,20,0.66); }
           .mka-card-v { font-size: 20px; font-weight: 500; color: #141414; }
           .mka-verde { color: #2E5539; }
-          .mka-card-s { font-size: 11px; color: rgba(20,20,20,0.45); }
+          .mka-card-s { font-size: 12px; color: rgba(20,20,20,0.62); }
           .mka-sec { padding: 22px 0; border-top: 1px solid rgba(20,20,20,0.1); }
           .mka-h2 { margin: 0 0 3px; font-family: var(--font-figtree), 'Figtree', sans-serif; font-size: 18px; font-weight: 600; color: #141414; }
-          .mka-sub { margin: 0 0 14px; font-size: 12px; color: rgba(20,20,20,0.5); line-height: 1.5; }
+          .mka-sub { margin: 0 0 14px; font-size: 12.5px; color: rgba(20,20,20,0.66); line-height: 1.5; }
           .mka-rows { display: flex; flex-direction: column; gap: 8px; }
           .mka-row { display: grid; grid-template-columns: 108px 1fr 84px; gap: 10px; align-items: center; }
           .mka-row-wide { grid-template-columns: 76px 1fr 70px; }
-          .mka-row-l { font-size: 12.5px; color: rgba(20,20,20,0.65); text-align: right; }
+          .mka-row-l { font-size: 12.5px; color: rgba(20,20,20,0.75); text-align: right; }
           .mka-row-track { display: block; height: 18px; background: rgba(20,20,20,0.06); border-radius: 4px; overflow: hidden; }
           .mka-row-track i { display: block; height: 100%; background: #3A6A48; border-radius: 4px; }
           .mka-row-v { font-size: 13px; font-weight: 500; color: #141414; }
-          .mka-gris { color: rgba(20,20,20,0.6); }
+          .mka-gris { color: rgba(20,20,20,0.72); }
           .mka-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
-          .mka-table th { text-align: left; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(20,20,20,0.5); padding: 8px 10px; border-bottom: 1px solid rgba(20,20,20,0.15); }
+          .mka-table th { text-align: left; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(20,20,20,0.66); padding: 8px 10px; border-bottom: 1px solid rgba(20,20,20,0.15); }
           .mka-table td { padding: 9px 10px; border-bottom: 1px solid rgba(20,20,20,0.07); color: rgba(20,20,20,0.85); }
-          .mka-fine { margin: 10px 0 0; font-size: 11.5px; color: rgba(20,20,20,0.45); line-height: 1.6; }
+          .mka-nowrap { white-space: nowrap; }
+          .mka-fine { margin: 10px 0 0; font-size: 12px; color: rgba(20,20,20,0.62); line-height: 1.6; }
           .mka-faq { display: flex; flex-direction: column; gap: 10px; }
           .mka-qa { background: #F7F4EC; border-radius: 8px; padding: 12px 14px; }
           .mka-q { margin: 0 0 4px; font-size: 13.5px; font-weight: 500; color: #141414; font-family: var(--font-dm), 'DM Sans', sans-serif; }
-          .mka-a { margin: 0; font-size: 12.5px; color: rgba(20,20,20,0.6); line-height: 1.65; }
+          .mka-a { margin: 0; font-size: 13px; color: rgba(20,20,20,0.7); line-height: 1.65; }
           .mka-foot { border-top: 1px solid rgba(20,20,20,0.1); padding-top: 18px; margin-top: 4px; }
-          .mka-foot p { margin: 0 0 10px; font-size: 11.5px; color: rgba(20,20,20,0.45); line-height: 1.7; }
-          .mka-links { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12.5px; color: rgba(20,20,20,0.4); }
+          .mka-foot p { margin: 0 0 10px; font-size: 12px; color: rgba(20,20,20,0.62); line-height: 1.7; }
+          .mka-links { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: rgba(20,20,20,0.62); }
           .mka-links :global(a) { color: #2E5539; text-decoration: underline; text-underline-offset: 3px; }
         `}</style>
       </div>
