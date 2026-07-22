@@ -64,6 +64,14 @@ BEGIN;
 -- browser con la anon key. Obligatorio salvo Preset A (data pública):
 -- REVOKE ALL ON public.MI_TABLA FROM anon, authenticated;
 -- REVOKE ALL ON SEQUENCE public.MI_TABLA_id_seq FROM anon, authenticated;  -- si hay BIGSERIAL
+-- REVOKE ALL ON public.V_MI_VISTA FROM anon, authenticated;                -- si creás vistas
+--
+-- ⚠️ EL REVOKE VA SOBRE **TODO** OBJETO NUEVO, NO SOLO LA TABLA (mig 290→291,
+-- 22-jul-2026): la 290 revocó tabla + secuencia pero se olvidó de la VISTA, y la
+-- vista quedó legible por anon. Y una vista **igual expone los datos aunque anon
+-- no tenga permiso sobre la tabla base**: sin `security_invoker` se ejecuta con
+-- los privilegios de su DUEÑO. Chequeo que lo delata (más confiable que leer relacl):
+--   SELECT has_table_privilege('anon','public.V_MI_VISTA','SELECT');  -- debe dar FALSE
 -- Verificar después: SELECT relacl::text FROM pg_class WHERE relname='MI_TABLA';
 
 -- Preset A — Data pública (propiedades, proyectos, vistas mercado)

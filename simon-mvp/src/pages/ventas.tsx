@@ -957,7 +957,7 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
               target="_blank" rel="noopener noreferrer" className="vc-act-btn vc-act-wsp"
               onClick={(e) => {
                 e.preventDefault()
-                trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: contactoDirecto ? 'public_share_directo' : 'card_desktop' })
+                trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), origen: contactoDirecto ? 'public_share_directo' : 'card_desktop' })
                 openWhatsApp(p.agente_telefono!, buildAgentWaMessage(p, brokerInfo))
               }}>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="#1EA952"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -1434,7 +1434,7 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
       setCurrentIdx(Math.min(idx, total - 1))
       if (idx > 0 && !swipedRef.current) {
         swipedRef.current = true
-        trackEvent('swipe_photos', { property_id: propertyId, photo_index: idx, total_photos: total, source: 'bottom_sheet' })
+        trackEvent('swipe_photos', { property_id: propertyId, photo_index: idx, total_photos: total, origen: 'bottom_sheet' })
       }
     }
     el.addEventListener('scroll', handleScroll, { passive: true })
@@ -2359,7 +2359,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
                 target="_blank" rel="noopener noreferrer" className="bs-wsp-cta"
                 onClick={(e) => {
                   e.preventDefault()
-                  trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: contactoDirecto ? 'public_share_directo' : 'detail_sheet', questions_count: selectedQs.size })
+                  trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), origen: contactoDirecto ? 'public_share_directo' : 'detail_sheet', questions_count: selectedQs.size })
                   openWhatsApp(p.agente_telefono!, buildSheetMsg())
                 }}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -2974,7 +2974,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   // de estas funciones nunca cambia entre renders (así React.memo de las cards
   // sigue siendo válido), pero siempre ejecutan la versión más reciente de la
   // lógica vía ref — sin closures viejos sobre favorites/properties.
-  const openCardMap = (p: UnidadVenta) => { setMapSelectedId(p.id); setMobileMapOpen(true); trackEvent('open_map_mobile_venta', { source: 'card' }) }
+  const openCardMap = (p: UnidadVenta) => { setMapSelectedId(p.id); setMobileMapOpen(true); trackEvent('open_map_mobile_venta', { origen: 'card' }) }
   // Pin del mapa del panel → abre el side sheet. Vive acá (y no inline en el
   // JSX) porque VentaMap RECONSTRUYE el mapa entero cuando cambia la identidad
   // de onSelectProperty — un lambda inline lo reconstruía en cada render.
@@ -3109,7 +3109,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
     const text = `Mirá esta propiedad: ${p.proyecto} (${dorms}, ${Math.round(p.area_m2)}m², $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
 
-    trackEvent('share_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), source: publicShareMode ? 'public_share' : 'feed' })
+    trackEvent('share_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), origen: publicShareMode ? 'public_share' : 'feed' })
 
     // En publicShareMode (cliente del broker), abrir WhatsApp directo: el user
     // elige a quién mandar al momento. Más confiable que Web Share API que
@@ -3631,14 +3631,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             <div className="vt-broker-viewmode" role="tablist" aria-label="Modo de vista">
               <button
                 className={`vt-broker-vm-btn ${viewMode === 'grid' ? 'active' : ''}`}
-                onClick={() => { setViewMode('grid'); trackEvent('switch_view_venta', { view_mode: 'grid', source: 'broker_banner' }) }}
+                onClick={() => { setViewMode('grid'); trackEvent('switch_view_venta', { view_mode: 'grid', origen: 'broker_banner' }) }}
                 aria-label="Ver lista" role="tab" aria-selected={viewMode === 'grid'}
               >
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
               </button>
               <button
                 className={`vt-broker-vm-btn ${viewMode === 'map' ? 'active' : ''}`}
-                onClick={() => { setViewMode('map'); trackEvent('switch_view_venta', { view_mode: 'map', source: 'broker_banner' }) }}
+                onClick={() => { setViewMode('map'); trackEvent('switch_view_venta', { view_mode: 'map', origen: 'broker_banner' }) }}
                 aria-label="Ver mapa" role="tab" aria-selected={viewMode === 'map'}
               >
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -3647,7 +3647,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           )}
           <button
             className="vt-broker-tool vt-broker-tool-primary"
-            onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay_venta', { source: 'broker_banner' }) }}
+            onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay_venta', { origen: 'broker_banner' }) }}
             title="Filtrar propiedades"
           >
             ⚙ Filtrar{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
@@ -3971,7 +3971,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="8" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
                       </button>
                       <button type="button" title="Solo mapa" className="vd-vt-btn"
-                        onClick={() => { setViewMode('map'); trackEvent('switch_view_venta', { view_mode: 'map', source: 'toggle' }) }}>
+                        onClick={() => { setViewMode('map'); trackEvent('switch_view_venta', { view_mode: 'map', origen: 'toggle' }) }}>
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
                       </button>
                     </div>
@@ -4017,7 +4017,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                         <VentaMap properties={confirmados}
                           onSelectProperty={onPanelMapSelect}
                           selectedId={hoveredId} />
-                        <button className="vd-map-full" onClick={() => { setViewMode('map'); trackEvent('switch_view_venta', { view_mode: 'map', source: 'panel' }) }}>
+                        <button className="vd-map-full" onClick={() => { setViewMode('map'); trackEvent('switch_view_venta', { view_mode: 'map', origen: 'panel' }) }}>
                           Ver mapa completo
                           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                         </button>

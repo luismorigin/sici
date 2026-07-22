@@ -80,12 +80,25 @@ export default function App({ Component, pageProps, router }: AppProps) {
     }
   }, [])
 
+  // Tráfico interno: quien pasa por /admin o /broker es del equipo. Se marca una vez
+  // y GA4 lo etiqueta como `traffic_type: internal` en las rutas públicas que visite
+  // después, para poder excluirlo con el filtro nativo de GA4 (Admin → Datos → Filtros).
+  // Sin esto los promedios del sitio los domina nuestro propio QA: hoy desktop son
+  // 154 sesiones de solo 34 usuarios con ~992s de duración.
+  useEffect(() => {
+    if (!router.pathname.startsWith('/admin') && !router.pathname.startsWith('/broker')) return
+    try { localStorage.setItem('simon_interno', '1') } catch { /* modo privado */ }
+  }, [router.pathname])
+
   // Visitor UUID cross-session (Fase 1 modal WA captura). Solo en rutas públicas.
   // Debug incluido: Lucho necesita trackear QA del flujo.
   useEffect(() => {
     if (router.pathname.startsWith('/admin')) return
     if (router.pathname.startsWith('/broker')) return
     import('@/lib/visitor').then(({ getVisitorId }) => { getVisitorId() }).catch(() => {})
+    // El origen de la visita se guarda apenas se entra, antes de que cualquier
+    // navegación interna borre los UTM de la URL. Ver lib/utm.ts.
+    import('@/lib/utm').then(({ capturarUtms }) => { capturarUtms() }).catch(() => {})
   }, [router.pathname])
 
   const page = needsAnimation ? (
@@ -111,7 +124,9 @@ export default function App({ Component, pageProps, router }: AppProps) {
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', '${GA_ID}');
+              var _interno = false;
+              try { _interno = localStorage.getItem('simon_interno') === '1'; } catch (e) {}
+              gtag('config', '${GA_ID}', _interno ? { traffic_type: 'internal' } : {});
             `}
           </Script>
 

@@ -97,6 +97,13 @@
 
 ## Notas tecnicas
 
+- 🔴 **NUNCA usar `source`, `medium`, `campaign`, `term` o `content` como nombre de parametro
+  de evento.** GA4 los trata como **dimensiones reservadas de trafico**: mandarlos en un evento
+  **pisa la fuente de la sesion**. Hasta el 22-jul-2026 los eventos mandaban `source:'bottom_sheet'`,
+  `'card_desktop'`, `'toggle'`… y GA4 los reportaba como fuentes de trafico reales — **114 de 392
+  sesiones (29%) quedaron mal atribuidas**, justamente las de la gente que mas interactuaba (una
+  sesion que llegaba de Instagram y tocaba una card pasaba a ser "card"). El parametro se llama
+  **`origen`**. Para la operacion usar **`operacion: 'venta' | 'alquiler'`**, nunca `medium`.
 - `trackEvent()` es fire-and-forget, no-op si GA no cargo
 - `strategy="lazyOnload"` difiere GA hasta despues de `window.onload` + `requestIdleCallback` — zero impacto en FCP/LCP
 - `?debug=1` en URL desactiva GA4 completamente (para testing sin contaminar datos)
@@ -129,6 +136,9 @@ Fechas donde los eventos cambiaron y los datos antes/despues NO son comparables 
 | 3 abr 2026 | `keepalive: true` en fetch de leads WA | Pre-3 abr: BD sub-reportaba leads vs GA4 (~83% perdidos en mobile). Post-fix deberian converger |
 | 4 abr 2026 | Agregados `nudge_filter_shown/tap/dismiss` | Pill aparece tras 15+ cards sin interaccion. Sin datos anteriores |
 | 8 abr 2026 | `utm_source` en `leads_alquiler` | Pre-8 abr: `utm_source=NULL` para todos los leads (no se capturaba). Split paid/orgánico confiable solo desde esta fecha |
+| 22 jul 2026 | **`source` → `origen` en los eventos (48 llamadas, 8 archivos)** | **Pre-22 jul: la fuente de trafico de ~29% de las sesiones esta INVENTADA** (`bottom_sheet`, `card`, `toggle`, `detail_sheet`, `panel`, `public_share_directo`…). Esas sesiones venian de algun lado real que ya no se puede recuperar. **No comparar "trafico por fuente" antes/despues.** Post-fix la atribucion es real |
+| 22 jul 2026 | UTM persistidos en sessionStorage (`lib/utm.ts`) | Pre-22 jul: los UTM se leian de la URL al momento del click de WhatsApp → si la persona navegaba (ej. buscador de la home, que arma la URL destino desde cero) el lead se guardaba SIN origen. Era el ~40% de los leads (100 de 253 en 120 dias). Post-fix el origen sobrevive toda la sesion |
+| 22 jul 2026 | `traffic_type: internal` para quien pasa por `/admin` o `/broker` | Pre-22 jul: nuestro propio QA contaminaba los promedios (desktop: 154 sesiones de solo 34 usuarios, ~992s de duracion). ⚠️ **Requiere activar el filtro en GA4 UI** (Admin → Configuracion de datos → Filtros de datos → "Trafico interno" en Activo). Sin activarlo el hit se marca pero no se excluye |
 | 18 abr 2026 | Fix `bounce_no_action` falso positivo | Pre-18 abr: `hasInteracted=true` se marcaba en el view_property automático del scroll-snap inicial → `bounce_no_action` siempre 0 (imposible). Post-fix: solo interacciones explícitas marcan `hasInteracted`, volumen esperado 15-25% de sesiones |
 
 ## Verificacion

@@ -7,6 +7,7 @@ import ChatTypingIndicator from './ChatTypingIndicator'
 import { WELCOME_MESSAGE } from './chat-constants'
 import { getSessionId, generateMsgId, trackChatEvent, parseSearchIntent } from './chat-utils'
 import { colors, spacing } from '@/lib/simon-design-tokens'
+import { getUtms } from '@/lib/utm'
 
 import type { ChatBotResponse } from './chat-types'
 
@@ -193,9 +194,7 @@ export default function ChatPanel({ properties, onClose, onOpenDetail, onApplyFi
               broker_nombre: prop.agente_nombre || '',
               fuente: 'chat-bot',
               sid: getSessionId(),
-              utm_source: new URLSearchParams(window.location.search).get('utm_source') || undefined,
-              utm_content: new URLSearchParams(window.location.search).get('utm_content') || undefined,
-              utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || undefined,
+              ...getUtms(),
             }),
           }).catch(() => {}) // fire-and-forget
           trackChatEvent('chat_lead', { property_id: prop.id, zona: prop.zona, fuente: 'chat-bot' })

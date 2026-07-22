@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { UnidadAlquiler } from '@/lib/supabase'
 import { colors, spacing } from '@/lib/simon-design-tokens'
 import { openWhatsApp } from '@/lib/whatsapp'
+import { getUtms } from '@/lib/utm'
 import { trackChatEvent, getSessionId } from './chat-utils'
 
 interface Props {
@@ -38,7 +39,7 @@ export default function ChatPropertyCard({ property: p, onOpenDetail }: Props) {
         broker_nombre: p.agente_nombre || '',
         fuente: 'chat-bot-card',
         sid: getSessionId(),
-        utm_source: new URLSearchParams(window.location.search).get('utm_source') || undefined,
+        ...getUtms(),
       }),
     }).catch(() => {})
     trackChatEvent('chat_lead', { property_id: p.id, zona: p.zona, fuente: 'chat-bot-card' })

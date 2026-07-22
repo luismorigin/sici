@@ -38,6 +38,16 @@ const nextConfig = {
       { source: '/home', destination: '/', permanent: true },
     ]
   },
+  async rewrites() {
+    return [
+      // Link puente de las publicaciones: /ir/f03 (el que va en los captions).
+      // Rewrite y NO redirect a propósito: un redirect agregaría un salto extra
+      // antes de WhatsApp y la URL corta es lo que se publica. Ver
+      // pages/api/ir/[[...slug]].ts y docs/backlog/MEDICION_FUNNEL_PLAN.md
+      { source: '/ir', destination: '/api/ir' },
+      { source: '/ir/:codigo', destination: '/api/ir/:codigo' },
+    ]
+  },
   async headers() {
     return [
       {

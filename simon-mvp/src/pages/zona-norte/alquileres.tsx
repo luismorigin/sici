@@ -1747,14 +1747,14 @@ export default function AlquileresPage({
             <div className="alq-broker-viewmode" role="tablist" aria-label="Modo de vista">
               <button
                 className={`alq-broker-vm-btn ${viewMode === 'grid' ? 'active' : ''}`}
-                onClick={() => { setViewMode('grid'); trackEvent('switch_view', { view_mode: 'grid', source: 'broker_banner' }) }}
+                onClick={() => { setViewMode('grid'); trackEvent('switch_view', { view_mode: 'grid', origen: 'broker_banner' }) }}
                 aria-label="Ver lista" role="tab" aria-selected={viewMode === 'grid'}
               >
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
               </button>
               <button
                 className={`alq-broker-vm-btn ${viewMode === 'map' ? 'active' : ''}`}
-                onClick={() => { setViewMode('map'); trackEvent('switch_view', { view_mode: 'map', source: 'broker_banner' }) }}
+                onClick={() => { setViewMode('map'); trackEvent('switch_view', { view_mode: 'map', origen: 'broker_banner' }) }}
                 aria-label="Ver mapa" role="tab" aria-selected={viewMode === 'map'}
               >
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -1763,7 +1763,7 @@ export default function AlquileresPage({
           )}
           <button
             className="alq-broker-tool alq-broker-tool-primary"
-            onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay', { source: 'broker_banner' }) }}
+            onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay', { origen: 'broker_banner' }) }}
             title="Filtrar alquileres"
           >
             ⚙ Filtrar{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
@@ -2822,7 +2822,7 @@ const DesktopCard = memo(function DesktopCard({
               rel="noopener noreferrer"
               onClick={(e) => {
                 e.preventDefault()
-                trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_card_desktop_public' })
+                trackEvent('click_whatsapp_broker', { property_id: p.id, origen: 'alq_card_desktop_public' })
                 openWhatsApp(publicShareBroker.telefono, buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))
               }}
               className="dc-wsp-inline"
@@ -3025,7 +3025,7 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
               rel="noopener noreferrer"
               onClick={(e) => {
                 e.preventDefault()
-                trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_card_mobile_public' })
+                trackEvent('click_whatsapp_broker', { property_id: p.id, origen: 'alq_card_mobile_public' })
                 openWhatsApp(publicShareBroker.telefono, buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))
               }}
               className="amc-wsp-inline-mobile"
@@ -3109,7 +3109,7 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { 
         // Track first swipe per card (indicates photo interest)
         if (idx > 0 && !swipedRef.current) {
           swipedRef.current = true
-          trackEvent('swipe_photos', { property_id: propertyId, photo_index: idx, total_photos: total, source: 'card' })
+          trackEvent('swipe_photos', { property_id: propertyId, photo_index: idx, total_photos: total, origen: 'card' })
         }
         ticking = false
       })
@@ -3171,7 +3171,7 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
       setCurrentIdx(Math.min(idx, total - 1))
       if (idx > 0 && !swipedRef.current) {
         swipedRef.current = true
-        trackEvent('swipe_photos', { property_id: propertyId, photo_index: idx, total_photos: total, source: 'bottom_sheet' })
+        trackEvent('swipe_photos', { property_id: propertyId, photo_index: idx, total_photos: total, origen: 'bottom_sheet' })
       }
     }
     el.addEventListener('scroll', handleScroll, { passive: true })
@@ -3607,7 +3607,7 @@ function BottomSheet({
             rel="noopener noreferrer"
             onClick={(e) => {
               e.preventDefault()
-              trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_bottom_sheet_public' })
+              trackEvent('click_whatsapp_broker', { property_id: p.id, origen: 'alq_bottom_sheet_public' })
               openWhatsApp(publicShareBroker.telefono, buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))
             }}
             className="bs-footer-wsp"
