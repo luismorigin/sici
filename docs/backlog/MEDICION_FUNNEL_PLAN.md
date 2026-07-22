@@ -203,7 +203,14 @@ al contacto, casas=venta, `lead_gate` que no se duplica, nulls filtrados, evento
 da vacío. Y el volumen del primer paso del embudo **sube** por el fix de la cola: no es que llegue
 más gente, es que antes no se contaba.
 
-### Paso 4 · Webhook de Kapso — ✅ CÓDIGO HECHO (22-jul) · ⚠️ falta configurar Kapso
+### Paso 4 · Webhook de Kapso — ✅ **VERIFICADO EN PRODUCCIÓN (22-jul)**
+
+> **Prueba end-to-end real:** el founder abrió `simonbo.com/ir/f03` desde su celular, WhatsApp se
+> abrió con el texto precargado, envió el mensaje y el bot respondió. Quedó registrado:
+> `v_atribucion_contactos` → pieza **3 "Los 5 barrios de Equipetrol"**, `atribuido=true`, `via=nombre`
+> · `simon_contactos` → 1 contacto con **2 mensajes (1 in + 1 out)** — el webhook captura también las
+> respuestas del bot. Migraciones 290-293 aplicadas. Webhook activo en Kapso (número `simon`, Kapso
+> events, v2) + `KAPSO_WEBHOOK_SECRET` en Vercel.
 
 `simon-mvp/src/pages/api/kapso/webhook.ts` + mig 292 (`simon_contactos`, `simon_mensajes`,
 `v_atribucion_contactos`). Es el subconjunto de MEDICIÓN de `CRM_CLIENTES_B2C_PLAN.md` (capas 1 y 2
