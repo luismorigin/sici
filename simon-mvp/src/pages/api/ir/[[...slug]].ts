@@ -149,11 +149,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (nm) org.piezaNum = parseInt(nm[1], 10)
     }
 
-    const piezas = org.piezaNum ? await conTimeout(getPiezas(), 700) : null
+    // 2500ms y no 700: en Vercel la PRIMERA lectura de una instancia fría paga
+    // cold start + TLS + el viaje a Supabase (sa-east-1) y se pasaba de 700ms.
+    // Medido en producción: en frío el nombre se perdía y el click quedaba mal
+    // marcado; en caliente resolvía siempre. Con ~230 usuarios/mes la función
+    // está fría casi siempre, así que le pasaba a la MAYORÍA de los clicks
+    // reales. El cache en memoria hace que este costo se pague una sola vez por
+    // instancia; el resto de los clicks no espera nada.
+    const piezas = org.piezaNum ? await conTimeout(getPiezas(), 2500) : null
     const nombrePieza = (org.piezaNum && piezas?.get(org.piezaNum)) || null
-    // Válido = resolvió a algo que sabemos nombrar. Un código inventado
-    // (/ir/zzz) igual redirige, pero queda marcado para detectar captions rotos.
-    const valido = Boolean(nombrePieza)
+
+    // `valido` = el CÓDIGO parseó, no "pude leer el nombre". Son cosas distintas:
+    // un /ir/f03 legítimo con la BD lenta no es un caption roto, y marcarlo así
+    // ensucia justamente la señal para la que existe la columna (detectar links
+    // mal escritos en publicaciones ya publicadas).
+    const valido = org.piezaNum !== null
 
     if (org.piezaNum) {
       org.utm_campaign = nombrePieza
@@ -164,9 +174,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // El texto precargado es la red de seguridad: deja la marca del origen DENTRO
     // de la conversación, así quien atiende ve de dónde viene sin abrir un panel.
     // Es lo único que sobrevive si el registro falla.
-    const destino = nombrePieza
-      ? `${WA_BASE}?text=${encodeURIComponent(`Hola Simón, vi tu publicación "${nombrePieza}" y quiero saber más.`)}`
-      : WA_BASE
+    //
+    // Tres niveles, para no quedarnos nunca sin marca de origen:
+    //   1. con nombre  → el texto lindo, y `v_atribucion_contactos` lo cruza solo
+    //   2. sin nombre pero con código → al menos el código viaja en el mensaje
+    //      (si la BD estuvo lenta, antes se perdía TODO el origen)
+    //   3. sin código  → wa.me pelado
+    const texto = nombrePieza
+      ? `Hola Simón, vi tu publicación "${nombrePieza}" y quiero saber más.`
+      : org.codigo
+        ? `Hola Simón, vengo de tu publicación (${org.codigo}) y quiero saber más.`
+        : null
+    const destino = texto ? `${WA_BASE}?text=${encodeURIComponent(texto)}` : WA_BASE
 
     if (supabaseUrl && supabaseServiceKey) {
       const sb = createClient(supabaseUrl, supabaseServiceKey)
