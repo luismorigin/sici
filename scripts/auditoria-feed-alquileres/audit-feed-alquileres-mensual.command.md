@@ -2,7 +2,16 @@
 description: Audit mensual del feed /alquileres — drift fetcher (curl) + inconsistencias internas + matching audit. Genera reporte ejecutivo con análisis humano.
 ---
 
+
 # Audit mensual — feed /alquileres
+
+> 🔴 **ALCANCE (desde el 21-jul-2026): esta skill audita ZN + casas, NO Equipetrol.**
+> Corre sobre PROD (`v_mercado_*`, régimen TC viejo). El feed público de **Equipetrol lee SHADOW**
+> desde el lanzamiento del TC nuevo, y lo auditan sus gemelas del híbrido: `/audit-cola-shadow`
+> (matching + dedup) y `/audit-deptos-shadow` (drift + cambio de precio). Correr esta skill con
+> `--macrozona equipetrol` audita data que **nadie ve**, y sus checks de TC (doble normalización,
+> flag paralelo) son del régimen viejo → no aplican a shadow. **Pasar la macrozona ZN explícitamente.**
+> Al cutover (cuando prod = shadow) el alcance vuelve a unificarse. Ver CLAUDE.md regla 15.
 
 Auditoría completa del feed cruzando 3 capas:
 
