@@ -509,7 +509,7 @@ Cambios fueron 3 DO blocks aplicados desde Supabase UI + docs (este append + REA
 
 1. **`/admin/market.tsx` filtra por `zona='global'`** (líneas 1020, 1033, 1057). El refactor v4 preserva ese nombre para EQ por backward compat.
 2. **`snapshot_absorcion_mercado()` LOOP 2 ya itera por DISTINCT zona** — Zona Norte automáticamente tiene serie por microzona post-migración.
-3. **`resumen_mercado()` y `buscar_propiedades()` hardcodean 5 zonas EQ** (falta 'Eq. 3er Anillo' — bug latente preexistente). Documentado para ticket #11.
+3. **`resumen_mercado()` y `buscar_propiedades()` hardcodean 5 zonas EQ** (falta 'Eq. 3er Anillo' — bug latente preexistente). Documentado para ticket #11. **✅ RESUELTO 1-jun-2026 (mig 258):** allowlist reemplazada por `zona_general='Equipetrol'` (6 zonas — decisión: 3er Anillo ES Equipetrol).
 4. **`insertar_proyectos_aprobados()` asigna `zona='Equipetrol'` sin sufijo** — no existe en CHECK constraint, probablemente bug latente. Investigar en ticket #11.
 5. **`populate_broker_prospection()` solo trae brokers EQ** — si se quiere prospección ZN, hay que agregar microzonas o usar `zona_general`. Documentado.
 
@@ -619,6 +619,324 @@ Al preparar la mig 255 (snapshot v4 paralelo), **dos hallazgos** llevaron a desc
 ### Próximo paso
 
 FASE 5-7 (no dependen del snapshot): `lib/zonas.ts` (14 microzonas en filtro admin) → workflows n8n ZN (array de microzonas) → docs. **Reactivar el workflow `auditoria_diaria_sici_v3.0`** en n8n (se desactivó para la ventana de migración).
+
+---
+
+## 30 May 2026 — Cierre end-to-end del ticket #8 (predicción v3 → hecho verificado)
+
+Sesión de **verificación** tras la primera corrida nocturna completa post-mig 254. El 29-may quedó como **predicción** que "v3 sin cambios genera las series por-microzona ZN" (justificación para descartar v4). Hoy quedó **confirmado con datos reales**.
+
+### Lo verificado
+
+- **14 microzonas en producción**, branch `feat/zn-microzonas-aplicacion` mergeada a `main` (merge commit `ad22b24`, PR #1). FASES 5-7 aplicadas (`lib/zonas.ts` con las 14 microzonas, workflows discovery ZN con array de microzonas, docs).
+- **Pipeline nocturno completo sin errores.** El ciclo 1:15-9:00 AM corrió 100% automático.
+- **Snapshot generando las 14 series por-microzona ZN** — la función `snapshot_absorcion_mercado()` v3, **sin una línea de SQL nueva**, las produjo vía su LOOP 2 (`DISTINCT zona`). Esto cierra la predicción del 29-may: la maquinaria de paralelización v4 + 14 días de observación pasiva nunca fue necesaria.
+- **EQ intacto, sin contaminación** (blindaje 2 sigue firme: `global` Equipetrol no incluye microzonas ZN). Branches limpias.
+
+### Estado del ticket #8
+
+**100% aplicado y validado en producción.** Lo único que v3 no produce es el agregado `'global_zona_norte'` → queda en **ticket #12** (no bloqueante, se resuelve cuando lo pida el frontend ZN #6). Tickets de seguimiento **#12 / #13 / #14** documentados, todos baja prioridad.
+
+### Lección meta del día
+
+**La validación compute-only del 29-may predijo bien, pero el cierre honesto exige confirmar con la corrida real.** El riesgo de la predicción no era el cómputo (ya validado readonly), sino que algún efecto del pipeline nocturno completo (discovery → enrichment → merge → matching → snapshot encadenados) revelara un borde no contemplado. No lo hubo. Convertir "debería funcionar" en "funcionó" cuesta una corrida y un check — y es la diferencia entre cerrar un ticket y dejarlo abierto disfrazado de cerrado.
+
+### Próximo paso
+
+Roadmap sin cambios respecto al 29-may: **#6 frontend `/mercado/zona-norte`** (prototipo multi-macrozona, privado por token) y **#7 alquiler** (replicar patrón). #1.7 detector automático de clusters en paralelo. Los 3 tickets nuevos (#12/#13/#14) no bloquean.
+
+---
+
+## 30 May 2026 (continuación) — Auditoría Fase 4 alquiler ZN: el motor ya procesa ZN solo + 2 hallazgos en prod
+
+**Origen:** elegido #7 (alquiler) como siguiente ticket. El director marcó —con razón— que el pipeline de alquiler es **separado** del de venta (Regla 6) y pidió **investigar antes de planear** + ver los verificadores. Se hizo auditoría contra producción (no supuestos) y export de funciones con `pg_get_functiondef` (Regla 7).
+
+### Hallazgo central: #7 NO es "replicar el pipeline de venta"
+
+El pipeline alquiler **ya procesa Zona Norte solo**: Remax alquiler trae todo Santa Cruz → el trigger `trg_asignar_zona_alquiler` (mig 232) zonifica a microzonas ZN → enrichment/merge/verificador/HITL son zone-agnostic y ya funcionan. **31 props ZN alquiler en `completado`** (30 Remax + 1 C21), solo 2 pending. El agente de mapeo fue alarmista (predijo masacre nocturna); prod lo desmintió.
+
+**El "BUG #1 de venta" (marcar ausentes sin filtro de zona) es benigno en alquiler:** al revés que venta. Remax trae todo SC → las props ZN están en el scrape → no se marcan ausentes. En venta C21 usaba bbox y las excluía.
+
+### Doble-check senior (leyendo las funciones de prod) — 2 hallazgos reales
+
+1. **🔴 El snapshot global de alquiler NO está blindado por zona → Equipetrol está contaminado HOY.** `snapshot_absorcion_mercado` LOOP 1 (`zona='global'`) blinda venta a las 6 zonas EQ pero **el bloque de alquiler no tiene filtro de zona** (el propio comentario lo admite). → `alquiler_activas`/`mediana`/`roi` del global cuentan las 31 props ZN junto con EQ. Eso alimenta `/admin/market-alquileres` **y el feed público `/mercado/equipetrol/alquileres`**. **El yield "de Equipetrol" ya está sucio con ZN.** Inverso al riesgo que buscábamos: el fix LIMPIA EQ, no lo amenaza. Además el LOOP 2 por-zona escribe `alquiler_*=NULL` literal → **ninguna zona (ni EQ) tiene serie de alquiler por-zona**.
+
+2. **🔴 `matchear_alquiler` Tier 1/2 auto-aprueban sin guard GPS ni zona.** El auto-approve aplica `UPDATE id_proyecto_master` directo, **no pasa por `matching_sugerencias`** → el trigger HITL separador (mig 254) no lo intercepta. Caso real: prop **2307** (alquiler "Condominio Portobello Isuto") → Tier 1 exact → pm **269** a **3.1 km**, microzona distinta. Ventas 2107/2108 (mismo nombre) también a ~4 km del mismo pm. pm 269 absorbe 3 clusters dispersos. "ISUTO" = desarrolladora con homónimos. **No se corrige a ciegas** (lección 24-may) → HTML de verificación visual generado.
+
+### Diseño del fix (NADA aplicado)
+
+- **FIX A (snapshot):** A1 blindar bloque alquiler global a 6 zonas EQ (limpia contaminación EQ); A2 computar alquiler en LOOP 2 por-zona (additive, da serie ZN + EQ-por-zona). **In-place sobre v3** — A1 solo quita contaminación del global, A2 solo llena NULLs; ninguno toca la serie de venta. No hace falta v4 (misma lógica que cerró #8).
+- **FIX B (matching):** B1 guard de distancia (>800m) en auto-approve Tier 1/2 → degradar a HITL (atrapa Portobello sin romper same-building); B2 cleanup del falso 2307 tras verificación visual. ⚠️ B1 toca EQ también → medir distribución de distancias en matches EQ auto-aprobados antes de aplicar (cuidado GPS de agente desplazado, igual que ticket #13).
+- **Cobertura C21+BI ZN:** opcional; Remax ya trae el grueso.
+
+### Artefactos producidos
+
+| Archivo | Estado |
+|---|---|
+| `docs/proyectos/zona-norte/AUDITORIA_Y_FIX_ALQUILER_ZN.md` | NUEVO — auditoría + diseño fix + doble-check senior + plan implementable 7 pasos |
+| `docs/proyectos/zona-norte/verify-portobello.html` | NUEVO — mapa Leaflet satelital, 3 pm + props, distancias, links Maps/Street View |
+| BACKLOG #7 | reformulado (de "replicar pipeline" → "snapshot + matching + cleanup") |
+
+### Lección meta del día
+
+**Medir antes de construir/planear** (otra vez). El título "#7 = replicar pipeline alquiler" implicaba duplicar 3 workflows + funciones. La BD mostró que el motor ya procesa ZN y que el trabajo real es otro — y que **Equipetrol ya tiene una contaminación de yield que nadie había visto** hasta leer la función de prod. El doble-check senior sobre código real (no docs) destapó lo que el plan optimista ocultaba, igual que en #8.
+
+### Próximo paso
+
+Decidir con el director: (a) verificación visual Portobello, (b) aplicar FIX A (net-positivo para EQ), (c) medir antes de FIX B1. Pasos 1-3 del plan son bajo riesgo y mejoran Equipetrol.
+
+---
+
+## 30 May 2026 (continuación 2) — Cleanup familia Portobello/Stone/Praga (FIX B2 aplicado)
+
+**Origen:** verificación del falso match Portobello (prop 2307 a 3.1 km del pm 269) que destapó la auditoría Fase 4. Se generó HTML satelital (`verify-portobello.html`) + se cruzaron las **URLs/slugs de los avisos** (fuente más confiable del nombre, lección 28-may). El director verificó GPS en terreno.
+
+### Hallazgo: el pm 269 "Portobello Isuto" absorbía 3 edificios distintos por el agujero del Tier 1
+
+`matchear_alquiler` Tier 1 (exact lookup) auto-aprueba por nombre **sin mirar GPS** → el pm 269 se comía cualquier prop con nombre "Portobello…". Las URLs lo desmienten:
+- **Portobello 6** (slug c21 `portobello-6`, pre-venta) — props 2107/2108, a ~4 km del pm 269.
+- **Stone By Portobello** (alianza desarrollador Stone + Portobello) — props 2228/2307/2387 + 2323 (estaba mal en pm 268 STONE 4).
+- **Portobello Isuto real** (slug `canal-isuto`/`portobello-isuto`) — los 4 que quedaron bien en pm 269.
+
+Es la **familia numerada del desarrollador** (Portobello 5 "V" pm 248, 6, 7, Green pm 326, Isuto pm 269) + alianza Stone, dispersa por la ciudad. Mismo patrón K1 de venta (loop self-reinforcing: match falso → merge pisa `nombre_edificio` con `pm.nombre_oficial`).
+
+### Verificación por el director (GPS de terreno)
+
+- Portobello 6: `-17.74812, -63.15608` (2107/2108 a 7-14m).
+- Condominio Stone By Portobello: `-17.73650, -63.17439` (2323@28m, 2228@113m). **2307 (843m) y 2387 (2.571m) tienen GPS de agente desplazado** — confirmados por la descripción del aviso, no por GPS.
+- Edificio Praga: `-17.75105, -63.15522` (prop 2332, sin nombre en BD, a 7m).
+
+### Aplicado (DO block transaccional desde Supabase UI — `cleanup-portobello-stone-praga-30may.sql`)
+
+- **3 pm nuevos:** Portobello 6 (#421), Condominio Stone By Portobello (#422), Edificio Praga (#423). Todos `gps_verificado_visual='confirmed'`, microzona vía `get_zona_by_gps`.
+- **7 props reasignadas** + candado `nombre_edificio`; candado **adicional de `id_proyecto_master` en 2307 y 2387** (GPS desplazado → que ningún recálculo nocturno las robe por cercanía).
+- pm 269 limpio (4 Isuto reales); pm 268 STONE 4 soltó 2323.
+
+### Lección meta (refuerza las del 28-29 may)
+
+1. **El slug/URL del aviso > GPS > nombre en BD.** El nombre en BD estaba pisado a "Portobello Isuto" por el merge; el slug decía "portobello-6". Las URLs resolvieron lo que el GPS y el nombre BD no podían.
+2. **Tier 1 exact sin guard GPS es el agujero estructural** (→ FIX B1 del doc de auditoría, pendiente con carve-out por nombre). Este cleanup es el parche de datos; el fix de raíz sigue en backlog.
+3. **GPS de agente desplazado hasta 2.5 km** — el candado de `id_proyecto_master` es obligatorio en estos casos, no opcional.
+
+### Pendiente menor
+
+- Prop **800** (`nombre="ISUTO"`, alquiler `inactivo_confirmed`) sigue en pm 269 — nombre genérico de la desarrolladora, ambiguo. Inactiva → no contamina. Sin urgencia.
+
+### Próximo paso
+
+FIX B2 cerrado. Queda **FIX A (snapshot alquiler)** — el de bajo riesgo y net-positivo para EQ — y, más adelante, FIX B1 (guard GPS en `matchear_alquiler`) con el carve-out por nombre que pidió el doble-check.
+
+---
+
+## 30 May 2026 (continuación 3) — FIX A aplicado y validado (mig 256)
+
+**`sql/migrations/256_snapshot_alquiler_zonas.sql`** aplicada (`CREATE OR REPLACE` + `SELECT * FROM snapshot_absorcion_mercado()` para regenerar el día). Dos cambios sobre `snapshot_absorcion_mercado`, ambos sin tocar la lógica de venta:
+
+- **A1 — Blindar el alquiler global a las 6 zonas EQ.** El bloque de alquiler del LOOP 1 no filtraba zona → el yield global mezclaba ZN con EQ. Ahora replica el blindaje de venta.
+- **A2 — LOOP 3 nuevo: serie de alquiler por-zona.** Antes el LOOP 2 escribía `alquiler_*=NULL`; ahora un loop separado computa alquiler por zona (precio `bob/6.96`, regla 10) vía `ON CONFLICT DO UPDATE` solo de columnas alquiler. Itera zonas de **alquiler** (no de venta) → cubre microzonas ZN con alquiler y 0 venta (bug de cobertura C4 evitado). ROI cruzado lee `venta_ticket_mediana` de la fila del LOOP 2.
+
+### Diseño guiado por el doble-check senior
+
+El revisor adversarial encontró 3 errores en el diseño original (documentados en `AUDITORIA_Y_FIX_ALQUILER_ZN.md` §0): el "feed público contaminado" era **falso** (nadie consume las columnas de alquiler del snapshot → A1 es higiene, no urgencia), el impacto era 1-5% (no 30-50%), y A2 tenía un bug de cobertura. La versión aplicada incorpora las 3 correcciones. **LOOP 3 separado = cero cambio a venta** (máximo aislamiento a EQ producción).
+
+### Validación (compute-only antes + post-ejecución)
+
+| Check | Resultado |
+|---|---|
+| A) Global alquiler blindado | 72/50/40/9 → **61/41/36/6** (saca ~29 props ZN); mediana +1-5% |
+| B) Microzonas ZN con alquiler + ROI | 10 celdas pobladas (antes NULL); ROI cruzado OK (ej 4to-6to Banzer-Alemana 1d: $575, ROI 10.55%) |
+| C) Venta intacta | venta_activas 29→30may = variación normal de discovery, sin quiebre |
+
+Las 2 celdas ZN de 4 dorms quedan fuera (loops `0..3`, igual que venta — C5, no regresión).
+
+### Estado del ticket #7
+
+- ✅ Auditoría Fase 4 (motor ya procesa ZN solo).
+- ✅ FIX B2 (cleanup Portobello/Stone/Praga, 3 pm + 7 props).
+- ✅ **FIX A (mig 256)** aplicado y validado.
+- ⬜ **FIX B1** (guard GPS en Tier 1 de `matchear_alquiler` con carve-out por nombre) — requiere medir los ~15 matches EQ >800m antes. Único pendiente del #7.
+- 🟡 Cobertura C21+BI ZN — opcional (Remax ya trae el grueso).
+
+### Lección meta
+
+El doble-check independiente **pagó dos veces**: desinfló una urgencia falsa (global sin consumidor) y atrapó un bug de cobertura que habría dejado sin serie a las microzonas ZN chicas — las que el ticket quería poblar. Validar el diseño con un revisor que no lo escribió, + validación compute-only antes de aplicar, hizo que la aplicación fluyera sin sorpresas (mismo patrón que cerró #8).
+
+---
+
+## 30 May 2026 (continuación 4) — Corrección: alquiler ZN NO está cerrado (falta el discovery dedicado)
+
+**Trigger:** el director cuestionó el "fase cerrada" de la continuación 3: *"no está nada en producción para C21 y BI; Remax no necesitaba discovery/enrichment/merge nuevos... hay algo raro acá."* Tenía razón. Investigación de los workflows reales confirmó la asimetría.
+
+### La asimetría venta vs alquiler en el discovery ZN
+
+- **Venta ZN:** workflows `_zonanorte` dedicados (Remax/C21) que traen todo SC + filtran por polígono ZN + filtran zona en "marcar ausentes" (`fb78d23`). Base sólida.
+- **Alquiler ZN:** **NO existe ningún workflow `*_alquiler_zonanorte`.** Las 30 props Remax entran **de colado**: el discovery Remax alquiler de Equipetrol usa el slug `equipetrolnoroeste` que la API de Remax no filtra efectivamente → devuelve todo SC → el trigger GPS (mig 147b) las etiqueta `Zona Norte`. **Accidental, no diseñado.**
+- **C21 alquiler:** grid de coordenadas fijo en Equipetrol → no llega a ZN (0-1 props). **BI alquiler:** filtra `barrio=equipetrol` → 0 ZN.
+
+### Riesgo confirmado (bug #1 latente en alquiler)
+
+Los 3 discovery de alquiler tienen el "marcar ausentes" **sin filtro de zona** — el mismo bug que venta resolvió en `fb78d23`, abierto en alquiler. Ya visible: **1 C21 ZN + 1 Remax ZN en `inactivo_pending`** (props que el discovery no re-encuentra y marca ausentes). Inofensivo con 30 props; deuda con volumen.
+
+### Corrección del estado
+
+- **Cerrado de verdad:** el *procesamiento* (snapshot FIX A + matching + cleanup FIX B2).
+- **NO cerrado:** la *captura/discovery* de alquiler ZN. Es parcial (solo Remax) y frágil (depende de que el slug roto de Remax siga devolviendo todo SC). → **ticket #7.1** (nuevo en BACKLOG): Fase 3 alquiler ZN = 3 workflows discovery dedicados + arreglar el "marcar ausentes" con filtro de zona. FIX B1 va dentro de ese paquete.
+
+### Lección meta
+
+**Cuidado con declarar "cerrado" lo que en realidad es "procesa lo poco que entra de colado".** El error fue clasificar la cobertura de discovery como "opcional 🟡" en vez de "la base de producción que falta". El director, que no es dev, lo detectó por sentido común del negocio ("¿por qué venta sí y alquiler no?"). Mismo valor que el "¿es escalable?" del #8: las preguntas ingenuas del dueño exponen deuda que el plan optimista esconde. Salvedad: repo puede diferir de prod (drift n8n) — el diagnóstico se sostiene igual porque los datos de la BD (30 Remax / 1 C21 / 0 BI + pendings) confirman el comportamiento real.
+
+---
+
+## 30 May 2026 (continuación 5) — Panorama del enjambre + plan #7.1 + catch de método (extrapolación EQ→ZN)
+
+**Panorama del enjambre alquiler (3 subagentes en paralelo):** enrichment, merge y verificador **zone-agnostic confirmado** — no hay más hardcodes EQ como el del discovery. Solo ajustes menores de throughput (LIMITs) + verificaciones de drift n8n. El único agujero estructural es el discovery.
+
+**Plan #7.1 redactado** (`PLAN_FASE3_DISCOVERY_ALQUILER_ZN.md`) + doble-check senior que podó over-engineering (no blindar 3 discovery EQ sino donde haga falta; Remax = patch no workflow nuevo; LIMITs condicionales).
+
+### 🔴 Catch de método del director (corrige a mí Y al doble-check)
+
+Tanto mi plan como el revisor priorizaron portales por el **volumen de alquiler en Equipetrol** (C21 121 > Remax 22 > BI 2) → "C21 core, BI descartable". **El director lo marcó: el mix de portales cambia por zona; no se infiere ZN desde EQ.** La evidencia ya lo gritaba: en ZN es Remax 30 vs C21 1 (opuesto a EQ). Y ese dato ZN está **sesgado** (solo Remax llega a ZN por el slug roto; el 1 de C21 / 0 de BI miden nuestra captura, no el inventario del portal).
+
+**Corrección aplicada al plan (§0.1):**
+- Se cae "C21 es la fuente #1 de ZN" y "BI descartable" — eran extrapolaciones de EQ.
+- Se agrega **Fase 0a: spike de inventario alquiler ZN por portal** (consultar los portales por el polígono ZN, como el PoC de venta del 20-may). Ese dato decide alcance.
+- **Por defecto: clonar los 3** (postura del director), sin descartar ninguno sin el spike.
+- Lo que SÍ se sostiene (no depende del mix por zona): el bug marcar-ausentes + su fix, el riesgo-EQ-nulo del filtro, el zone-agnostic del core.
+
+### Lección meta
+
+**Sesgo de extrapolación zona-a-zona.** Usé Equipetrol como proxy de Zona Norte para dimensionar portales — inválido, y el dato disponible ya lo contradecía. Tercer catch del dueño en la sesión (tras "¿es escalable?" del #8 y "¿por qué venta sí y alquiler no?"): las preguntas de negocio del director exponen fallas de método que ni yo ni un revisor adversarial agarramos cuando ambos compartimos el mismo dato sesgado. **Antes de dimensionar/priorizar por zona, medir esa zona — no otra.**
+
+---
+
+## 30 May 2026 (continuación 6) — Spike Fase 0a ejecutado: el dato real reescribe la prioridad
+
+**`scripts/poc-zona-norte/spike-alquiler-zn.mjs`** (nuevo, clon del PoC de venta para alquiler; fetch directo a los 3 portales sobre el polígono ZN de 14 microzonas; costo $0, no toca BD). Resultado del inventario alquiler ZN por portal:
+
+| Portal | Tiene en ZN | Capturamos (BD) | Gap |
+|---|---|---|---|
+| **C21** | **89** | 1 | **88** |
+| Remax | 31 | 30 | ~1 |
+| BI | 2 | 0 | 2 |
+| Total | ~122 | ~31 (25%) | ~91 |
+
+**Lo que el spike destapó (que ni EQ ni la BD mostraban):**
+- **C21 es la fuente #1 de alquiler en ZN (89), y la perdemos casi entera** (su grid fijo EQ no llega a ZN → capturamos 1 de 89). El gap total de alquiler ZN es ~91 props, y el **97% es C21**.
+- La BD decía "Remax dominante" (30 vs 1) — **sesgo de captura**, no realidad del mercado. Remax domina lo *capturado* solo porque es el único con discovery que llega a ZN.
+- Calidad: Remax 31/31 completo; C21 89/89 con precio/área pero 37 sin dorms (enrichment los completa); BI 2 sin área.
+
+**Prioridad del plan #7.1 reescrita con dato de ZN:** (1) C21 ZN grid = prioridad 1 (el gap real), (2) Remax patch = robustez no cobertura (ya tenemos 30/31), (3) BI descartado (2 props). El spike también confirma el **total de mercado de alquiler ZN (~122)** vs EQ — dato de producto, no solo de pipeline.
+
+**Meta:** el método del director (medir ZN, no extrapolar) no solo evitó un error de priorización — cuantificó que estábamos capturando 1 de cada 4 alquileres de ZN, con el grueso del agujero en un portal (C21) que la BD hacía ver como irrelevante. **Pendiente:** Fase 0b (drift n8n, UI en vivo) + implementación. Sin aplicar nada en esta sesión.
+
+---
+
+## 30 May 2026 (continuación 7) — Verificación BI + corrección "los 3 portales"
+
+**Dos catches más del director:**
+
+1. **"Te pusiste bizco priorizando — voy a hacer los 3 portales igual."** Tenía razón: estuve rankeando/descartando (C21 sí, BI no) cuando su decisión ya era clonar los 3. El spike **no es para descartar** — sirve para dimensionar el mercado ZN (~122) y validar captura. Corregido en plan + backlog: **se clonan los 3** (C21/Remax/BI), el ranking es solo color.
+
+2. **"Creo que hay un error en validar BI, no se capta bien la cantidad."** Sospecha válida — verificada con `scripts/poc-zona-norte/diag-bi-alquiler.mjs`. **NO hay error de captura:** las 16 BI alquiler tienen GPS 100% (mi hipótesis de "GPS faltante" quedó refutada), y el endpoint anda perfecto (**BI da 233 venta vs 16 alquiler** — si fuera bug del script, venta también daría poco). **BI es venta-pesado**: casi no lista alquileres (16 en todo SC, ~2 en ZN). El 2 es real. La duda valió la pena chequearla aunque la conclusión sea "no hay error".
+
+**Meta (4to/5to catch de la sesión):** tiendo a optimizar/priorizar/descartar cuando la decisión del dueño ya es "hacer todo" — sobre-ingeniería de la decisión, no solo del código. Y una corazonada de error (GPS BI) hay que verificarla con dato (233 vs 16 lo cerró), no asumirla para complacer la sospecha. El dato manda en ambas direcciones: validó "medir ZN" y refutó "error en BI".
+
+---
+
+## 31 May 2026 — Plan #7.1 implementado: discovery C21 alquiler ZN (Paso 1) end-to-end ✅
+
+**Contexto:** Lucho exportó los 8 workflows de alquiler de prod (`Flujos 31.05.26/`). 3 subagentes los analizaron sin gastar contexto (plantilla venta ZN / discovery alquiler EQ / core). Hallazgos que ajustaron el plan:
+- **Fase 0b (drift n8n) resuelta sin abrir la UI** — los exports SON prod. Confirmado: enrichment v2.1.0, verificador v2.0.0 (`followRedirects:false`), merge v1.0.0, los 3 **zone-agnostic** (no se tocan).
+- **Corrección de orden:** el blindaje EQ va **emparejado** con el clon, no después (si no, el EQ tumba las props ZN esa misma noche).
+- **Remax (para Paso 4):** el clon usa el endpoint todo-SC de la plantilla venta + nodo "Filtrar Solo Alquileres", NO el slug `equipetrolnoroeste`.
+
+**Tres preocupaciones del director, todas verificadas con datos (PostGIS + BD) antes de tocar nada:**
+1. **¿Remax todo-SC se cuela fuera de ZN?** No. Fetch amplio + filtro point-in-polygon (mismo mecanismo que venta ZN en prod). Lo que entra a la BD ya pasó el polígono. Fail-closed.
+2. **¿Esparcimiento/solape EQ↔ZN?** Las zonas **no se solapan en área** (overlap 0 km², solo comparten frontera). ZN es 60 km² vs 2.5 de EQ (24×). El grid de fetch hardcodeado del C21 EQ sí se mete 1.46 km² en ZN (3 microzonas) = **redundancia de fetch inofensiva** (UPSERT idempotente), neutralizada por el blindaje. NO se agrega filtro de polígono al EQ (viola strangler).
+3. **¿Las props EQ usan los nombres de microzona o "Equipetrol" genérico?** Todas usan nombres de microzona exactos (`Equipetrol Centro/Norte/Sirari/Oeste/Villa Brigida`). **Cero sin match.** El blindaje `zona IN (… zona_general='Equipetrol') OR zona IS NULL` matchea las 167 props EQ sin perder ninguna. Las únicas NULL activas son 6 `excluida_zona` (se comportan igual que hoy).
+
+**Implementado (Pasos 1-3 del plan #7.1):**
+- **Clon** `n8n/workflows/alquiler/flujo_discovery_c21_alquiler_zonanorte_v1.0.0.json` — esqueleto geográfico de venta ZN (grid dinámico desde polígonos, point-in-polygon, ARRAY['Zona Norte'] parametrizable) + extracción/registro de alquiler del C21 EQ (`precio_mensual_bob`, `registrar_discovery_alquiler`). Cron 1:35 AM. Verificados los 6 nodos que tocan la BD + el contrato de datos entre nodos.
+- **Blindaje** del C21 alquiler EQ (`flujo_discovery_c21_alquiler_v1.0.0.json`) — filtro de zona en "Obtener Alquileres Activos BD". Aplicado en prod por Lucho y reflejado en el repo.
+
+**Corrida de validación (manual, costo $0 — C21 no usa Firecrawl en discovery):**
+- Discovery clon: snapshot 88, **83 nuevas / 5 actualizadas / 0 ausentes marcadas**, las 14 microzonas. Pasamos de 1 a 88 props C21 alquiler ZN — el gap del 97% cerrado.
+- Calidad: 82 nuevas con precio/GPS/zona/área al 100%.
+- Enrichment (2 lotes, LIMIT subido temporal y revertido a 20): **79/83 enriquecidas**, dorms completados al 100% en las procesadas. 4 rebotaron en Firecrawl → re-intento automático nocturno.
+- **proyectos_master ZN: 76 disponibles** → enrichment con contexto "PROYECTOS CONOCIDOS" + matching habilitado (el caveat no aplica).
+
+**Pendiente:** activar cron del clon → validar 1ra nocturna conjunta (clon 1:35 + EQ blindado 1:30 + merge + matching; confirmar 0 props ZN tumbadas por el EQ + las 4 enrichment) → **Paso 4 (Remax ZN)** → Paso 5 (BI ZN). Merge/matching corren esta noche (zone-agnostic, ya verificados).
+
+**Remax (Paso 4, misma sesión):** clon `flujo_discovery_remax_alquiler_zonanorte_v1.0.0.json` (endpoint todo-SC + nodo "Filtrar Solo Alquileres" + polígono, **NO slug**; conversión moneda USD↔BOB del fix abr-2026; cron 1:50) + blindaje del Remax EQ (mismo patrón que C21). Corrida manual: API 536 → 110 alquileres → **30 en ZN; 0 nuevas / 30 existentes / 0 ausentes** — esperado, porque Remax ya capturaba ZN de colado (su slug `equipetrolnoroeste` devuelve todo SC); el clon es **robustez** (no depende del slug roto), no cobertura nueva. **Alquiler ZN activo pasó de ~31 a 113 props** (83 C21 + 30 Remax). 2 props Remax sin `precio_mensual_bob` (calidad menor del portal, no del clon). El Remax EQ (slug roto) y el clon registran las mismas 30 ZN — redundancia inofensiva (UPSERT idempotente); el blindaje evita el marcado-ausente cruzado. NO se toca el slug del EQ (strangler). Falta **BI (Paso 5)** + validar nocturna conjunta.
+
+**Sobre el matching (decisión del director):** el match rate de alquiler ZN es bajo (~23% en las completadas, vs ~60% EQ) porque `proyectos_master` ZN es ralo (76 pm / 60 km² vs 250 / 2.5 km² en EQ). **No es bloqueante** — el matching se resuelve después con auditoría + creación de pm, y **más volumen ayuda** (props con GPS similares forman clusters → asignación/creación de pm más fácil, ticket #1.7). Diagnóstico de las sin-match: ~44 tienen pm a ≤100m (matching débil, mejorable / FIX B1) + ~42 sin pm cerca (crear el proyecto). El batch manual de pm se arma con el universo completo post-nocturna. Las props sin match igual se muestran en el feed (el match solo agrupa por edificio + habilita estudio por proyecto).
+
+**BI (Paso 5, misma sesión) — LOS 3 PORTALES CERRADOS.** Clon `flujo_discovery_bien_inmuebles_alquiler_zonanorte_v1.0.0.json` (POST único sin grid; filtro client-side `nomb_barri='equipetrol'` **reemplazado por point-in-polygon GPS** + nodos Leer Polígonos/Calcular BBox de la plantilla; cron 2:40) + blindaje BI EQ. Corrida manual: 16 catálogo SC → **2 en ZN**; 1 nueva legítima (id 2577) + reclamo de 1385 (edge case, abajo).
+
+**Sospecha del director ("muy pocos alquileres BI en ZN, investigar la API"):** verificada con variaciones del endpoint (costo $0). **REFUTADA con dato:** el endpoint trae TODO lo que BI tiene. `id_fami=0` (todas las familias) = 16, igual que `id_fami=1`; `filas=500` → sin paginación oculta; sin modalidad = 251 (232 venta + 16 alquiler + solapamiento). BI es **estructuralmente venta-pesado** (232 venta vs 16 alquiler en todo SC). Los 16 alquiler dispersos por barrio BI: Urubó 4, Centro 2, Equipetrol 2, resto 1 c/u (Hamacas, Plan 3000, varios anillos) — solo 2 caen en el polígono ZN. **Bonus: 4 alquileres BI en Urubó** → el mismo clon multi-macrozona los captura cuando se active esa macrozona (ADR-009).
+
+**Edge case prop 1385 (Ed. Europeo):** BI manda GPS errado (3 km al norte → cae en polígono ZN), el clon la reclama por usar el GPS crudo del portal (no el corregido de la BD). Investigada `registrar_discovery_alquiler` (Regla 7, def de prod): `metodo_discovery` y `status` se pisan SIEMPRE (ignoran `campos_bloqueados`) → **NO existe candado por-campo que corte el re-reclamo** (la idea de candar `metodo_discovery` resultó inviable). PERO **daño NULO**: la función NO resetea `fecha_enrichment` (sin re-enrichment, sin costo), y `lat/lon/area/id_proyecto_master` están bloqueados + el clon manda `p_zona=null` → zona sigue `Equipetrol Norte` correcta, coords intactas. El re-reclamo es ruido de cero costo: `status` oscila `completado↔actualizado` + re-merge idempotente. **Decisión: aceptar + documentar** (no tocar la función ni hardcodear exclusión — desproporcionado para 1 prop de impacto cero). Si aparecen varias props con GPS errado de BI, reevaluar.
+
+**Total alquiler ZN: 115 props activas (83 C21 + 30 Remax + 2 BI). Los 3 portales con discovery dedicado multi-macrozona + blindaje EQ par.** Pendiente: validar nocturna conjunta (los 6 workflows: 3 clones ZN + 3 EQ blindados + merge + matching) + batch manual de pm.
+
+---
+
+## 1-2 Jun 2026 — Mejora del matching ZN (#1.7 ejecutado manual): 13 pm nuevos, SIN tocar el engine
+
+**Pedido del director:** mejorar el matching ZN ahora que hay más unidades, **procediendo con #1.7**. Corrección clave de scope durante la sesión: *"no puedo tocar matching como función porque está en producción"* — se descarta toda idea de modificar el engine (ej. "exigir GPS en la función"). Se trabaja **alrededor**: cargar `proyectos_master` faltantes + asignar `id_proyecto_master` con candado, como hace el HITL a mano. El matching nocturno (intacto) hace el resto.
+
+**Método validado (2 fases), reusable para futuras macrozonas (Urubó/Polanco):**
+1. **Asegurar lo seguro por SQL** — props con sugerencia en `matching_sugerencias` (estado `pendiente_zona_norte`) cuyo **nombre coincide + GPS ≤50m + vecino más cercano con OTRO nombre**. Hallazgo del director que afinó el criterio: *"¿el nombre + 30m lo asegura si hay edificios vecinos?"* → NO basta; el ancla es el **nombre** (campo `nombre_edificio` **o el slug de la URL del portal**), el GPS es respaldo. 21 props de venta asignadas así (Grupo A).
+2. **Verificación visual de lo dudoso** — HTML con mapa satelital (`scripts/verify-pm-gps/verify-pm-zn-1jun.html` + `-r2.html`, reutilizan el patrón de [verify-pm-nuevos-zn.html]). Cards con Leaflet (satélite ESRI + OSM), props (verde) vs pm que ya existe cerca (rosado), veredicto cargar/asignar/descartar → export a SQL `INSERT`+`UPDATE` candado. El director verificó GPS uno por uno (incluso corrigió coords: Nature Residence, Los Sauces, Los Tusequis — GPS de brokers errados).
+
+**Confirmación fuerte del problema de FP del matching por nombre:** las **13/13 sugerencias de alquiler ZN eran falsos positivos por GPS** (más cercana a 104m, el resto 130m-4.700m; ej. "Condominio Barak"→CONDOMINIO ONE a 2.1km, "Torres Zen"→Torres Isuto a 2.7km). El matching sugiere por nombre genérico sin mirar GPS. **Ninguna se asignó a ciegas.**
+
+**Detector de clusters emergentes (#1.7) ejecutado como query** (no como workflow n8n todavía): `≥2 props mismo nombre normalizado + dispersión <40-60m + lejos de pm existente >100m`. Encontró los edificios sin proyecto en 2 rondas.
+
+**Cargados: 13 pm nuevos (IDs 424-436), todos `gps_verificado_visual='confirmed'`:**
+- Ronda 1 (7): Villa Ada, Torre Zen, Habita Beni, Condominio Barcelona, Bizet, Nature Residence, Condominio Los Jazmines del Parque.
+- Ronda 2 (6): Macororó 13/14, Vilanova, Edificio Los Sauces, Eivissa (vecino de Cantabria, distinto), Condominio Los Tusequis, Floreza.
+- Descartado: prop 2530 (sin nombre, Brickell 4 a 23m vs Domus Madero a 31m — ambiguo real).
+
+**2 detalles técnicos que quedaron como regla:**
+- El matching usa la MV `mv_nombre_proyecto_lookup`; su trigger `trg_refresh_nombre_lookup` solo refresca en **UPDATE**, no en INSERT → **tras cargar pm nuevos hay que correr `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_nombre_proyecto_lookup;`** (sola, fuera de transacción) o el matching no los encuentra por nombre.
+- **Inconsistencia detectada y corregida (audit-docs):** los 13 pm nuevos se cargaron con `zona='Zona Norte'` (macrozona), pero los pm ZN existentes usan la **microzona** en ese campo. Corregido con `UPDATE … SET zona = get_zona_by_gps(latitud, longitud) WHERE id_proyecto_master BETWEEN 424 AND 436`. (El match rate no depende de `pm.zona` — las props ya traen microzona del trigger GPS — pero se corrige por consistencia.)
+
+**Resultado:** **Venta ZN 60.6% → 66.2%** (264/399). **Alquiler ZN ~23-38.9% → 53.2%** (50/94, +14pp). ~40 props enganchadas, 0 cambios al engine de producción.
+
+**Pendiente:** alquiler aún ~44 props sin proyecto (3ª ronda posible). El director **NO quiere mergear** `feat/zn-alquiler-auditoria-fixa` hasta hacer una **prueba visual**. #1.7 sigue abierto como ticket (falta el **workflow n8n automático** + HTML genérico desde BD; el método manual ya está probado).
+
+**Validación de la nocturna conjunta (2-jun) — cierra parte del pendiente #7.1:** revisada la corrida. **Inventario ZN intacto:** alquiler **113 activas** (era 115 el 31-may, merma normal), venta **476**. **El discovery EQ blindado NO tumbó props ZN** — la preocupación central del #7.1 queda **validada**. `enrichment_llm_venta` OK (02:14). `workflow_executions` solo instrumenta el enrichment LLM venta (los clones de discovery ZN no escriben ahí → validar por datos). **Ojo de timing:** la nocturna corrió ANTES de cargar los 13 pm de hoy, así que esos matches fueron manuales; la **próxima nocturna (3-jun)** usará los pm nuevos vía la MV `mv_nombre_proyecto_lookup` refrescada y puede **sumar matches automáticos** — vale revisarla.
+
+---
+
+## 2 Jun 2026 (sesión 2) — Continuación matching ZN (#1.7 manual): +32 matches, venta cruza 70%
+
+> Contexto de la jornada: en la misma sesión se resolvió primero el **incidente de aislamiento en prod** (el feed `/ventas` exponía 399 props ZN porque el código de aislamiento estaba en la rama sin mergear a `main`). Cherry-pick a `main` de `a3726e0`+`313dc2d`, verificado en vivo 0 ZN. Detalle completo en **`BACKLOG.md` #15**.
+
+**Pedido:** seguir mejorando el matching ZN, mismo método #1.7 manual (sin tocar el engine).
+
+**Avance:** **Venta 63.9% (264) → 70.2% (290)** · **Alquiler 52.0% (52) → 58.0% (58)** · **+32 matches** (el total subió a 413 venta / 100 alquiler porque la nocturna 2-jun metió props nuevas, por eso el % de partida bajó respecto al 66.2% del 1-jun aunque el `matched` no cambió).
+
+**Lo cargado:**
+1. **5 asignaciones a pm existentes** que el matching no enganchó por variación de nombre (nombre + GPS ≤13m, sin ambigüedad): Baruc (2139, 2145→409), Bizet (2586, 2572→428), Barcelona (2485→427).
+2. **pm 437 Condominio Arista** — 17 props. Las **16 de Remax tenían `nombre_edificio='Preventa'`** (el enrichment confundió el estado "pre venta" con el nombre → por eso nunca matchearon). El director las **identificó por la FOTO del listing**. Sumada la 2164 ("Proyecto Arista", C21). GPS del listing caía sobre una concesionaria (TDLMotors) → **GPS real corregido a `-17.73557,-63.15935`** (verificación visual).
+3. **Lote 5 pm nuevos (438-442):** Light, Living Costanera, Barak II, Barak III, Barak. 10 props.
+
+**Hallazgos metodológicos (reusables):**
+- **GPS basura compartido `-17.73388,-63.16198`:** 5 edificios DISTINTOS apilados en el mismo pin (Living Costanera, Macororó III, Holiday Smart Studio, Mozart, Vertical) — pin placeholder de un portal. **El GPS no sirve para ubicar; agrupar por GPS los fusionaría.** Refuerza que el ancla es el **nombre real** (slug de la URL / foto), no el campo `nombre_edificio` crudo ni el GPS.
+- **Nombres mal extraídos** ("Preventa" en Arista) y **GPS de broker desviados** son la causa principal del gap restante, no falta de reglas de matching.
+- **verify-pm-gps** corrido sobre los 6 pm nuevos. Overpass público dio 504 (saturado) → se completó con mirror `overpass.private.coffee`. El director verificó GPS uno por uno: **Arista y Barak corregidos** (broker/portal desviados), Light/Living Costanera/Barak II/III confirmados. Los **6 pm → `gps_verificado_visual='confirmed'`**.
+- **Barak = complejo de 3 torres reales** (Barak, Barak II, Barak III), confirmadas por slug C21 (`condominio-barak-ii`) + descripción Remax ("CONDOMINIO BARAK III"). Se descartó fusionar 440↔442 (son torres pegadas, mismo predio, distinto nombre real). Prop **2534 dejada `sospechosa`** en la razón del candado (slug C21 genérico + GPS a 185m de las otras).
+
+**Pendiente (123 venta + 42 alquiler sin match), todo para verificación visual:**
+- El **GPS basura** `-17.73388` (Macororó III, Holiday Smart, Mozart, Vertical-2148) — cada uno necesita su GPS real.
+- El **trío Atlantis/Holiday/Panorama** (mismo GPS `-17.73763,-63.15718`: ¿complejo o basura?).
+- La **saga Macororó** (10, 19, genérico) — varios edificios numerados.
+- Los **`(s/n)` a ≤50m de un pm existente** (2526→Ares, 2308→Portobello, 2065→Hera, 2037/2032→Raizant, 2257→Macororó 13/14…) — asignaciones probables, verificación visual liviana.
+
+---
 
 ## 16 Jun 2026 — Matching: aprobar sugerencias atascadas + 7 pm nuevos (venta 79.9%→85.8%, alquiler 79.6%→83.3%)
 
