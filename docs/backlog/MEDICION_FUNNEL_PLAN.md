@@ -9,7 +9,13 @@
 
 ## 🔴 ACCIONES MANUALES DEL FOUNDER (no se pueden hacer desde el repo)
 
-### 1. Activar el filtro de tráfico interno en GA4 — **pendiente**
+### 1. Activar el filtro de tráfico interno en GA4 — ✅ **ACTIVADO por el founder (22-jul)**
+
+> ⚠️ **Todavía no surte efecto: el código que pone la etiqueta no está en producción.** El filtro
+> excluye los hits con `traffic_type=internal`, y ese parámetro lo manda el `gtag('config', …)` de
+> `_app.tsx` — que vive en la rama `fix/analytics-atribucion`, sin pushear. Filtro activo + nadie
+> etiquetando = no filtra nada. Empieza a funcionar con el deploy.
+
 
 **Qué es, en simple:** el código ya le pone una **etiqueta** a las visitas del equipo (a quien pasó
 alguna vez por `/admin` o `/broker`). Pero **poner la etiqueta y descartar la visita son dos cosas
