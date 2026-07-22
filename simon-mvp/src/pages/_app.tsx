@@ -95,7 +95,14 @@ export default function App({ Component, pageProps, router }: AppProps) {
   useEffect(() => {
     if (router.pathname.startsWith('/admin')) return
     if (router.pathname.startsWith('/broker')) return
-    import('@/lib/visitor').then(({ getVisitorId }) => { getVisitorId() }).catch(() => {})
+    // El mismo id que se guarda en leads_alquiler.visitor_uuid se manda a GA4
+    // como user_id. Es el hilo que permite unir las tres puntas: lo que la
+    // persona hizo en el sitio (GA4), el lead que quedó en la BD y —cuando
+    // exista el webhook de Kapso— la conversación de WhatsApp.
+    import('@/lib/visitor').then(({ getVisitorId }) => {
+      const id = getVisitorId()
+      import('@/lib/analytics').then(({ setUsuarioGA }) => setUsuarioGA(id)).catch(() => {})
+    }).catch(() => {})
     // El origen de la visita se guarda apenas se entra, antes de que cualquier
     // navegación interna borre los UTM de la URL. Ver lib/utm.ts.
     import('@/lib/utm').then(({ capturarUtms }) => { capturarUtms() }).catch(() => {})

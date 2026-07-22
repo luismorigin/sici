@@ -49,6 +49,26 @@ marcar como *evento clave*. Sin esto, GA4 no lo trata como conversión en ningú
 ### 3. Confirmar si Kapso puede mandar webhooks en el plan actual — **pendiente**
 Ver paso 4. El diseño ya existe; falta confirmar que el plan contratado de Kapso lo incluye.
 
+### 5. Activar el webhook de Kapso — **pendiente, bloquea el paso 4**
+
+Tres cosas, en este orden:
+
+1. **Aplicar `sql/migrations/292_simon_contactos_mensajes.sql`** en Supabase.
+2. **Elegir un secreto** (una cadena larga al azar) y ponerlo en **los dos lados**:
+   - En Vercel: variable de entorno `KAPSO_WEBHOOK_SECRET`.
+   - En Kapso: el `webhook_secret_key` del webhook.
+   Sin la variable el endpoint responde **503 y rechaza todo** — a propósito: aceptar mensajes sin
+   firmar convertiría la URL en un formulario público para inyectar conversaciones falsas.
+3. **Crear el webhook en Kapso** apuntando a `https://simonbo.com/api/kapso/webhook`, con los
+   eventos `whatsapp.message.received` y `whatsapp.message.sent`, sobre los 2 números del bot
+   (trigger ids en `lab-kapso/workflows/simon/workflow.js`). Detalle:
+   `lab-kapso/CRM_PENDIENTE_LAB_KAPSO.md` Tarea 1. **Acción gated: requiere OK del founder.**
+
+Verificar después, con una conversación real de prueba:
+```sql
+SELECT pieza, COUNT(*) FROM v_atribucion_contactos WHERE atribuido GROUP BY 1 ORDER BY 2 DESC;
+```
+
 ### 4. Aplicar la migración 290 en Supabase — **pendiente, bloquea el registro de `/ir`**
 `sql/migrations/290_mkt_clicks_puente.sql` desde Supabase UI o psql (el MCP es readonly).
 **El endpoint ya funciona sin ella** — redirige bien y con el texto correcto — pero **cada click
@@ -124,35 +144,65 @@ compila sin chistar y revienta en runtime; como el handler atrapa todo y redirig
 era invisible**: redirigía sin texto y sin registrar nada. Se arregló con `Promise.resolve()` y
 tipando `PromiseLike`. Sin probarlo de verdad, esto se iba a producción "funcionando".
 
-### Paso 3 · Los 7 eventos unificados — ⏳ pendiente
-Reemplazan a los ~50 actuales. **La operación va como parámetro, no como sufijo** — eso es lo que
-permite un solo embudo y comparar venta contra alquiler en el mismo informe:
+### Paso 3 · Los 7 eventos unificados — ✅ HECHO (22-jul)
 
-```
-feed_view         { operacion, macrozona, n_resultados }
-buscar            { operacion, texto, n_resultados, origen }
-ficha_abrir       { operacion, property_id, zona, precio }
-favorito          { operacion, property_id, accion }
-contacto_whatsapp { operacion, property_id, ubicacion, zona, precio }   ← LA conversión
-lead_gate         { operacion, property_id }
-puente_click      { pieza, red }
-```
-Incluye: eventos en `/` y `/b/*`, y mandar `visitor_uuid` como `user_id` de GA4 (ya existe en
-`lib/visitor.ts` y en `leads_alquiler.visitor_uuid`; hoy **no** se manda a GA4 — es el hilo que une
-GA4 ↔ BD ↔ WhatsApp). Al hacerlo, **arreglar el funnel de `scripts/check_ga4_metrics.py`**.
+`simon-mvp/src/lib/analytics.ts` + `feed_view` en ventas + `buscar` en la home + `user_id` en `_app`.
 
-**Expectativa honesta:** a 231 usuarios/mes el fondo del embudo tiene números demasiado chicos para
-optimizar por porcentaje (de 3 a 4 contactos no es "+33%", es una persona). El embudo sirve para
-cazar caídas **arriba**, donde hay volumen. Los contactos de abajo se miran **de a uno**.
+**Cómo, sin romper nada:** no se tocaron los ~25 call-sites repartidos en 9 archivos (superficie
+enorme para un cambio de nombres). `lib/analytics.ts` **traduce**: cuando un feed dispara su evento
+legacy, se emiten los dos — el legacy conserva la serie histórica y el canónico alimenta el embudo.
+Para retirar los legacy (~1 mes) alcanza con borrar el mapa `CANONICO`, sin tocar los feeds.
 
-### Paso 4 · Webhook de Kapso — ⏳ pendiente (ya diseñado, sin implementar)
-Cierra el círculo: click en la pieza → conversación real. **No requiere darle permiso de escritura al
-bot** (hoy es `bot_kapso_readonly`, solo lectura, y así debe quedar): Kapso **empuja** el evento a
-`POST /api/kapso/webhook` y SICI escribe con sus propios permisos.
-Diseño completo: `docs/backlog/CRM_CLIENTES_B2C_PLAN.md` (decisiones confirmadas 5-jun-2026) +
-`lab-kapso/CRM_PENDIENTE_LAB_KAPSO.md` Tarea 1 (bloqueada esperando el endpoint de SICI).
+También: se eliminaron las **copias locales de `trackEvent`** en `alquileres.tsx` y
+`zona-norte/alquileres.tsx` (idénticas a la central, pero al no pasar por ella dejaban al feed
+principal fuera del embudo), y `visitor_uuid` se manda a GA4 como `user_id` — el hilo que une
+GA4 ↔ BD ↔ (a futuro) WhatsApp.
 
----
+🔴 **Hallazgo grande: los eventos de entrada se estaban perdiendo.** GA se inyecta con
+`strategy="lazyOnload"` (después de `window.onload` + idle) pero `feed_view` / `page_enter_alquiler`
+se disparan en el mount, mucho antes; `trackEvent` era no-op si `gtag` no existía todavía. **Está en
+los datos:** `/alquileres` tuvo **202 sesiones** en 28 días y `page_enter_alquiler` registró solo
+**23 usuarios** — el primer paso del embudo sub-reportado ~10x, lo que además inflaba toda tasa de
+conversión calculada sobre él. Ahora se encolan hasta que `gtag` aparece. Verificado con Playwright:
+antes del fix `/ventas` y `/alquileres` emitían **cero** eventos en carga directa; después, todos.
+
+También se arregló `scripts/check_ga4_metrics.py`, que perseguía los nombres de alquileres e
+ignoraba ventas: reportaba "conversión total 0.87%" dejando fuera 442 aperturas de ficha de venta.
+
+**Verificado:** 14/14 casos de la capa de traducción contra el código real compilado (los 4 caminos
+al contacto, casas=venta, `lead_gate` que no se duplica, nulls filtrados, eventos ajenos intactos)
++ en navegador real el recorrido `buscar` (home) → `feed_view` (alquiler) y `feed_view` con
+`operacion=venta` en el otro feed: **el mismo nombre de evento en ambos, que es todo el punto.**
+
+⚠️ **Corte de datos:** los canónicos existen desde el 22-jul. Consultarlos en ventanas anteriores
+da vacío. Y el volumen del primer paso del embudo **sube** por el fix de la cola: no es que llegue
+más gente, es que antes no se contaba.
+
+### Paso 4 · Webhook de Kapso — ✅ CÓDIGO HECHO (22-jul) · ⚠️ falta configurar Kapso
+
+`simon-mvp/src/pages/api/kapso/webhook.ts` + mig 292 (`simon_contactos`, `simon_mensajes`,
+`v_atribucion_contactos`). Es el subconjunto de MEDICIÓN de `CRM_CLIENTES_B2C_PLAN.md` (capas 1 y 2
+tal cual el diseño del 5-jun); la capa 3 (criterios por búsqueda, timeline, UI admin) es CRM y sigue
+en ese plan.
+
+**El bot NO escribe en SICI y no hay que cambiarlo.** Kapso EMPUJA el evento y SICI escribe con su
+propio `service_role`. `bot_kapso_readonly` sigue siendo incapaz de modificar nada.
+
+🎯 **`v_atribucion_contactos` es lo que cierra el círculo.** El endpoint `/ir` precarga en WhatsApp
+*«Hola Simón, vi tu publicación "X" y quiero saber más»*, así que el nombre de la pieza viaja DENTRO
+del mensaje. Cruzándolo con `mkt_piezas` se obtiene lo que hasta ahora era imposible: **qué
+publicación generó una conversación real**, no solo un click.
+
+⚠️ **Límites declarados de esa atribución:** la persona puede borrar el texto antes de enviar; dos
+piezas con nombres parecidos pueden confundirse; solo cubre a quien llegó por `/ir`. **Sirve para
+comparar piezas entre sí, no como conteo absoluto.**
+
+**Verificado con curl** contra el dev server: sin firma → 401 · firma falsa → 401 · firma de otro
+secreto → 401 · **body alterado con la firma del original → 401** (detecta manipulación) · firma
+válida → procesa. Contrato tomado de la doc real de Kapso
+(`lab-kapso/.agents/skills/integrate-whatsapp/references/webhooks-overview.md`): header
+`X-Webhook-Signature` = `HMAC-SHA256(secret, raw body)` en hex, verificado contra los **bytes crudos**
+(por eso `bodyParser: false` — si Next parsea, el JSON re-serializado ya no es el que se firmó).
 
 ## Lo que NO se va a hacer (decidido 22-jul)
 

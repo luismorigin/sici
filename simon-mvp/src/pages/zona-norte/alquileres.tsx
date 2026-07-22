@@ -8,6 +8,7 @@ import { type UnidadAlquiler, type FiltrosAlquiler, buscarUnidadesAlquiler } fro
 import { ZONAS_ZONA_NORTE, getMicrozonasZN, displayZona } from '@/lib/zonas'
 import { dormLabel, formatPriceBob, firstName, nombreAlquiler } from '@/lib/format-utils'
 import { fbqTrack } from '@/lib/meta-pixel'
+import { trackEvent } from '@/lib/analytics'
 import { fetchMercadoAlquilerDataZN as fetchMercadoAlquilerData, type MercadoAlquilerData } from '@/lib/mercado-alquiler-data-zn'
 import { useWhatsAppCapture, triggerWhatsAppCapture, setDemoModeForCapture, setBrokerModeForCapture, setContactoDirectoForCapture } from '@/hooks/useWhatsAppCapture'
 import { buildAlquilerWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
@@ -223,11 +224,6 @@ function trackShareClick(p: UnidadAlquiler) {
 }
 
 // GA event helper — fire and forget, never throws
-function trackEvent(name: string, params?: Record<string, any>) {
-  if (typeof window !== 'undefined' && (window as any).gtag) {
-    (window as any).gtag('event', name, params)
-  }
-}
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false)
