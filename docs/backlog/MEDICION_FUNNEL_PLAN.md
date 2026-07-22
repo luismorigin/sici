@@ -124,26 +124,39 @@ compila sin chistar y revienta en runtime; como el handler atrapa todo y redirig
 era invisible**: redirigía sin texto y sin registrar nada. Se arregló con `Promise.resolve()` y
 tipando `PromiseLike`. Sin probarlo de verdad, esto se iba a producción "funcionando".
 
-### Paso 3 · Los 7 eventos unificados — ⏳ pendiente
-Reemplazan a los ~50 actuales. **La operación va como parámetro, no como sufijo** — eso es lo que
-permite un solo embudo y comparar venta contra alquiler en el mismo informe:
+### Paso 3 · Los 7 eventos unificados — ✅ HECHO (22-jul)
 
-```
-feed_view         { operacion, macrozona, n_resultados }
-buscar            { operacion, texto, n_resultados, origen }
-ficha_abrir       { operacion, property_id, zona, precio }
-favorito          { operacion, property_id, accion }
-contacto_whatsapp { operacion, property_id, ubicacion, zona, precio }   ← LA conversión
-lead_gate         { operacion, property_id }
-puente_click      { pieza, red }
-```
-Incluye: eventos en `/` y `/b/*`, y mandar `visitor_uuid` como `user_id` de GA4 (ya existe en
-`lib/visitor.ts` y en `leads_alquiler.visitor_uuid`; hoy **no** se manda a GA4 — es el hilo que une
-GA4 ↔ BD ↔ WhatsApp). Al hacerlo, **arreglar el funnel de `scripts/check_ga4_metrics.py`**.
+`simon-mvp/src/lib/analytics.ts` + `feed_view` en ventas + `buscar` en la home + `user_id` en `_app`.
 
-**Expectativa honesta:** a 231 usuarios/mes el fondo del embudo tiene números demasiado chicos para
-optimizar por porcentaje (de 3 a 4 contactos no es "+33%", es una persona). El embudo sirve para
-cazar caídas **arriba**, donde hay volumen. Los contactos de abajo se miran **de a uno**.
+**Cómo, sin romper nada:** no se tocaron los ~25 call-sites repartidos en 9 archivos (superficie
+enorme para un cambio de nombres). `lib/analytics.ts` **traduce**: cuando un feed dispara su evento
+legacy, se emiten los dos — el legacy conserva la serie histórica y el canónico alimenta el embudo.
+Para retirar los legacy (~1 mes) alcanza con borrar el mapa `CANONICO`, sin tocar los feeds.
+
+También: se eliminaron las **copias locales de `trackEvent`** en `alquileres.tsx` y
+`zona-norte/alquileres.tsx` (idénticas a la central, pero al no pasar por ella dejaban al feed
+principal fuera del embudo), y `visitor_uuid` se manda a GA4 como `user_id` — el hilo que une
+GA4 ↔ BD ↔ (a futuro) WhatsApp.
+
+🔴 **Hallazgo grande: los eventos de entrada se estaban perdiendo.** GA se inyecta con
+`strategy="lazyOnload"` (después de `window.onload` + idle) pero `feed_view` / `page_enter_alquiler`
+se disparan en el mount, mucho antes; `trackEvent` era no-op si `gtag` no existía todavía. **Está en
+los datos:** `/alquileres` tuvo **202 sesiones** en 28 días y `page_enter_alquiler` registró solo
+**23 usuarios** — el primer paso del embudo sub-reportado ~10x, lo que además inflaba toda tasa de
+conversión calculada sobre él. Ahora se encolan hasta que `gtag` aparece. Verificado con Playwright:
+antes del fix `/ventas` y `/alquileres` emitían **cero** eventos en carga directa; después, todos.
+
+También se arregló `scripts/check_ga4_metrics.py`, que perseguía los nombres de alquileres e
+ignoraba ventas: reportaba "conversión total 0.87%" dejando fuera 442 aperturas de ficha de venta.
+
+**Verificado:** 14/14 casos de la capa de traducción contra el código real compilado (los 4 caminos
+al contacto, casas=venta, `lead_gate` que no se duplica, nulls filtrados, eventos ajenos intactos)
++ en navegador real el recorrido `buscar` (home) → `feed_view` (alquiler) y `feed_view` con
+`operacion=venta` en el otro feed: **el mismo nombre de evento en ambos, que es todo el punto.**
+
+⚠️ **Corte de datos:** los canónicos existen desde el 22-jul. Consultarlos en ventanas anteriores
+da vacío. Y el volumen del primer paso del embudo **sube** por el fix de la cola: no es que llegue
+más gente, es que antes no se contaba.
 
 ### Paso 4 · Webhook de Kapso — ⏳ pendiente (ya diseñado, sin implementar)
 Cierra el círculo: click en la pieza → conversación real. **No requiere darle permiso de escritura al

@@ -2739,6 +2739,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     try { if (localStorage.getItem('ventas_gate_v1')) setGateCompleted(true) } catch {}
   }, [])
 
+  // Entrada al feed. Alquileres tenía `page_enter_alquiler` desde siempre y
+  // ventas no tenía nada equivalente, así que el primer paso del embudo existía
+  // solo para una de las dos operaciones y no se podían comparar.
+  useEffect(() => {
+    trackEvent('feed_view', { operacion: 'venta', macrozona: 'equipetrol' })
+  }, [])
+
   // Deep-link: parse ?edificio= from URL → pre-apply building filter
   useEffect(() => {
     const edificioParam = router.query.edificio

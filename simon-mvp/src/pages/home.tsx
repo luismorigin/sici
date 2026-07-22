@@ -9,6 +9,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GetStaticProps } from 'next'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
+import { trackEvent } from '@/lib/analytics'
 import { fetchSuperficiesData, fetchDestacadosHome, fetchContextoVenta, type SuperficiesMarketData, type DestacadoHome, type ContextoVenta } from '@/lib/superficies-data'
 
 const SIMON_WHATSAPP = '59177066308'
@@ -243,7 +244,16 @@ export default function HomePrincipal({ market, destacados, contexto }: { market
 
   const buscar = (e?: React.FormEvent) => {
     e?.preventDefault()
-    router.push(construirDestino(q))
+    const destino = construirDestino(q)
+    // La home era una caja negra: 68 sesiones en 28 días y CERO eventos, siendo
+    // la puerta de entrada desde el switch del 7-jul. Sin esto no se sabe qué
+    // busca la gente ni si el parser la manda al feed correcto.
+    trackEvent('buscar', {
+      operacion: destino.startsWith('/ventas') ? 'venta' : 'alquiler',
+      texto: q.trim().slice(0, 100),
+      origen: 'home',
+    })
+    router.push(destino)
   }
 
   const fmt = fmtNum
@@ -445,7 +455,14 @@ export default function HomePrincipal({ market, destacados, contexto }: { market
                   const destino = construirDestino(e)
                   const feed = destino.startsWith('/ventas') ? 'Ventas' : 'Alquileres'
                   return (
-                    <button key={e} type="button" className="ej-chip" onClick={() => router.push(destino)}>
+                    <button key={e} type="button" className="ej-chip" onClick={() => {
+                      trackEvent('buscar', {
+                        operacion: destino.startsWith('/ventas') ? 'venta' : 'alquiler',
+                        texto: e.slice(0, 100),
+                        origen: 'home_ejemplo',
+                      })
+                      router.push(destino)
+                    }}>
                       &ldquo;{e}&rdquo;
                       <span className="ej-dest">→ {feed}</span>
                     </button>

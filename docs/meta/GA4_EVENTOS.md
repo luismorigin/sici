@@ -86,6 +86,38 @@
 | `favorite_complete` | Completar seleccion (max) | `resultados-v2.tsx` | Funnel completado |
 | `premium_requested` | Solicitar informe premium | `resultados-v2.tsx` | Conversion premium |
 
+## El embudo canonico (desde 22 jul 2026)
+
+**7 eventos, la operacion como PARAMETRO — no como sufijo.** Es lo que permite
+UN embudo para venta y alquiler, y compararlos en el mismo informe.
+
+| Evento | Cuando | Params |
+|--------|--------|--------|
+| `feed_view` | Entrada a un feed | `operacion`, `macrozona` |
+| `buscar` | Busqueda en la home o en un feed | `operacion`, `texto`, `origen` |
+| `ficha_abrir` | Abre el detalle de una propiedad | `operacion`, `property_id`, `zona`, `precio` |
+| `favorito` | Guarda/quita favorito | `operacion`, `property_id`, `accion` |
+| **`contacto_whatsapp`** | **LA conversion** | `operacion`, `property_id`, `zona`, `precio`, `ubicacion` |
+| `lead_gate` | Completa el gate "ver anuncio" | `operacion`, `property_id` |
+| `puente_click` | Click en `/ir/:codigo` | lo registra el SERVER en Supabase, no pasa por GA4 |
+
+**Como se emiten:** NO se tocaron los ~25 call-sites repartidos en 9 archivos.
+`lib/analytics.ts` **traduce**: cuando un feed dispara su evento legacy, se emiten
+LOS DOS — el legacy conserva la serie historica y el canonico alimenta el embudo.
+Para retirar los legacy (dentro de ~1 mes) alcanza con borrar el mapa `CANONICO`,
+sin tocar los feeds.
+
+| Legacy | Canonico |
+|--------|----------|
+| `page_enter_alquiler` | `feed_view` (alquiler) |
+| `open_detail` / `open_detail_venta` / `open_detail_casa` | `ficha_abrir` |
+| `toggle_favorite` / `toggle_favorite_venta` | `favorito` |
+| `click_whatsapp` / `_broker` / `_venta` / `_casa` | `contacto_whatsapp` |
+| `lead_gate` / `lead_gate_venta` | `lead_gate` (no se duplica) |
+
+**Nota dev:** con `reactStrictMode` los eventos de montaje se ven DOS veces en
+desarrollo (React monta-desmonta-monta). En produccion se emiten una sola vez.
+
 ## Paginas sin tracking custom
 
 | Pagina | Tracking | Notas |
@@ -97,6 +129,16 @@
 
 ## Notas tecnicas
 
+- 🔴 **Los eventos de montaje se PERDIAN si GA no habia cargado todavia** (fix 22-jul-2026).
+  GA se inyecta con `strategy="lazyOnload"` (despues de `window.onload` + idle), pero
+  `feed_view` / `page_enter_alquiler` se disparan en el mount, mucho antes. `trackEvent`
+  era no-op si `gtag` no existia → el primer paso del embudo se perdia. **No es teorico:**
+  `/alquileres` tuvo **202 sesiones** en 28 dias y `page_enter_alquiler` registro solo
+  **23 usuarios** (~10x sub-reportado), lo que ademas inflaba toda tasa de conversion
+  calculada sobre el (denominador faltante). Ahora `lib/analytics.ts` encola hasta que
+  `gtag` aparece (tope 50 eventos, se rinde a los 30s si GA nunca carga).
+  Verificado con Playwright: antes del fix `/ventas` y `/alquileres` emitian CERO eventos
+  en carga directa; despues llegan todos.
 - 🔴 **NUNCA usar `source`, `medium`, `campaign`, `term` o `content` como nombre de parametro
   de evento.** GA4 los trata como **dimensiones reservadas de trafico**: mandarlos en un evento
   **pisa la fuente de la sesion**. Hasta el 22-jul-2026 los eventos mandaban `source:'bottom_sheet'`,

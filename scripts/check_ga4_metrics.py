@@ -87,8 +87,22 @@ KEY_EVENTS_VENTA = [
     "lead_gate_venta",
 ]
 
+# El embudo CANÓNICO (paso 3 del plan de medición, 22-jul-2026).
+#
+# El anterior era ["session_start","view_property","swipe_photos","open_detail",
+# "click_whatsapp"] — todos nombres del feed de ALQUILERES. Perseguía una sola
+# operación e ignoraba ventas por completo: en los 28 días previos reportó
+# "conversión total 0.87%" mientras dejaba fuera 442 aperturas de ficha de venta.
+# Un número presentado como global que en realidad medía media casa.
+#
+# Ahora los dos feeds emiten los mismos nombres con `operacion` como parámetro
+# (ver simon-mvp/src/lib/analytics.ts), así que el embudo es uno solo y se puede
+# segmentar por operación cuando haga falta.
+#
+# ⚠️ Corte de datos: estos eventos existen desde el 22-jul-2026. Para ventanas
+# anteriores el embudo sale vacío — es esperable, no es un bug.
 FUNNEL_EVENTS = [
-    "session_start", "view_property", "swipe_photos", "open_detail", "click_whatsapp",
+    "feed_view", "ficha_abrir", "favorito", "contacto_whatsapp",
 ]
 
 # ======================== CLIENT ========================
