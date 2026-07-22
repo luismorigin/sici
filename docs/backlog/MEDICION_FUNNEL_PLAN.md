@@ -43,6 +43,13 @@ marcar como *evento clave*. Sin esto, GA4 no lo trata como conversión en ningú
 ### 3. Confirmar si Kapso puede mandar webhooks en el plan actual — **pendiente**
 Ver paso 4. El diseño ya existe; falta confirmar que el plan contratado de Kapso lo incluye.
 
+### 4. Aplicar la migración 290 en Supabase — **pendiente, bloquea el registro de `/ir`**
+`sql/migrations/290_mkt_clicks_puente.sql` desde Supabase UI o psql (el MCP es readonly).
+**El endpoint ya funciona sin ella** — redirige bien y con el texto correcto — pero **cada click
+se pierde** hasta que la tabla exista (el insert falla con `PGRST205` y el código lo absorbe a
+propósito: se prefiere perder el dato antes que el lead). Verificar después:
+`SELECT relacl::text FROM pg_class WHERE relname='mkt_clicks_puente';` → no debe aparecer `anon`.
+
 ---
 
 ## Diagnóstico (22 Jul 2026, datos reales)
@@ -82,15 +89,34 @@ del sitio** (700-860 s por sesión, contra 121 s del feed mobile) **y son las qu
 `source`→`origen` (48 llamadas, 8 archivos) · `lib/utm.ts` (origen persistido en sessionStorage) ·
 `traffic_type: internal`. Verificado con Playwright. Cortes de datos en `docs/meta/GA4_EVENTOS.md`.
 
-### Paso 2 · Endpoint `/ir/*` + registro propio — ⏳ pendiente
-El pedido original está en `Higgsfield/publicacion/PEDIDO-DEV.md`. **Corregir antes de pasarlo al dev:**
-sus criterios de aceptación 1 y 2 se contradicen — **un 302 server-side no ejecuta JavaScript, así que
-nunca dispara GA4** (y acá GA carga con `strategy="lazyOnload"`, más tarde todavía). Registrar
-server-side en Supabase + 302, como ya hace `pages/api/abrir-whatsapp.ts` con Slack.
-La tabla de piezas ya existe en la BD: **`mkt_piezas`** (32 filas, `num`/`nombre`/captions por red) —
-mejor fuente que el CSV, evita el hardcode. ⚠️ Filtrar bots: los crawlers de Facebook y WhatsApp
-piden el link para armar el preview e inflan los clicks (`leads_alquiler` ya tiene `es_bot` por esta
-misma lección).
+### Paso 2 · Endpoint `/ir/*` + registro propio — ✅ HECHO (22-jul) · ⚠️ falta aplicar la mig 290
+
+`simon-mvp/src/pages/api/ir/[[...slug]].ts` + rewrite en `next.config.js` + mig 290.
+
+**Se apartó del pedido original** (`Higgsfield/publicacion/PEDIDO-DEV.md`) en un punto: sus criterios
+de aceptación 1 y 2 **se contradicen** — un 302 server-side no ejecuta JavaScript, así que nunca
+dispara GA4 (y acá GA carga con `strategy="lazyOnload"`, más tarde todavía). El registro va a
+Supabase, como ya hace `pages/api/abrir-whatsapp.ts` con Slack. Todo lo demás del pedido se cumple.
+
+Decisiones:
+- **Piezas desde `mkt_piezas`** (no el CSV, no hardcode), cacheadas 1h en memoria: el redirect no
+  puede pagar un roundtrip a la BD solo para armar el texto.
+- **Bots filtrados por user-agent** y NO registrados: los crawlers de FB/WhatsApp piden el link para
+  armar el preview de la tarjeta. Sin esto, cada vez que alguien comparte el link se cuenta un click
+  que nadie hizo (misma lección que `leads_alquiler.es_bot`).
+- **Nada bloquea la llegada a WhatsApp:** timeout de 800 ms al registro y `try/catch` que redirige
+  igual. Perder el dato es aceptable; perder el lead no.
+- Códigos inválidos (`/ir/zzz`) redirigen sin texto pero **se registran con `valido=false`** — un pico
+  ahí significa que hay un caption publicado con el link mal escrito.
+
+**Verificado con curl** (dev): `f03` → texto de la pieza 3 · `i05` → pieza 5 · forma larga → pieza 1 ·
+`zzz` → sin texto · bot FB y preview de WhatsApp → sin registro. **100-130 ms** (requisito: <300 ms).
+
+🐛 **Bug cazado en la verificación, vale recordarlo:** el query builder de supabase-js es un
+*thenable* — tiene `.then()` pero **no `.catch()`**. Pasarlo a un helper tipado como `Promise`
+compila sin chistar y revienta en runtime; como el handler atrapa todo y redirige igual, **el fallo
+era invisible**: redirigía sin texto y sin registrar nada. Se arregló con `Promise.resolve()` y
+tipando `PromiseLike`. Sin probarlo de verdad, esto se iba a producción "funcionando".
 
 ### Paso 3 · Los 7 eventos unificados — ⏳ pendiente
 Reemplazan a los ~50 actuales. **La operación va como parámetro, no como sufijo** — eso es lo que
