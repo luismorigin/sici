@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { trackEvent } from '@/lib/analytics'
 import { fbqTrack } from '@/lib/meta-pixel'
 import { getStoredPhone, setStoredPhone } from '@/lib/user-phone'
+import { getUtms } from '@/lib/utm'
 import { getVisitorId } from '@/lib/visitor'
 import { openWhatsApp } from '@/lib/whatsapp'
 import WhatsAppCaptureModal from '@/components/capture/WhatsAppCaptureModal'
@@ -167,15 +168,9 @@ interface LeadApiPayload {
   modal_action: 'submitted' | 'skipped' | 'reused' | 'dismissed'
 }
 
-function getUtms() {
-  if (typeof window === 'undefined') return {}
-  const sp = new URLSearchParams(window.location.search)
-  return {
-    utm_source: sp.get('utm_source') || undefined,
-    utm_content: sp.get('utm_content') || undefined,
-    utm_campaign: sp.get('utm_campaign') || undefined,
-  }
-}
+// El origen sale de lib/utm (persistido en sessionStorage al entrar al sitio),
+// NO de la URL del momento del click: para cuando la persona toca WhatsApp ya
+// navegó y los UTM de la URL se perdieron. Ver el comentario en lib/utm.ts.
 
 function buildPayload(
   p: CaptureProperty,
@@ -312,7 +307,7 @@ export function useWhatsAppCapture() {
         property_id: p.id,
         zona: p.zona || '',
         operacion: 'alquiler',
-        source: fuente,
+        origen: fuente,
       })
       const payload = buildPayload(p, msg, fuente, preguntas, 'reused', stored.phone, stored.consent)
       postLead(payload).then((ok) => { if (!ok) savePendingLead(payload) })
@@ -326,7 +321,7 @@ export function useWhatsAppCapture() {
       property_id: p.id,
       zona: p.zona || '',
       operacion: 'alquiler',
-      source: fuente,
+      origen: fuente,
     })
   }, [])
 
@@ -345,7 +340,7 @@ export function useWhatsAppCapture() {
       zona: p.zona || '',
       operacion: 'alquiler',
       alert_consent: consent,
-      source: cur.fuente,
+      origen: cur.fuente,
     })
 
     setStoredPhone(normalizedPhone, consent)
@@ -377,7 +372,7 @@ export function useWhatsAppCapture() {
       property_id: p.id,
       zona: p.zona || '',
       operacion: 'alquiler',
-      source: cur.fuente,
+      origen: cur.fuente,
     })
 
     const payload = buildPayload(p, cur.msg, cur.fuente, cur.preguntas, 'skipped', null, false)
@@ -398,7 +393,7 @@ export function useWhatsAppCapture() {
       trackEvent('wa_capture_dismissed', {
         property_id: cur.property.id,
         operacion: 'alquiler',
-        source: cur.fuente,
+        origen: cur.fuente,
       })
       // Persistir dismiss en BD (sin abrir WA) para análisis cross-reference por visitor_uuid.
       // Filtrable downstream con WHERE modal_action != 'dismissed' para leads "válidos".
