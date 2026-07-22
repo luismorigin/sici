@@ -2,7 +2,16 @@
 description: Audit mensual del feed /ventas con FETCHER DIRECTO ($0, sin Firecrawl). Gemela de /audit-feed-ventas-mensual — mismas 3 capas y mismo análisis, pero gratis. Genera reporte ejecutivo con análisis humano.
 ---
 
+
 # Audit mensual — feed /ventas (fetcher directo, $0)
+
+> 🔴 **ALCANCE (desde el 21-jul-2026): esta skill audita ZN + casas, NO Equipetrol.**
+> Corre sobre PROD (`v_mercado_*`, régimen TC viejo). El feed público de **Equipetrol lee SHADOW**
+> desde el lanzamiento del TC nuevo, y lo auditan sus gemelas del híbrido: `/audit-cola-shadow`
+> (matching + dedup) y `/audit-deptos-shadow` (drift + cambio de precio). Correr esta skill con
+> `--macrozona equipetrol` audita data que **nadie ve**, y sus checks de TC (doble normalización,
+> flag paralelo) son del régimen viejo → no aplican a shadow. **Pasar la macrozona ZN explícitamente.**
+> Al cutover (cuando prod = shadow) el alcance vuelve a unificarse. Ver CLAUDE.md regla 15.
 
 **Gemela de `/audit-feed-ventas-mensual`**, con una sola diferencia: la **Capa 1** trae las descripciones con el **fetcher directo del híbrido ZN** (C21 `?json=true` / Remax `data-page`) en vez de Firecrawl → **costo $0**.
 

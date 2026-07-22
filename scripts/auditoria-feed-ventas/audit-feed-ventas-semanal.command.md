@@ -2,7 +2,16 @@
 description: Audit semanal del feed /ventas sin Firecrawl — capas 2+3+4 sobre props nuevas/rango. Costo $0. Reporte ejecutivo con SQL listo. Sin persistencia. v1.6: scope por macrozona (`--macrozona`, default equipetrol = feed público); v1.3: detector TC reescrito (solo doble normalización paralelo).
 ---
 
+
 # Audit semanal — feed /ventas
+
+> 🔴 **ALCANCE (desde el 21-jul-2026): esta skill audita ZN + casas, NO Equipetrol.**
+> Corre sobre PROD (`v_mercado_*`, régimen TC viejo). El feed público de **Equipetrol lee SHADOW**
+> desde el lanzamiento del TC nuevo, y lo auditan sus gemelas del híbrido: `/audit-cola-shadow`
+> (matching + dedup) y `/audit-deptos-shadow` (drift + cambio de precio). Correr esta skill con
+> `--macrozona equipetrol` audita data que **nadie ve**, y sus checks de TC (doble normalización,
+> flag paralelo) son del régimen viejo → no aplican a shadow. **Pasar la macrozona ZN explícitamente.**
+> Al cutover (cuando prod = shadow) el alcance vuelve a unificarse. Ver CLAUDE.md regla 15.
 
 Variante liviana del audit mensual. Cubre props nuevas en una ventana temporal usando solo SQL via MCP `postgres-sici`. **No usa Firecrawl** — por eso no detecta drift contra el portal en vivo, pero captura el 80% del valor del mensual a costo $0.
 
