@@ -17,6 +17,7 @@ import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
 import ReportPropertyModal from '@/components/broker/ReportPropertyModal'
 import DataReportsBanner from '@/components/broker/DataReportsBanner'
 import EdificioSelect from '@/components/feed/EdificioSelect'
+import IsotipoSimon from '@/components/feed/IsotipoSimon'
 import { firstName } from '@/lib/format-utils'
 import { buildAtribucionWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
@@ -1352,7 +1353,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   return (
     <div className="fo-overlay">
       <div className="fo-header">
-        <span className="fo-logo" aria-hidden="true" />
+        <IsotipoSimon size={24} variant="onDark" style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)' }} />
         <span className="fo-hcount">{displayCount} resultados</span>
         <button className="fo-close" aria-label="Cerrar filtros" onClick={onClose}>&times;</button>
       </div>
@@ -4111,7 +4112,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           <header className="mfh">
             <div className="mfh-top">
               <a href="/" className="mfh-brand" aria-label="Simon inicio">
-                <span className="mfh-logo" aria-hidden="true" />
+                <IsotipoSimon size={22} variant="onDark" />
                 <span className="mfh-brand-text">Simon</span>
               </a>
               <div className="mfh-icons">
