@@ -16,6 +16,7 @@ import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
 import { useTypewriterPlaceholder } from '@/lib/useTypewriterPlaceholder'
 import PriceHistogram from '@/components/feed/PriceHistogram'
+import EdificioSelect from '@/components/feed/EdificioSelect'
 import { AmenityIcon, SparkleIcon, hasCanonicalIcon } from '@/lib/amenity-icons'
 import { AMENIDADES_FILTRABLES } from '@/config/amenidades-mercado'
 import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerShortlists'
@@ -2905,13 +2906,7 @@ function FilterPillsAlquiler({ currentFilters, isFiltered, onApply, onReset, pro
               <button className={`df-dorm-btn df-mascotas ${mascotas ? 'active' : ''}`} onClick={handleMascotas}>Mascotas</button>
             </div>
             <div className="df-label"><span className="df-dot" />EDIFICIO</div>
-            <input type="text" className="df-search" placeholder="Buscar edificio..." value={proyecto}
-              onChange={e => handleProyecto(e.target.value)} list="afp-proyectos" autoComplete="off" />
-            {proyectoNames && proyectoNames.length > 0 && (
-              <datalist id="afp-proyectos">
-                {proyectoNames.map(n => <option key={n} value={n} />)}
-              </datalist>
-            )}
+            <EdificioSelect value={proyecto} onChange={handleProyecto} options={proyectoNames || []} variant="light" placeholder="Buscar edificio..." />
           </div>
         )}
       </div>
@@ -3021,13 +3016,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
       {/* Edificio search */}
       <div className="df-group">
         <div className="df-label"><span className="df-dot" />EDIFICIO</div>
-        <input type="text" className="df-search" placeholder="Buscar edificio..." value={proyecto}
-          onChange={e => handleProyecto(e.target.value)} list="df-proyectos" autoComplete="off" />
-        {proyectoNames && proyectoNames.length > 0 && (
-          <datalist id="df-proyectos">
-            {proyectoNames.map(n => <option key={n} value={n} />)}
-          </datalist>
-        )}
+        <EdificioSelect value={proyecto} onChange={handleProyecto} options={proyectoNames || []} variant="light" placeholder="Buscar edificio..." />
       </div>
 
       {/* Microzonas */}
@@ -3214,13 +3203,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
       <div className="afo-body">
         {/* Edificio search */}
         <div className="afo-group"><div className="afo-label"><span className="afo-dot" />EDIFICIO</div>
-          <input type="text" className="afo-search" placeholder="Buscar edificio..." value={proyecto}
-            onChange={e => setProyecto(e.target.value)} list="afo-proyectos" autoComplete="off" />
-          {proyectoNames && proyectoNames.length > 0 && (
-            <datalist id="afo-proyectos">
-              {proyectoNames.map(n => <option key={n} value={n} />)}
-            </datalist>
-          )}
+          <EdificioSelect value={proyecto} onChange={setProyecto} options={proyectoNames || []} variant="light" placeholder="Buscar edificio..." />
         </div>
         {/* Microzonas */}
         <div className="afo-group"><div className="afo-label"><span className="afo-dot" />MICROZONA</div>
