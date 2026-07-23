@@ -9,47 +9,34 @@
 
 ## 🔴 ACCIONES MANUALES DEL FOUNDER (no se pueden hacer desde el repo)
 
-### 1. Activar el filtro de tráfico interno en GA4 — ✅ **ACTIVADO por el founder (22-jul)**
+### 1. Activar el filtro de tráfico interno en GA4 — ✅ **HECHO Y SURTIENDO EFECTO (22-jul)**
 
-> ⚠️ **Todavía no surte efecto: el código que pone la etiqueta no está en producción.** El filtro
-> excluye los hits con `traffic_type=internal`, y ese parámetro lo manda el `gtag('config', …)` de
-> `_app.tsx` — que vive en la rama `fix/analytics-atribucion`, sin pushear. Filtro activo + nadie
-> etiquetando = no filtra nada. Empieza a funcionar con el deploy.
+> Filtro activado por el founder + código en producción (PR #34 mergeado). El `gtag('config', …)`
+> de `_app.tsx` etiqueta con `traffic_type=internal` a quien pasó por `/admin` o `/broker`, y GA4
+> excluye esos hits. Verificar a los 2-3 días que la duración promedio de sesión en desktop **baje**
+> de los ~992s (que eran nuestro propio QA); si sigue alta, revisar que el filtro esté en "Activo"
+> (no "Probando"). No es retroactivo: limpia desde el deploy en adelante.
+>
+> Contexto (por si hay que rehacerlo): el filtro está en GA4 → Administrar → Configuración de datos →
+> Filtros de datos → "Internal Traffic" (acción *Excluir*, `traffic_type=internal`). Etiquetar y
+> excluir son cosas distintas — el filtro es lo que descarta; el código solo etiqueta. El descarte es
+> destructivo e irreversible hacia atrás, por eso Google exige hacerlo a mano una vez.
 
-
-**Qué es, en simple:** el código ya le pone una **etiqueta** a las visitas del equipo (a quien pasó
-alguna vez por `/admin` o `/broker`). Pero **poner la etiqueta y descartar la visita son dos cosas
-distintas**: GA4 recibe el hit etiquetado y lo sigue contando hasta que alguien, desde el panel, le
-dice "a los que traen esta etiqueta, ignoralos". Ese permiso se da una sola vez y a mano — Google no
-deja hacerlo desde el código, justamente porque **descartar tráfico es destructivo**.
-
-**Dónde:** GA4 → **Administrar** (engranaje abajo a la izquierda) → **Configuración de datos** →
-**Filtros de datos**. Ahí suele existir ya un filtro llamado **"Internal Traffic"** creado por Google,
-en estado **"Probando"** (`Testing`). Hay que abrirlo y ponerlo en **"Activo"**.
-Si no existe: **Crear filtro** → tipo *Tráfico interno* → acción *Excluir* → valor del parámetro
-`traffic_type` = `internal` → Activo.
-
-**Por qué importa:** hoy el desktop del sitio son **154 sesiones de solo 34 usuarios con ~992 s de
-duración promedio** — o sea, nosotros trabajando. Mientras eso esté adentro, toda métrica de
-"cuánto se queda la gente" está inflada y no sirve para decidir nada.
-
-⚠️ **Dos advertencias antes de activarlo:**
-- **No es retroactivo.** Los datos viejos siguen incluyendo nuestro tráfico. El corte es desde el día
-  que lo activás.
-- **Es irreversible hacia atrás.** Un hit excluido no se recupera nunca. Es lo correcto acá (queremos
-  que desaparezca), pero conviene saberlo.
-
-**Cómo verificar que quedó bien:** a los 2-3 días, en *Informes → Adquisición*, el promedio de
-duración de sesión de desktop tiene que **bajar** bastante. Si sigue en ~900 s, el filtro no está activo.
-
-### 2. Marcar `contacto_whatsapp` como conversión (key event) en GA4 — **pendiente**
+### 2. Marcar `contacto_whatsapp` como conversión (key event) en GA4 — **⏳ pendiente (lo único que queda)**
 Va junto con el paso 3 (cuando exista el evento unificado). GA4 → Administrar → **Eventos** →
 marcar como *evento clave*. Sin esto, GA4 no lo trata como conversión en ningún informe.
 
-### 3. Confirmar si Kapso puede mandar webhooks en el plan actual — **pendiente**
-Ver paso 4. El diseño ya existe; falta confirmar que el plan contratado de Kapso lo incluye.
+### 3. Confirmar si Kapso puede mandar webhooks en el plan actual — ✅ **CONFIRMADO (22-jul)**
+Sí puede. El webhook quedó creado y probado end-to-end (ver #5).
 
-### 5. Activar el webhook de Kapso — **pendiente, es lo único que falta**
+### 5. Activar el webhook de Kapso — ✅ **HECHO Y VERIFICADO EN PRODUCCIÓN (22-jul)**
+
+> El founder creó el webhook (número `simon`, kind Kapso, v2, eventos `message.received` +
+> `message.sent`) + `KAPSO_WEBHOOK_SECRET` en Vercel + redeploy. Prueba real: abrió `/ir/f03` desde
+> el celular → WhatsApp con el texto → el bot respondió → `v_atribucion_contactos` mostró pieza 3
+> "Los 5 barrios de Equipetrol", `atribuido=true`, `via=nombre`, 2 mensajes (in+out). El bot tiene
+> **un solo número** en la práctica (la doc mencionaba dos por si acaso). Instrucciones abajo por si
+> hay que recrearlo.
 
 > Fuente: doc oficial `docs.kapso.ai` → *Webhooks overview* (la doc local de `lab-kapso` es más
 > vieja y omite el formato de lote y la opción de fijar el secreto).
@@ -94,12 +81,10 @@ SELECT pieza, COUNT(*) FROM v_atribucion_contactos
 Si queda vacío: en Kapso, historial de entregas del webhook. **401** = el secreto no coincide ·
 **503** = falta la variable o el redeploy · **sin intentos** = se creó a nivel proyecto.
 
-### 4. Aplicar la migración 290 en Supabase — **pendiente, bloquea el registro de `/ir`**
-`sql/migrations/290_mkt_clicks_puente.sql` desde Supabase UI o psql (el MCP es readonly).
-**El endpoint ya funciona sin ella** — redirige bien y con el texto correcto — pero **cada click
-se pierde** hasta que la tabla exista (el insert falla con `PGRST205` y el código lo absorbe a
-propósito: se prefiere perder el dato antes que el lead). Verificar después:
-`SELECT relacl::text FROM pg_class WHERE relname='mkt_clicks_puente';` → no debe aparecer `anon`.
+### 4. Aplicar las migraciones 290-293 en Supabase — ✅ **HECHAS Y VERIFICADAS (22-jul)**
+290 (`mkt_clicks_puente`), 291 (fix grants vista), 292 (`simon_contactos`/`simon_mensajes`),
+293 (atribución por código). Aplicadas por el founder desde Supabase UI. Verificado en la BD:
+`anon` no lee ninguna de las tablas/vistas nuevas (`has_table_privilege` = false en las 3).
 
 ---
 
@@ -113,12 +98,12 @@ mobile 269 ses / 207 usuarios (121 s) · desktop 154 ses / 34 usuarios (992 s, =
 
 | # | Problema | Estado |
 |---|---|---|
-| 1 | `source` como parámetro pisaba la fuente de tráfico (29% de sesiones mal atribuidas) | ✅ resuelto 22-jul |
-| 2 | UTM se perdían al navegar dentro del sitio (~40% de leads sin origen) | ✅ resuelto 22-jul |
-| 3 | Tráfico propio contaminaba los promedios | ⚠️ código listo, **falta el click en GA4** |
-| 4 | Eventos duplicados `_venta` vs alquiler → imposible un embudo único | ⏳ paso 3 |
-| 5 | `/` (home, la entrada), `/b/*` (shortlists) y `/whatsapp` sin eventos | ⏳ paso 3 |
-| 6 | Nada mide del lado de WhatsApp — el click no se une al lead | ⏳ paso 4 |
+| 1 | `source` como parámetro pisaba la fuente de tráfico (29% de sesiones mal atribuidas) | ✅ resuelto 22-jul (PR #34) |
+| 2 | UTM se perdían al navegar dentro del sitio (~40% de leads sin origen) | ✅ resuelto 22-jul (PR #34) |
+| 3 | Tráfico propio contaminaba los promedios | ✅ resuelto 22-jul (código en prod + filtro GA4 activo) |
+| 4 | Eventos duplicados `_venta` vs alquiler → imposible un embudo único | ✅ resuelto 22-jul (PR #35, embudo canónico) |
+| 5 | `/` (home, la entrada) sin eventos (+ `/b/*`, `/whatsapp` aún sin eventos propios) | ✅ home resuelta 22-jul; shortlists/whatsapp siguen pendientes (backlog) |
+| 6 | Nada mide del lado de WhatsApp — el click no se une al lead | ✅ resuelto 22-jul (webhook Kapso, PR #35) |
 
 **Sobre el #4, ejemplo concreto del costo:** `scripts/check_ga4_metrics.py` reporta *"conversión
 total 0.87%"*. Es falso: el embudo persigue `view_property → open_detail → click_whatsapp`, que son
@@ -140,7 +125,7 @@ del sitio** (700-860 s por sesión, contra 121 s del feed mobile) **y son las qu
 `source`→`origen` (48 llamadas, 8 archivos) · `lib/utm.ts` (origen persistido en sessionStorage) ·
 `traffic_type: internal`. Verificado con Playwright. Cortes de datos en `docs/meta/GA4_EVENTOS.md`.
 
-### Paso 2 · Endpoint `/ir/*` + registro propio — ✅ HECHO (22-jul) · ⚠️ falta aplicar la mig 290
+### Paso 2 · Endpoint `/ir/*` + registro propio — ✅ HECHO Y EN PRODUCCIÓN (22-jul)
 
 `simon-mvp/src/pages/api/ir/[[...slug]].ts` + rewrite en `next.config.js` + mig 290.
 
