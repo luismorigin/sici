@@ -322,16 +322,50 @@ function construirFila(e, v, match) {
   };
 }
 
+// ── GATE: basura estructural vs operación mal tipeada (gemelo de cargar-deptos-shadow.mjs) ─────
+// Anexos sueltos (baulera/parqueo publicados como "departamento") = basura REAL → se materializa como
+// DESCARTE para que el discovery no los re-proponga al MOAT cada noche. Operación mal tipeada (venta
+// tipeada como alquiler, etc.) → se sigue rechazando. Ver /revisar-routines.
+const _RE_OTRA_OP = /\btipead|\bventa\b|anticr[eé]tico/i;
+const _RE_ANEXO = /\b(baulera|parqueo|garaje|dep[oó]sito)\b/i;
+function esBasuraEstructural(v) {
+  const r = v?.razon_gate || '';
+  if (_RE_OTRA_OP.test(r)) return false;                       // operación mal tipeada → NO tocar
+  const area = v?.area_m2 ?? null;
+  return _RE_ANEXO.test(r) || (area != null && area < 20);
+}
+function construirFilaDescarte(e, v) {
+  const a = e._apply;
+  const tipoAnexo = /parqueo|garaje/i.test(v?.razon_gate || '') ? 'parqueo' : 'baulera';
+  return {
+    id: e.id, url: a.url, fuente: e.fuente,
+    tipo_operacion: 'alquiler', tipo_propiedad_original: tipoAnexo,
+    area_total_m2: v.area_m2 ?? a.area ?? null,
+    latitud: a.latitud ?? null, longitud: a.longitud ?? null, zona: e.zona ?? null, microzona: a.microzona ?? null,
+    status: 'completado', es_activa: false, es_para_matching: false, id_proyecto_master: null,
+    razon_inactiva: 'descarte_gate_basura_estructural', scraper_version: SCRAPER_VERSION,
+    datos_json: {
+      contenido: { descripcion: e.descripcion || '' },
+      senales_portal: e.senales ?? null,
+      trazabilidad: { scraper_version: SCRAPER_VERSION, metodo_match: 'descarte_basura_estructural', razon_gate: v.razon_gate ?? null },
+    },
+  };
+}
+
 async function apply(file) {
   const doc = JSON.parse(readFileSync(file, 'utf-8'));
   const conVer = doc.entradas.filter((e) => e.veredicto);
   const sinVer = doc.entradas.filter((e) => !e.veredicto);
   console.log(`\n✍️  APPLY ALQUILER — ${conVer.length}/${doc.entradas.length} con veredicto${sinVer.length ? ` (faltan ${sinVer.length}: ${sinVer.map((e) => e.id).join(',')})` : ''}\n`);
 
-  const filas = [], rechazados = [], aliasSugeridos = [], reporte = [];
+  const filas = [], rechazados = [], aliasSugeridos = [], reporte = [], descartes = [];
   for (const e of conVer) {
     const v = e.veredicto;
-    if (v.gate === 'rechazar') { rechazados.push({ id: e.id, razon: v.razon_gate }); continue; }
+    if (v.gate === 'rechazar') {
+      // Basura estructural → DESCARTE (no vuelve al MOAT; la vista la excluye). Operación mal tipeada → rechaza.
+      if (esBasuraEstructural(v)) { descartes.push(construirFilaDescarte(e, v)); continue; }
+      rechazados.push({ id: e.id, razon: v.razon_gate }); continue;
+    }
 
     let match = { pm: null, metodo: 'sin_nombre', motivo: '', auto: false };
     if (v.id_proyecto_master != null) {
@@ -364,8 +398,14 @@ async function apply(file) {
     if (error) fallidas.push({ id: f.id, motivo: (error.message.split('\n')[0] || '').slice(0, 80) });
   }
   const escritas = filas.length - fallidas.length;
+  // Descartes (basura estructural) → upsert aparte, no cuentan como "unidades". Resiliente.
+  let descartadas = 0;
+  for (const d of descartes) {
+    const { error } = await sb.from('propiedades_v2_shadow').upsert(d, { onConflict: 'id' });
+    if (!error) descartadas++; else console.log(`⚠️  descarte ${d.id} NO escrito: ${(error.message.split('\n')[0] || '').slice(0, 70)}`);
+  }
   if (rechazados.length) { const prev = leerRechazados(); for (const r of rechazados) prev.add(r.id); writeFileSync(REJ_FILE, JSON.stringify([...prev])); }
-  console.log(`✅ ${escritas} escritos en propiedades_v2_shadow (alquiler).  Rechazados (gate): ${rechazados.length}${rechazados.length ? ' → ' + rechazados.map((r) => `${r.id}(${r.razon})`).join(', ') : ''}${protegidas ? `  ·  fecha protegida (LEAST) en ${protegidas}` : ''}`);
+  console.log(`✅ ${escritas} escritos en propiedades_v2_shadow (alquiler).  Rechazados (gate): ${rechazados.length}${rechazados.length ? ' → ' + rechazados.map((r) => `${r.id}(${r.razon})`).join(', ') : ''}${descartes.length ? `  ·  Descartes basura (baulera/parqueo): ${descartadas}/${descartes.length}` : ''}${protegidas ? `  ·  fecha protegida (LEAST) en ${protegidas}` : ''}`);
   if (fallidas.length) console.log(`⚠️  ${fallidas.length} NO escritas (constraint): ${fallidas.map((f) => `${f.id}(${f.motivo})`).join(', ')}`);
   console.log('');
   for (const r of reporte) console.log(`   ${r.id}  ${r.crudo} ${r.moneda} [${r.tc}]  ${r.dorm}d  edif="${r.edif || '—'}" → pm ${r.pm ?? '—'} [${r.match}]${r.motivo ? '  ·  ' + r.motivo : ''}`);
