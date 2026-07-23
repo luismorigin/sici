@@ -17,6 +17,7 @@ import { parsearBusqueda } from '@/lib/busqueda-natural'
 import { useTypewriterPlaceholder } from '@/lib/useTypewriterPlaceholder'
 import PriceHistogram from '@/components/feed/PriceHistogram'
 import EdificioSelect from '@/components/feed/EdificioSelect'
+import IsotipoSimon from '@/components/feed/IsotipoSimon'
 import { AmenityIcon, SparkleIcon, hasCanonicalIcon } from '@/lib/amenity-icons'
 import { AMENIDADES_FILTRABLES } from '@/config/amenidades-mercado'
 import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerShortlists'
@@ -2055,7 +2056,7 @@ export default function AlquileresPage({
           <header className="mfh">
             <div className="mfh-top">
               <a href="/" className="mfh-brand" aria-label="Simon inicio">
-                <span className="mfh-logo" aria-hidden="true" />
+                <IsotipoSimon size={22} variant="onDark" />
                 <span className="mfh-brand-text">Simon</span>
               </a>
               <div className="mfh-icons">
@@ -3196,7 +3197,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   return (
     <div className="afo-overlay">
       <div className="afo-header">
-        <span className="afo-logo" aria-hidden="true" />
+        <IsotipoSimon size={24} variant="onLight" style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)' }} />
         <span className="afo-hcount">{displayCount} resultados</span>
         <button className="afo-close" onClick={onClose}>&times;</button>
       </div>
