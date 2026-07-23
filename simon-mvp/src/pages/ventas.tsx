@@ -16,6 +16,7 @@ import ShortlistsPanel from '@/components/broker/ShortlistsPanel'
 import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
 import ReportPropertyModal from '@/components/broker/ReportPropertyModal'
 import DataReportsBanner from '@/components/broker/DataReportsBanner'
+import EdificioSelect from '@/components/feed/EdificioSelect'
 import { firstName } from '@/lib/format-utils'
 import { buildAtribucionWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
@@ -407,13 +408,7 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
   return (
     <>
       <div className="vf-group"><div className="vf-label">EDIFICIO</div>
-        <input type="text" className="vf-search" placeholder="Buscar edificio..." value={proyecto}
-          onChange={e => onProyecto(e.target.value)} list="vf-proyectos" autoComplete="off" />
-        {proyectoNames && proyectoNames.length > 0 && (
-          <datalist id="vf-proyectos">
-            {proyectoNames.map(n => <option key={n} value={n} />)}
-          </datalist>
-        )}
+        <EdificioSelect value={proyecto} onChange={onProyecto} options={proyectoNames || []} variant="dark" placeholder="Buscar edificio..." />
       </div>
       <div className="vf-group"><div className="vf-label">ZONA</div>
         <div className="vf-zona-btns">
@@ -715,13 +710,7 @@ function FilterPillsVentas({ currentFilters, isFiltered, onApply, onReset, proye
         {openPill === 'edificio' && (
           <div className="vfp-pop vfp-pop-mas">
             <div className="vf-label">NOMBRE DEL EDIFICIO</div>
-            <input type="text" className="vf-search" placeholder="Ej. Sky Eclipse, Condominio Maré..." value={proyecto}
-              onChange={e => handleProyecto(e.target.value)} list="vfp-proyectos" autoComplete="off" autoFocus />
-            {proyectoNames && proyectoNames.length > 0 && (
-              <datalist id="vfp-proyectos">
-                {proyectoNames.map(n => <option key={n} value={n} />)}
-              </datalist>
-            )}
+            <EdificioSelect value={proyecto} onChange={handleProyecto} options={proyectoNames || []} variant="dark" placeholder="Ej. Sky Eclipse, Condominio Maré..." autoFocus />
           </div>
         )}
       </div>
