@@ -1,19 +1,26 @@
-// /mercado/equipetrol/ventas — página SEO/AEO de mercado (rediseño 21-jul-2026,
-// lanzamiento TC nuevo). Oscura como el feed /ventas (brand v1.4).
+// /mercado/equipetrol/ventas — página SEO/AEO de mercado.
+// Rediseño mobile 22-jul-2026 (MERCADO_MOBILE_REDESIGN_PLAN.md): de documento
+// con tablas a app de indicadores — el resumen primero, el detalle bajo demanda.
 //
 // Principios (no romper):
-//  - AEO: todo server-rendered; cada gráfico tiene su TABLA HTML gemela (los
-//    agentes de IA leen HTML, no canvas); FAQ visible = espejo del FAQPage del
-//    schema; cada cifra viaja con unidad y fecha.
-//  - Fiduciario: la curva USD NUNCA sin el dólar al lado; la caída se declara
-//    como RANGO (la banda 12-17% viene del análisis de métodos, migs 287/288);
-//    yield bruto con su supuesto de amoblados; "precio de oferta, no cierre"
-//    en el cuerpo; medianas con su n. Sin absorción como predicción.
+//  - AEO: todo server-rendered; el schema JSON-LD (Article/Dataset/FAQPage) se
+//    MANTIENE INTACTO del rediseño 21-jul; la tabla gemela de la serie vive en
+//    un <details> (en el DOM aunque colapsada → los agentes la leen); el FAQ
+//    visible sigue siendo espejo del FAQPage del schema.
+//  - Fiduciario: la curva USD NUNCA sin el dólar al lado (toggle explícito de
+//    moneda); la caída se declara como RANGO (banda 12-17%, migs 287/288);
+//    yield bruto con su supuesto de amoblados; "precio de oferta, no cierre";
+//    medianas con su n. SIN comparación preventa/entrega: el pozo real se vende
+//    por canales internos — lo que llega a portales es un recorte sesgado
+//    (decisión founder 22-jul, memoria preventa_pozo_sesgo_portales).
+//  - Mobile: nada desborda el viewport (las tablas de 5 columnas murieron);
+//    números en color pleno ≥13px; el $/m² visible sin abrir nada.
 //  - Datos: KPIs vivos de v_mercado_venta_shadow (fetchMercadoData) · serie
 //    histórica de market_price_reexpresado (ESTIMACIÓN declarada) · yield del
 //    snapshot shadow. Todo graceful: sin serie/extra, la sección no se pinta.
 import Head from 'next/head'
 import Link from 'next/link'
+import { useEffect } from 'react'
 import type { GetStaticProps, InferGetStaticPropsType } from 'next'
 import { Figtree, DM_Sans } from 'next/font/google'
 import { fetchMercadoData } from '@/lib/mercado-data'
@@ -24,7 +31,13 @@ import {
   type VentasShadowExtra,
 } from '@/lib/mercado-shadow-data'
 import { supabase } from '@/lib/supabase'
-import { EvolucionSerie } from '@/components/mercado/EvolucionSerie'
+import { trackEvent } from '@/lib/analytics'
+import SerieInteractiva from '@/components/mercado/SerieInteractiva'
+import TipologiaDrill, { type TipologiaItem } from '@/components/mercado/TipologiaDrill'
+import ZonasBars from '@/components/mercado/ZonasBars'
+import Lectura from '@/components/mercado/Lectura'
+import FaqAccordion from '@/components/mercado/FaqAccordion'
+import CtaSticky from '@/components/mercado/CtaSticky'
 
 const figtree = Figtree({ subsets: ['latin'], weight: ['500', '600'], variable: '--font-figtree', display: 'optional' })
 const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-dm', display: 'optional' })
@@ -57,6 +70,10 @@ export default function MercadoEquipetrol({
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   const mesAnio = formatMesAnio(kpis.fechaActualizacion)
   const fechaCorta = formatFechaCorta(kpis.fechaActualizacion)
+
+  useEffect(() => {
+    trackEvent('mercado_view', { operacion: 'venta' })
+  }, [])
 
   const title = `Precio del m² en Equipetrol hoy: $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD — ${mesAnio} | Simon`
   const description = `Cuanto cuesta un departamento en Equipetrol, Santa Cruz, Bolivia? Precio mediano del m²: $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD. ${kpis.totalPropiedades} propiedades activas en 6 zonas. Datos actualizados ${fechaCorta}. Fuente: Simon Inteligencia Inmobiliaria.`
@@ -192,6 +209,48 @@ export default function MercadoEquipetrol({
 
   const maxRoi = extra?.yieldZonas[0]?.roi || 1
 
+  // Delta del último mes de la serie (para el chip del hero)
+  const ult = serie && serie.puntos.length >= 2 ? serie.puntos[serie.puntos.length - 1] : null
+  const prev = serie && serie.puntos.length >= 2 ? serie.puntos[serie.puntos.length - 2] : null
+  const deltaMes = ult && prev && prev.usd_m2 > 0 ? Math.round((ult.usd_m2 / prev.usd_m2 - 1) * 100) : null
+
+  // Drill de tipologías: precio total + $/m², cada una con su deep-link al feed
+  const drillItems: TipologiaItem[] = tipologias.map(t => ({
+    key: String(t.dormitorios),
+    label: DORM_LABELS[t.dormitorios] || `${t.dormitorios} dormitorios`,
+    sub: `${t.unidades} avisos`,
+    valor: fmt(t.precioMediano),
+    secundario: `${fmt(t.medianaPrecioM2)}/m²`,
+    rangos: [
+      {
+        min: t.precioP25,
+        med: t.precioMediano,
+        max: t.precioP75,
+        fmt,
+        cap: 'Rango típico (la mitad central de los avisos) · la marca es la mediana',
+      },
+      ...(t.m2P25 && t.m2P75
+        ? [{
+            min: t.m2P25,
+            med: t.medianaPrecioM2,
+            max: t.m2P75,
+            fmt: (n: number) => `${fmt(n)}/m²`,
+            cap: 'Lo mismo, por metro cuadrado — para comparar deptos de distinto tamaño',
+          }]
+        : []),
+    ],
+    href: `/ventas?dormitorios=${t.dormitorios}`,
+    hrefLabel: `Ver los ${t.unidades} →`,
+  }))
+
+  // Lecturas calculadas de la data viva (nunca números hardcodeados — doc-rot)
+  const zonasOrd = [...zonas].sort((a, b) => b.medianaPrecioM2 - a.medianaPrecioM2)
+  const zTop = zonasOrd[0]
+  const zBot = zonasOrd[zonasOrd.length - 1]
+  const brechaPct = zTop && zBot ? Math.round((1 - zBot.medianaPrecioM2 / zTop.medianaPrecioM2) * 100) : 0
+  const zMasOferta = [...zonas].sort((a, b) => b.unidades - a.unidades)[0]
+  const concentracionPct = zMasOferta ? Math.round((zMasOferta.unidades / kpis.totalPropiedades) * 100) : 0
+
   return (
     <>
       <Head>
@@ -217,10 +276,17 @@ export default function MercadoEquipetrol({
             <Link href="/" className="mkt-brand">
               <span className="mkt-dot" aria-hidden="true" />
               Simon
-              <span className="mkt-crumb">Mercado · Ventas · Equipetrol</span>
+              <span className="mkt-crumb">Mercado · Equipetrol</span>
             </Link>
             <span className="mkt-badge">Actualizado · {fechaCorta}</span>
           </nav>
+
+          {/* Toggle de operación: NAVEGA entre las dos URLs (SEO intacto,
+              deep-linkeable) — no es estado client-side */}
+          <div className="mkt-op" role="navigation" aria-label="Operación">
+            <span className="mkt-op-on" aria-current="page">Comprar</span>
+            <Link href="/mercado/equipetrol/alquileres" className="mkt-op-off">Alquilar</Link>
+          </div>
 
           <header className="mkt-hero">
             <p className="mkt-kicker">Precio mediano del m² · departamentos en venta</p>
@@ -228,91 +294,94 @@ export default function MercadoEquipetrol({
               {fmt(kpis.medianaPrecioM2)}
               <span className="mkt-h1-sub">USD por m² · precio de oferta</span>
             </h1>
+            <div className="mkt-chips">
+              {deltaMes != null && deltaMes !== 0 && (
+                <span className={`mkt-chip ${deltaMes < 0 ? 'down' : 'up'}`}>
+                  {deltaMes < 0 ? '▼' : '▲'} {deltaMes > 0 ? '+' : ''}{deltaMes}% vs mes anterior (serie)
+                </span>
+              )}
+              <span className="mkt-chip">{kpis.totalPropiedades} deptos{extra?.edificios ? ` · ${extra.edificios} edificios` : ''}</span>
+            </div>
             <p className="mkt-lead">
-              {kpis.totalPropiedades} departamentos verificados diariamente
-              {extra?.edificios ? ` en ${extra.edificios} edificios` : ''} de las 6 zonas de Equipetrol:
-              Centro, Norte, Oeste, Sirari, Villa Brígida y 3er Anillo. Fuente: Century 21, Remax y Bien Inmuebles.
+              {serie
+                ? <>El precio <b>viene bajando desde enero</b>: −12 a −17% en dólares, {serie.varBsPct.toFixed(0)}% en bolivianos. La diferencia entre ambos es el dólar.</>
+                : <>{kpis.totalPropiedades} departamentos verificados diariamente en las 6 zonas de Equipetrol. Fuente: Century 21, Remax y Bien Inmuebles.</>}
             </p>
           </header>
 
           <div className="mkt-cards">
             <div className="mkt-card">
               <span className="mkt-card-l">En oferta</span>
-              <span className="mkt-card-v">{kpis.totalPropiedades}</span>
-              <span className="mkt-card-s">{extra?.edificios ? `en ${extra.edificios} edificios` : 'departamentos'}</span>
+              <span className="mkt-card-v num">{kpis.totalPropiedades}</span>
+              <span className="mkt-card-s">{extra?.edificios ? `${extra.edificios} edificios verificados a diario` : 'verificados a diario'}</span>
             </div>
             {extra?.domVenta != null && (
               <div className="mkt-card">
                 <span className="mkt-card-l">Rotación</span>
-                <span className="mkt-card-v">~{extra.domVenta} días</span>
-                <span className="mkt-card-s">mediana publicado</span>
+                <span className="mkt-card-v num">~{extra.domVenta} <small>días</small></span>
+                <span className="mkt-card-s">lo que lleva publicado un aviso</span>
               </div>
             )}
             {tcHoy != null && (
               <div className="mkt-card">
                 <span className="mkt-card-l">Dólar hoy</span>
-                <span className="mkt-card-v">Bs {tcHoy.toFixed(2).replace('.', ',')}</span>
+                <span className="mkt-card-v num">Bs {tcHoy.toFixed(2).replace('.', ',')}</span>
                 <span className="mkt-card-s">paralelo Binance</span>
               </div>
             )}
             <div className="mkt-card">
               <span className="mkt-card-l">Actividad</span>
-              <span className="mkt-card-v">{kpis.absorcionPct}%</span>
-              <span className="mkt-card-s">retiros mensuales *</span>
+              <span className="mkt-card-v num">{kpis.absorcionPct}%</span>
+              <span className="mkt-card-s">{kpis.absorcionPct >= 20 ? `1 de cada ${Math.round(100 / kpis.absorcionPct)} avisos se retira al mes *` : 'retiros mensuales *'}</span>
             </div>
           </div>
 
           {serie && (
             <section className="mkt-sec" aria-labelledby="sec-evolucion">
-              <h2 id="sec-evolucion" className="mkt-h2">Evolución del precio — {serie.puntos[0].mes.toLowerCase()} a {serie.puntos[serie.puntos.length - 1].mes.toLowerCase()}</h2>
-              <p className="mkt-sub">Base 100 = {serie.puntos[0].mes.toLowerCase()} · 1 dormitorio (la tipología más ofertada) · serie reexpresada al criterio actual de precios</p>
-              <div className="mkt-legend">
-                <span><i className="mkt-sw" style={{ background: '#EDE8DC' }} />En dólares −12 a −17%</span>
-                <span><i className="mkt-sw" style={{ background: '#7FB08A' }} />En bolivianos {serie.varBsPct.toFixed(0)}%</span>
-                <span><i className="mkt-sw" style={{ background: '#C9A15A' }} />Dólar paralelo +{serie.varTcPct.toFixed(0)}%</span>
-              </div>
-              <EvolucionSerie serie={serie} />
-              <div className="mkt-note">
-                La brecha entre las dos curvas es el dólar: el precio en la moneda local bajó mucho menos de lo
-                que sugiere la cifra en USD. La magnitud exacta en dólares depende del método de reexpresión
+              <h2 id="sec-evolucion" className="mkt-h2">¿Hacia dónde va el precio?</h2>
+              <p className="mkt-sub">
+                {serie.puntos[0].mes} → {serie.puntos[serie.puntos.length - 1].mes} · 1 dormitorio (la tipología más ofertada) · serie reexpresada al criterio actual de precios
+              </p>
+              <SerieInteractiva serie={serie} operacion="venta" />
+              <Lectura>
+                <b>La brecha entre monedas es el dólar</b>: el precio en bolivianos bajó mucho menos de lo que
+                sugiere la cifra en USD. La magnitud exacta en dólares depende del método de reexpresión
                 (entre 12% y 17%); la forma de la curva es robusta. Precio de publicación — el de cierre puede diferir.
-              </div>
-              <table className="mkt-table" aria-label="Serie mensual del precio por metro cuadrado">
-                <thead>
-                  <tr><th>Mes</th><th>USD/m²</th><th>Bs/m²</th><th>Dólar (Bs)</th></tr>
-                </thead>
-                <tbody>
-                  {serie.puntos.map(p => (
-                    <tr key={p.mes}>
-                      <td>{p.mes}</td>
-                      <td>{fmt(p.usd_m2)}</td>
-                      <td>Bs {p.bs_m2.toLocaleString('es-BO')}</td>
-                      <td>{p.tc.toFixed(2).replace('.', ',')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              </Lectura>
             </section>
           )}
 
-          {extra?.spread && (
-            <section className="mkt-sec" aria-labelledby="sec-spread">
-              <h2 id="sec-spread" className="mkt-h2">Preventa vs entrega inmediata</h2>
-              <p className="mkt-sub">Mediana USD/m² del inventario activo · solo avisos con estado declarado</p>
-              <div className="mkt-pair">
-                <div className="mkt-card">
-                  <span className="mkt-card-l">Preventa · {extra.spread.prevN} avisos</span>
-                  <span className="mkt-card-v">{fmt(extra.spread.prevM2)}<em>/m²</em></span>
-                  <span className="mkt-bar"><i style={{ width: `${Math.round((extra.spread.prevM2 / Math.max(extra.spread.prevM2, extra.spread.entrM2)) * 100)}%`, background: '#7FB08A' }} /></span>
-                </div>
-                <div className="mkt-card">
-                  <span className="mkt-card-l">Entrega inmediata · {extra.spread.entrN} avisos</span>
-                  <span className="mkt-card-v">{fmt(extra.spread.entrM2)}<em>/m²</em></span>
-                  <span className="mkt-bar"><i style={{ width: `${Math.round((extra.spread.entrM2 / Math.max(extra.spread.prevM2, extra.spread.entrM2)) * 100)}%`, background: 'rgba(237,232,220,0.55)' }} /></span>
-                </div>
-              </div>
-            </section>
-          )}
+          <section className="mkt-sec" aria-labelledby="sec-tipologias">
+            <h2 id="sec-tipologias" className="mkt-h2">¿Cuánto cuesta el tuyo?</h2>
+            <p className="mkt-sub">Tocá una tipología para ver el rango típico · USD, inventario activo</p>
+            <TipologiaDrill items={drillItems} operacion="venta" />
+            {zTop && zBot && brechaPct > 0 && (
+              <Lectura>
+                <b>El precio depende más de la zona que del tamaño</b>: el m² va de {fmt(zTop.medianaPrecioM2)} en{' '}
+                {zTop.zonaDisplay} a {fmt(zBot.medianaPrecioM2)} en {zBot.zonaDisplay} (−{brechaPct}%). Mirá tu zona
+                abajo antes de comparar.
+              </Lectura>
+            )}
+          </section>
+
+          <section className="mkt-sec" aria-labelledby="sec-zonas">
+            <h2 id="sec-zonas" className="mkt-h2">Las zonas, comparadas</h2>
+            <p className="mkt-sub">USD/m² mediano · más caro arriba · zonas con menos de 5 avisos no se muestran</p>
+            <ZonasBars
+              items={zonas.filter(z => z.unidades >= 5).map(z => ({
+                label: z.zonaDisplay,
+                sub: `${z.unidades} avisos`,
+                valor: z.medianaPrecioM2,
+                valorFmt: fmt(z.medianaPrecioM2),
+              }))}
+            />
+            {zTop && zBot && zMasOferta && (
+              <Lectura>
+                <b>{zBot.zonaDisplay} cuesta −{brechaPct}% que {zTop.zonaDisplay}</b> — la brecha más grande del
+                mapa. {zMasOferta.zonaDisplay} concentra el {concentracionPct}% de la oferta.
+              </Lectura>
+            )}
+          </section>
 
           {extra && extra.yieldZonas.length > 0 && (
             <section className="mkt-sec" aria-labelledby="sec-yield">
@@ -323,63 +392,16 @@ export default function MercadoEquipetrol({
                   <div className="mkt-row" key={y.zona}>
                     <span className="mkt-row-l">{y.zona}</span>
                     <span className="mkt-row-track"><i style={{ width: `${Math.round((y.roi / maxRoi) * 100)}%` }} /></span>
-                    <span className="mkt-row-v">{y.roi.toFixed(1).replace('.', ',')}%</span>
+                    <span className="mkt-row-v num">{y.roi.toFixed(1).replace('.', ',')}%</span>
                   </div>
                 ))}
               </div>
             </section>
           )}
 
-          <section className="mkt-sec" aria-labelledby="sec-tipologias">
-            <h2 id="sec-tipologias" className="mkt-h2">Precios por tipología</h2>
-            <p className="mkt-sub">Mediana y rango típico (p25–p75) del inventario activo, en USD</p>
-            <table className="mkt-table" aria-label="Precios por tipología">
-              <thead>
-                <tr><th>Tipología</th><th>Unidades</th><th>Mediana</th><th>Rango típico</th><th>$/m²</th></tr>
-              </thead>
-              <tbody>
-                {tipologias.map(t => (
-                  <tr key={t.dormitorios}>
-                    <td>{DORM_LABELS[t.dormitorios] || `${t.dormitorios}D`}</td>
-                    <td>{t.unidades}</td>
-                    <td>{fmt(t.precioMediano)}</td>
-                    <td>{fmt(t.precioP25)} – {fmt(t.precioP75)}</td>
-                    <td>{fmt(t.medianaPrecioM2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          <section className="mkt-sec" aria-labelledby="sec-zonas">
-            <h2 id="sec-zonas" className="mkt-h2">Precios por zona</h2>
-            <table className="mkt-table" aria-label="Precios por zona">
-              <thead>
-                <tr><th>Zona</th><th>Unidades</th><th>$/m² mediana</th><th>Precio mediano</th></tr>
-              </thead>
-              <tbody>
-                {zonas.map(z => (
-                  <tr key={z.zonaDisplay}>
-                    <td>{z.zonaDisplay}</td>
-                    <td>{z.unidades}</td>
-                    <td>{fmt(z.medianaPrecioM2)}</td>
-                    <td>{fmt(z.precioMediano)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
           <section className="mkt-sec" aria-labelledby="sec-faq">
             <h2 id="sec-faq" className="mkt-h2">Preguntas que responde esta página</h2>
-            <div className="mkt-faq">
-              {faq.map(f => (
-                <div className="mkt-qa" key={f.q}>
-                  <h3 className="mkt-q">{f.q}</h3>
-                  <p className="mkt-a">{f.a}</p>
-                </div>
-              ))}
-            </div>
+            <FaqAccordion items={faq} />
           </section>
 
           <footer className="mkt-foot">
@@ -395,55 +417,72 @@ export default function MercadoEquipetrol({
             <div className="mkt-links">
               <Link href="/mercado/equipetrol/alquileres">Ver mercado de alquileres</Link>
               <span aria-hidden="true">·</span>
-              <Link href="/ventas">Ver los departamentos en venta</Link>
-              <span aria-hidden="true">·</span>
               <Link href="/mercado/equipetrol">Volver al índice</Link>
             </div>
           </footer>
         </article>
 
+        <CtaSticky href="/ventas" label={`Ver los ${kpis.totalPropiedades} departamentos →`} operacion="venta" />
+
         <style jsx>{`
-          .mkt { min-height: 100vh; background: #141414; color: #EDE8DC; font-family: var(--font-dm), 'DM Sans', sans-serif; }
-          .mkt-wrap { max-width: 760px; margin: 0 auto; padding: 0 20px 48px; }
+          .mkt {
+            min-height: 100vh; background: #141414; color: #EDE8DC; font-family: var(--font-dm), 'DM Sans', sans-serif;
+            /* Tema de los componentes compartidos (components/mercado/) */
+            --mx-bg: #141414;
+            --mx-bg-fade: rgba(20, 20, 20, 0.9);
+            --mx-text: #EDE8DC;
+            --mx-dim: rgba(237, 232, 220, 0.62);
+            --mx-dim2: rgba(237, 232, 220, 0.4);
+            --mx-panel: rgba(237, 232, 220, 0.05);
+            --mx-panel2: rgba(237, 232, 220, 0.12);
+            --mx-line: rgba(237, 232, 220, 0.09);
+            --mx-accent: #9DBF9E;
+            --mx-accent-deep: #3A6A48;
+            --mx-bar-deep: #2E5239;
+            --mx-bar-a: rgba(157, 191, 158, 0.35);
+            --mx-bar-b: rgba(157, 191, 158, 0.75);
+            --mx-lectura-bg: rgba(58, 106, 72, 0.16);
+            --mx-lectura-border: rgba(58, 106, 72, 0.3);
+            --mx-lectura-text: #B9CDB9;
+          }
+          .mkt-wrap { max-width: 760px; margin: 0 auto; padding: 0 20px 110px; }
           .mkt-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0; border-bottom: 1px solid rgba(237,232,220,0.09); flex-wrap: wrap; }
           .mkt-brand { display: flex; align-items: center; gap: 8px; color: #EDE8DC; text-decoration: none; font-weight: 500; font-size: 15px; letter-spacing: 0.3px; }
           .mkt-dot { width: 10px; height: 10px; border-radius: 50%; background: #3A6A48; }
           .mkt-crumb { color: rgba(237,232,220,0.58); font-size: 13px; font-weight: 400; margin-left: 8px; }
           .mkt-badge { font-size: 12px; color: #9DBF9E; border: 1px solid rgba(58,106,72,0.5); padding: 3px 10px; border-radius: 100px; white-space: nowrap; }
-          .mkt-hero { padding: 34px 0 22px; }
+          .mkt-op { display: grid; grid-template-columns: 1fr 1fr; background: rgba(237,232,220,0.05); border: 1px solid rgba(237,232,220,0.09); border-radius: 12px; padding: 3px; margin-top: 14px; }
+          .mkt-op-on { padding: 9px 0; border-radius: 9px; font-size: 13.5px; font-weight: 600; text-align: center; background: #3A6A48; color: #F2EFE6; }
+          .mkt-op :global(.mkt-op-off) { padding: 9px 0; border-radius: 9px; font-size: 13.5px; font-weight: 500; text-align: center; color: rgba(237,232,220,0.62); text-decoration: none; }
+          .mkt-op :global(.mkt-op-off:hover) { color: #EDE8DC; }
+          .mkt-hero { padding: 26px 0 20px; border-bottom: 1px solid rgba(237,232,220,0.09); }
           .mkt-kicker { margin: 0 0 8px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(237,232,220,0.62); }
-          .mkt-h1 { margin: 0; font-family: var(--font-figtree), 'Figtree', sans-serif; font-size: clamp(38px, 8vw, 54px); font-weight: 600; letter-spacing: -1px; line-height: 1.05; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+          .mkt-h1 { margin: 0; font-family: var(--font-figtree), 'Figtree', sans-serif; font-size: clamp(38px, 8vw, 54px); font-weight: 600; letter-spacing: -1px; line-height: 1.05; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
           .mkt-h1-sub { font-family: var(--font-dm), 'DM Sans', sans-serif; font-size: 15px; font-weight: 400; letter-spacing: 0; color: rgba(237,232,220,0.55); }
-          .mkt-lead { margin: 12px 0 0; font-size: 13.5px; color: rgba(237,232,220,0.66); line-height: 1.65; max-width: 560px; }
-          .mkt-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; padding-bottom: 26px; }
-          .mkt-card { background: rgba(237,232,220,0.05); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
-          .mkt-card-l { font-size: 12px; color: rgba(237,232,220,0.62); }
-          .mkt-card-v { font-size: 20px; font-weight: 500; color: #EDE8DC; }
-          .mkt-card-v em { font-style: normal; font-size: 13px; color: rgba(237,232,220,0.62); }
-          .mkt-card-s { font-size: 12px; color: rgba(237,232,220,0.6); }
+          .mkt-chips { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+          .mkt-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; padding: 5px 10px; border-radius: 999px; background: rgba(237,232,220,0.05); border: 1px solid rgba(237,232,220,0.09); color: rgba(237,232,220,0.62); font-variant-numeric: tabular-nums; }
+          .mkt-chip.down { color: #D08770; border-color: rgba(208,135,112,0.3); }
+          .mkt-chip.up { color: #D4A93C; border-color: rgba(212,169,60,0.3); }
+          .mkt-lead { margin: 14px 0 0; font-size: 14px; color: rgba(237,232,220,0.66); line-height: 1.6; max-width: 560px; }
+          .mkt-lead b { color: #EDE8DC; font-weight: 500; }
+          .num { font-variant-numeric: tabular-nums; }
+          .mkt-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 18px 0 26px; }
+          @media (min-width: 640px) { .mkt-cards { grid-template-columns: repeat(4, 1fr); } }
+          .mkt-card { background: rgba(237,232,220,0.05); border: 1px solid rgba(237,232,220,0.09); border-radius: 14px; padding: 13px 14px; display: flex; flex-direction: column; gap: 4px; }
+          .mkt-card-l { font-size: 10.5px; letter-spacing: 1.3px; text-transform: uppercase; color: rgba(237,232,220,0.62); }
+          .mkt-card-v { font-family: var(--font-figtree), 'Figtree', sans-serif; font-size: 22px; font-weight: 600; color: #EDE8DC; letter-spacing: -0.02em; }
+          .mkt-card-v small { font-size: 12px; font-weight: 400; color: rgba(237,232,220,0.62); }
+          .mkt-card-s { font-size: 12px; color: rgba(237,232,220,0.62); line-height: 1.4; }
           .mkt-sec { padding: 22px 0; border-top: 1px solid rgba(237,232,220,0.09); }
-          .mkt-h2 { margin: 0 0 3px; font-family: var(--font-figtree), 'Figtree', sans-serif; font-size: 18px; font-weight: 600; color: #EDE8DC; }
-          .mkt-sub { margin: 0 0 14px; font-size: 12.5px; color: rgba(237,232,220,0.66); line-height: 1.5; }
-          .mkt-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; font-size: 12px; color: rgba(237,232,220,0.7); }
-          .mkt-legend span { display: inline-flex; align-items: center; gap: 5px; }
-          .mkt-sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; }
-          .mkt-note { margin-top: 12px; background: rgba(58,106,72,0.16); border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #B9CDB9; line-height: 1.6; }
-          .mkt-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
-          .mkt-table th { text-align: left; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(237,232,220,0.62); padding: 8px 10px; border-bottom: 1px solid rgba(237,232,220,0.12); }
-          .mkt-table td { padding: 9px 10px; border-bottom: 1px solid rgba(237,232,220,0.06); color: rgba(237,232,220,0.85); }
-          .mkt-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
-          .mkt-bar { display: block; height: 6px; background: rgba(237,232,220,0.1); border-radius: 3px; margin-top: 8px; overflow: hidden; }
-          .mkt-bar i { display: block; height: 100%; border-radius: 3px; }
-          .mkt-rows { display: flex; flex-direction: column; gap: 8px; }
-          .mkt-row { display: grid; grid-template-columns: 92px 1fr 52px; gap: 10px; align-items: center; }
+          .mkt-sec:first-of-type { border-top: 0; }
+          .mkt-h2 { margin: 0 0 3px; font-family: var(--font-figtree), 'Figtree', sans-serif; font-size: 17px; font-weight: 600; color: #EDE8DC; }
+          .mkt-sub { margin: 0 0 4px; font-size: 12.5px; color: rgba(237,232,220,0.66); line-height: 1.5; }
+          .mkt-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+          .mkt-row { display: grid; grid-template-columns: 96px 1fr 56px; gap: 10px; align-items: center; }
           .mkt-row-l { font-size: 12.5px; color: rgba(237,232,220,0.7); text-align: right; }
           .mkt-row-track { display: block; height: 18px; background: rgba(237,232,220,0.07); border-radius: 4px; overflow: hidden; }
           .mkt-row-track i { display: block; height: 100%; background: #3A6A48; border-radius: 4px; }
-          .mkt-row-v { font-size: 13px; font-weight: 500; color: #9DBF9E; }
-          .mkt-faq { display: flex; flex-direction: column; gap: 10px; }
-          .mkt-qa { background: rgba(237,232,220,0.04); border-radius: 8px; padding: 12px 14px; }
-          .mkt-q { margin: 0 0 4px; font-size: 13.5px; font-weight: 500; color: #EDE8DC; font-family: var(--font-dm), 'DM Sans', sans-serif; }
-          .mkt-a { margin: 0; font-size: 13px; color: rgba(237,232,220,0.68); line-height: 1.65; }
+          .mkt-row-v { font-size: 13px; font-weight: 500; color: #9DBF9E; text-align: right; }
           .mkt-foot { border-top: 1px solid rgba(237,232,220,0.09); padding-top: 18px; margin-top: 4px; }
           .mkt-foot p { margin: 0 0 10px; font-size: 12px; color: rgba(237,232,220,0.6); line-height: 1.7; }
           .mkt-links { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: rgba(237,232,220,0.6); }
@@ -463,7 +502,7 @@ export const getStaticProps: GetStaticProps<{
   extra: VentasShadowExtra | null
   tcHoy: number | null
 }> = async () => {
-  const [data, serie, extra, tcRes] = await Promise.all([
+  const [data, serie, extraRaw, tcRes] = await Promise.all([
     fetchMercadoData(),
     fetchSerieMensualVentas(),
     fetchVentasShadowExtra(),
@@ -475,6 +514,10 @@ export const getStaticProps: GetStaticProps<{
   // El histórico prod (régimen viejo) NO viaja en props: la curva sale de la
   // serie reexpresada. Se destructura para no serializarlo en __NEXT_DATA__.
   const { kpis, tipologias, zonas, generatedAt } = data
+  // El spread preventa/entrega ya no se muestra (el pozo real se vende por
+  // canales internos; los portales ven un recorte sesgado — decisión founder
+  // 22-jul). Se anula para no serializar data que la página no usa.
+  const extra = extraRaw ? { ...extraRaw, spread: null } : null
   return {
     props: { kpis, tipologias, zonas, generatedAt, serie, extra, tcHoy },
     revalidate: 21600, // 6 horas (la data se refresca con el cron nocturno)

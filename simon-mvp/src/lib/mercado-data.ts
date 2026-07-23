@@ -17,6 +17,12 @@ export interface TipologiaRow {
   precioP25: number
   precioP75: number
   medianaPrecioM2: number
+  // Rango típico del $/m² (rediseño mobile): el rango de precio total solo no
+  // responde "¿es caro para lo que es, o solo es grande?". Opcionales porque el
+  // FALLBACK (snapshot real de mar-2026) no los tiene y no se inventan datos —
+  // la UI muestra el rango de m² solo cuando existe.
+  m2P25?: number
+  m2P75?: number
 }
 
 export interface ZonaRow {
@@ -194,6 +200,8 @@ export async function fetchMercadoData(): Promise<MercadoData> {
         precioP25: Math.round(percentile(precios, 0.25)),
         precioP75: Math.round(percentile(precios, 0.75)),
         medianaPrecioM2: Math.round(percentile(preciosM2, 0.5)),
+        m2P25: Math.round(percentile(preciosM2, 0.25)),
+        m2P75: Math.round(percentile(preciosM2, 0.75)),
       }
     }).filter(t => t.unidades > 0)
 

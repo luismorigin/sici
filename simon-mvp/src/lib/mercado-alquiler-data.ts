@@ -11,6 +11,12 @@ export interface AlquilerKPIs {
   fechaActualizacion: string
 }
 
+/** Mediana de un corte con su n — el n viaja SIEMPRE (doctrina de muestras). */
+export interface CorteMediana {
+  n: number
+  medianaBs: number
+}
+
 export interface AlquilerTipologiaRow {
   dormitorios: number
   unidades: number
@@ -18,6 +24,13 @@ export interface AlquilerTipologiaRow {
   rentaP25Bs: number
   rentaP75Bs: number
   bsM2Mediana: number
+  // Split amoblado POR tipología (rediseño mobile). NUNCA comparar amoblado
+  // global: los amoblados se concentran en monoambientes y el agregado dice lo
+  // contrario que cada tipología (paradoja de composición medida el 22-jul).
+  // "Sin declarar" y no "no amoblado": el negativo casi nunca se declara.
+  // null = no llega al gate n>=5 (no se publican medianas de muestras chicas).
+  amobladoSi: CorteMediana | null
+  sinDeclarar: CorteMediana | null
 }
 
 export interface AlquilerZonaRow {
@@ -79,10 +92,10 @@ const FALLBACK_DATA: MercadoAlquilerData = {
     fechaActualizacion: '2026-03-17',
   },
   tipologias: [
-    { dormitorios: 0, unidades: 11, rentaMedianaBs: 3500, rentaP25Bs: 2800, rentaP75Bs: 4200, bsM2Mediana: 95 },
-    { dormitorios: 1, unidades: 71, rentaMedianaBs: 4500, rentaP25Bs: 3500, rentaP75Bs: 5800, bsM2Mediana: 80 },
-    { dormitorios: 2, unidades: 53, rentaMedianaBs: 6500, rentaP25Bs: 5000, rentaP75Bs: 8500, bsM2Mediana: 72 },
-    { dormitorios: 3, unidades: 12, rentaMedianaBs: 10500, rentaP25Bs: 8000, rentaP75Bs: 13000, bsM2Mediana: 65 },
+    { dormitorios: 0, unidades: 11, rentaMedianaBs: 3500, rentaP25Bs: 2800, rentaP75Bs: 4200, bsM2Mediana: 95, amobladoSi: null, sinDeclarar: null },
+    { dormitorios: 1, unidades: 71, rentaMedianaBs: 4500, rentaP25Bs: 3500, rentaP75Bs: 5800, bsM2Mediana: 80, amobladoSi: null, sinDeclarar: null },
+    { dormitorios: 2, unidades: 53, rentaMedianaBs: 6500, rentaP25Bs: 5000, rentaP75Bs: 8500, bsM2Mediana: 72, amobladoSi: null, sinDeclarar: null },
+    { dormitorios: 3, unidades: 12, rentaMedianaBs: 10500, rentaP25Bs: 8000, rentaP75Bs: 13000, bsM2Mediana: 65, amobladoSi: null, sinDeclarar: null },
   ],
   zonas: [
     { zonaDisplay: 'Eq. Centro', unidades: 66, bsM2Promedio: 79, rentaMedianaBs: 5200 },
@@ -106,6 +119,7 @@ interface RawAlquilerProp {
   id_proyecto_master: number | null
   es_multiproyecto: boolean | null
   tipo_propiedad_original: string | null
+  amoblado: string | null // 'si' | 'no' | 'semi' | null (solo el positivo es confiable)
 }
 
 export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
@@ -116,7 +130,7 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
     // feed). Al cutover se repointea a v_mercado_alquiler (CUTOVER_DATA_PLAN).
     const { data: rawProps } = await supabase
       .from('v_mercado_alquiler_shadow')
-      .select('precio_mensual_bob, precio_mensual_usd, area_total_m2, dormitorios, zona, id_proyecto_master, es_multiproyecto, tipo_propiedad_original')
+      .select('precio_mensual_bob, precio_mensual_usd, area_total_m2, dormitorios, zona, id_proyecto_master, es_multiproyecto, tipo_propiedad_original, amoblado')
 
     if (!rawProps || rawProps.length === 0) {
       console.warn('fetchMercadoAlquilerData: no data, using fallback')
@@ -157,13 +171,26 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
     // --- Tipologias ---
     const dormGroups: Record<number, number[]> = {}
     const dormBsM2: Record<number, number[]> = {}
+    // Split amoblado POR tipología: 'si' vs sin-declarar. 'no'/'semi' quedan
+    // fuera del split (n≈2-5 en toda la base — el negativo no se declara).
+    const dormAmoSi: Record<number, number[]> = {}
+    const dormAmoNd: Record<number, number[]> = {}
     props.forEach(p => {
       const d = p.dormitorios ?? -1
       if (d < 0 || d > 3) return
-      if (!dormGroups[d]) { dormGroups[d] = []; dormBsM2[d] = [] }
+      if (!dormGroups[d]) { dormGroups[d] = []; dormBsM2[d] = []; dormAmoSi[d] = []; dormAmoNd[d] = [] }
       dormGroups[d].push(p.precio_mensual_bob)
       if (p.area_total_m2 > 0) dormBsM2[d].push(p.precio_mensual_bob / p.area_total_m2)
+      if (p.amoblado === 'si') dormAmoSi[d].push(p.precio_mensual_bob)
+      else if (p.amoblado == null) dormAmoNd[d].push(p.precio_mensual_bob)
     })
+
+    // Gate n>=5: bajo el umbral el corte no se publica (mediana de 2 avisos = ruido)
+    const corteDe = (vals: number[]): CorteMediana | null => {
+      if (vals.length < 5) return null
+      const sorted = [...vals].sort((a, b) => a - b)
+      return { n: sorted.length, medianaBs: Math.round(percentile(sorted, 0.5)) }
+    }
 
     const tipologias: AlquilerTipologiaRow[] = Object.entries(dormGroups)
       .map(([dStr, precios]) => {
@@ -177,6 +204,8 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
           rentaP25Bs: Math.round(percentile(sorted, 0.25)),
           rentaP75Bs: Math.round(percentile(sorted, 0.75)),
           bsM2Mediana: Math.round(percentile(bsm2Sorted, 0.5) * 10) / 10,
+          amobladoSi: corteDe(dormAmoSi[d] || []),
+          sinDeclarar: corteDe(dormAmoNd[d] || []),
         }
       })
       .sort((a, b) => a.dormitorios - b.dormitorios)
