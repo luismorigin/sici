@@ -303,16 +303,56 @@ function construirFila(e, v, match) {
   };
 }
 
+// ── GATE: basura estructural vs operación mal tipeada ─────────────────────────────────────────
+// El lector rechaza DOS cosas muy distintas: (1) anexos sueltos (baulera/parqueo publicados como
+// "departamento") = basura REAL que nunca es una unidad; (2) deptos reales tipeados en otra operación
+// (alquiler/anticrético como venta). SOLO la (1) se materializa como DESCARTE en shadow: así su URL
+// queda registrada y el discovery deja de re-proponerla al MOAT cada noche. La (2) se sigue rechazando
+// (podría corregirla el captador → recapturar). razon_gate real: "baulera suelta 3 m²",
+// "parqueo suelto 12,50 m²", "operación alquiler tipeada como venta…". Ver /revisar-routines.
+const _RE_OTRA_OP = /\btipead|alquiler|anticr[eé]tico/i;
+const _RE_ANEXO = /\b(baulera|parqueo|garaje|dep[oó]sito)\b/i;
+function esBasuraEstructural(v) {
+  const r = v?.razon_gate || '';
+  if (_RE_OTRA_OP.test(r)) return false;                       // operación mal tipeada → NO tocar
+  const area = v?.area_m2 ?? null;
+  return _RE_ANEXO.test(r) || (area != null && area < 20);      // anexo suelto o superficie de anexo
+}
+// Fila de DESCARTE: mínima, fuera del feed POR DISEÑO (tipo baulera/parqueo → la vista la excluye;
+// area<20 la excluye igual; es_activa=false + razon_inactiva documentan el descarte). NO es inventario.
+function construirFilaDescarte(e, v) {
+  const a = e._apply;
+  const tipoAnexo = /parqueo|garaje/i.test(v?.razon_gate || '') ? 'parqueo' : 'baulera';
+  return {
+    id: e.id, url: a.url, fuente: e.fuente,
+    tipo_operacion: 'venta', tipo_propiedad_original: tipoAnexo,
+    area_total_m2: v.area_m2 ?? a.area ?? null,
+    latitud: a.latitud ?? null, longitud: a.longitud ?? null, zona: e.zona ?? null, microzona: a.microzona ?? null,
+    status: 'completado', es_activa: false, es_para_matching: false, id_proyecto_master: null,
+    razon_inactiva: 'descarte_gate_basura_estructural', scraper_version: SCRAPER_VERSION,
+    datos_json: {
+      contenido: { descripcion: e.descripcion || '' },
+      senales_portal: e.senales ?? null,
+      trazabilidad: { scraper_version: SCRAPER_VERSION, metodo_match: 'descarte_basura_estructural', razon_gate: v.razon_gate ?? null },
+    },
+  };
+}
+
 async function apply(file) {
   const doc = JSON.parse(readFileSync(file, 'utf-8'));
   const conVer = doc.entradas.filter((e) => e.veredicto);
   const sinVer = doc.entradas.filter((e) => !e.veredicto);
   console.log(`\n✍️  APPLY — ${conVer.length}/${doc.entradas.length} con veredicto${sinVer.length ? ` (faltan ${sinVer.length}: ${sinVer.map((e) => e.id).join(',')})` : ''}\n`);
 
-  const filas = [], rechazados = [], aliasSugeridos = [], reporte = [], proyectos = [];
+  const filas = [], rechazados = [], aliasSugeridos = [], reporte = [], proyectos = [], descartes = [];
   for (const e of conVer) {
     const v = e.veredicto;
-    if (v.gate === 'rechazar') { rechazados.push({ id: e.id, razon: v.razon_gate }); continue; }
+    if (v.gate === 'rechazar') {
+      // Basura estructural (baulera/parqueo suelto) → se escribe como DESCARTE (no vuelve al MOAT cada
+      // noche; la vista la excluye). Operación mal tipeada → se sigue rechazando como antes.
+      if (esBasuraEstructural(v)) { descartes.push(construirFilaDescarte(e, v)); continue; }
+      rechazados.push({ id: e.id, razon: v.razon_gate }); continue;
+    }
 
     // MULTIPROYECTO → NO va a propiedades_v2_shadow (viola check_multiproperty_completo_v2 y el
     // feed lo excluye igual). Se guarda la CRUDA en proyectos_detectados (mig 273) para el
@@ -364,8 +404,14 @@ async function apply(file) {
     if (error) fallidas.push({ id: f.id, mp: f.es_multiproyecto, motivo: (error.message.split('\n')[0] || '').slice(0, 70) });
   }
   const escritas = filas.length - fallidas.length;
+  // Descartes (basura estructural) → upsert aparte para NO contarlos como "unidades". Resiliente.
+  let descartadas = 0;
+  for (const d of descartes) {
+    const { error } = await sb.from('propiedades_v2_shadow').upsert(d, { onConflict: 'id' });
+    if (!error) descartadas++; else console.log(`⚠️  descarte ${d.id} NO escrito: ${(error.message.split('\n')[0] || '').slice(0, 70)}`);
+  }
   if (rechazados.length) { const prev = leerRechazados(); for (const r of rechazados) prev.add(r.id); writeFileSync(REJ_FILE, JSON.stringify([...prev])); }
-  console.log(`✅ ${escritas} escritos en propiedades_v2_shadow.  Rechazados (gate): ${rechazados.length}${rechazados.length ? ' → ' + rechazados.map((r) => `${r.id}(${r.razon})`).join(', ') : ''}${protegidas ? `  ·  fecha_publicacion protegida (LEAST) en ${protegidas}` : ''}`);
+  console.log(`✅ ${escritas} escritos en propiedades_v2_shadow.  Rechazados (gate): ${rechazados.length}${rechazados.length ? ' → ' + rechazados.map((r) => `${r.id}(${r.razon})`).join(', ') : ''}${descartes.length ? `  ·  Descartes basura (baulera/parqueo, fuera del feed): ${descartadas}/${descartes.length}` : ''}${protegidas ? `  ·  fecha_publicacion protegida (LEAST) en ${protegidas}` : ''}`);
   if (fallidas.length) console.log(`⚠️  ${fallidas.length} NO escritas (constraint): ${fallidas.map((f) => `${f.id}${f.mp ? '[multiproyecto]' : ''}(${f.motivo})`).join(', ')}`);
   // Multiproyectos → cola proyectos_detectados (mig 273; upsert por url+fuente → la cruda no se pierde)
   if (proyectos.length) {
