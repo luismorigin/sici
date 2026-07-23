@@ -127,7 +127,7 @@ Referencia completa: `docs/arquitectura/TIPO_CAMBIO_SICI.md` (flujo portal→ext
 | **Brand Guidelines** | Repo externo `simon-brand` — ver sección abajo |
 | **Índice migraciones** | `docs/migrations/MIGRATION_INDEX.md` |
 | **Catálogo funciones SQL** | `sql/functions/FUNCTION_CATALOG.md` |
-| **Backlogs** | `docs/backlog/`: CALIDAD_DATOS_BACKLOG, DEUDA_TECNICA, RETENCION_USUARIOS, MATCHING_ALQUILER_PLAN, SUPABASE_RLS_BACKLOG, IMAGE_OPTIMIZATION_VERCEL, CRM_CLIENTES_B2C_PLAN, CASAS_TERRENOS_PRD, AGENTE_DESARROLLADORAS_PRD, PRODUCTO_INFORME_MERCADO, **MEDICION_FUNNEL_PLAN** |
+| **Backlogs** | `docs/backlog/`: CALIDAD_DATOS_BACKLOG, DEUDA_TECNICA, RETENCION_USUARIOS, MATCHING_ALQUILER_PLAN, SUPABASE_RLS_BACKLOG, IMAGE_OPTIMIZATION_VERCEL, CRM_CLIENTES_B2C_PLAN, CASAS_TERRENOS_PRD, AGENTE_DESARROLLADORAS_PRD, PRODUCTO_INFORME_MERCADO, **MEDICION_FUNNEL_PLAN**, **MERCADO_MOBILE_REDESIGN_PLAN** |
 | **Medición / funnel** | `docs/backlog/MEDICION_FUNNEL_PLAN.md` — número elegido = **contactos WhatsApp/semana**; plan de 4 pasos (paso 1 ✅ 22-jul), acciones manuales del founder en la UI de GA4, y qué NO se va a hacer. 🔴 **`source`/`medium`/`campaign` son nombres RESERVADOS de GA4**: usarlos como parámetro de evento pisa la fuente de tráfico — el parámetro se llama `origen` |
 | **Seguridad Supabase (reglas)** | `docs/canonical/SEGURIDAD_SUPABASE.md` |
 | **Límites data fiduciaria** | `docs/canonical/LIMITES_DATA_FIDUCIARIA.md` — qué puede aseverar Simón, matriz verde/amarillo/rojo |

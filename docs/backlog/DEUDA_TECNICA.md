@@ -2,6 +2,33 @@
 
 > Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 7 Jul 2026.
 
+## 🔴 TC Binance sin guardrails — salto de +7,6% en un día publicado sin control (22 Jul 2026)
+
+**Contexto:** el "Dólar hoy" público de /mercado y el `precio_normalizado()` de las props `paralelo`
+en régimen viejo (ZN) salen de `config_global.tipo_cambio_paralelo`, alimentado por el workflow n8n
+`tc_dinamico_binance` (modulo_2, ~04:00 UTC) que consulta el libro P2P de Binance y guarda en
+`tc_binance_historial`.
+
+**Hallazgos (verificados en BD el 22-jul-2026):**
+1. **El 21→22 jul el tc_sell saltó de 11,058 a 11,902 (+7,6% EN UN DÍA)** y el spread compra/venta
+   se invirtió (de −0,31% a +4,02%). Puede ser mercado real o anuncios outliers en el libro P2P —
+   nadie lo revisó y se publicó solo.
+2. La muestra es de **10 anuncios** (`num_anuncios_sell=10`) — chica y manipulable.
+3. **Huecos en la serie**: faltan 14, 17, 19 y 20 de julio (el workflow no corrió/falló esas noches
+   y no hay alerta).
+4. `aplicado_a_config=false` en todas las filas recientes pero config SÍ tiene 11,902 aplicado
+   (la fecha coincide) — el flag no refleja la realidad; revisar el nodo n8n que lo setea.
+
+**Pendiente (media-alta — un valor errado mueve precios públicos):**
+- Verificar si el 11,90 del 22-jul fue real (cruzar contra otra referencia del paralelo).
+- Guardrails en el workflow: (a) mediana de más anuncios, (b) **tope de variación diaria** — si
+  |delta| > ~4% NO aplicar a config y avisar por Slack para revisión humana, (c) alerta si el
+  workflow no corre N noches seguidas.
+- Arreglar o documentar el flag `aplicado_a_config`.
+
+⚠️ n8n de producción suele diferir del repo (memoria `n8n_drift_repo_vs_prod`) — verificar el
+workflow REAL en la UI, no el JSON local. Hay un task chip pendiente de esta sesión con el detalle.
+
 ## SEO de las superficies públicas nuevas — sitemap + robots (7 Jul 2026)
 
 **Contexto:** el switch del 7-jul (`main` `ebad62f`) hizo `/` la Home nueva y sacó de `noindex` a `/`, `/sobre-simon` y `/whatsapp` (ahora indexables). Falta cerrar el lado SEO para que Google las descubra rápido y bien.
