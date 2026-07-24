@@ -28,6 +28,7 @@ import { pace, circuit, trafico } from '../sonda-suelo/lib/fetcher.mjs';
 import { fetchDetalleDepto } from './lib/detalle-deptos.mjs';
 import { matchearPorNombre } from './lib/matcher.mjs';
 import { reBucket } from './lib/canonicalizar.mjs';
+import { reservarIdsShadow } from './lib/reservar-ids-shadow.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -183,21 +184,26 @@ async function prepNuevas(discoveryFile, n) {
   const { data: tcRow } = await sb.from('config_global').select('valor').eq('clave', 'tipo_cambio_paralelo').single();
   const tasaParalelo = tcRow?.valor != null ? Number(tcRow.valor) : null;
   if (yaCargadas) console.log(`   (${yaCargadas} de las ${(disc.nuevas || []).length} del discovery ya están en shadow → se saltean; quedan ${pendientes.length} pendientes)`);
-  // 🔴 El id reservado ARRANCA DESDE EL MÁXIMO 8M YA EN SHADOW, no desde 8_000_000+i.
-  // Con `8_000_000 + i` cada corrida reiniciaba la numeración y COLISIONABA con las nuevas de
-  // corridas previas → el upsert del --apply PISABA props reales de otros edificios (bug cazado
-  // 17-jul: 29 colisiones, ej. 8000001 = Sky Luxury en shadow vs Sky Equinox nueva).
-  const { data: maxRow } = await sb.from('propiedades_v2_shadow').select('id').gte('id', 8_000_000)
-    .order('id', { ascending: false }).limit(1);
-  let idSeq = Math.max(8_000_000, maxRow?.[0]?.id ?? 8_000_000);
-  console.log(`\n🌱 PREP NUEVAS — ${nuevas.length} deptos del discovery (no en prod). tasa_paralelo=${tasaParalelo}. ids reservados desde ${idSeq + 1}. NO escribe a la BD.\n`);
+  // 🔴 Los ids salen de una SECUENCIA ATÓMICA (mig 298), NO de MAX(id)+1.
+  // Historia de este renglón, en dos capas:
+  //   1) `8_000_000 + i` reiniciaba la numeración en cada corrida y colisionaba con las nuevas
+  //      de corridas previas (17-jul: 29 colisiones, ej. 8000001 = Sky Luxury vs Sky Equinox).
+  //      Se arregló arrancando desde el máximo ya usado.
+  //   2) Pero leer-el-máximo-y-después-escribir NO es atómico: el 24-jul las 3 routines
+  //      dispararon juntas (catch-up con la máquina apagada), venta y alquiler leyeron el mismo
+  //      máximo (8000197), ambas numeraron desde 8000198 y venta pisó 2 alquileres ya escritos.
+  // `nextval()` cierra las dos: dos procesos concurrentes nunca reciben el mismo id.
+  // Se reserva el bloque entero acá; si un fetch falla su id queda como hueco (inofensivo).
+  const poolIds = nuevas.length ? await reservarIdsShadow(sb, nuevas.length) : [];
+  console.log(`\n🌱 PREP NUEVAS — ${nuevas.length} deptos del discovery (no en prod). tasa_paralelo=${tasaParalelo}. ids reservados ${poolIds.length ? `${poolIds[0]}–${poolIds[poolIds.length - 1]}` : '(ninguno)'}. NO escribe a la BD.\n`);
   const entradas = [];
   for (const nv of nuevas) {
     if (circuit.tripped) { console.log('🛑 circuit breaker.'); break; }
     let h = null, err = null;
     try { h = await fetchDetalleDepto(nv.fuente, nv.url); } catch (e) { err = String(e.message); }
     if (!h) { console.log(`   ✗ fetch ${nv.url.slice(0, 55)}: ${err || ''}`); await pace(400); continue; }
-    const id = ++idSeq;                             // id reservado shadow (TEMPORAL; al cutover lo da prod)
+    const id = poolIds.shift();                     // id ya reservado en la BD (TEMPORAL; al cutover lo da prod)
+    if (id == null) { console.log('   ✗ se agotó el pool de ids reservados — corto acá.'); break; }
     const area = h.area_const_m2 ?? h.area_texto ?? null;
     entradas.push({
       id, fuente: nv.fuente, zona: nv.zona || null, slug: slugDe(nv.url),
