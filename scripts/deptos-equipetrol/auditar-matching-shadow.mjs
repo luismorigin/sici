@@ -24,6 +24,7 @@
 //   node auditar-matching-shadow.mjs                  # ambas operaciones
 //   node auditar-matching-shadow.mjs --op venta
 //   node auditar-matching-shadow.mjs --op alquiler --limit 40
+//   node auditar-matching-shadow.mjs --sin-guarda     # saltear la guarda de orden (ver abajo)
 // Salida: output/audit-matching-shadow-<ts>.json (superficies para el juez) + summary.
 // ============================================================================
 import { createClient } from '@supabase/supabase-js';
@@ -45,6 +46,31 @@ const argv = process.argv.slice(2);
 const opArg = (() => { const i = argv.indexOf('--op'); return i >= 0 ? argv[i + 1] : 'ambos'; })();
 const OPS = opArg === 'venta' ? ['venta'] : opArg === 'alquiler' ? ['alquiler'] : ['venta', 'alquiler'];
 const LIMIT = (() => { const i = argv.indexOf('--limit'); return i >= 0 ? Number(argv[i + 1]) : null; })();
+const SIN_GUARDA = argv.includes('--sin-guarda');
+
+// ---------------------------------------------------------------------------
+// 🔒 GUARDA DE ORDEN — el audit DEBE correr después de las capturas de esa noche.
+// ---------------------------------------------------------------------------
+// El 24-jul-2026 la máquina estuvo apagada durante la ventana nocturna (01:17–03:10) y el
+// scheduler lanzó las 3 routines JUNTAS al arrancar. El audit ganó la carrera: corrió a las
+// 04:19 y las capturas a las 06:37. Auditó el inventario de la víspera y reportó
+// "superficie 1 = 0 · nada que aplicar" — cierto sobre lo que vio, y falso sobre la noche.
+// Se perdió los 3 casos capturados esa madrugada y nadie se enteró, porque el log decía que
+// todo estaba limpio. Ese es el peor modo de falla: no romperse, sino mentir en verde.
+//
+// Marcador de "las capturas ya corrieron hoy": el snapshot diario (paso 5c), que escriben
+// AMBAS capturas y es idempotente. No sirve mirar si hay props nuevas: una noche sin altas
+// es perfectamente normal y no distingue "no había nada" de "no corrió".
+async function capturasDeHoyCorrieron() {
+  const ahora = new Date(); // la máquina del founder corre en hora de Bolivia
+  const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+  const { data, error } = await sb
+    .from('market_absorption_snapshots_shadow').select('fecha').eq('fecha', hoy).limit(1);
+  // Ante un error de consulta NO bloqueamos: la guarda existe para evitar un audit ciego,
+  // no para volverse ella misma un motivo de caída.
+  if (error) { console.log(`   ⚠️  No se pudo verificar el snapshot de hoy (${error.message}) — sigo igual.`); return { ok: true, hoy }; }
+  return { ok: (data || []).length > 0, hoy };
+}
 
 // Métodos que marcan AUTO-MATCH RIESGOSO (surface 2). El matcher híbrido pone confianza 85 +
 // metodo 'nombre_unico_zona_dif' cuando el nombre es único exacto pero la zona no corrobora.
@@ -70,6 +96,23 @@ const candado = (p, campo) => p?.campos_bloqueados?.[campo]?.bloqueado === true;
 
 async function main() {
   console.log(`\n🔎 AUDIT MATCHING SHADOW — ops: ${OPS.join('+')}${LIMIT ? ` (limit ${LIMIT}/op)` : ''}. READ-ONLY, $0 (sin fetch).\n`);
+
+  const guarda = await capturasDeHoyCorrieron();
+  if (!guarda.ok) {
+    if (!SIN_GUARDA) {
+      console.error(
+        `\n🛑 ABORTADO — las capturas de hoy (${guarda.hoy}) todavía no corrieron.\n` +
+        `   No hay snapshot shadow de hoy, así que este audit estaría revisando el inventario de ayer\n` +
+        `   y reportaría "nada que aplicar" sin haber visto lo de esta noche (pasó el 24-jul-2026).\n\n` +
+        `   Qué hacer:\n` +
+        `     · Si las routines se dispararon desordenadas, corré primero las capturas y después este audit.\n` +
+        `     · Si querés auditar el inventario actual igual: node auditar-matching-shadow.mjs --sin-guarda\n`
+      );
+      process.exit(2);
+    }
+    console.log(`   ⚠️  --sin-guarda: las capturas de hoy (${guarda.hoy}) no corrieron. Audito el inventario tal como está.\n`);
+  }
+
   let filas = [];
   for (const op of OPS) {
     let q = sb.from('propiedades_v2_shadow').select(COLS).eq('tipo_operacion', op).eq('es_activa', true).order('id', { ascending: true });
