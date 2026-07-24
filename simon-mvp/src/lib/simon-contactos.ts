@@ -13,6 +13,20 @@ const sb = () => createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+/**
+ * Las 3 formas en que un mismo número quedó guardado en `broker_shortlists`
+ * antes del fix de normalización (el create solo hacía .trim()):
+ *   +59176308808 · 59176308808 · 76308808
+ * Documentado en CRM_CLIENTES_B2C_PLAN.md §2.2. Las filas NUEVAS ya se guardan
+ * normalizadas, pero las viejas siguen sucias → hay que buscar las 3.
+ */
+export function variantesTelefono(normalizado: string): string[] {
+  const m = /^\+591([67]\d{7})$/.exec(normalizado)
+  if (!m) return [normalizado]
+  const local = m[1]
+  return [`+591${local}`, `591${local}`, local]
+}
+
 export interface ContactoResumen {
   id: string
   telefono: string
@@ -136,11 +150,16 @@ export async function getContactoDetalle(id: string) {
 
   // Shortlists del bot cruzadas por teléfono (contacto_id todavía no se puebla
   // en el create path — ver CRM_CLIENTES_B2C_PLAN.md capa 3).
+  //
+  // ⚠️ El teléfono viejo está SUCIO: hasta el fix de hoy el create solo hacía .trim(),
+  // así que el mismo número vive en 3 formatos (+59176…, 59176…, 76…). Un .eq() sobre
+  // el normalizado encontraba SOLO las nuevas (bug: el detalle mostraba "SELECCIONES (1)"
+  // mientras la lista contaba 21, porque la vista sí normaliza). Se buscan las 3 variantes.
   const { data: slRaw, error: eS } = await client
     .from('broker_shortlists')
     .select('id, hash, cliente_nombre, created_at, view_count, status')
     .eq('broker_slug', 'simon-asistente')
-    .eq('cliente_telefono', (contacto as ContactoResumen).telefono)
+    .in('cliente_telefono', variantesTelefono((contacto as ContactoResumen).telefono))
     .order('created_at', { ascending: false })
   if (eS) throw eS
 
