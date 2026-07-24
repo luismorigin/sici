@@ -28,6 +28,10 @@ export interface ContactoResumen {
   ultimo_texto_in: string | null
   total_shortlists: number
   ultima_shortlist_at: string | null
+  total_favoritos: number
+  ultimo_favorito_at: string | null
+  total_wa_clicks: number
+  ultimo_wa_click_at: string | null
   dias_sin_actividad: number | null
 }
 
@@ -89,16 +93,28 @@ export async function listContactos(opts: { search?: string | null; limit?: numb
 export async function getContactosStats() {
   const { data, error } = await sb()
     .from('v_simon_contactos_resumen')
-    .select('total_mensajes, total_shortlists, ultimo_mensaje_at')
+    .select('total_mensajes, total_shortlists, total_favoritos, total_wa_clicks, ultimo_mensaje_at')
   if (error) throw error
 
   const filas = data ?? []
   const hace7d = Date.now() - 7 * 864e5
+
+  // La MÉTRICA del negocio: contactos de WhatsApp de los últimos 7 días — de TODAS
+  // las superficies, no solo de contactos ya identificados (por eso sale de la tabla
+  // directo y no de la vista, que solo cuenta los que tienen contacto_id).
+  const { count: waSemana } = await sb()
+    .from('wa_clicks')
+    .select('id', { count: 'exact', head: true })
+    .eq('es_bot', false).eq('es_test', false)
+    .gte('created_at', new Date(hace7d).toISOString())
+
   return {
     total: filas.length,
     con_shortlist: filas.filter(f => (f.total_shortlists ?? 0) > 0).length,
     activos_7d: filas.filter(f => f.ultimo_mensaje_at && new Date(f.ultimo_mensaje_at).getTime() >= hace7d).length,
     mensajes: filas.reduce((a, f) => a + (f.total_mensajes ?? 0), 0),
+    favoritos: filas.reduce((a, f) => a + (f.total_favoritos ?? 0), 0),
+    contactos_wa_7d: waSemana ?? 0,
   }
 }
 

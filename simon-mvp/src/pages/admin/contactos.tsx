@@ -30,6 +30,10 @@ interface ContactoResumen {
   ultimo_texto_in: string | null
   total_shortlists: number
   ultima_shortlist_at: string | null
+  total_favoritos: number
+  ultimo_favorito_at: string | null
+  total_wa_clicks: number
+  ultimo_wa_click_at: string | null
   dias_sin_actividad: number | null
 }
 
@@ -68,7 +72,7 @@ interface ShortlistCRM {
   total_favoritas: number
 }
 
-interface Stats { total: number; con_shortlist: number; activos_7d: number; mensajes: number }
+interface Stats { total: number; con_shortlist: number; activos_7d: number; mensajes: number; favoritos: number; contactos_wa_7d: number }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   if (!supabase) return {}
@@ -177,6 +181,8 @@ export default function AdminContactos() {
             <div className="cc-stat"><b>{stats.total}</b><span>contactos</span></div>
             <div className="cc-stat"><b>{stats.activos_7d}</b><span>activos (7d)</span></div>
             <div className="cc-stat"><b>{stats.con_shortlist}</b><span>con selección</span></div>
+            <div className="cc-stat cc-stat-hero"><b>{stats.contactos_wa_7d}</b><span>contactos WA (7d)</span></div>
+            <div className="cc-stat"><b>{stats.favoritos}</b><span>favoritos ♥</span></div>
             <div className="cc-stat"><b>{stats.mensajes}</b><span>mensajes</span></div>
           </div>
         )}
@@ -205,7 +211,8 @@ export default function AdminContactos() {
               <thead>
                 <tr>
                   <th>Contacto</th><th>Último mensaje</th><th>Msgs</th>
-                  <th>Selecciones</th><th>Actividad</th><th>Estado</th>
+                  <th>Selec.</th><th>♥</th><th>Contactó</th>
+                  <th>Actividad</th><th>Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -218,6 +225,13 @@ export default function AdminContactos() {
                     <td className="cc-prev">{c.ultimo_texto_in || '—'}</td>
                     <td>{c.total_mensajes} <span className="cc-muted cc-sm">({c.mensajes_in}/{c.mensajes_out})</span></td>
                     <td>{c.total_shortlists || '—'}</td>
+                    {/* Interés REVELADO: lo que hizo, no lo que dijo. */}
+                    <td className={c.total_favoritos > 0 ? 'cc-fav' : ''}>
+                      {c.total_favoritos > 0 ? `♥ ${c.total_favoritos}` : '—'}
+                    </td>
+                    <td className={c.total_wa_clicks > 0 ? 'cc-hot' : ''}>
+                      {c.total_wa_clicks > 0 ? `${c.total_wa_clicks}×` : '—'}
+                    </td>
                     <td className="cc-sm">
                       {fechaCorta(c.ultimo_mensaje_at)}
                       {c.dias_sin_actividad != null && c.dias_sin_actividad > 0 && (
@@ -348,6 +362,7 @@ export default function AdminContactos() {
         .cc-btn-wa { background: #3A6A48; color: #fff; border-color: #3A6A48; text-decoration: none; display: inline-block; }
         .cc-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px; }
         .cc-stat { background: #FBF9F3; border: 1px solid #EDE8DC; border-radius: 12px; padding: 12px 14px; }
+        .cc-stat-hero { background: rgba(58,106,72,.10); border-color: rgba(58,106,72,.30); }
         .cc-stat b { display: block; font-size: 22px; font-family: 'Figtree', sans-serif; font-weight: 500; }
         .cc-stat span { font-size: 12px; color: #7A7060; }
         .cc-search { width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #D8D0BC; font-size: 14px; font-family: inherit; margin-bottom: 14px; box-sizing: border-box; }
