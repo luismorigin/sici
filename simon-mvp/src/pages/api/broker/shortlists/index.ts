@@ -9,6 +9,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { randomBytes } from 'crypto'
 import { isValidBrokerSlug } from '@/lib/simon-brokers'
+import { normalizePhone } from '@/lib/phone'
 import type { BrokerShortlist, CreateShortlistPayload } from '@/types/broker-shortlist'
 
 const supabase = createClient(
@@ -125,7 +126,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         broker_slug: payload.broker_slug,
         hash,
         cliente_nombre: payload.cliente_nombre.trim(),
-        cliente_telefono: payload.cliente_telefono.trim(),
+        // Normaliza a +591[67]NNNNNNN (lib/phone.ts) para que el mismo número no
+        // viva en 3 formatos → identidad estable del contacto B2C (CRM, mig 296).
+        // Fallback al crudo si no es un celular boliviano válido (no rompe el bot).
+        cliente_telefono: normalizePhone(payload.cliente_telefono) ?? payload.cliente_telefono.trim(),
         mensaje_whatsapp: payload.mensaje_whatsapp?.trim() || null,
       }
       if (payload.broker_slug === SIMON_ASISTENTE_SLUG) {
