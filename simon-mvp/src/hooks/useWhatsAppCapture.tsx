@@ -74,7 +74,11 @@ export function triggerWhatsAppCapture(e: React.MouseEvent, p: CaptureProperty, 
   if (_contactoDirecto) {
     e.preventDefault()
     fireLegacyTracking(p, 'public_share_directo')
-    openWhatsApp(getFinalPhone(p), msg)
+    // mig 299: este camino es el de las shortlists del bot ("sin lead en BD") —
+    // el beacon de openWhatsApp es lo ÚNICO que deja rastro server-side del contacto.
+    openWhatsApp(getFinalPhone(p), msg, {
+      origen: 'public_share_directo', propiedad_id: p.id, tipo_operacion: 'alquiler',
+    })
     return
   }
   // Broker logueado: NO mostrar modal de captura, ir directo a WA.
@@ -311,7 +315,7 @@ export function useWhatsAppCapture() {
       })
       const payload = buildPayload(p, msg, fuente, preguntas, 'reused', stored.phone, stored.consent)
       postLead(payload).then((ok) => { if (!ok) savePendingLead(payload) })
-      openWhatsApp(getFinalPhone(p), msg)
+      openWhatsApp(getFinalPhone(p), msg, { origen: fuente, propiedad_id: p.id, tipo_operacion: 'alquiler' })
       return
     }
 
@@ -348,7 +352,7 @@ export function useWhatsAppCapture() {
     postLead(payload).then((ok) => { if (!ok) savePendingLead(payload) })
 
     // Abrir WA (click del submit cuenta como user gesture)
-    openWhatsApp(getFinalPhone(p), cur.msg)
+    openWhatsApp(getFinalPhone(p), cur.msg, { origen: cur.fuente, propiedad_id: p.id, tipo_operacion: 'alquiler' })
 
     // Mostrar "listo" brevemente
     setShowSuccess(true)
@@ -378,7 +382,7 @@ export function useWhatsAppCapture() {
     const payload = buildPayload(p, cur.msg, cur.fuente, cur.preguntas, 'skipped', null, false)
     postLead(payload).then((ok) => { if (!ok) savePendingLead(payload) })
 
-    openWhatsApp(getFinalPhone(p), cur.msg)
+    openWhatsApp(getFinalPhone(p), cur.msg, { origen: cur.fuente, propiedad_id: p.id, tipo_operacion: 'alquiler' })
 
     setState(EMPTY_STATE)
   }, [isSubmitting])

@@ -101,8 +101,53 @@ function _openFallbackTab(telefono: string, mensaje: string): void {
  * @param telefono - con o sin signos, código de país incluido
  * @param mensaje - texto a precargar (se url-encodea)
  */
-export function openWhatsApp(telefono: string, mensaje: string): void {
+export interface WaClickCtx {
+  /** Desde dónde: 'feed' | 'sheet' | 'compare' | 'mapa' | 'shortlist' … */
+  origen?: string
+  propiedad_id?: number | null
+  tipo_operacion?: 'venta' | 'alquiler' | null
+}
+
+/**
+ * Beacon del INTENTO DE CONTACTO (mig 299 · tabla wa_clicks). Alimenta la métrica
+ * "contactos de WhatsApp por semana", que hasta ahora solo registraba 1 de 4
+ * superficies (el modal del feed de alquiler) — las shortlists, que son las de
+ * MÁS engagement del sitio, no dejaban rastro.
+ *
+ * Va acá adentro (y no en los ~39 call-sites de openWhatsApp) para que TODA
+ * superficie quede cubierta sin tocarlas una por una. El `hash` de la shortlist
+ * se deduce de la URL (`/b/<hash>`) → el server resuelve de QUIÉN es el clic sin
+ * pedirle nada al usuario.
+ *
+ * `keepalive` es lo que lo hace funcionar: el request sobrevive a que la pestaña
+ * navegue a WhatsApp. Nunca lanza — una métrica jamás debe romper el contacto.
+ */
+function _registrarWaClick(telefono: string, ctx?: WaClickCtx): void {
+  try {
+    if (typeof window === 'undefined' || typeof fetch !== 'function') return
+    const m = window.location.pathname.match(/^\/b\/([A-Za-z0-9_-]+)/)
+    const hash = m?.[1] ?? undefined
+    const esDebug = new URLSearchParams(window.location.search).get('debug') === '1'
+    fetch('/api/public/wa-click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+      body: JSON.stringify({
+        origen: ctx?.origen || (hash ? 'shortlist' : 'feed'),
+        propiedad_id: ctx?.propiedad_id ?? null,
+        tipo_operacion: ctx?.tipo_operacion ?? null,
+        destino_telefono: telefono,
+        hash,
+        es_test: esDebug,
+      }),
+    }).catch(() => {})
+  } catch { /* nunca romper el flujo del usuario */ }
+}
+
+export function openWhatsApp(telefono: string, mensaje: string, ctx?: WaClickCtx): void {
   if (typeof window === 'undefined') return
+
+  _registrarWaClick(telefono, ctx)
 
   if (_isMobileLike()) {
     const mobileUrl = buildWhatsAppURL(telefono, mensaje)
