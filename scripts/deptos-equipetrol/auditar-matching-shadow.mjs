@@ -123,8 +123,29 @@ async function main() {
   }
   console.log(`   ${filas.length} filas activas en shadow.\n`);
 
-  const sup1 = [], sup2 = [];
+  const sup1 = [];
+  let sup2 = [], sup2Auto = [];
   const pmRiesgoIds = new Set();
+
+  // ── PINES GENÉRICOS DEL PORTAL (se detectan solos, no se hardcodean) ──────────
+  // Una coordenada compartida por MÁS DE UN edificio no es una ubicación: es el pin
+  // por defecto del portal. Medido el 25-jul: `-17.766967/-63.192905` aparecía en 25
+  // props de **17 edificios distintos** — físicamente imposible. Las demás coordenadas
+  // repetidas del set tenían 1 edificio cada una (varias unidades del mismo edificio,
+  // legítimo). Detectarlo por datos y no por lista fija hace que un pin nuevo del
+  // portal quede cazado solo.
+  const claveGps = (lat, lon) => (lat == null || lon == null ? null : `${Number(lat).toFixed(6)},${Number(lon).toFixed(6)}`);
+  const pinesGenericos = (() => {
+    const porGps = new Map();
+    for (const p of filas) {
+      const k = claveGps(p.latitud, p.longitud);
+      if (!k || p.id_proyecto_master == null) continue;
+      if (!porGps.has(k)) porGps.set(k, new Set());
+      porGps.get(k).add(p.id_proyecto_master);
+    }
+    return new Set([...porGps.entries()].filter(([, pms]) => pms.size > 1).map(([k]) => k));
+  })();
+  if (pinesGenericos.size) console.log(`   📍 ${pinesGenericos.size} pin(es) genérico(s) del portal detectados (misma coordenada, >1 edificio) → su distancia no se usa como evidencia.\n`);
 
   for (const p of filas) {
     const dj = p.datos_json || {};
@@ -159,8 +180,30 @@ async function main() {
     const byId = new Map((pms || []).map((r) => [r.id_proyecto_master, r]));
     for (const s of sup2) {
       const pm = byId.get(s.pm_actual);
-      if (pm) { s.pm_nombre = pm.nombre_oficial; s.pm_zona = pm.zona; s.dist_metros = haversine(s.lat, s.lon, pm.latitud, pm.longitud); }
+      if (pm) {
+        s.pm_nombre = pm.nombre_oficial; s.pm_zona = pm.zona;
+        s.gps_placeholder = pinesGenericos.has(claveGps(s.lat, s.lon));
+        // Con pin genérico la distancia es una ILUSIÓN: no se calcula, para que ni el juez
+        // ni el humano la lean como evidencia (25 props compartían un pin y producían
+        // "distancias" de 900-1100 m que no significaban nada).
+        s.dist_metros = s.gps_placeholder ? null : haversine(s.lat, s.lon, pm.latitud, pm.longitud);
+      }
     }
+    // ── Filtro de RUIDO (25-jul-2026) ─────────────────────────────────────────────
+    // `nombre_unico_zona_dif` acumulaba 23/23 veredictos CONFIRMAR: gritaba lobo todas
+    // las noches y el juez releía lo mismo. Las causas del falso positivo, medidas:
+    //   · pin genérico del portal → la "zona distinta" es un artefacto del pin, no del match;
+    //   · borde de polígono → las zonas son polígonos y <200 m de ruido cambian de zona.
+    // En ambos casos el nombre coincide y NO hay nada que juzgar. Se auto-confirman y se
+    // declaran en el resumen (no desaparecen: quedan en `sup2_autoconfirmados` para poder
+    // ajustar el umbral si algún día uno sale mal).
+    // ⚠️ NO se toca el caso de riesgo REAL — nombres con hermanos numerados (Baruc Uno/II,
+    // Condado II/III), donde el fuzzy sí falla. Esos siguen yendo al juez porque su GPS es
+    // legítimo y su distancia, real.
+    const RUIDO_METROS = 200;
+    sup2Auto = sup2.filter((s) => s.pm_nombre && (s.gps_placeholder || (s.dist_metros != null && s.dist_metros < RUIDO_METROS)));
+    const autoIds = new Set(sup2Auto.map((s) => s.prop_id));
+    sup2 = sup2.filter((s) => !autoIds.has(s.prop_id));
   }
 
   // ── SUPERFICIE 3 — DUPLICADOS (apart-hoteles / republicaciones) ──
@@ -207,8 +250,17 @@ async function main() {
   const file = join(OUT, `audit-matching-shadow-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, ops: OPS, total_filas: filas.length,
-    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_2_automatch_riesgoso: sup2.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0) },
-    superficie_1: sup1, superficie_2: sup2, superficie_3: sup3,
+    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0) },
+    superficie_1: sup1, superficie_2: sup2,
+    // Se auto-confirmaron por ruido geográfico (pin genérico o <200 m). NO van al juez,
+    // pero quedan acá para poder auditar el umbral si alguno saliera mal.
+    superficie_2_autoconfirmados: sup2Auto.map((s) => ({
+      prop_id: s.prop_id, op: s.op, nombre_edificio: s.nombre_edificio,
+      pm_actual: s.pm_actual, pm_nombre: s.pm_nombre,
+      motivo: s.gps_placeholder ? 'pin_generico_del_portal' : 'borde_de_zona_<200m',
+      dist_metros: s.dist_metros,
+    })),
+    superficie_3: sup3,
   }, null, 2));
 
   console.log(`────────── RESUMEN AUDIT MATCHING SHADOW ──────────`);
@@ -216,6 +268,12 @@ async function main() {
   for (const s of sup1.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}"  cands:${s.candidatos.length}${s.candidatos[0] ? ` (mejor ${s.candidatos[0].nombre} ${s.candidatos[0].score})` : ''}`);
   console.log(`  Superficie 2 (auto-match riesgoso nombre_unico_zona_dif): ${sup2.length}`);
   for (const s of sup2.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'}, zona ${s.pm_zona || '?'} vs ${s.zona}) dist ${s.dist_metros ?? '?'}m`);
+  // Se DECLARA lo silenciado: un filtro que no se ve es un filtro que nadie audita.
+  if (sup2Auto.length) {
+    const nPin = sup2Auto.filter((s) => s.gps_placeholder).length;
+    console.log(`  └─ + ${sup2Auto.length} auto-confirmadas por ruido geográfico (NO van al juez): ${nPin} por pin genérico · ${sup2Auto.length - nPin} por borde de zona <200m`);
+    for (const s of sup2Auto.slice(0, 20)) console.log(`        ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre}) · ${s.gps_placeholder ? 'pin genérico' : `${s.dist_metros}m`}`);
+  }
   const dupProps = sup3.reduce((a, c) => a + c.duplicados.length, 0);
   console.log(`  Superficie 3 (duplicados apart-hotel/republicación): ${sup3.length} clusters · ${dupProps} props a deduplicar`);
   for (const c of sup3.slice(0, 20)) console.log(`     [${c.op}] "${c.edificio}"${c.pm ? ` pm${c.pm}` : ''} $${c.precio} ${c.area}m² → sobrevive ${c.sobreviviente}, duplicados: ${c.duplicados.join(',')} (${c.n} avisos)`);
