@@ -48,12 +48,32 @@ function _urlConSesion(proxy, sesion) {                      // _session-<id>_li
 // ⚠️ NO cerrar el agente devuelto — lo gestiona el lote. Al terminar el script, llamar cerrarProxy().
 // El verificador la usa para su fetch propio (necesita `redirect: manual` + status crudo → no pasa por
 // fetchRetry) y así sale por el MISMO proxy sticky. Devuelve null si no hay PROXY_URL.
+// 🔴 CERRAR EL AGENTE NO PUEDE COLGAR EL PROCESO (bug cazado 25-jul-2026).
+// `agent.close()` de undici es GRACEFUL: espera a que terminen las conexiones pendientes.
+// Si una quedó tomada con el proxy (el socket no responde y nadie lo aborta), **no resuelve
+// nunca** — sin excepción, así que el `.catch()` tampoco salva. Como se llama al rotar de IP
+// (cada LOTE requests), el discovery quedaba vivo horas con ~1 s de CPU acumulado, sin escribir
+// un solo artefacto y sin fallar: la peor forma de romperse, porque no avisa.
+// Caso real: `discovery-alquiler.mjs` (PID 31480) colgado **7,5 h**; la noche se perdió entera
+// y nadie se enteró hasta la mañana. Segunda vez en dos noches.
+// FIX: `destroy()` (aborta las pendientes, no las espera) + carrera contra un timeout, por si
+// alguna versión de undici tarda igual. Cerrar un agente que ya no se usa NUNCA vale bloquear
+// la corrida: si no cierra en 5 s, se abandona y se sigue.
+async function _cerrarAgente(a) {
+  if (!a) return;
+  const cerrar = (typeof a.destroy === 'function' ? a.destroy() : a.close()) ?? Promise.resolve();
+  await Promise.race([
+    Promise.resolve(cerrar).catch(() => {}),
+    new Promise((r) => setTimeout(r, 5000)),
+  ]);
+}
+
 export async function crearAgente() {
   const proxy = process.env.PROXY_URL;
   if (!proxy) return null;
   if (!_ProxyAgent) ({ ProxyAgent: _ProxyAgent } = await import('undici'));
   if (!_agente || _enLote >= LOTE) {                         // lote lleno (o primer request) → rotar IP
-    if (_agente) await _agente.close().catch(() => {});
+    if (_agente) await _cerrarAgente(_agente);
     _sesion = _nuevaSesion();
     _agente = new _ProxyAgent(_urlConSesion(proxy, _sesion));
     _enLote = 0;
@@ -64,7 +84,7 @@ export async function crearAgente() {
 }
 
 // Cerrar la conexión del último lote al terminar el script (si no, la keep-alive puede demorar el exit).
-export async function cerrarProxy() { if (_agente) { await _agente.close().catch(() => {}); _agente = null; _enLote = 0; } }
+export async function cerrarProxy() { if (_agente) { await _cerrarAgente(_agente); _agente = null; _enLote = 0; } }
 
 // Fuerza IP NUEVA en el próximo crearAgente. Se llama cuando un request FALLA: sticky se queda pegado
 // a la IP del lote, así que si esa IP viene mala, 5 fallos seguidos disparan el circuit breaker y muere
