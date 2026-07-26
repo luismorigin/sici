@@ -22,9 +22,16 @@
 > excluir son cosas distintas — el filtro es lo que descarta; el código solo etiqueta. El descarte es
 > destructivo e irreversible hacia atrás, por eso Google exige hacerlo a mano una vez.
 
-### 2. Marcar `contacto_whatsapp` como conversión (key event) en GA4 — **⏳ pendiente (lo único que queda)**
-Va junto con el paso 3 (cuando exista el evento unificado). GA4 → Administrar → **Eventos** →
-marcar como *evento clave*. Sin esto, GA4 no lo trata como conversión en ningún informe.
+### 2. Marcar `contacto_whatsapp` como conversión (key event) en GA4 — ✅ **HECHO (26-jul)**
+
+> Marcado por el founder. **El canónico y solo el canónico**: `click_whatsapp` (alquiler) y
+> `click_whatsapp_venta` (venta) son los legacy, y marcarlos también contaría dos veces la misma
+> conversión — la capa de traducción de `lib/analytics.ts` emite el canónico junto a cada legacy.
+> No es retroactivo: GA4 cuenta como conversión desde el momento en que se marca.
+
+Contexto (por si hay que rehacerlo): GA4 → Administrar → **Eventos** → interruptor *Marcar como
+evento clave* en la fila de `contacto_whatsapp`. Sin esto, GA4 no lo trata como conversión en
+ningún informe.
 
 ### 3. Confirmar si Kapso puede mandar webhooks en el plan actual — ✅ **CONFIRMADO (22-jul)**
 Sí puede. El webhook quedó creado y probado end-to-end (ver #5).
