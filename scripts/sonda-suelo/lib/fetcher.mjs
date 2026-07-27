@@ -6,14 +6,53 @@ export const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 // es una firma de bot obvia). Usar pace() en vez de sleep() para las pausas entre requests.
 export const pace = (ms) => sleep(Math.round(ms * (0.7 + Math.random() * 0.6)));
 
+// ⏱️ RELOJ DE PARED DE LA CORRIDA — es OTRA cosa que el timeout por request.
+// El `AbortSignal.timeout(30000)` de `intentar()` protege UN pedido. NO protege el caso real de
+// las noches del 25, 26 y 27-jul-2026: la máquina (portátil con Modern Standby, y su firmware
+// declara "Standby S0 Low Power Idle — **Network Disconnected**") se suspende a mitad del crawl,
+// el proceso se congela ENTERO —timers incluidos— y al despertar sigue como si nada. Medido:
+// **11 h 44 min de reloj para 13 min de trabajo**, sin un solo error, sin abortar y sin avisar.
+// Un timeout por pedido no lo puede ver: mientras el host duerme, su cuenta atrás tampoco corre.
+//
+// 🔑 POR QUÉ AVISO BLANDO + CORTE DURO, y no un único umbral:
+// esas tres noches el crawl **terminó BIEN** (exit 0, 81 cuadrantes completos, datos buenos).
+// Un corte a los 45 min habría tirado a la basura una captura sana. Lo que faltaba no era
+// cortar: era ENTERARSE. Entonces avisa temprano y sigue trabajando, y corta recién cuando la
+// duración ya no es "lentitud" sino un cuelgue de verdad (el `agent.close()` del proxy que colgó
+// 7,5 h el 25-jul es exactamente eso).
+// Perillas por env: CRAWL_AVISO_MIN (45) · CRAWL_LIMITE_MIN (180).
+export const reloj = {
+  t0: Date.now(),
+  avisoMs: Math.max(1, Number(process.env.CRAWL_AVISO_MIN || 45)) * 60000,
+  limiteMs: Math.max(2, Number(process.env.CRAWL_LIMITE_MIN || 180)) * 60000,
+  avisado: false,
+  get minutos() { return Math.round((Date.now() - this.t0) / 60000); },
+  get lento() { return Date.now() - this.t0 > this.avisoMs; },
+  get vencido() { return Date.now() - this.t0 > this.limiteMs; },
+  // Para scripts largos que quieran medir por etapa (no lo usa el discovery).
+  reiniciar() { this.t0 = Date.now(); this.avisado = false; },
+};
+
 // CIRCUIT BREAKER: si se acumulan fallos seguidos, la IP probablemente está bloqueada
 // → dejar de pegarle (seguir solo profundiza el bloqueo). El caller chequea circuit.tripped
 // y aborta la corrida. Se resetea con cualquier éxito (un fallo aislado no lo dispara).
+//
+// El reloj vencido entra por ACÁ a propósito: los bucles de `portales.mjs` ya cortan con
+// `circuit.tripped`, así que reusar esa puerta hace que el corte por tiempo funcione en todos
+// los crawls existentes sin tocar ninguno. `motivo` existe para que el mensaje no mienta:
+// un corte por reloj NO es "IP bloqueada" y diagnosticarlo así costaría la misma confusión
+// que el 20-jul (se dijo "IP bloqueada" cuando C21 estaba caído).
 let consecFails = 0;
 const CB_THRESHOLD = 5;
 export const circuit = {
-  get tripped() { return consecFails >= CB_THRESHOLD; },
+  get tripped() { return consecFails >= CB_THRESHOLD || reloj.vencido; },
   get fails() { return consecFails; },
+  get porReloj() { return reloj.vencido; },
+  get motivo() {
+    if (reloj.vencido) return `reloj de pared: la corrida lleva ${reloj.minutos} min (límite ${Math.round(reloj.limiteMs / 60000)})`;
+    if (consecFails >= CB_THRESHOLD) return `${consecFails} fallos seguidos — bloqueo de IP o portal caído`;
+    return null;
+  },
   reset() { consecFails = 0; },
 };
 
@@ -116,7 +155,14 @@ async function intentar(url, { json, headers }) {
 }
 
 export async function fetchRetry(url, { json = false, headers = {}, retries = 2 } = {}) {
-  if (circuit.tripped) return null;                 // ya bloqueado → no seguir pegando
+  // Aviso blando: se imprime UNA vez y la corrida SIGUE. Queda en el log del cron y en el
+  // aviso de Slack, que es lo que faltaba las tres noches que se perdió la ventana horaria.
+  if (reloj.lento && !reloj.avisado) {
+    reloj.avisado = true;
+    console.warn(`  ⏱️  La corrida lleva ${reloj.minutos} min (aviso a los ${Math.round(reloj.avisoMs / 60000)}). ` +
+      `Si la máquina se suspendió a mitad del crawl, el trabajo real es mucho menor que el reloj: revisar la ventana horaria, no el portal.`);
+  }
+  if (circuit.tripped) return null;                 // bloqueado o pasado de tiempo → no seguir pegando
   for (let i = 0; i <= retries; i++) {
     try {
       const r = await intentar(url, { json, headers });
