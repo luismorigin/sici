@@ -88,15 +88,25 @@ if (circuit.tripped) {
   // CAÍDO, (b) nuestra IP/proxy bloqueada, o (c) la red propia. Decir "IP bloqueada" a secas fue
   // ENGAÑOSO el 20-jul (C21 estaba caído: DNS ENOTFOUND global, no era la IP). Un lookup DNS lo
   // distingue gratis: si el dominio no resuelve, el portal está caído y no hay nada que reintentar.
-  const dns = await import('node:dns');
-  const resuelve = async (h) => { try { await dns.promises.lookup(h); return true; } catch { return false; } };
-  const [c21Ok, remaxOk] = await Promise.all([resuelve('c21.com.bo'), resuelve('remax.bo')]);
-  const diag = !c21Ok && !remaxOk ? 'NINGUNO de los dos portales resuelve DNS → caídos o problema de red propia'
-    : !c21Ok ? 'C21 NO resuelve DNS → C21 caído (no es bloqueo de IP)'
-    : !remaxOk ? 'Remax NO resuelve DNS → Remax caído (no es bloqueo de IP)'
-    : 'ambos portales resuelven DNS → probable bloqueo de IP/proxy o rate-limit';
+  // Si el corte fue por RELOJ, el DNS no viene al caso: los portales no tienen nada que ver.
+  // Preguntarlo igual daría "ambos resuelven DNS → probable bloqueo de IP", que es exactamente
+  // la conclusión equivocada (y manda a investigar el proxy en vez de la ventana horaria).
+  let diag;
+  if (circuit.porReloj) {
+    diag = `la corrida pasó del límite de tiempo (${circuit.motivo}). Causa típica: la máquina se ` +
+      `suspendió a mitad del crawl (Modern Standby corta la red) y el reloj siguió corriendo. ` +
+      `NO es el portal ni la IP: revisar que la ventana nocturna esté despierta.`;
+  } else {
+    const dns = await import('node:dns');
+    const resuelve = async (h) => { try { await dns.promises.lookup(h); return true; } catch { return false; } };
+    const [c21Ok, remaxOk] = await Promise.all([resuelve('c21.com.bo'), resuelve('remax.bo')]);
+    diag = !c21Ok && !remaxOk ? 'NINGUNO de los dos portales resuelve DNS → caídos o problema de red propia'
+      : !c21Ok ? 'C21 NO resuelve DNS → C21 caído (no es bloqueo de IP)'
+      : !remaxOk ? 'Remax NO resuelve DNS → Remax caído (no es bloqueo de IP)'
+      : 'ambos portales resuelven DNS → probable bloqueo de IP/proxy o rate-limit';
+  }
 
-  console.error(`🛑 Discovery INCOMPLETO: circuit breaker (${circuit.fails} fallos seguidos).`);
+  console.error(`🛑 Discovery INCOMPLETO: ${circuit.motivo}.`);
   console.error(`   Diagnóstico: ${diag}`);
   console.error(`   Aborto para NO escribir un diff parcial (metería falsas "desaparecidas"). Reintentá más tarde.\n`);
 
@@ -105,7 +115,7 @@ if (circuit.tripped) {
   const { notificarSlack } = await import('./notificar-slack.mjs');
   await notificarSlack(
     `🛑 *Cron deptos-VENTA ABORTADO* (discovery)\n` +
-    `Circuit breaker: ${circuit.fails} fallos seguidos.\n` +
+    `Motivo: ${circuit.motivo}.\n` +
     `Diagnóstico: ${diag}\n` +
     `*NO se escribió nada* — se aborta a propósito para no meter bajas falsas.\n` +
     `Se reintenta en la próxima corrida; el inventario no se pierde (el discovery es shadow-relativo).`

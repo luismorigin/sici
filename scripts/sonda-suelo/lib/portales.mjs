@@ -27,7 +27,7 @@ export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {},
 
   const vistos = new Set(), out = [];
   for (const [idx, c] of cuadrantes.entries()) {
-    if (circuit.tripped) { log(`    🛑 C21 ${zonaKey}/${tipo}: circuit breaker (${circuit.fails} fallos seguidos) — corte temprano, IP probablemente bloqueada`); break; }
+    if (circuit.tripped) { log(`    🛑 C21 ${zonaKey}/${tipo}: corte temprano en el cuadrante ${idx + 1}/${cuadrantes.length} — ${circuit.motivo}`); break; }
     const coord = `coordenadas_${c.N.toFixed(6)},${c.E.toFixed(6)},${c.S.toFixed(6)},${c.O.toFixed(6)}`;
     const url = `https://c21.com.bo/v/resultados/tipo_${tipo}/operacion_${operacion}/layout_mapa/${coord},15?json=true`;
     const j = await fetchRetry(url, { json: true, headers: C21_HEADERS() });
@@ -79,7 +79,7 @@ export async function c21Detalle(url) {
 export async function remaxListadoSC(tipo, { rateMs = 1200, maxPages = 60, log = () => {}, operacion = 'venta' } = {}) {
   const out = [];
   for (let page = 1; page <= maxPages; page++) {
-    if (circuit.tripped) { log(`    🛑 Remax ${tipo}: circuit breaker (${circuit.fails} fallos seguidos) — corte temprano, IP probablemente bloqueada`); break; }
+    if (circuit.tripped) { log(`    🛑 Remax ${tipo}: corte temprano en la pág ${page} — ${circuit.motivo}`); break; }
     const j = await fetchRetry(`https://remax.bo/api/search/${tipo}/santa-cruz-de-la-sierra?page=${page}`, { json: true });
     const data = j?.data ?? [];
     if (!data.length) { log(`    Remax ${tipo}: fin en pág ${page} (${out.length} props SC)`); break; }
