@@ -48,6 +48,35 @@ export const formatDorms = (
 }
 
 /**
+ * Etiqueta de tipología de UNA propiedad, para TEXTO CORRIDO. Devuelve `null` cuando no se sabe,
+ * para que el llamador **omita el segmento entero** (`zona · 241m²` en vez de `zona · — · 241m²`).
+ *
+ * Hay tres formateadores de dormitorios y cada uno existe por un motivo distinto:
+ *   · `formatDorms()`     → 'Todos' para null. Es de los FILTROS ("todos los dormitorios").
+ *   · `dormLabel()`       → '—' para null. Es de las TABLAS (una celda necesita relleno).
+ *   · `dormLabelOrNull()` → null. Es de los TEXTOS, donde lo que no se sabe no se escribe.
+ * Usar el equivocado es lo que produce un guión suelto en medio de una frase, o peor, un dato
+ * inventado.
+ *
+ * 🔑 NUNCA convertir null a 0 antes de mostrar. `0` es una AFIRMACIÓN ("es monoambiente"),
+ * no una ausencia. Contrato del frontend shadow: null = "no sé", y lo que no se sabe no se
+ * muestra. Caso real (27-jul-2026): el penthouse 8000223 —241 m², $375.000, piso 16— salía
+ * como "Mono" en el feed porque `/api/ventas` hacía `?? 0`; su aviso solo dice "DEPARTAMENTO
+ * PISO 16, PROYECTO STRATTO UP". Y el daño no era la etiqueta: el chip fiduciario comparaba
+ * ese penthouse contra el mercado de monoambientes y concluía "más caro que similares".
+ */
+export const dormLabelOrNull = (
+  dorms: number | null | undefined,
+  formato: 'largo' | 'corto' | 'numero' = 'corto'
+): string | null => {
+  if (dorms === null || dorms === undefined || Number.isNaN(dorms)) return null
+  if (dorms === 0) return formato === 'largo' ? 'Monoambiente' : formato === 'numero' ? 'Mono' : 'Mono'
+  if (formato === 'numero') return String(dorms)
+  if (formato === 'largo') return dorms === 1 ? '1 dormitorio' : `${dorms} dormitorios`
+  return `${dorms} dorm`
+}
+
+/**
  * Format number without decimals
  */
 export const formatNum = (n: number | null | undefined): string => {
