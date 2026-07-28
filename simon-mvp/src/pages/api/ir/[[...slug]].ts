@@ -78,24 +78,35 @@ const escaparHtml = (s: string) =>
  * Sin recursos externos (ni fuentes ni imágenes): tiene que pintar instantánea.
  */
 function paginaPuente(urlNativa: string, urlWeb: string): string {
+  // `x-safari-https://` fuerza a iOS a abrir el link en SAFARI, saliendo del
+  // navegador interno. Es la única vía que no depende de que Meta permita el
+  // esquema: una vez en Safari, `wa.me` funciona normal (verificado — los clics
+  // desde Safari sí convertían al chat).
+  const urlSafari = urlWeb.replace(/^https:\/\//, 'x-safari-https://')
   return `<!doctype html><html lang="es"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex"><title>Abrir WhatsApp · Simón</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-text-size-adjust:100%}
 body{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;
-gap:22px;padding:32px 24px;background:#EDE8DC;color:#141414;
+gap:20px;padding:28px 20px;background:#EDE8DC;color:#141414;
 font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center}
-.logo{font-size:19px;font-weight:600;letter-spacing:-.02em}
-p{font-size:15.5px;line-height:1.5;color:#5A5347;max-width:19rem}
-a.cta{display:block;width:100%;max-width:20rem;padding:17px 24px;border-radius:14px;
-background:#3A6A48;color:#fff;text-decoration:none;font-size:17px;font-weight:600}
-a.alt{font-size:13.5px;color:#7A7060;text-decoration:underline}
+.logo{font-size:26px;font-weight:700;letter-spacing:-.02em}
+h1{font-size:23px;line-height:1.3;font-weight:600;max-width:20rem}
+p{font-size:18px;line-height:1.45;color:#4A443A;max-width:21rem}
+a.cta{display:block;width:100%;max-width:22rem;padding:22px 24px;border-radius:16px;
+background:#3A6A48;color:#fff;text-decoration:none;font-size:21px;font-weight:700}
+a.cta.alt{background:#141414}
+.hint{font-size:16px;line-height:1.45;color:#6B6357;max-width:21rem;
+border-top:1px solid #D8D0BC;padding-top:18px;margin-top:4px}
 </style></head><body>
 <div class="logo">Simón</div>
-<p>Tocá el botón para abrir WhatsApp con tu mensaje listo.</p>
+<h1>Abrí WhatsApp para escribirnos</h1>
 <a class="cta" href="${escaparHtml(urlNativa)}">Abrir WhatsApp</a>
-<a class="alt" href="${escaparHtml(urlWeb)}">No se abre — probar de otra forma</a>
+<p>Si no se abre, probá con este:</p>
+<a class="cta alt" href="${escaparHtml(urlSafari)}">Abrir en Safari</a>
+<div class="hint">¿Ninguno funciona? Tocá los <b>tres puntos</b> arriba a la derecha
+y elegí <b>“Abrir en el navegador”</b>. Ahí sí va a funcionar.</div>
 </body></html>`
 }
 
