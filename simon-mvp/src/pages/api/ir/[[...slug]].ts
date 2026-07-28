@@ -54,13 +54,20 @@ const REDES: Record<string, string> = { f: 'facebook', i: 'instagram', t: 'tikto
 // la app" y cae a su landing de descarga. Tocar "usar la aplicación" reintenta
 // el mismo salto automático y vuelve a fallar: por eso es un círculo.
 //
-// 🔑 POR QUÉ UNA PÁGINA CON BOTÓN Y NO UN 302 A `whatsapp://` (que era el pedido):
-// el bloqueo es sobre la navegación **automática**, no sobre el esquema. Un 302
-// del servidor es igual de automático que el JS de wa.me → muy probablemente lo
-// bloquee igual. **El toque del usuario es justamente el gesto que lo habilita.**
-// Además, un 302 a `whatsapp://` para alguien SIN la app instalada lo deja en una
-// pantalla de error sin salida; wa.me al menos le ofrece instalarla. Con la página
-// el link de respaldo sigue ahí.
+// 🔑 EL BOTÓN APUNTA A `wa.me`, **NO** A `whatsapp://` — probado en iPhone real:
+//   · botón a `whatsapp://`  → NO abre. Meta bloquea el esquema nativo siempre,
+//     lo toque el usuario o no.
+//   · botón a `https://wa.me/…` → **SÍ abre.** (28-jul, prueba de campo del founder.)
+//
+// Lo que decide NO es el esquema: es el GESTO. Llegando a wa.me por un 302, wa.me
+// intenta el salto a la app sin que el usuario haya tocado nada → bloqueado →
+// pantalla de descarga. Tocando un link a wa.me, ese mismo salto hereda el toque
+// y pasa. O sea: hay que poner el gesto sobre el link https, no sobre el esquema.
+//
+// Por eso NO se hace el 302 a `whatsapp://` que pedía marketing (lo bloquea igual)
+// ni se intenta el salto automático al cargar (sería repetir el fallo de wa.me).
+// Y un `whatsapp://` para alguien SIN la app deja una pantalla de error sin salida;
+// wa.me al menos le ofrece instalarla.
 //
 // Verificado con los UA reales de `mkt_clicks_puente` (ids 24-27, 32):
 //   …Mobile/22H340 Safari/604.1 [FBAN/FBIOS;FBAV/571.0.0.55.72;…;IABMV/1]
@@ -77,12 +84,7 @@ const escaparHtml = (s: string) =>
  * El botón es el mecanismo, no el respaldo.
  * Sin recursos externos (ni fuentes ni imágenes): tiene que pintar instantánea.
  */
-function paginaPuente(urlNativa: string, urlWeb: string): string {
-  // `x-safari-https://` fuerza a iOS a abrir el link en SAFARI, saliendo del
-  // navegador interno. Es la única vía que no depende de que Meta permita el
-  // esquema: una vez en Safari, `wa.me` funciona normal (verificado — los clics
-  // desde Safari sí convertían al chat).
-  const urlSafari = urlWeb.replace(/^https:\/\//, 'x-safari-https://')
+function paginaPuente(urlWeb: string): string {
   return `<!doctype html><html lang="es"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex"><title>Abrir WhatsApp · Simón</title>
@@ -102,11 +104,9 @@ border-top:1px solid #D8D0BC;padding-top:18px;margin-top:4px}
 </style></head><body>
 <div class="logo">Simón</div>
 <h1>Abrí WhatsApp para escribirnos</h1>
-<a class="cta" href="${escaparHtml(urlNativa)}">Abrir WhatsApp</a>
-<p>Si no se abre, probá con este:</p>
-<a class="cta alt" href="${escaparHtml(urlSafari)}">Abrir en Safari</a>
-<div class="hint">¿Ninguno funciona? Tocá los <b>tres puntos</b> arriba a la derecha
-y elegí <b>“Abrir en el navegador”</b>. Ahí sí va a funcionar.</div>
+<a class="cta" href="${escaparHtml(urlWeb)}">Abrir WhatsApp</a>
+<div class="hint">Si no se abre, tocá los <b>tres puntos</b> arriba a la derecha
+y elegí <b>“Abrir en el navegador”</b>.</div>
 </body></html>`
 }
 
@@ -309,11 +309,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Todo lo demás (Instagram, Android fuera de FB, escritorio, bio) sigue por
     // el 302 de siempre, que funciona.
     if (esFacebookInApp(ua) && esMovil(ua)) {
-      const urlNativa = texto
-        ? `whatsapp://send?phone=${SIMON_WHATSAPP}&text=${encodeURIComponent(texto)}`
-        : `whatsapp://send?phone=${SIMON_WHATSAPP}`
+      // Mismo `destino` que el 302: la única diferencia es que acá lo TOCA el
+      // usuario, y ese gesto es lo que destraba el salto a la app (ver arriba).
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
-      return res.status(200).send(paginaPuente(urlNativa, destino))
+      return res.status(200).send(paginaPuente(destino))
     }
 
     return res.redirect(302, destino)
