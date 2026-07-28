@@ -59,10 +59,20 @@ discovery reportó 0 nuevas.)
 
 ### 3. MOAT — lectura por subagentes-lectores (el juez; lo hacés VOS con subagentes)
 ```
-node partir-lectura.mjs output/material-alq-<ts>.json 10     # → lectura-chunk-1..N.json (livianos)
+node partir-lectura.mjs output/material-alq-<ts>.json 10   # → lectura-alquiler-<AAAA-MM-DD>-c1..N.json
 ```
-Lanzá **N subagentes en paralelo**. Cada uno lee su `lectura-chunk-K.json` + **`READER_SPEC_ALQUILER.md`**, y
-escribe `output/veredictos-chunk-K.json` (array de veredictos con `id`). Reglas v2 críticas del veredicto:
+Lanzá **N subagentes en paralelo**. Cada uno lee su `lectura-alquiler-<fecha>-cK.json` +
+**`READER_SPEC_ALQUILER.md`**, y escribe `output/veredictos-alquiler-<fecha>-cK.json` (array con `id`).
+
+> 🔴 **Los nombres llevan la operación y la fecha a propósito — NO usar `lectura-chunk-N.json`.**
+> El 28-jul-2026 venta y alquiler corrieron en paralelo (las 3 routines disparan juntas cuando la
+> máquina durmió) y compartían esos nombres: **el que escribía segundo pisaba al primero**. Un lector
+> de venta vio cambiar su propio chunk entre dos lecturas y terminó con ids y schema de alquiler.
+> El daño es **silencioso**: `inyectar-veredictos.mjs` matchea por id, así que no mezcla — PIERDE
+> veredictos, y esas props se caen del apply sin que nadie lo note. El chunk además trae
+> `"operacion": "alquiler"` adentro: **si no coincide, parar y avisar** (te dieron el chunk equivocado).
+
+Reglas v2 críticas del veredicto:
 - **precio_mensual (CRUDO) + moneda_original + tipo_cambio_detectado**: el TEXTO manda la etiqueta y la MONEDA
   (el estructurado —esp. Remax— MIENTE: trae USD pero el aviso cotiza en Bs → tag `bob`). `bob`→Bs/paralelo live;
   `no_especificado`/`paralelo`→USD directo; `oficial_viejo`→6.96/7 explícito → descuenta. NUNCA `precio_usd`.
@@ -74,7 +84,7 @@ escribe `output/veredictos-chunk-K.json` (array de veredictos con `id`). Reglas 
 - **dormitorios** (0=mono, la SUITE cuenta), **banos** (dorms≤1→1), **nombre_edificio_canonico** (arábigo, sin
   prefijo; el matcher normaliza romano↔arábigo; `id_proyecto_master` null salvo certeza).
 ```
-node inyectar-veredictos.mjs output/material-alq-<ts>.json output/veredictos-chunk-*.json
+node inyectar-veredictos.mjs output/material-alq-<ts>.json output/veredictos-alquiler-<fecha>-c*.json
 ```
 
 ### 4. Apply — escribe la fila a shadow (muta SOLO `propiedades_v2_shadow`)
