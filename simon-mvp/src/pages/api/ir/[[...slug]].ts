@@ -42,6 +42,64 @@ const esBot = (ua: string) => {
 const REDES: Record<string, string> = { f: 'facebook', i: 'instagram', t: 'tiktok', m: 'meta' }
 
 // ---------------------------------------------------------------------------
+// NAVEGADOR INTERNO DE FACEBOOK — el caso que rompe la conversión en iPhone
+// ---------------------------------------------------------------------------
+// Síntoma real (27-jul-2026, primera publicación): el usuario toca el link desde
+// un post de Facebook en iPhone, llega a wa.me, toca "usar la aplicación" y
+// termina en la PANTALLA DE DESCARGA de WhatsApp — teniendo la app instalada.
+//
+// Causa: el in-app browser de Meta **bloquea la navegación a esquemas nativos
+// (`whatsapp://`) que NO inició el usuario**. wa.me intenta el salto solo por JS
+// → bloqueado en silencio → wa.me no puede distinguir "bloqueado" de "no tiene
+// la app" y cae a su landing de descarga. Tocar "usar la aplicación" reintenta
+// el mismo salto automático y vuelve a fallar: por eso es un círculo.
+//
+// 🔑 POR QUÉ UNA PÁGINA CON BOTÓN Y NO UN 302 A `whatsapp://` (que era el pedido):
+// el bloqueo es sobre la navegación **automática**, no sobre el esquema. Un 302
+// del servidor es igual de automático que el JS de wa.me → muy probablemente lo
+// bloquee igual. **El toque del usuario es justamente el gesto que lo habilita.**
+// Además, un 302 a `whatsapp://` para alguien SIN la app instalada lo deja en una
+// pantalla de error sin salida; wa.me al menos le ofrece instalarla. Con la página
+// el link de respaldo sigue ahí.
+//
+// Verificado con los UA reales de `mkt_clicks_puente` (ids 24-27, 32):
+//   …Mobile/22H340 Safari/604.1 [FBAN/FBIOS;FBAV/571.0.0.55.72;…;IABMV/1]
+const esFacebookInApp = (ua: string) => /FBAN|FBAV|FB_IAB|FB4A/i.test(ua)
+const esMovil = (ua: string) => /iPhone|iPad|iPod|Android/i.test(ua)
+
+const escaparHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+   .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+
+/**
+ * Página puente mínima. NO intenta el salto automático a propósito: si lo hiciera
+ * y el navegador lo bloqueara, estaríamos repitiendo exactamente el fallo de wa.me.
+ * El botón es el mecanismo, no el respaldo.
+ * Sin recursos externos (ni fuentes ni imágenes): tiene que pintar instantánea.
+ */
+function paginaPuente(urlNativa: string, urlWeb: string): string {
+  return `<!doctype html><html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Abrir WhatsApp · Simón</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+gap:22px;padding:32px 24px;background:#EDE8DC;color:#141414;
+font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center}
+.logo{font-size:19px;font-weight:600;letter-spacing:-.02em}
+p{font-size:15.5px;line-height:1.5;color:#5A5347;max-width:19rem}
+a.cta{display:block;width:100%;max-width:20rem;padding:17px 24px;border-radius:14px;
+background:#3A6A48;color:#fff;text-decoration:none;font-size:17px;font-weight:600}
+a.alt{font-size:13.5px;color:#7A7060;text-decoration:underline}
+</style></head><body>
+<div class="logo">Simón</div>
+<p>Tocá el botón para abrir WhatsApp con tu mensaje listo.</p>
+<a class="cta" href="${escaparHtml(urlNativa)}">Abrir WhatsApp</a>
+<a class="alt" href="${escaparHtml(urlWeb)}">No se abre — probar de otra forma</a>
+</body></html>`
+}
+
+// ---------------------------------------------------------------------------
 // Mapa num → nombre de pieza, cacheado en memoria.
 // Se lee de mkt_piezas (fuente de verdad) en vez de hardcodear la tabla, pero
 // se cachea porque el redirect tiene que ser rápido: un roundtrip a la BD por
@@ -209,6 +267,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // No cachear: cada visita tiene que llegar al servidor para quedar registrada.
     res.setHeader('Cache-Control', 'no-store, max-age=0')
+
+    // Navegador interno de Facebook en móvil → página con botón (ver comentario
+    // de `paginaPuente`). Va DESPUÉS del registro a propósito: el clic ya quedó
+    // guardado con el mismo `destino` de siempre, así que la serie histórica de
+    // `mkt_clicks_puente` sigue siendo comparable y no hace falta columna nueva
+    // — que el clic pasó por acá se deduce del user_agent (trae FBAN/FBAV).
+    // Todo lo demás (Instagram, Android fuera de FB, escritorio, bio) sigue por
+    // el 302 de siempre, que funciona.
+    if (esFacebookInApp(ua) && esMovil(ua)) {
+      const urlNativa = texto
+        ? `whatsapp://send?phone=${SIMON_WHATSAPP}&text=${encodeURIComponent(texto)}`
+        : `whatsapp://send?phone=${SIMON_WHATSAPP}`
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      return res.status(200).send(paginaPuente(urlNativa, destino))
+    }
+
     return res.redirect(302, destino)
   } catch (e) {
     console.error('[/ir] error, redirigiendo igual:', e)
