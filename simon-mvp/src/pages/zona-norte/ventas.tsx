@@ -3479,7 +3479,9 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
         desarrollador: p.desarrollador || null,
         zona: p.zona || 'Sin zona',
         microzona: p.microzona || null,
-        dormitorios: p.dormitorios ?? 0,
+        // null = "el aviso no lo dice", NO 0 (= monoambiente). Gemelo del mapeador de
+        // /ventas y /api/ventas — ver el caso 8000223 en lib/format-utils.
+        dormitorios: p.dormitorios ?? null,
         banos: p.banos ? parseFloat(String(p.banos)) : null,
         precio_usd: parseFloat(String(p.precio_usd)) || 0,
         precio_m2: parseFloat(String(p.precio_m2)) || 0,

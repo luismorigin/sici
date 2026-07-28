@@ -18,7 +18,7 @@ import ReportPropertyModal from '@/components/broker/ReportPropertyModal'
 import DataReportsBanner from '@/components/broker/DataReportsBanner'
 import EdificioSelect from '@/components/feed/EdificioSelect'
 import IsotipoSimon from '@/components/feed/IsotipoSimon'
-import { firstName } from '@/lib/format-utils'
+import { firstName, dormLabelOrNull } from '@/lib/format-utils'
 import { buildAtribucionWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
@@ -870,8 +870,12 @@ const VentaCard = memo(function VentaCard({ property: p, isFavorite, onToggleFav
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
-        {publicShareMode && p.precio_m2 > 0 && (
-          <ShortlistCardChip variant="venta" op="venta" dormitorios={p.dormitorios ?? 0} zonaDb={p.zona} precioComparable={p.precio_m2} />
+        {/* Sin tipología NO hay cohorte válida: el chip se OMITE en vez de inventarla.
+            Con `?? 0` el penthouse 8000223 (241 m²) se comparaba contra monoambientes y
+            anunciaba "Más caro que similares" — una afirmación fiduciaria sobre el grupo
+            equivocado, que es justo lo que el producto promete no hacer. */}
+        {publicShareMode && p.precio_m2 > 0 && p.dormitorios !== null && (
+          <ShortlistCardChip variant="venta" op="venta" dormitorios={p.dormitorios} zonaDb={p.zona} precioComparable={p.precio_m2} />
         )}
         {brokerComment && publicShareMode && (
           <div className="vc-comentario">
@@ -1380,7 +1384,7 @@ function MapFloatCard({ property: p, isFavorite, onClose, onOpenDetail, onToggle
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = p.fotos_urls ?? []
-  const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+  const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
   return (
     <div className={mobile ? 'mfc-mobile' : 'mfc-desktop'}>
       <button className="mfc-close" aria-label="Cerrar" onClick={onClose}>&times;</button>
@@ -1400,7 +1404,7 @@ function MapFloatCard({ property: p, isFavorite, onClose, onOpenDetail, onToggle
       </div>
       <div className="mfc-body">
         <div className="mfc-name">{p.proyecto}</div>
-        <div className="mfc-specs">{displayZona(p.zona)} · {Math.round(p.area_m2)}m² · {dorms}</div>
+        <div className="mfc-specs">{displayZona(p.zona)} · {Math.round(p.area_m2)}m²{dorms ? ` · ${dorms}` : ''}</div>
         <div className="mfc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
         <div className="mfc-m2">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</div>
         <button className="mfc-detail" onClick={onOpenDetail}>Ver detalles</button>
@@ -1526,10 +1530,12 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
   // nativa "Cómo está el precio".
   const [slMarket, setSlMarket] = useState<null | { mediana: number; rangoLow: number; rangoHigh: number; totalLow: number; totalHigh: number; count: number; ampliado: boolean; mixto: boolean; segmento: string | null }>(null)
   useEffect(() => {
-    if (!publicShareMode || !p) { setSlMarket(null); return }
+    // Sin tipología no hay cohorte que pedir: con `?? 0` se comparaba contra MONOAMBIENTES
+    // (bug 8000223). Preferimos no mostrar la sección de mercado antes que mostrarla mal.
+    if (!publicShareMode || !p || p.dormitorios === null) { setSlMarket(null); return }
     let cancel = false
     // El endpoint lee el cohort shadow-first (misma base que la propiedad).
-    const qs = `op=venta&dorms=${p.dormitorios ?? 0}&zona=${encodeURIComponent(p.zona || '')}`
+    const qs = `op=venta&dorms=${p.dormitorios}&zona=${encodeURIComponent(p.zona || '')}`
     fetch(`/api/shortlist-market?${qs}`)
       .then(r => r.json())
       .then(res => {
@@ -1684,8 +1690,11 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
         ? { txt: 'Más caro que deptos similares', path: 'M3 17l6-6 4 4 8-8M21 7v4M21 7h-4' }
         : { txt: 'En línea con deptos similares', path: 'M5 12l4 4L19 7' }
   ) : null
-  const dormTxt = p.dormitorios === 0 ? 'monoambientes' : `${p.dormitorios} dormitorio${p.dormitorios !== 1 ? 's' : ''}`
-  const dormShort = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+  // `null` cuando el aviso no declara tipología → los textos de mercado la omiten en vez de
+  // afirmar una cohorte que no existe (bug 8000223: penthouse comparado contra monoambientes).
+  const dormTxt = p.dormitorios === null ? null
+    : p.dormitorios === 0 ? 'monoambientes' : `${p.dormitorios} dormitorio${p.dormitorios !== 1 ? 's' : ''}`
+  const dormShort = dormLabelOrNull(p.dormitorios)
 
   // richLayout (desktop-split + mobile público) = mercado v2 con medidor;
   // broker/publicShare = la versión mktv anterior.
@@ -1697,7 +1706,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
           <span className="bs-mkt2-vico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={mktStatus!.path} /></svg></span>
           <div>
             <div className="bs-mkt2-vtitle">{mktStatus!.txt}</div>
-            <div className="bs-mkt2-vsub">para departamentos de {dormTxt} en la zona</div>
+            <div className="bs-mkt2-vsub">{dormTxt ? `para departamentos de ${dormTxt} en la zona` : 'para departamentos en la zona'}</div>
           </div>
         </div>
         {(() => {
@@ -1726,7 +1735,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
             <div className="bs-mkt2-cval"><b>$us {Math.round(p.precio_usd).toLocaleString('en-US')}</b><em>$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</em></div>
           </div>
           <div className="bs-mkt2-crow">
-            <span>Deptos similares ({dormShort})</span>
+            <span>Deptos similares{dormShort ? ` (${dormShort})` : ''}</span>
             <div className="bs-mkt2-cval"><b>$us {marketData.totalLow.toLocaleString('en-US')} – {marketData.totalHigh.toLocaleString('en-US')}</b><em>$us {marketData.rangoLow.toLocaleString('en-US')} – {marketData.rangoHigh.toLocaleString('en-US')}/m²</em></div>
           </div>
         </div>
@@ -1752,7 +1761,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
           <span className="bs-mktv-status">{p.precio_m2 < marketData.rangoLow ? 'Más barato que similares' : p.precio_m2 > marketData.rangoHigh ? 'Más caro que similares' : 'En línea con similares'}</span>
         </div>
         <div className="bs-mktv-zona">
-          Zona ({p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}{marketData.segmento ? ` · ${marketData.segmento}` : ''}): mediana <b>$us {marketData.mediana.toLocaleString('en-US')}/m²</b>
+          Zona ({[dormLabelOrNull(p.dormitorios), marketData.segmento].filter(Boolean).join(' · ') || 'todas'}): mediana <b>$us {marketData.mediana.toLocaleString('en-US')}/m²</b>
           <span className="bs-mktv-rango">Rango típico $us {marketData.rangoLow.toLocaleString('en-US')} — {marketData.rangoHigh.toLocaleString('en-US')}/m²</span>
         </div>
         {(() => {
@@ -1807,7 +1816,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
             <div className="bs-sim-info">
               <div className="bs-sim-name">{sp.proyecto}</div>
               <div className="bs-sim-price">$us {Math.round(sp.precio_usd).toLocaleString('en-US')}</div>
-              <div className="bs-sim-specs">{Math.round(sp.area_m2)}m² · {sp.dormitorios === 0 ? 'Mono' : `${sp.dormitorios} dorm`}</div>
+              <div className="bs-sim-specs">{Math.round(sp.area_m2)}m²{dormLabelOrNull(sp.dormitorios) ? ` · ${dormLabelOrNull(sp.dormitorios)}` : ''}</div>
             </div>
           </button>
         ))}
@@ -2322,8 +2331,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, onCompare, isFavor
               </a>
             ) : p.agente_telefono && (() => {
               const buildSheetMsg = (): string => {
-                const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
-                const specs = `${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')}`
+                const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
+                const specs = `${dorms ? `${dorms} · ` : ''}${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')}`
                 if (brokerMode && brokerInfo) {
                   const identidad = brokerInfo.inmobiliaria
                     ? `${brokerInfo.nombre} de ${brokerInfo.inmobiliaria}`
@@ -2466,16 +2475,16 @@ function priceChangeBadge(snap: { rawSnapshot: number | null; normSnapshot: numb
 // Mensaje WhatsApp del cliente del shortlist DIRIGIDO AL BROKER (no al agente del listing).
 // Usado en /b/[hash] para botones "Consultar por WA" en card o sheet.
 function buildClientToBrokerMessage(p: UnidadVenta, brokerName: string): string {
-  const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
-  return `Hola ${firstName(brokerName)}, me interesa esta propiedad:\n\n${p.proyecto} (${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})\n\n¿Podemos coordinar?`
+  const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
+  return `Hola ${firstName(brokerName)}, me interesa esta propiedad:\n\n${p.proyecto} (${dorms ? `${dorms} · ` : ''}${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})\n\n¿Podemos coordinar?`
 }
 
 // Mensaje WhatsApp del cliente al broker con LISTA de propiedades de interés.
 // Usado en CompareSheet (publicShareMode) cuando el cliente comparó 2+ y quiere consultar.
 function buildClientShortlistInterestMessage(props: UnidadVenta[], brokerName: string): string {
   const lines = props.map(p => {
-    const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
-    return `• ${p.proyecto} (${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+    const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
+    return `• ${p.proyecto} (${dorms ? `${dorms} · ` : ''}${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
   }).join('\n')
   return `Hola ${firstName(brokerName)}, estoy interesado en estas alternativas:\n\n${lines}\n\n¿Podemos coordinar?`
 }
@@ -2485,8 +2494,8 @@ function buildClientShortlistInterestMessage(props: UnidadVenta[], brokerName: s
 // franquicia/independiente y link del anuncio. Si no, copy estándar de cliente final.
 function buildAgentWaMessage(p: UnidadVenta, brokerInfo: { nombre: string; inmobiliaria?: string | null } | null): string {
   if (brokerInfo) {
-    const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
-    const specs = `${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')}`
+    const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
+    const specs = `${dorms ? `${dorms} · ` : ''}${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')}`
     const identidad = brokerInfo.inmobiliaria
       ? `${brokerInfo.nombre} de ${brokerInfo.inmobiliaria}`
       : `${brokerInfo.nombre}, broker independiente`
@@ -3103,8 +3112,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       ? `${window.location.origin}${window.location.pathname}`
       : `${window.location.origin}/ventas`
     const url = `${baseUrl}?id=${p.id}`
-    const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
-    const text = `Mirá esta propiedad: ${p.proyecto} (${dorms}, ${Math.round(p.area_m2)}m², $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+    const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
+    const text = `Mirá esta propiedad: ${p.proyecto} (${dorms ? `${dorms}, ` : ''}${Math.round(p.area_m2)}m², $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
 
     trackEvent('share_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), origen: publicShareMode ? 'public_share' : 'feed' })
 
@@ -3429,8 +3438,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     let msg: string
     if (hearted.length > 0) {
       const lines = hearted.map(p => {
-        const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
-        return `• ${p.proyecto} (${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+        const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
+        return `• ${p.proyecto} (${dorms ? `${dorms} · ` : ''}${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
       }).join('\n')
       if (contactoDirecto) {
         msg = `Hola ${firstName(publicShare.broker.nombre)}, de las que me pasaste me interesaron:\n\n${lines}\n\n¿Tenés otras parecidas?`
@@ -3792,8 +3801,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
               let msg: string
               if (hearted.length > 0) {
                 const lines = hearted.map(p => {
-                  const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
-                  return `• ${p.proyecto} (${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+                  const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
+                  return `• ${p.proyecto} (${dorms ? `${dorms} · ` : ''}${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
                 }).join('\n')
                 // B2C: el broker dueño es el bot → re-enfocar a "pedir más opciones"
                 // (el bot no coordina visitas; eso va por el captador). Los favoritos
@@ -5617,7 +5626,10 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
         desarrollador: p.desarrollador || null,
         zona: p.zona || 'Sin zona',
         microzona: p.microzona || null,
-        dormitorios: p.dormitorios ?? 0,
+        // Mismo criterio que /api/ventas: null = "el aviso no lo dice", NO 0 (= monoambiente).
+        // Este mapeador es GEMELO del de la API route y se olvidó en el primer arreglo: sin
+        // esto la PRIMERA PINTURA seguía mostrando "Mono" y recién al hidratar se corregía.
+        dormitorios: p.dormitorios ?? null,
         banos: p.banos ? parseFloat(String(p.banos)) : null,
         precio_usd: parseFloat(String(p.precio_usd)) || 0,
         precio_m2: parseFloat(String(p.precio_m2)) || 0,

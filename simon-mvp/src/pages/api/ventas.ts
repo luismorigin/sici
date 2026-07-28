@@ -50,7 +50,12 @@ function mapRow(p: RawUnidadSimpleRow) {
     desarrollador: p.desarrollador || null,
     zona: p.zona || 'Sin zona',
     microzona: p.microzona || null,
-    dormitorios: p.dormitorios ?? 0,
+    // 🔴 NO poner `?? 0`: null significa "el aviso no lo dice", y 0 significa "monoambiente".
+    // Convertir uno en otro inventa el dato MÁS específico posible a partir de su ausencia, y
+    // el frontend hereda la mentira sin poder detectarla. Caso 8000223 (27-jul-2026): penthouse
+    // de 241 m² que salía como "Mono" y al que el chip fiduciario le comparaba el precio contra
+    // el mercado de monoambientes. Ver `dormLabel()` en lib/format-utils.
+    dormitorios: p.dormitorios ?? null,
     banos: p.banos ? parseFloat(String(p.banos)) : null,
     precio_usd: parseFloat(String(p.precio_usd)) || 0,
     precio_m2: parseFloat(String(p.precio_m2)) || 0,

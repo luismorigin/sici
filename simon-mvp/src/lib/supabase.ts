@@ -1987,7 +1987,9 @@ export interface UnidadVenta {
   desarrollador: string | null
   zona: string
   microzona: string | null
-  dormitorios: number
+  // `null` = el aviso no declara la tipología. NO es 0 (que significa monoambiente).
+  // Mostrar con `dormLabel()` de lib/format-utils, que devuelve null y permite omitir el dato.
+  dormitorios: number | null
   banos: number | null
   precio_usd: number
   precio_m2: number

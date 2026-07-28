@@ -5,12 +5,13 @@ import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import 'leaflet.markercluster'
 import { displayZona } from '@/lib/zonas'
+import { dormLabelOrNull } from '@/lib/format-utils'
 
 interface VentaMapProperty {
   id: number
   proyecto: string
   zona: string
-  dormitorios: number
+  dormitorios: number | null   // null = el aviso no lo declara (ver dormLabel)
   precio_usd: number
   precio_m2: number
   area_m2: number
@@ -149,11 +150,12 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
       const marker = L.marker([p.latitud!, p.longitud!], { icon })
         .on('click', () => onSelectProperty(p.id))
 
-      const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+      // Sin dato de tipología se OMITE el segmento (antes imprimía "null dorm" en el globo).
+      const dorms = dormLabelOrNull(p.dormitorios)
       marker.bindTooltip(`
         <div style="font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.4;">
           <strong style="font-family:'Figtree',sans-serif;font-size:14px;font-weight:500;">${p.proyecto}</strong><br/>
-          <span style="color:#7A7060;">${displayZona(p.zona)} · ${dorms} · ${Math.round(p.area_m2)}m²</span><br/>
+          <span style="color:#7A7060;">${displayZona(p.zona)}${dorms ? ` · ${dorms}` : ''} · ${Math.round(p.area_m2)}m²</span><br/>
           <span style="color:#141414;font-weight:600;font-variant-numeric:tabular-nums;">$us ${Math.round(p.precio_usd).toLocaleString('en-US')}</span>
           <span style="color:#7A7060;font-size:11px;"> · $us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>
         </div>

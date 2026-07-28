@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { dormLabel, firstName } from '@/lib/format-utils'
+import { dormLabel, dormLabelOrNull, firstName } from '@/lib/format-utils'
 import type { UnidadVenta } from '@/lib/supabase'
 import { displayZona } from '@/lib/zonas'
 import { openWhatsApp } from '@/lib/whatsapp'
@@ -457,7 +457,7 @@ export default function CompareSheet({ open, properties, chips = null, onClose, 
         {/* CTA único al broker que comparte (solo publicShareMode B2B; en contactoDirecto va al captador) */}
         {publicShareMode && !contactoDirecto && publicShareBroker && (() => {
           const clienteLines = props.map(p => {
-            const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+            const dorms = dormLabelOrNull(p.dormitorios)   // null → se omite (no "null dorm")
             return `• ${p.proyecto} (${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
           }).join('\n')
           const msg = `Hola ${firstName(publicShareBroker.nombre)}, estoy interesado en estas alternativas:\n\n${clienteLines}\n\n¿Podemos coordinar?`
@@ -527,7 +527,7 @@ export default function CompareSheet({ open, properties, chips = null, onClose, 
         {!publicShareMode && (
           <div className="csv-actions">
             <button type="button" className="csv-action-btn" onClick={() => {
-              const lines = props.map((p, i) => `${String.fromCharCode(65 + i)}) ${p.proyecto} — ${p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}, ${Math.round(p.area_m2)}m², $us ${fmt(Math.round(p.precio_usd))}`).join('\n')
+              const lines = props.map((p, i) => `${String.fromCharCode(65 + i)}) ${p.proyecto} — ${dormLabelOrNull(p.dormitorios) ? `${dormLabelOrNull(p.dormitorios)}, ` : ''}${Math.round(p.area_m2)}m², $us ${fmt(Math.round(p.precio_usd))}`).join('\n')
               const text = `Comparativo Simon (venta):\n${lines}\n\nhttps://simonbo.com/ventas`
               trackEvent('share_compare_venta', { count: props.length })
               if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
