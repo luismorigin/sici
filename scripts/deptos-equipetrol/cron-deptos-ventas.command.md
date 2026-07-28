@@ -69,9 +69,21 @@ al MISMO flujo MOAT + apply (pasos 3-4). Es lo que hace que el comando CAPTURE i
 re-lea las existentes. (Opcional si el discovery reportó 0 nuevas.)
 
 ### 3. MOAT — lectura por subagentes-lectores (el juez; lo hacés VOS con subagentes)
-Dividí las entradas del `material-<ts>.json` en chunks de ~10 y lanzá **N subagentes en paralelo**
-(patrón `/audit-cola-matching`). Cada subagente recibe su chunk + lee **`READER_SPEC.md`** y devuelve
-el `veredicto` de cada depto. Mergeá los veredictos de vuelta al `material-<ts>.json`.
+```
+node partir-lectura.mjs output/material-<ts>.json 10   # → lectura-venta-<AAAA-MM-DD>-c1..N.json
+```
+Lanzá **N subagentes en paralelo** (patrón `/audit-cola-matching`). Cada uno lee su
+`lectura-venta-<fecha>-cK.json` + **`READER_SPEC.md`** y escribe `output/veredictos-venta-<fecha>-cK.json`
+(array con `id`). Mergeá los veredictos de vuelta al `material-<ts>.json`.
+
+> 🔴 **Usá SIEMPRE estos nombres; no inventes uno.** Antes esta skill no prescribía ninguno y el agente
+> improvisaba `lectura-chunk-N.json` / `veredictos-chunk-N.json` — **los mismos que usaba alquiler**.
+> El 28-jul-2026, con las dos routines corriendo en paralelo (pasa cuando la máquina durmió y las 3
+> disparan juntas), el que escribía segundo **pisaba** al primero: un lector de venta vio cambiar su
+> propio chunk entre dos lecturas, con ids y schema de ALQUILER. El daño es **silencioso** —
+> `inyectar-veredictos.mjs` matchea por id, así que no mezcla data ajena: PIERDE veredictos y esas
+> props se caen del apply sin aviso. El chunk trae `"operacion": "venta"` adentro: **si no coincide,
+> parar y avisar**.
 
 Cada `veredicto` sigue el schema de `READER_SPEC.md`. Lo esencial:
 - **gate**: `aceptar` | `rechazar` (+ `razon_gate`). Rechazar = multiproyecto, anticrético, baulera,
