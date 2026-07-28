@@ -188,7 +188,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Bots: redirigir sin registrar ni tocar la BD.
     if (esBot(ua)) return res.redirect(302, WA_BASE)
 
-    const { slug, p, s, m, o } = req.query
+    const { slug, p, s, m, o, t } = req.query
     const codigo = Array.isArray(slug) ? slug[0] : (slug as string | undefined) || ''
 
     const org: Origen = {
@@ -235,6 +235,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // instancia; el resto de los clicks no espera nada.
     const piezas = org.piezaNum ? await conTimeout(getPiezas(), 2500) : null
     const nombrePieza = (org.piezaNum && piezas?.get(org.piezaNum)) || null
+
+    // MODO PRUEBA: `?t=1` marca el clic para que NO cuente en las métricas.
+    // El clic se registra igual (queda el rastro de que se probó y funcionó);
+    // `v_mkt_clicks_humanos` lo excluye del conteo (mig 308).
+    // Por qué acá y no por teléfono: un clic es ANÓNIMO — la persona recién se
+    // identifica cuando escribe. La marca la tiene que traer el propio link.
+    // Uso: simonbo.com/ir/f03?t=1
+    if (primero(t) === '1') org.utm_content = 'test'
 
     // `valido` = PUDIMOS IDENTIFICAR EL ORIGEN. No es "pude leer el nombre": un
     // /ir/f03 legítimo con la BD lenta no es un caption roto, y marcarlo así
