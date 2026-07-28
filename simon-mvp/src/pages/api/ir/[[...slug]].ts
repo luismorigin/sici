@@ -184,6 +184,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       codigo: null, piezaNum: null, red: null,
       utm_source: null, utm_medium: null, utm_campaign: null, utm_content: null,
     }
+    // Enlace PERMANENTE de perfil (`?p=bio`) en vez de una pieza puntual.
+    let esPermanente = false
 
     if (codigo) {
       // Forma corta: /ir/f03
@@ -196,7 +198,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         org.utm_medium = parsed.red === 'meta' ? 'paid' : 'organic'
       }
     } else if (primero(p)) {
-      // Forma larga: /ir?p=id03&s=facebook&m=organic&o=bio
+      // Forma larga: /ir?p=id03&s=facebook&m=organic&o=bio  ← pieza concreta
+      //              /ir?p=bio&s=instagram&m=organic&o=bio  ← enlace PERMANENTE de perfil
       const pv = primero(p).slice(0, 64)
       org.codigo = pv
       org.red = primero(s).slice(0, 32) || null
@@ -205,6 +208,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       org.utm_content = primero(o).slice(0, 100) || null
       const nm = /^id(\d{1,3})$/i.exec(pv)
       if (nm) org.piezaNum = parseInt(nm[1], 10)
+      // `p` que NO es idNN (hoy `bio`) = enlace permanente de perfil, no una pieza.
+      // Es un origen legítimo y perfectamente identificable, así que NO es un
+      // "código roto": ver `valido` abajo. Separar bio de post en las consultas:
+      //   pieza_num IS NOT NULL → post · pieza_num IS NULL → perfil/bio
+      esPermanente = !nm
     }
 
     // 2500ms y no 700: en Vercel la PRIMERA lectura de una instancia fría paga
@@ -217,11 +225,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const piezas = org.piezaNum ? await conTimeout(getPiezas(), 2500) : null
     const nombrePieza = (org.piezaNum && piezas?.get(org.piezaNum)) || null
 
-    // `valido` = el CÓDIGO parseó, no "pude leer el nombre". Son cosas distintas:
-    // un /ir/f03 legítimo con la BD lenta no es un caption roto, y marcarlo así
+    // `valido` = PUDIMOS IDENTIFICAR EL ORIGEN. No es "pude leer el nombre": un
+    // /ir/f03 legítimo con la BD lenta no es un caption roto, y marcarlo así
     // ensucia justamente la señal para la que existe la columna (detectar links
     // mal escritos en publicaciones ya publicadas).
-    const valido = org.piezaNum !== null
+    //
+    // Los enlaces permanentes de perfil (`?p=bio`) también cuentan como válidos:
+    // el origen se identifica perfectamente (es la bio), solo que no es una pieza.
+    // Sin esto quedaban en `false` y —al ser links PERMANENTES que reciben clics
+    // todos los días— arruinaban la señal para siempre: los 3 primeros clics de
+    // bio (27-jul) ya eran el 100% de los "inválidos" registrados.
+    const valido = org.piezaNum !== null || esPermanente
 
     if (org.piezaNum) {
       org.utm_campaign = nombrePieza
@@ -233,16 +247,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // de la conversación, así quien atiende ve de dónde viene sin abrir un panel.
     // Es lo único que sobrevive si el registro falla.
     //
-    // Tres niveles, para no quedarnos nunca sin marca de origen:
+    // Niveles, para no quedarnos nunca sin marca de origen:
     //   1. con nombre  → el texto lindo, y `v_atribucion_contactos` lo cruza solo
-    //   2. sin nombre pero con código → al menos el código viaja en el mensaje
+    //   2. permanente  → texto natural, SIN código: la persona viene del perfil,
+    //      no de una pieza. Antes caía al nivel 3 y le hacía escribir "vengo de tu
+    //      publicación (bio)" — jerga interna, y encima la bio no es una publicación.
+    //      Acá no hace falta marcar el origen en el texto: ya está en la BD
+    //      (`codigo='bio'` + `red`), y lo que se quería saber con el texto era
+    //      QUÉ PIEZA, que en la bio no aplica.
+    //   3. sin nombre pero con código → al menos el código viaja en el mensaje
     //      (si la BD estuvo lenta, antes se perdía TODO el origen)
-    //   3. sin código  → wa.me pelado
+    //   4. sin código  → wa.me pelado
     const texto = nombrePieza
       ? `Hola Simón, vi tu publicación "${nombrePieza}" y quiero saber más.`
-      : org.codigo
-        ? `Hola Simón, vengo de tu publicación (${org.codigo}) y quiero saber más.`
-        : null
+      : esPermanente
+        ? 'Hola Simón, quiero saber más.'
+        : org.codigo
+          ? `Hola Simón, vengo de tu publicación (${org.codigo}) y quiero saber más.`
+          : null
     const destino = texto ? `${WA_BASE}?text=${encodeURIComponent(texto)}` : WA_BASE
 
     if (supabaseUrl && supabaseServiceKey) {
