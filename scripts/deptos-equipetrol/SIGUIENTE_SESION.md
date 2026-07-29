@@ -121,8 +121,14 @@ node cargar-deptos-shadow.mjs --apply output/material-<ts>-zn.json --zona=zona-n
 lector queda ciego en el ~60% de los avisos (los que no traen el monto en el texto). Ver
 `RECONOCIMIENTO_ZN.md` §"El portal miente el precio". El fetch cuesta ~11 MB por tanda: barato.
 
-🔴 **Archivar los veredictos de la tanda anterior antes de partir** (`output/tanda-N/`): los
-nombres solo llevan la fecha, así que dos tandas el mismo día se pisan.
+🔴 **Archivar los veredictos apenas se aplica la tanda** (`output/tanda-<N>-aplicada/`), no antes
+de la siguiente: los nombres solo llevan la fecha, así que dos tandas del mismo día se pisan.
+Al 29-jul ya están archivadas las cuatro (`tanda-1-aplicada`, `tanda-2-descartada`,
+`tanda-145-aplicada`, `tanda-104-aplicada`) y no hay ningún veredicto suelto — se puede partir
+la próxima sin tocar nada.
+
+🔧 **Mejora de fondo pendiente** (chica): que `partir-lectura.mjs` incluya la HORA en el nombre,
+no solo la fecha. Mientras no esté, archivar es obligatorio y depende de que alguien se acuerde.
 
 **Faltan ~300 props de venta** (109 de 448 hechas) + **101 de alquiler**.
 
