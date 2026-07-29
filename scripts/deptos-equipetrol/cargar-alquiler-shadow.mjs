@@ -30,19 +30,24 @@ import { fetchDetalleDepto, num, numOrZero } from './lib/detalle-deptos.mjs';
 import { matchearPorNombre } from './lib/matcher.mjs';
 import { reBucket } from './lib/canonicalizar.mjs';
 import { reservarIdsShadow } from './lib/reservar-ids-shadow.mjs';
+import { resolverZona, conSufijo } from './lib/zonas-hibrido.mjs';
+import { detalleDesdeBase } from './lib/detalle-desde-base.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
 dotenv.config({ path: `${ROOT}/simon-mvp/.env.local` });
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 const OUT = join(__dirname, 'output'); mkdirSync(OUT, { recursive: true });
-const ZONAS_EQ = ['Equipetrol Centro', 'Equipetrol Norte', 'Sirari', 'Villa Brigida', 'Equipetrol Oeste', 'Eq. 3er Anillo'];
+const ZONA = resolverZona();                    // default equipetrol → sin flags, igual que antes
+const ZONAS_EQ = ZONA.zonas;
 const SCRAPER_VERSION = 'hibrido-alquiler-v1';
 const TS = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
 // ---- args ----
 const argv = process.argv.slice(2);
 const MODE = argv.includes('--prep') ? 'prep' : argv.includes('--apply') ? 'apply' : argv.includes('--nuevas') ? 'nuevas' : null;
+// --local: armar el material desde lo guardado, sin salir al portal (ver lib/detalle-desde-base.mjs)
+const LOCAL = argv.includes('--local');
 const idsArg = (() => { const i = argv.indexOf('--ids'); return i >= 0 ? (argv[i + 1] || '').split(',').map((x) => Number(x.trim())).filter(Boolean) : null; })();
 const N = Number(argv.find((a) => /^\d+$/.test(a))) || 4;
 const applyFile = MODE === 'apply' ? argv[argv.indexOf('--apply') + 1] : null;
@@ -93,7 +98,8 @@ const COLS = 'id,fuente,url,tipo_propiedad_original,precio_mensual_bob,precio_me
   'monto_expensas_bob,deposito_meses,contrato_minimo_meses,amoblado,acepta_mascotas,servicios_incluidos,' +
   'area_total_m2,dormitorios,banos,piso,estacionamientos,baulera,latitud,longitud,zona,microzona,' +
   'id_proyecto_master,nombre_edificio,fecha_publicacion,score_calidad_dato,es_multiproyecto,duplicado_de,' +
-  'datos_json_discovery,datos_json_enrichment';
+  'datos_json_discovery,datos_json_enrichment' +
+  (LOCAL ? ',datos_json' : '');   // solo en --local: fallback de la descripción (payload grande)
 
 async function traerLote() {
   let q = sb.from('propiedades_v2').select(COLS)
@@ -115,13 +121,19 @@ async function prep() {
   const lote = await traerLote();
   const { data: tcRow } = await sb.from('config_global').select('valor').eq('clave', 'tipo_cambio_paralelo').single();
   const tasaParalelo = tcRow?.valor != null ? Number(tcRow.valor) : null;
-  console.log(`\n🔎 PREP ALQUILER — material para ${lote.length} deptos${idsArg ? ' (--ids)' : ` (hasta ${N} frescos)`}. tasa_paralelo=${tasaParalelo}. NO escribe a la BD.\n`);
+  console.log(`\n🔎 PREP ALQUILER — material para ${lote.length} deptos${idsArg ? ' (--ids)' : ` (hasta ${N} frescos)`}. zona=${ZONA.nombre}. tasa_paralelo=${tasaParalelo}. ${LOCAL ? 'MODO LOCAL: desde lo guardado, sin salir al portal.' : ''} NO escribe a la BD.\n`);
   const entradas = [];
+  let sinTexto = 0;
   for (const p of lote) {
-    if (circuit.tripped) { console.log('🛑 circuit breaker.'); break; }
+    if (!LOCAL && circuit.tripped) { console.log('🛑 circuit breaker.'); break; }
     let h = null, err = null;
-    try { h = await fetchDetalleDepto(p.fuente, p.url); } catch (e) { err = String(e.message); }
-    if (!h) { console.log(`   ${p.id} ${p.fuente} ✗ fetch: ${err || ''}`); await pace(400); continue; }
+    if (LOCAL) {
+      h = detalleDesdeBase(p);
+      if (!h) { sinTexto++; console.log(`   ${p.id} ${p.fuente} ✗ sin descripción guardada → necesita fetch`); continue; }
+    } else {
+      try { h = await fetchDetalleDepto(p.fuente, p.url); } catch (e) { err = String(e.message); }
+      if (!h) { console.log(`   ${p.id} ${p.fuente} ✗ fetch: ${err || ''}`); await pace(400); continue; }
+    }
 
     const disc = p.datos_json_discovery || {};
     const precio = precioCrudoAlquiler(p);
@@ -170,12 +182,17 @@ async function prep() {
       veredicto: null,
     });
     console.log(`   ${p.id} ${p.fuente}  crudo=${precio.precio_crudo} ${precio.moneda_original || '?'}  guess="${nombreGuess || '—'}"  cands:${candidatos.length}  slug:${(slugDe(p.url) || '').slice(0, 40)}`);
-    await pace(500);
+    if (!LOCAL) await pace(500);
   }
-  const file = join(OUT, `material-alq-${TS}.json`);
-  writeFileSync(file, JSON.stringify({ generado: TS, spec: 'READER_SPEC_ALQUILER.md', total: entradas.length, entradas }, null, 2));
+  // zona en el nombre Y adentro (mismo criterio que venta: el dato manda sobre la convención)
+  const file = join(OUT, conSufijo(`material-alq-${TS}.json`, ZONA));
+  writeFileSync(file, JSON.stringify({
+    generado: TS, spec: 'READER_SPEC_ALQUILER.md', zona: ZONA.id, origen: LOCAL ? 'base' : 'portal',
+    m2_tipico: ZONA.m2Tipico, total: entradas.length, entradas,
+  }, null, 2));
   console.log(`\n💾 ${file}`);
-  console.log(`   📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
+  if (sinTexto) console.log(`   ⚠️  ${sinTexto} sin descripción guardada (quedaron afuera; esas sí necesitan fetch)`);
+  console.log(`   📊 Tráfico: ${LOCAL ? 'ninguno — no se salió al portal' : `${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`}`);
   console.log(`   → LÉELO y llená "veredicto" (READER_SPEC_ALQUILER.md), después: node cargar-alquiler-shadow.mjs --apply ${file}\n`);
 }
 
@@ -191,7 +208,7 @@ async function prepNuevas(discoveryFile, n) {
   // Con `slice(0,n)` + `8_000_000+i` cada corrida reprocesaba las mismas y reiniciaba los ids →
   // colisión que PISA props reales en el upsert (el rango 8M lo comparten venta y alquiler).
   const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('url');
-  const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', 'equipetrol');
+  const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', ZONA.macrozona);
   const urlsShadow = new Set([...(yaEn || []).map((r) => r.url), ...(yaProy || []).map((r) => r.url)]);
   const pendientes = (disc.nuevas || []).filter((nv) => !urlsShadow.has(nv.url));
   const yaCargadas = (disc.nuevas || []).length - pendientes.length;

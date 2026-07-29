@@ -1,6 +1,6 @@
 // Adaptadores C21 + Remax: listado (volumen) y detalle (campos ricos).
 import { fetchRetry, sleep, pace, circuit } from './fetcher.mjs';
-import { bboxDe } from './zonas.mjs';
+import { bboxDe, enZona, ZONAS } from './zonas.mjs';
 
 const TC = 6.96; // TC oficial para conversión BOB→USD del listado (aproximado; el detalle refina)
 const STEP = 0.02;
@@ -13,7 +13,7 @@ const C21_HEADERS = () => ({
   'cookie': `PHPSESSID=sici_sonda_${Math.random().toString(36).slice(2, 12)}`,
 });
 
-export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {}, step = STEP, operacion = 'venta' } = {}) {
+export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {}, step = STEP, operacion = 'venta', saltarVacios = false } = {}) {
   // operacion: token de la URL C21 — 'venta' (default, backward compat) | 'renta' (alquiler).
   // step: tamaño del cuadrante. C21 corta a ~100 props/request → cuadrante grande PIERDE inventario.
   // Default 0.02 (casas). Deptos pasa 0.005: Equipetrol es ULTRA-denso y con 0.01 los cuadrantes del core
@@ -25,9 +25,27 @@ export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {},
     for (let lon = b.O; lon < b.E; lon += step)
       cuadrantes.push({ N: Math.min(lat + step, b.N), E: Math.min(lon + step, b.E), S: lat, O: lon });
 
+  // saltarVacios (28-jul-2026, OPT-IN — default false = nadie cambia de comportamiento):
+  // el grid es un RECTÁNGULO sobre el bbox. Para una zona compacta da igual, pero Zona Norte
+  // es una franja irregular metida en un rectángulo de 12×8,8 km → 130 de sus 374 cuadrantes
+  // (35%) caen en el vacío. Pedirlos igual es tiempo, datos de proxy y riesgo de rate-limit a
+  // cambio de nada: las props que devolvieran caen fuera del polígono y el llamador las
+  // descarta después con el mismo `enZona`. Se muestrea una grilla de 6×6 puntos por cuadrante
+  // y solo se salta si NINGUNO cae dentro — conservador, para no perder inventario del borde.
+  // Requiere polígono real: Equipetrol no lo tiene (rectángulo) → aunque se pida, no salta nada.
+  let saltados = 0;
+  const activo = saltarVacios && !!ZONAS[zonaKey]?.poligono;
+  const tocaLaZona = (c) => {
+    for (let i = 0; i <= 5; i++)
+      for (let j = 0; j <= 5; j++)
+        if (enZona(c.S + (c.N - c.S) * i / 5, c.O + (c.E - c.O) * j / 5, zonaKey)) return true;
+    return false;
+  };
+
   const vistos = new Set(), out = [];
   for (const [idx, c] of cuadrantes.entries()) {
     if (circuit.tripped) { log(`    🛑 C21 ${zonaKey}/${tipo}: corte temprano en el cuadrante ${idx + 1}/${cuadrantes.length} — ${circuit.motivo}`); break; }
+    if (activo && !tocaLaZona(c)) { saltados++; continue; }
     const coord = `coordenadas_${c.N.toFixed(6)},${c.E.toFixed(6)},${c.S.toFixed(6)},${c.O.toFixed(6)}`;
     const url = `https://c21.com.bo/v/resultados/tipo_${tipo}/operacion_${operacion}/layout_mapa/${coord},15?json=true`;
     const j = await fetchRetry(url, { json: true, headers: C21_HEADERS() });
@@ -54,6 +72,7 @@ export async function c21Listado(zonaKey, tipo, { rateMs = 1500, log = () => {},
     if ((idx + 1) % 15 === 0) log(`    C21 ${zonaKey}/${tipo}: ${idx + 1}/${cuadrantes.length} cuadrantes, ${out.length} props`);
     await pace(rateMs);
   }
+  if (saltados) log(`    C21 ${zonaKey}/${tipo}: ${saltados}/${cuadrantes.length} cuadrantes saltados por caer fuera del polígono (${cuadrantes.length - saltados} pedidos)`);
   return out;
 }
 

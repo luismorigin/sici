@@ -95,11 +95,29 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 >   **NUNCA** guardes `BOB/tasa` (eso es crudo-falso) NI uses `precio_candidato` (BOB/6.96). Si el texto dice 6.96/7 explícito → `oficial_viejo`.
 > - Remax trae precio en USD → usá ese, tag según texto. `precio_usd` = CRUDO en su moneda nativa; el feed normaliza (keyed en el tag).
 >
+> ### 🎛️ La banda de $/m² es POR ZONA — no uses la de Equipetrol en otra zona (28-jul-2026)
+> Varias reglas de abajo desempatan por "$/m² coherente". Esa banda **depende de la zona**: aplicar la de
+> Equipetrol a una zona más barata hace clasificar mal el tipo de cambio, en silencio. La banda viene en el
+> material (`m2_tipico`); si no viene, usá la de la tabla:
+>
+> | Zona | Banda típica $/m² | Medido sobre |
+> |---|---|---|
+> | Equipetrol | **$1.700 – $2.200** | p50–p90, n=381 |
+> | Zona Norte | **$1.500 – $1.900** | p50–p90, n=428 · ZN es ~12% más barata |
+>
+> Método (para recalcular cuando haga falta): $/m² sobre el precio **crudo** de las activas con tag directo,
+> percentil 50 a 90. Validación: ese cálculo sobre Equipetrol reproduce el 1.700–2.200 que esta spec ya usaba.
+>
+> 🔴 **Modo `--local` (material armado desde lo guardado, sin ir al portal): `precio_bob_portal` viene NULL a
+> propósito.** En Zona Norte el `precio_bs` guardado resultó ser `precio_usd × 6.96` en **435 de 435** props —
+> lo calculó el pipeline viejo, no es un precio en bolivianos del anuncio. Tratarlo como BOB genuino lo
+> convertiría a la tasa de hoy y hundiría el precio ~40%. Si el aviso publica en bolivianos, está **en el texto**.
+>
 > ### Fallback C21 sin precio en el texto — elegir USD-directo vs bob por $/m² (RESUELTO 10-jul)
 > C21 expone SIEMPRE el precio en BOB (`senales.precio_bob_portal`) Y en USD (`senales.precio_candidato =
 > precio_bob_portal / 6.96`), con `senales.moneda='USD'`. Cuando el texto NO trae precio, el `precio_bob_portal`
 > puede ser (a) un precio genuino en bolivianos, o (b) el USD del vendedor × 6.96 (crudo-falso). **NO defaultear a
-> `bob` a ciegas** — elegí por **$/m² coherente** (~$1.500–2.300 Equipetrol; memoria `feedback_clasificacion_tc_por_m2`):
+> `bob` a ciegas** — elegí por **$/m² coherente** (banda de la zona, tabla de arriba; memoria `feedback_clasificacion_tc_por_m2`):
 > - `usd_m2 = precio_candidato / area` · `bob_m2 = (precio_bob_portal / tasa_paralelo) / area`.
 > - `usd_m2` en banda y `bob_m2` muy bajo → **USD directo** (`precio_usd = precio_candidato`, tag `no_especificado`,
 >   `moneda_original='USD'`). El vendedor pensó en dólares; el BOB era USD×6.96.

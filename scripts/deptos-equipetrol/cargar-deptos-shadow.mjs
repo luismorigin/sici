@@ -29,19 +29,29 @@ import { fetchDetalleDepto } from './lib/detalle-deptos.mjs';
 import { matchearPorNombre } from './lib/matcher.mjs';
 import { reBucket } from './lib/canonicalizar.mjs';
 import { reservarIdsShadow } from './lib/reservar-ids-shadow.mjs';
+import { resolverZona, conSufijo } from './lib/zonas-hibrido.mjs';
+import { detalleDesdeBase } from './lib/detalle-desde-base.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
 dotenv.config({ path: `${ROOT}/simon-mvp/.env.local` });
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 const OUT = join(__dirname, 'output'); mkdirSync(OUT, { recursive: true });
-const ZONAS_EQ = ['Equipetrol Centro', 'Equipetrol Norte', 'Sirari', 'Villa Brigida', 'Equipetrol Oeste', 'Eq. 3er Anillo'];
+const ZONA = resolverZona();                    // default equipetrol → sin flags, igual que antes
+const ZONAS_EQ = ZONA.zonas;
 const SCRAPER_VERSION = 'hibrido-shadow-v4';  // v4 = 4 cortes de ambigüedad de la validación ciega de 100 (equipado-literal / TC-palabra-sin-número / dos-precios-el-bajo / gate-renta-oferta-vs-pitch). v3 = reader extendido (amenidades/extra/equipamiento/baños/piso/estado/fecha/amoblado/multiproyecto)
 const TS = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
 // ---- args ----
 const argv = process.argv.slice(2);
 const MODE = argv.includes('--prep') ? 'prep' : argv.includes('--apply') ? 'apply' : argv.includes('--nuevas') ? 'nuevas' : null;
+// --local (28-jul-2026): armar el material SIN salir al portal, desde lo ya guardado en
+// `datos_json_enrichment`. Nació para Zona Norte, donde ya hay 435 de 445 anuncios con su
+// texto guardado por el pipeline viejo: re-leerlos no necesita internet. Es gratis, no
+// gasta proxy, no expone la IP, y funciona aunque el anuncio ya no esté publicado.
+// ⚠️ Es RE-LECTURA de lo capturado, NO captura fresca: si el anuncio cambió en el portal,
+// esto no se entera (para eso está /audit-deptos-shadow, que compara contra el portal).
+const LOCAL = argv.includes('--local');
 const idsArg = (() => { const i = argv.indexOf('--ids'); return i >= 0 ? (argv[i + 1] || '').split(',').map((x) => Number(x.trim())).filter(Boolean) : null; })();
 const N = Number(argv.find((a) => /^\d+$/.test(a))) || 4;
 const applyFile = MODE === 'apply' ? argv[argv.indexOf('--apply') + 1] : null;
@@ -71,7 +81,8 @@ const leerRechazados = () => { try { return new Set(JSON.parse(readFileSync(REJ_
 const COLS = 'id,fuente,url,tipo_propiedad_original,estado_construccion,precio_usd,tipo_cambio_detectado,' +
   'moneda_original,area_total_m2,dormitorios,banos,piso,estacionamientos,latitud,longitud,zona,microzona,' +
   'id_proyecto_master,nombre_edificio,fecha_publicacion,score_calidad_dato,es_multiproyecto,duplicado_de,' +
-  'baulera,solo_tc_paralelo,datos_json_discovery,datos_json_enrichment';
+  'baulera,solo_tc_paralelo,datos_json_discovery,datos_json_enrichment' +
+  (LOCAL ? ',datos_json' : '');   // solo en --local: es el fallback de la descripción (payload grande)
 
 async function traerLote() {
   let q = sb.from('propiedades_v2').select(COLS)
@@ -84,7 +95,7 @@ async function traerLote() {
   const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('id');
   // + los multiproyecto YA detectados (van a proyectos_detectados, NO a shadow ni a rechazados) —
   //   sin esto reaparecen en cada prep y consumen slots del lote. Se excluyen por url.
-  const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', 'equipetrol');
+  const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', ZONA.macrozona);
   const urlsProy = new Set((yaProy || []).map((r) => r.url));
   const cargados = new Set([...(yaEn || []).map((r) => r.id), ...leerRechazados()]);
   const frescos = data.filter((d) => !cargados.has(d.id) && !urlsProy.has(d.url));
@@ -102,13 +113,19 @@ async function prep() {
   // el BOB con la MISMA tasa (mata la divergencia C21-BOB). Fuente: config_global.
   const { data: tcRow } = await sb.from('config_global').select('valor').eq('clave', 'tipo_cambio_paralelo').single();
   const tasaParalelo = tcRow?.valor != null ? Number(tcRow.valor) : null;
-  console.log(`\n🔎 PREP — material de lectura para ${lote.length} deptos${idsArg ? ' (--ids)' : ` (hasta ${N} frescos, agnóstico a fuente)`}. tasa_paralelo=${tasaParalelo}. NO escribe a la BD.\n`);
+  console.log(`\n🔎 PREP — material de lectura para ${lote.length} deptos${idsArg ? ' (--ids)' : ` (hasta ${N} frescos, agnóstico a fuente)`}. zona=${ZONA.nombre}. tasa_paralelo=${tasaParalelo}. ${LOCAL ? 'MODO LOCAL: desde lo guardado, sin salir al portal.' : ''} NO escribe a la BD.\n`);
   const entradas = [];
+  let sinTexto = 0;
   for (const p of lote) {
-    if (circuit.tripped) { console.log('🛑 circuit breaker.'); break; }
+    if (!LOCAL && circuit.tripped) { console.log('🛑 circuit breaker.'); break; }
     let h = null, err = null;
-    try { h = await fetchDetalleDepto(p.fuente, p.url); } catch (e) { err = String(e.message); }
-    if (!h) { console.log(`   ${p.id} ${p.fuente} ✗ fetch: ${err || ''}`); await pace(400); continue; }
+    if (LOCAL) {
+      h = detalleDesdeBase(p);
+      if (!h) { sinTexto++; console.log(`   ${p.id} ${p.fuente} ✗ sin descripción guardada → necesita fetch`); continue; }
+    } else {
+      try { h = await fetchDetalleDepto(p.fuente, p.url); } catch (e) { err = String(e.message); }
+      if (!h) { console.log(`   ${p.id} ${p.fuente} ✗ fetch: ${err || ''}`); await pace(400); continue; }
+    }
 
     const disc = p.datos_json_discovery || {};
     // nombre-guess (solo para traer candidatos de referencia; el lector da el canónico)
@@ -153,12 +170,18 @@ async function prep() {
       veredicto: null,
     });
     console.log(`   ${p.id} ${p.fuente}  guess="${nombreGuess || '—'}"  cands:${candidatos.length}  slug:${(slugDe(p.url) || '').slice(0, 42)}`);
-    await pace(500);
+    if (!LOCAL) await pace(500);
   }
-  const file = join(OUT, `material-${TS}.json`);
-  writeFileSync(file, JSON.stringify({ generado: TS, spec: 'READER_SPEC.md', total: entradas.length, entradas }, null, 2));
+  // El material dice de qué ZONA es y de dónde salió el texto: el lector y el --apply pueden
+  // verificar que están trabajando sobre lo que creen (lección del pisado de chunks del 28-jul).
+  const file = join(OUT, conSufijo(`material-${TS}.json`, ZONA));
+  writeFileSync(file, JSON.stringify({
+    generado: TS, spec: 'READER_SPEC.md', zona: ZONA.id, origen: LOCAL ? 'base' : 'portal',
+    m2_tipico: ZONA.m2Tipico, total: entradas.length, entradas,
+  }, null, 2));
   console.log(`\n💾 ${file}`);
-  console.log(`   📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
+  if (sinTexto) console.log(`   ⚠️  ${sinTexto} sin descripción guardada (quedaron afuera; esas sí necesitan fetch)`);
+  console.log(`   📊 Tráfico: ${LOCAL ? 'ninguno — no se salió al portal' : `${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`}`);
   console.log(`   → LÉELO y llená "veredicto" en cada depto (READER_SPEC.md), después: node cargar-deptos-shadow.mjs --apply ${file}\n`);
 }
 
@@ -176,7 +199,7 @@ async function prepNuevas(discoveryFile, n) {
   // + los multiproyecto YA detectados (viven en proyectos_detectados, NO en shadow): sin esto se
   //   re-fetchean los mismos brochures en cada corrida y consumen slots del lote (mismo criterio que traerLote).
   const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('url');
-  const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', 'equipetrol');
+  const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', ZONA.macrozona);
   const urlsShadow = new Set([...(yaEn || []).map((r) => r.url), ...(yaProy || []).map((r) => r.url)]);
   const pendientes = (disc.nuevas || []).filter((nv) => !urlsShadow.has(nv.url));
   const yaCargadas = (disc.nuevas || []).length - pendientes.length;
@@ -368,7 +391,12 @@ async function apply(file) {
         url: e._apply.url, fuente: e.fuente, codigo_propiedad: slugDe(e._apply.url),
         descripcion_cruda: e.descripcion || null,
         datos_json: { senales: e.senales, veredicto: v },
-        zona: e.zona || null, macrozona: 'equipetrol',
+        // La ESCRITURA también va por la perilla. Se me pasó en la primera migración: quedó
+        // 'equipetrol' fijo mientras las lecturas ya usaban ZONA.macrozona → los 2 brochures de
+        // la primera tanda de ZN se registraron como Equipetrol. Daño concreto: el discovery de
+        // ZN los busca por su macrozona, no los encuentra, y los reporta como "nuevas" todas las
+        // noches (el bug que esta tabla existía para evitar). Corregido 28-jul-2026.
+        zona: e.zona || null, macrozona: ZONA.macrozona,
         latitud: e._apply.latitud ?? null, longitud: e._apply.longitud ?? null,
         nombre_proyecto: v.nombre_edificio_canonico || null, estado: 'pendiente',
       });

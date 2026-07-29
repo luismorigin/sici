@@ -28,22 +28,32 @@ import { fileURLToPath } from 'node:url';
 import { c21Listado, remaxListadoSC } from '../sonda-suelo/lib/portales.mjs';
 import { enZona } from '../sonda-suelo/lib/zonas.mjs';
 import { circuit, trafico } from '../sonda-suelo/lib/fetcher.mjs';
+import { ZONAS_HIBRIDO, resolverZona } from './lib/zonas-hibrido.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
 dotenv.config({ path: `${ROOT}/simon-mvp/.env.local` });
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-const ZONA_KEY = 'equipetrol-deptos';
+const ZONA = resolverZona();                   // default equipetrol → sin flags, igual que antes
+const ZONA_KEY = ZONA.bboxKey;
 const TIPO = 'departamento';
-const ZONAS_EQ = new Set(['Equipetrol Centro', 'Equipetrol Norte', 'Sirari', 'Villa Brigida', 'Equipetrol Oeste', 'Eq. 3er Anillo']);
+const ZONAS_EQ = new Set(ZONA.zonas);
 const FORCE = process.argv.includes('--force');
 const log = (m) => console.log(m);
+
+// Cooldown POR ZONA (ver el gemelo de venta): el prefijo de Equipetrol es prefijo de los demás,
+// así que hay que excluir explícitamente los de otras zonas o se auto-bloquearía con ellos.
+const PREFIJO = `discovery-alquiler${ZONA.sufijoArchivo}-`;
+const PREFIJOS_AJENOS = Object.values(ZONAS_HIBRIDO)
+  .filter((z) => z.id !== ZONA.id && z.sufijoArchivo)
+  .map((z) => `discovery-alquiler${z.sufijoArchivo}-`);
+const esDeEstaZona = (f) => f.startsWith(PREFIJO) && !PREFIJOS_AJENOS.some((p) => f.startsWith(p));
 
 const COOLDOWN_MIN = 20;
 const OUT = join(__dirname, 'output'); mkdirSync(OUT, { recursive: true });
 try {
-  const last = readdirSync(OUT).filter((x) => x.startsWith('discovery-alquiler')).sort().pop();
+  const last = readdirSync(OUT).filter(esDeEstaZona).sort().pop();
   if (last && !FORCE) {
     const ageMin = (Date.now() - statSync(join(OUT, last)).mtimeMs) / 60000;
     if (ageMin < COOLDOWN_MIN) {
@@ -68,12 +78,12 @@ async function clasificarZonas(items) {
 }
 
 // ============================== MAIN ==============================
-log(`\n🏢 DISCOVERY ALQUILER EQUIPETROL — DRY-RUN (read-only) · tipo=${TIPO} · operacion=alquiler · 6 microzonas\n`);
+log(`\n🏢 DISCOVERY ALQUILER ${ZONA.nombre.toUpperCase()} — DRY-RUN (read-only) · tipo=${TIPO} · operacion=alquiler · ${ZONA.zonas.length} microzonas\n`);
 
 // ---------- 1. DISCOVERY ----------
-log('1) Discovery (C21 renta + Remax alquiler, red ancha Equipetrol)…');
+log(`1) Discovery (C21 renta + Remax alquiler, red ancha ${ZONA.nombre})…`);
 const listings = [];
-for (const p of await c21Listado(ZONA_KEY, TIPO, { log, step: 0.005, operacion: 'renta' })) if (p.url && enZona(p.lat, p.lon, ZONA_KEY)) listings.push({ ...p, fuente: 'century21' });
+for (const p of await c21Listado(ZONA_KEY, TIPO, { log, step: 0.005, operacion: 'renta', saltarVacios: ZONA.usaPoligono })) if (p.url && enZona(p.lat, p.lon, ZONA_KEY)) listings.push({ ...p, fuente: 'century21' });
 for (const p of await remaxListadoSC(TIPO, { log, operacion: 'alquiler' })) if (p.url && enZona(p.lat, p.lon, ZONA_KEY)) listings.push({ ...p, fuente: 'remax' });
 const byUrl = new Map();
 for (const p of listings) if (!byUrl.has(p.url)) byUrl.set(p.url, p);
@@ -117,10 +127,10 @@ if (circuit.tripped) {
 }
 
 // ---------- 2. ZONA FINA ----------
-log('2) Filtro de zona fina (get_zona_by_gps ∈ 6 microzonas)…');
+log(`2) Filtro de zona fina (get_zona_by_gps ∈ ${ZONA.zonas.length} microzonas)…`);
 const zonaDe = await clasificarZonas(portalBbox);
 const portal = portalBbox.filter((p) => ZONAS_EQ.has(zonaDe.get(p.url)));
-log(`   → ${portal.length} deptos en las 6 microzonas (${portalBbox.length - portal.length} descartados)\n`);
+log(`   → ${portal.length} deptos en las ${ZONA.zonas.length} microzonas (${portalBbox.length - portal.length} descartados)\n`);
 
 // ---------- 3. DIFF (SELECT-only, SOLO alquiler) — SHADOW-AWARE ----------
 // El híbrido vive en SHADOW: NUEVAS excluyen lo ya cargado en shadow (sin esto se reprocesan cada
@@ -137,18 +147,32 @@ for (let from = 0; ; from += 1000) {
   if (data.length < 1000) break;
 }
 // SHADOW (alquiler): lo que el híbrido YA cargó (existentes migradas + nuevas con id 8M)
-const shadowRows = [];
+// 🔒 FILTRADO POR ZONA (28-jul-2026) — gemelo del de venta y por el mismo motivo: las
+// `desaparecidas` son las que están en shadow y este crawl no vio, así que sin filtro el
+// discovery de una zona daría de baja las props de la otra.
+// ⚠️ En alquiler el filtro SÍ cambia un número (en venta no cambiaba ninguno): shadow alquiler
+// tiene 270 filas y UNA es de Zona Norte (id 3674, "Torre Moderna", 4to-6to Banzer-Alemana).
+// Hoy el crawl de Equipetrol no la ve nunca — está fuera de su bbox — así que figura como
+// "desaparecida" TODAS las noches y se la chequea por HTTP al pedo (no se da de baja porque el
+// verificador exige 2 señales). Con el filtro sale del universo de Equipetrol, que es lo correcto:
+// la va a levantar el discovery de su propia zona cuando ZN entre al híbrido.
+const shadowTodas = [];
 for (let from = 0; ; from += 1000) {
   const { data, error } = await sb.from('propiedades_v2_shadow')
     .select('id, url, es_activa, zona').eq('tipo_operacion', 'alquiler').range(from, from + 999);
   if (error) { console.error('   ERROR leyendo shadow:', error.message); process.exit(1); }
-  shadowRows.push(...data);
+  shadowTodas.push(...data);
   if (data.length < 1000) break;
 }
+const shadowRows = shadowTodas.filter((r) => ZONAS_EQ.has(r.zona));
+const ajenas = shadowTodas.length - shadowRows.length;
+const sinZona = shadowTodas.filter((r) => !r.zona).length;
+if (ajenas) log(`   ℹ️  ${ajenas} props de otras zonas en shadow alquiler → fuera de este diff (las verifica su zona)`);
+if (sinZona) log(`   ⚠️  ${sinZona} props en shadow SIN zona → fuera del diff (no se verifican). Revisar.`);
 // Multiproyecto ya clasificados (mismo criterio que el cargador, línea ~192): van a
 // `proyectos_detectados`, NO a shadow. Sin excluirlos reaparecen como "nuevas" cada corrida. (20-jul)
 const { data: proyRows, error: errProy } = await sb.from('proyectos_detectados')
-  .select('url').eq('macrozona', 'equipetrol');
+  .select('url').eq('macrozona', ZONA.macrozona);
 if (errProy) { console.error('   ERROR leyendo proyectos_detectados:', errProy.message); process.exit(1); }
 const proyUrls = new Set((proyRows || []).map((r) => r.url));
 
@@ -169,9 +193,11 @@ log(`   → desaparecidas (activas en SHADOW, no vistas → verificar): ${desapa
 
 // ---------- 4. SALIDA ----------
 const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-const outPath = join(OUT, `discovery-alquiler-${ts}.json`);
+const outPath = join(OUT, `${PREFIJO}${ts}.json`);
 writeFileSync(outPath, JSON.stringify({
   generado: new Date().toISOString(), modo: 'DRY-RUN', tipo: TIPO, operacion: 'alquiler',
+  // La zona viaja DENTRO del archivo: el verificador la chequea antes de dar bajas.
+  zona: ZONA.id, zona_nombre: ZONA.nombre, microzonas: ZONA.zonas,
   resumen: {
     portal_bbox: portalBbox.length, portal_zona: portal.length,
     prod: dbRows.length, prod_activas: dbActivas, shadow: shadowRows.length, shadow_activas: shadowActivas,
@@ -189,7 +215,7 @@ writeFileSync(outPath, JSON.stringify({
 
 log('='.repeat(64));
 log(`  DRY-RUN listo. NO se escribió nada a la BD.`);
-log(`  Portal: ${portal.length} (6 microzonas) · shadow alquiler activas: ${shadowActivas}`);
+log(`  Portal: ${portal.length} (${ZONA.zonas.length} microzonas) · shadow alquiler activas (${ZONA.nombre}): ${shadowActivas}`);
 log(`  Nuevas (ni prod ni shadow): ${nuevas.length} · Desaparecidas del híbrido a verificar: ${desaparecidas.length}`);
 log(`  💾 ${outPath}`);
 log(`  📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy — se descuenta de los GB)' : ' (IP directa, $0)'}\n`);

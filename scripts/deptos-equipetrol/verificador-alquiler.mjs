@@ -28,6 +28,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sleep, crearAgente, cerrarProxy, rotarSesion, trafico } from '../sonda-suelo/lib/fetcher.mjs';
+import { ZONAS_HIBRIDO, resolverZona } from './lib/zonas-hibrido.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -38,6 +39,7 @@ const APPLY = process.argv.includes('--apply');
 const GRACE_DAYS = 2, GRACE_MS = GRACE_DAYS * 86400000;
 const CB_RATIO = 0.4;
 const OUT = join(__dirname, 'output');
+const ZONA = resolverZona();   // default equipetrol → sin flags, igual que antes
 const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36' };
 
 const parseUTC = (s) => new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s + 'Z');
@@ -61,23 +63,39 @@ async function chequear(url, fuente) {
 }
 
 // --- Señal 1: desaparecidas del discovery-alquiler de hoy (las calcula y guarda el discovery) ---
-const discFile = readdirSync(OUT).filter(x => x.startsWith('discovery-alquiler')).sort().pop();
-if (!discFile) { console.error('No hay output de discovery-alquiler. Corré discovery-alquiler.mjs primero (el verificador usa su lista de desaparecidas).'); process.exit(1); }
+// 🔴 POR ZONA (28-jul-2026, gemelo del de venta): `startsWith('discovery-alquiler')` también
+// matchea `discovery-alquiler-zn-*` → con dos zonas escribiendo acá, el verificador de una podía
+// tomar el crawl de la otra y confirmar bajas de props que nunca crawleó.
+const PREFIJO = `discovery-alquiler${ZONA.sufijoArchivo}-`;
+const PREFIJOS_AJENOS = Object.values(ZONAS_HIBRIDO)
+  .filter((z) => z.id !== ZONA.id && z.sufijoArchivo)
+  .map((z) => `discovery-alquiler${z.sufijoArchivo}-`);
+const discFile = readdirSync(OUT)
+  .filter((x) => x.startsWith(PREFIJO) && !PREFIJOS_AJENOS.some((p) => x.startsWith(p)))
+  .sort().pop();
+if (!discFile) { console.error(`No hay output de discovery-alquiler para ${ZONA.nombre}. Corré discovery-alquiler.mjs${ZONA.id === 'equipetrol' ? '' : ` --zona=${ZONA.id}`} primero (el verificador usa su lista de desaparecidas).`); process.exit(1); }
 const disc = JSON.parse(readFileSync(join(OUT, discFile), 'utf8'));
+if (disc.zona && disc.zona !== ZONA.id) {
+  console.error(`🛑 El discovery elegido (${discFile}) es de la zona "${disc.zona}" y este verificador corre "${ZONA.id}". Abortado para no dar bajas falsas.`);
+  process.exit(1);
+}
 const desap = disc.desaparecidas || [];
 const desapIds = new Set(desap.map(d => d.id));
 
 // --- Universo: las desaparecidas que están EN shadow + las con contador (siempre alquiler) ---
+// Acotado a la zona: sin eso, `primera_ausencia_at.not.is.null` traía props de otras zonas, y el
+// denominador del disyuntor se inflaba (aflojando la protección contra un crawl parcial).
 const ids = [...desapIds];
 const { data: rows, error: selErr } = await sb.from('propiedades_v2_shadow')
   .select('id, url, fuente, status, primera_ausencia_at, es_activa')
   .eq('tipo_operacion', 'alquiler')
+  .in('zona', ZONA.zonas)
   .or(`id.in.(${ids.length ? ids.join(',') : 0}),primera_ausencia_at.not.is.null`);
 if (selErr) { console.error('ERROR leyendo shadow:', selErr.message); process.exit(1); }
 
-// --- Disyuntor: ¿el crawl fue confiable? ---
+// --- Disyuntor: ¿el crawl fue confiable? --- (denominador de ESTA zona)
 const { count: activas } = await sb.from('propiedades_v2_shadow').select('*', { count: 'exact', head: true })
-  .eq('tipo_operacion', 'alquiler').eq('es_activa', true);
+  .eq('tipo_operacion', 'alquiler').eq('es_activa', true).in('zona', ZONA.zonas);
 const cbTripped = activas > 0 && desap.length > activas * CB_RATIO;
 
 console.log(`\n🔎 VERIFICADOR alquiler SHADOW — ${APPLY ? 'APPLY' : 'DRY-RUN'}  ·  gracia ${GRACE_DAYS}d  ·  status-code-only + 2 señales`);

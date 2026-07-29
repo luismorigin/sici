@@ -29,6 +29,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sleep, crearAgente, cerrarProxy, rotarSesion, trafico } from '../sonda-suelo/lib/fetcher.mjs';
+import { ZONAS_HIBRIDO, resolverZona } from './lib/zonas-hibrido.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -39,6 +40,7 @@ const APPLY = process.argv.includes('--apply');
 const GRACE_DAYS = 2, GRACE_MS = GRACE_DAYS * 86400000;
 const CB_RATIO = 0.4;
 const OUT = join(__dirname, 'output');
+const ZONA = resolverZona();   // default equipetrol → sin flags, igual que antes
 const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36' };
 
 const parseUTC = (s) => new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s + 'Z');
@@ -67,26 +69,47 @@ async function chequear(url, fuente) {
 // 🔴 Antes se filtraba por `-shadowaware` (parche de cuando había 2 variantes por corrida): con un
 // archivo viejo de esos en output/, el verificador agarraba un crawl de días atrás e ignoraba el de
 // hoy (bug cazado 17-jul: usaba el del 13-jul). En empate de ts, preferir la variante shadowaware.
+// 🔴 ZONA (28-jul-2026): `startsWith('discovery-deptos')` también matchea `discovery-deptos-zn-*`.
+// Con dos zonas escribiendo en output/, el verificador de Equipetrol podía agarrar el crawl de ZN
+// y tratar sus desaparecidas como propias → bajas masivas y falsas. Mismo agujero que tenía el
+// diff del discovery. Se filtra por el prefijo de ESTA zona, excluyendo los de las otras.
+const PREFIJO = `discovery-deptos${ZONA.sufijoArchivo}-`;
+const PREFIJOS_AJENOS = Object.values(ZONAS_HIBRIDO)
+  .filter((z) => z.id !== ZONA.id && z.sufijoArchivo)
+  .map((z) => `discovery-deptos${z.sufijoArchivo}-`);
 const tsDe = (f) => (f.match(/(\d{4}-\d{2}-\d{2}T[\d-]+)/)?.[1] || '');
 const rank = (f) => (f.includes('-shadowaware') ? 1 : 0);
-const discFiles = readdirSync(OUT).filter(x => x.startsWith('discovery-deptos') && x.endsWith('.json'));
+const discFiles = readdirSync(OUT).filter((x) =>
+  x.startsWith(PREFIJO) && !PREFIJOS_AJENOS.some((p) => x.startsWith(p)) && x.endsWith('.json'));
 const discFile = discFiles.sort((a, b) => tsDe(a).localeCompare(tsDe(b)) || rank(a) - rank(b)).pop();
-if (!discFile) { console.error('No hay output de discovery-deptos. Corré discovery-deptos.mjs primero (el verificador usa su lista de desaparecidas).'); process.exit(1); }
+if (!discFile) { console.error(`No hay output de discovery-deptos para ${ZONA.nombre}. Corré discovery-deptos.mjs${ZONA.id === 'equipetrol' ? '' : ` --zona=${ZONA.id}`} primero (el verificador usa su lista de desaparecidas).`); process.exit(1); }
 const disc = JSON.parse(readFileSync(join(OUT, discFile), 'utf8'));
+// Cinturón además del tirante: el discovery escribe su zona DENTRO del archivo. Si no coincide,
+// parar — dar de baja con la lista equivocada es destructivo y no se nota hasta que el feed vacía.
+if (disc.zona && disc.zona !== ZONA.id) {
+  console.error(`🛑 El discovery elegido (${discFile}) es de la zona "${disc.zona}" y este verificador corre "${ZONA.id}". Abortado para no dar bajas falsas.`);
+  process.exit(1);
+}
 const desap = disc.desaparecidas || [];
 const desapIds = new Set(desap.map(d => d.id));
 
 // --- Universo: las desaparecidas que están EN shadow + las con contador (siempre venta) ---
 const ids = [...desapIds];
+// Acotado a la ZONA por dos motivos distintos, los dos serios:
+//  (a) `primera_ausencia_at.not.is.null` traía las props CON CONTADOR de cualquier zona → el
+//      verificador de una zona podía confirmar bajas de la otra, sin haberla crawleado nunca.
+//  (b) el disyuntor compara desaparecidas contra activas: si el denominador incluye otra zona,
+//      el umbral del 40% se diluye y la protección contra un crawl parcial se afloja sola.
 const { data: rows, error: selErr } = await sb.from('propiedades_v2_shadow')
   .select('id, url, fuente, status, primera_ausencia_at, es_activa')
   .eq('tipo_operacion', 'venta')
+  .in('zona', ZONA.zonas)
   .or(`id.in.(${ids.length ? ids.join(',') : 0}),primera_ausencia_at.not.is.null`);
 if (selErr) { console.error('ERROR leyendo shadow:', selErr.message); process.exit(1); }
 
-// --- Disyuntor: ¿el crawl fue confiable? ---
+// --- Disyuntor: ¿el crawl fue confiable? --- (denominador de ESTA zona, ver (b) arriba)
 const { count: activas } = await sb.from('propiedades_v2_shadow').select('*', { count: 'exact', head: true })
-  .eq('tipo_operacion', 'venta').eq('es_activa', true);
+  .eq('tipo_operacion', 'venta').eq('es_activa', true).in('zona', ZONA.zonas);
 const cbTripped = activas > 0 && desap.length > activas * CB_RATIO;
 
 console.log(`\n🔎 VERIFICADOR deptos VENTA SHADOW — ${APPLY ? 'APPLY' : 'DRY-RUN'}  ·  gracia ${GRACE_DAYS}d  ·  status-code-only + 2 señales`);

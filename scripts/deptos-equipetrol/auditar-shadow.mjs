@@ -104,7 +104,7 @@ async function main() {
 
   const material = [];          // los que van al JUEZ (drift / precio / matching / baja)
   const buckets = { identicas: 0, cambio_menor: 0, cambio_relevante: 0, reescrita: 0, fetch_fallo: 0 };
-  const bajas = [], preciosCambio = [], matchingSospecha = [], sinMatchConNombre = [];
+  const bajas = [], preciosCambio = [], matchingSospecha = [], sinMatchConNombre = [], fotosRotas = [];
 
   for (const p of filas) {
     if (circuit.tripped) { console.log('🛑 circuit breaker — IP probablemente bloqueada. Cortando; reintentá en horas.\n'); break; }
@@ -144,6 +144,44 @@ async function main() {
     if (p.nombre_edificio && aparece === false) { matchFlag = 'nombre_no_aparece'; matchingSospecha.push({ id: p.id, edif: p.nombre_edificio }); }
     if (p.id_proyecto_master == null && p.nombre_edificio) sinMatchConNombre.push({ id: p.id, edif: p.nombre_edificio });
 
+    // 4) FOTOS PODRIDAS (28-jul-2026) — el punto ciego que encontró la revisión de marketing.
+    // Caso real: 8 preventas de Rhodium con el placeholder vacío en /ventas. El aviso seguía
+    // VIVO (HTTP 200, 10 fotos), pero el captador REEMPLAZÓ las imágenes: las que teníamos
+    // guardadas fueron borradas del CDN de C21 y devuelven 403 AccessDenied. Ningún chequeo
+    // lo veía: el discovery mira la lista de URLs del portal, el verificador mira si el aviso
+    // existe, y el drift mira el TEXTO. Nadie miraba si la foto todavía carga.
+    //
+    // Cuesta CERO pedidos extra: el detalle que ya bajamos trae las fotos de hoy, así que
+    // alcanza con cruzar las dos listas. Solo si NINGUNA de las guardadas sigue publicada se
+    // gasta 1 request para confirmar que de verdad están rotas (y no que el portal reordenó).
+    // 🔑 Lo que decide es la PORTADA, no el conjunto. Medido en Rhodium 8000209: de 11 fotos
+    // guardadas 8 SIGUEN vivas — pero la PRIMERA no, y esa es la única que pinta la card del
+    // feed. Por eso la tarjeta sale vacía mientras el contador dice "1/11": el número sale del
+    // largo de la lista guardada, la imagen sale de la primera URL. Un criterio de "ninguna
+    // sobrevive" no habría detectado ni uno solo de los 8 casos reportados.
+    const fotosGuardadas = Array.isArray(dj.contenido?.fotos_urls) ? dj.contenido.fotos_urls : [];
+    const fotosHoy = Array.isArray(h.fotos_urls) ? h.fotos_urls : [];
+    let fotosFlag = null;
+    if (fotosGuardadas.length > 0 && fotosHoy.length > 0) {
+      const hoySet = new Set(fotosHoy);
+      const portadaSigue = hoySet.has(fotosGuardadas[0]);
+      if (!portadaSigue) {
+        // Confirmar que está rota de verdad (y no que el captador solo reordenó las fotos):
+        // 1 request, solo en los casos sospechosos.
+        let httpPortada = null;
+        try {
+          const r = await fetch(fotosGuardadas[0], { headers: { 'User-Agent': 'Mozilla/5.0' } });
+          httpPortada = r.status;
+        } catch { httpPortada = 'sin respuesta'; }
+        if (httpPortada !== 200) {
+          const vivas = fotosGuardadas.filter((u) => hoySet.has(u)).length;
+          fotosFlag = { guardadas: fotosGuardadas.length, en_el_portal_hoy: fotosHoy.length, otras_que_siguen_vivas: vivas, http_portada: httpPortada, portada_del_portal_hoy: fotosHoy[0] };
+          fotosRotas.push({ id: p.id, fuente: p.fuente, edif: p.nombre_edificio, ...fotosFlag });
+          console.log(`   ${p.id} ${p.fuente} 📷 PORTADA ROTA (HTTP ${httpPortada}) — la card sale vacía. ${vivas}/${fotosGuardadas.length} fotos siguen vivas → re-leer`);
+        }
+      }
+    }
+
     // ¿va al juez? drift fuerte, o cambio de precio, o sospecha de matching.
     const revisar = drift.bucket === 'reescrita' || drift.bucket === 'cambio_relevante' || precioFlag || matchFlag || drift.tiene_flag_semantico;
     if (revisar) {
@@ -181,8 +219,8 @@ async function main() {
   writeFileSync(file, JSON.stringify({
     generado: TS, operacion: OP, spec: OP === 'venta' ? 'READER_SPEC.md' : 'READER_SPEC_ALQUILER.md',
     total: filas.length, revisados, buckets, drift_pct: driftPct,
-    resumen: { al_juez: material.length, posibles_bajas: bajas.length, cambios_precio: preciosCambio.length, matching_sospecha: matchingSospecha.length, sin_match_con_nombre: sinMatchConNombre.length },
-    material, bajas, sin_match_con_nombre: sinMatchConNombre,
+    resumen: { al_juez: material.length, posibles_bajas: bajas.length, cambios_precio: preciosCambio.length, matching_sospecha: matchingSospecha.length, sin_match_con_nombre: sinMatchConNombre.length, fotos_rotas: fotosRotas.length },
+    material, bajas, sin_match_con_nombre: sinMatchConNombre, fotos_rotas: fotosRotas,
   }, null, 2));
 
   console.log(`\n────────── RESUMEN AUDIT SHADOW (${OP}) ──────────`);
@@ -192,6 +230,8 @@ async function main() {
   console.log(`  🏷️  Matching sospechoso (nombre no aparece): ${matchingSospecha.length}${matchingSospecha.length ? '  → ' + matchingSospecha.slice(0, 12).map((x) => `${x.id}(${x.edif})`).join(', ') : ''}`);
   console.log(`  ⚠️  Sin match pero con nombre (cola PM_NUEVO/fuzzy): ${sinMatchConNombre.length}`);
   console.log(`  💀 Posibles bajas (fetch falló): ${bajas.length}${bajas.length ? '  → ids: ' + bajas.slice(0, 20).map((b) => b.id).join(',') : ''}`);
+  console.log(`  📷 Fotos reemplazadas por el captador (card sale VACÍA en el feed): ${fotosRotas.length}${fotosRotas.length ? '  → ids: ' + fotosRotas.slice(0, 20).map((f) => f.id).join(',') : ''}`);
+  if (fotosRotas.length) console.log(`     → se arregla re-leyendo esos avisos: el portal ya tiene las fotos nuevas.`);
   console.log(`\n  📦 ${material.length} al JUEZ → ${file}`);
   console.log(`     Siguiente: partí el material en chunks y lanzá subagentes-lectores (READER_SPEC${OP === 'alquiler' ? '_ALQUILER' : ''}.md).`);
   console.log(`     Cada uno re-lee anuncio_hoy y llena veredicto_audit (sigue_valido + correccion). Read-only: el SQL de corrección lo aplica el humano.\n`);

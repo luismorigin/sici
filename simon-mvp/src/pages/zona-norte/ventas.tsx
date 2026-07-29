@@ -140,14 +140,21 @@ function useIsDesktop() {
 }
 
 // ===== API fetch =====
+// 🔬 `?shadow=1` = mirar la data del laboratorio (`propiedades_v2_shadow`) en vez de producción.
+// OPT-IN, al revés que el feed de Equipetrol: allá shadow es el default (la app pública ya lee el
+// régimen TC nuevo), acá el default sigue siendo PROD porque Zona Norte todavía se captura con el
+// pipeline viejo. Existe para poder VER lo que el híbrido vaya cargando de ZN antes de moverle
+// nada al feed público — sin esto, se puede cargar ZN a shadow y no tener dónde comprobarlo.
+// Las vistas shadow no filtran por zona, así que las props ZN aparecen solas cuando entren.
 async function fetchFromAPI(
   filtros: FiltrosVentaSimple,
   spotlightId?: number
 ): Promise<{ data: UnidadVenta[]; total: number; spotlight?: UnidadVenta | null }> {
+  const shadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
   const res = await fetch('/api/ventas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filtros, spotlightId }),
+    body: JSON.stringify({ filtros, spotlightId, shadow }),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()

@@ -175,10 +175,15 @@ function mapRawToUnidad(p: any): UnidadAlquiler {
   }
 }
 
+// 🔬 `?shadow=1` = mirar la data del laboratorio en vez de producción. OPT-IN (default PROD),
+// al revés que el feed de Equipetrol, porque Zona Norte todavía se captura con el pipeline viejo.
+// Es la única forma de VER lo que el híbrido cargue de ZN antes de tocar el feed público.
+// Gemelo de `zona-norte/ventas.tsx`.
 async function fetchFromAPI(filtros: FiltrosAlquiler & { offset?: number }, spotlightId?: number): Promise<{ data: UnidadAlquiler[]; total: number; spotlight?: UnidadAlquiler | null }> {
   try {
     const body: Record<string, any> = { filtros }
     if (spotlightId) body.spotlightId = spotlightId
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1') body.shadow = true
     const res = await fetch('/api/alquileres', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
