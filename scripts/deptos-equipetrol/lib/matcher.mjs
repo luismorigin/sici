@@ -75,8 +75,13 @@ const ROMANOS = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 
 export function numeralesDe(s) {
   const out = new Set();
   for (const t of tokensDe(s)) {
-    if (/^\d{1,3}$/.test(t)) out.add(Number(t));            // "Macororo 16/17" → {16,17}
-    else if (ROMANOS[t] !== undefined) out.add(ROMANOS[t]);  // "Limco II" → {2}
+    if (/^\d{1,3}$/.test(t)) { out.add(Number(t)); continue; }   // "Macororo 16/17" → {16,17}
+    // Los captadores escriben el romano con ELES minúsculas: "Barack ll" por "Barak II",
+    // "Macororo lll" por "III". Visualmente idéntico, otro carácter. Caso real: prop 3867
+    // (29-jul), donde el catálogo tiene Barak II, III y sin numeral, los tres con el mismo
+    // score. Un token hecho SOLO de eles no puede ser otra cosa que un romano mal tipeado.
+    const t2 = /^l+$/.test(t) ? t.replace(/l/g, 'i') : t;
+    if (ROMANOS[t2] !== undefined) out.add(ROMANOS[t2]);          // "Limco II" → {2}
   }
   return out;
 }
