@@ -3,6 +3,92 @@
 > Rama `worktree-zn-perilla-zona`, worktree `.claude/worktrees/zn-perilla-zona`.
 > **3 commits, sin push.** Las routines nocturnas corren `main`, que no se tocó.
 
+## Por qué estamos haciendo esto (leer antes de ejecutar nada)
+
+El objetivo de fondo es el **cutover**: que `propiedades_v2_shadow` pase a ser la base y n8n se
+jubile. Zona Norte es una pieza de eso, y el caso para hacerla **no es capturar más avisos** — el
+discovery midió que n8n solo se pierde **11 de 498**. El caso es de calidad, y son cuatro cosas
+distintas que se arreglan con la misma acción:
+
+| Qué está mal en ZN hoy | Cuánto |
+|---|---|
+| Matching | 59,8% contra 91,6% de Equipetrol |
+| Precios inflados por el TC viejo | el feed muestra ~20% de más ($99.569 vs $80.000 medianos) |
+| Datos que el frontend pide y no existen | "lo que la hace especial", piso, equipado: **0 de 445** |
+| Estados de obra inventados | el pipeline viejo ponía "entrega inmediata" cuando el aviso callaba |
+
+Y hay un efecto secundario que importa: con los precios inflados, **la data dice que ZN cuesta lo
+mismo que Equipetrol** ($1.720 vs $1.703 el m²). Es falso — ZN es ~12% más barata. El TC viejo
+borra la diferencia entre las dos zonas, que es justo el dato que le interesa a un comprador.
+
+> 🔴 **Regla que salió de acá: no publicar ZN hasta terminar de releerla.** Publicarla hoy pondría
+> precios 20% inflados y media ficha vacía al lado de un Equipetrol que está bien. Peor que no tenerla.
+
+## Decisiones del founder que NO hay que revertir por "eficiencia"
+
+Se tomaron con datos en la mano el 28-jul. Si alguien las cambia sin leer esto, se repite el trabajo.
+
+1. **ZN no se audita campo por campo: se relee.** Se descartó auditar el crudo viejo. El lector
+   re-lee y corrige, que es más barato y deja mejor resultado. Eso sacó el bloqueo más pesado del
+   plan de cutover (ver `CUTOVER_DATA_PLAN.md`).
+2. **Se relee CON fetch, no desde lo guardado.** El atajo `--local` parecía ahorrar, pero ahorra
+   el recurso equivocado (proxy sobra, cuota no) y deja al lector ciego en el ~60% de los avisos.
+   Ya costó rehacer dos tandas (~1,5M tokens).
+3. **El precio se muestra como lo dice el aviso, con badge.** No se descuenta el "TC 7". Es
+   criterio fiduciario: declarar la duda en vez de resolverla suponiendo. Detalle y evidencia en
+   `TC_NUEVO_DECISION.md`.
+4. **La spec de "Precios desde" NO se tocó** — cuesta ~8 unidades por tanda, pero cambiarla es
+   decisión de producto, no de implementación.
+
+## Dónde encaja esto en el cutover
+
+Después de la jornada del 28-jul el mapa quedó así:
+
+```
+BLOQUEOS que siguen:   A · el motor tiene que correr sin la máquina de Lucho prendida
+                       C · observabilidad (/admin/salud queda ciego al apagar n8n)
+
+YA NO BLOQUEAN:        B · auditar ZN      → se resuelve releyendo (esto)
+                       gate de precios     → resuelto por la serie reexpresada (migs 287-289),
+                                             que empalma exacto con la serie shadow el 21-jul
+```
+
+O sea: **el cutover ya no depende de esperar a fin de agosto.** Depende de cerrar A y C, que es
+trabajo de días. Lo de ZN corre en paralelo y no lo bloquea.
+
+⚠️ Y ojo con el orden: el **ajuste del TC por vecinos** (decisión abierta 2) **no se puede hacer
+antes de terminar de releer ZN** — hoy solo 4 de 18 props con "TC 7" tienen vecino releído con
+qué compararse. No es preferencia, es dependencia.
+
+## ⚠️ La serie de mercado: qué pasó al entrar ZN (verificado 29-jul)
+
+**El `global` de Equipetrol NO se contaminó.** Está blindado a las 6 zonas dentro de
+`snapshot_absorcion_mercado_shadow`. Conteos de los últimos 4 días: 118 → 118 → 119 → 121 (0 dorm).
+Si ZN se hubiera colado, saltaba a 500 y pico.
+
+**Pero sí pasaron dos cosas que hay que saber leer:**
+
+1. **Escalón de precio el 29-jul, por la mig 311.** Al dejar de descontar el "TC 7": mediana de
+   0 dorm 66.000 → **68.250**, 1 dorm 88.000 → **91.092**, $/m² 1.707 → **1.809**. Es correcto y
+   esperado — son las 54 props que se mostraban 40% abajo volviendo a su precio. **Al publicar
+   cualquier comparación que cruce esa fecha, hay que declararlo**, como se hace con las
+   `filter_version`.
+2. **Aparecieron filas por microzona de ZN** (el LOOP 2 del snapshot no filtra zona, a diferencia
+   del global). No corrompen nada de Equipetrol, pero **esa serie nace con cobertura parcial**:
+   hoy refleja 109 de 448 props. A medida que se relee ZN, el "inventario" de cada microzona va a
+   subir — y eso **NO es que ZN gane propiedades**, es que las estamos leyendo. Nadie debería
+   graficar la absorción de ZN hasta terminar la relectura.
+
+## Cuándo correr los audits (y cuál)
+
+- **`/audit-cola-shadow`** (matching + dedup) → **después de aplicar, no antes**, y con la zona
+  cargada entera o casi. Hoy tiene sentido apenas se apliquen las tandas: hay 21+ props ZN con
+  nombre y sin match (candidatas a PM nuevo) y varios pares de duplicados que los lectores ya
+  señalaron (Ziri Zwei 2806/2805, Torre Moderna 2600/2605, 3849/3847, 3543/3544…).
+- **`/audit-deptos-shadow`** (drift + precio en portal + **fotos podridas**) → **no ahora**: recién
+  leímos estos avisos, el drift va a dar ~0. Conviene en unas semanas, o antes solo para las 8
+  Rhodium, que ya sabemos que tienen la portada rota.
+
 ## Lo que quedó andando (aplicado y verificado)
 
 | | |
