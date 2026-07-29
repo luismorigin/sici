@@ -76,12 +76,17 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 >   paralelo", "paralelo o dólares", "TC del día", "al día", "USD o TCP" — emití SIEMPRE el mismo tag
 >   **`no_especificado`** (todas normalizan directo igual; usar tags distintos para la misma frase ensucia la data).
 >   Reservá el tag `paralelo` para señal FUERTE y sola ("al paralelo", "TCP", "dólares físicos/billete").
-> - **`oficial_viejo`**: SOLO si el texto ancla EXPLÍCITO al rate muerto ("6.96" / "Bs 7" / "TC 7" / "al oficial 7") → se descuenta.
-> - **v4 — tag fiel a la cruda (NINGÚN tag infla: el feed shadow toma paralelo / oficial-nuevo / no_especificado
->   DIRECTO; solo `oficial_viejo` descuenta y `bob` convierte de bolivianos):**
+> - **`oficial_viejo`**: SOLO si el texto ancla EXPLÍCITO al rate muerto ("6.96" / "Bs 7" / "TC 7" / "al oficial 7").
+>   🔴 **Desde la mig 311 (28-jul-2026) este tag YA NO DESCUENTA** — el precio pasa tal cual y el tag dispara el badge
+>   "Confirmar tipo de cambio" en el feed. Verificado: `precio_normalizado_shadow(100000,'oficial_viejo') = 100000`.
+>   Poné el tag igual: es el registro fiel de lo que dice el aviso, y es lo que enciende el badge. **No lo evites por
+>   miedo a hundir el precio** — ese descuento ya no existe.
+> - **v4 — tag fiel a la cruda (NINGÚN tag infla: el feed shadow toma paralelo / oficial-nuevo / no_especificado /
+>   `oficial_viejo` DIRECTO; el ÚNICO que mueve el precio es `bob`, que convierte de bolivianos):**
 >   · **"oficial" solo** (sin número) = oficial NUEVO (≈paralelo) → `no_especificado`. `oficial_viejo` SOLO con el
->     número viejo explícito (6.96/7) — único que descuenta; la palabra "oficial" sola NO descuenta (subvaluaría: Onix
->     Art $1.800→$1.188/m²).
+>     número viejo explícito (6.96/7). *(Histórico: antes de la mig 311 este tag descontaba, y por eso la spec exigía
+>     que la palabra "oficial" sola NO lo llevara — habría subvaluado, caso Onix Art $1.800→$1.188/m². La distinción
+>     sigue siendo correcta para el badge, aunque ya no cambie el precio.)*
 >   · **"paralelo" DECLARADO solo** ("al paralelo", "TC/tipo de cambio paralelo", "dólares físicos/billete") → tag
 >     `paralelo` (registro fiel; hoy normaliza directo igual que no_especificado — no infla).
 >   · **"paralelo" EQUIPARADO** ("dólares O paralelo", "USD o TC del día") o **SILENCIO** → `no_especificado`.
