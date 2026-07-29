@@ -374,6 +374,7 @@ async function apply(file) {
   console.log(`\n✍️  APPLY — ${conVer.length}/${doc.entradas.length} con veredicto${sinVer.length ? ` (faltan ${sinVer.length}: ${sinVer.map((e) => e.id).join(',')})` : ''}\n`);
 
   const filas = [], rechazados = [], aliasSugeridos = [], reporte = [], proyectos = [], descartes = [];
+  const areasAbsurdas = [], preciosSospechosos = [];
   for (const e of conVer) {
     const v = e.veredicto;
     if (v.gate === 'rechazar') {
@@ -412,6 +413,29 @@ async function apply(file) {
       if (!match.auto) match.pm = null; // ambiguo/débil → sin match (lo levanta el audit); no forzar
     }
     if (v.alias_sugerido && match.pm) aliasSugeridos.push({ pm: match.pm, alias: v.alias_sugerido, edif: v.nombre_edificio_canonico });
+
+    // ── GUARDRAIL DE ÁREA (29-jul-2026) ──────────────────────────────────────
+    // El veredicto ya pisa la del portal cuando el texto declara superficie (v4.3). Lo que
+    // faltaba es el caso en que el texto NO la declara y la del portal es absurda: la prop
+    // 2262 entró con **127.800 m²** (error ×1000 del captador) y daba $1,33 el m². Ningún
+    // filtro la frenaba porque `area >= 20` la deja pasar por arriba.
+    // Se anula en vez de adivinar: sin área la vista la excluye (exige >= 20) y no ensucia
+    // ningún corte. Corregirla es una decisión humana, no una división por 1000 automática.
+    const areaEfectiva = v.area_m2 ?? e._apply.area;
+    if (areaEfectiva != null && (Number(areaEfectiva) > 1000 || Number(areaEfectiva) < 10)) {
+      areasAbsurdas.push({ id: e.id, area: areaEfectiva, deTexto: v.area_m2 != null });
+      v.area_m2 = null; e._apply.area = null;
+    }
+
+    // ── DETECTOR DE PRECIO EN BOLIVIANOS TRUNCADO (29-jul-2026) ──────────────
+    // La prop 2123 llegó con `precio_bob_portal = 504` cuando el real era 504.000: el portal
+    // corta los miles. El lector lo reconstruyó leyendo el aviso, pero si no lo hubiera notado
+    // entraba un depto a Bs 504 (~US$43). Un depto de 20 m² o más por menos de Bs 50.000
+    // (~US$4.300) no existe en estas zonas.
+    if (v.tipo_cambio_detectado === 'bob' && v.precio_usd != null && Number(v.precio_usd) < 50000
+        && (areaEfectiva == null || Number(areaEfectiva) >= 20)) {
+      preciosSospechosos.push({ id: e.id, bs: v.precio_usd, area: areaEfectiva });
+    }
 
     filas.push(construirFila(e, v, match));
     reporte.push({ id: e.id, precio: v.precio_usd, tc: v.tipo_cambio_detectado, dorm: v.dormitorios, edif: v.nombre_edificio_canonico, pm: match.pm, match: match.metodo, motivo: match.motivo });
@@ -455,9 +479,71 @@ async function apply(file) {
   }
   console.log('');
   for (const r of reporte) console.log(`   ${r.id}  $${r.precio} ${r.tc}  ${r.dorm}d  edif="${r.edif || '—'}" → pm ${r.pm ?? '—'} [${r.match}]${r.motivo ? '  ·  ' + r.motivo : ''}`);
+  // ── ALIAS SUGERIDOS → ARCHIVO SQL (29-jul-2026) ──────────────────────────────
+  // Antes SOLO se imprimían. "Registrados para el cutover" era una intención, no un hecho:
+  // no había registro en ningún lado y se perdían al cerrar la terminal. Cada alias perdido
+  // es trabajo que se repite — en ZN, 111 de 199 matches los tuvo que hacer el LECTOR
+  // (leyendo el aviso) en vez del matcher, y cada aviso nuevo del mismo edificio con esa
+  // grafía vuelve a la cola del audit y termina otra vez en el escritorio del founder.
+  // Sigue sin escribirse solo: `proyectos_master` es PROD y el invariante shadow es no
+  // tocarlo. Lo que cambia es que ahora queda un .sql listo para que el humano lo aplique.
   if (aliasSugeridos.length) {
-    console.log(`\n🏷️  Alias sugeridos (NO se escriben a prod en fase shadow — registrados para el cutover/audit):`);
+    console.log(`\n🏷️  Alias sugeridos (${aliasSugeridos.length}):`);
     for (const a of aliasSugeridos) console.log(`   pm ${a.pm} (${a.edif}) ← alias "${a.alias}"`);
+
+    // Dedup por (pm, alias): la misma grafía aparece una vez por propiedad del edificio.
+    const porPm = new Map();
+    for (const a of aliasSugeridos) {
+      if (!porPm.has(a.pm)) porPm.set(a.pm, { edif: a.edif, alias: new Set() });
+      porPm.get(a.pm).alias.add(a.alias);
+    }
+    const fecha = new Date().toISOString().slice(0, 10);
+    const sqlFile = join(OUT, conSufijo(`alias-sugeridos-${fecha}.sql`, ZONA));
+    const esc = (s) => String(s).replace(/'/g, "''");
+    const sql = [
+      `-- Alias sugeridos por el --apply de ${fecha} · zona: ${ZONA.nombre}`,
+      `-- Los propuso el LECTOR al reconocer el edificio; sin esto, el proximo aviso con la`,
+      `-- misma grafia vuelve a caer sin match y hay que leerlo de nuevo.`,
+      `-- Revisar antes de aplicar: un alias equivocado ata avisos al edificio incorrecto.`,
+      `-- proyectos_master es PROD (compartido con n8n y ZN): es aditivo, no cambia matches existentes.`,
+      '',
+      'BEGIN;',
+      '',
+      ...[...porPm.entries()].map(([pm, { edif, alias }]) => {
+        const nuevos = [...alias];
+        return [
+          `-- pm ${pm} — ${edif}`,
+          // UNION contra los que ya están: idempotente de verdad. Un `array_cat` con candado
+          // `AND NOT (a AND b)` parece equivalente pero NO lo es — si uno de los alias ya existe
+          // y el otro no, el candado deja pasar el UPDATE y duplica el que ya estaba.
+          `UPDATE proyectos_master SET`,
+          `  alias_conocidos = (SELECT array_agg(DISTINCT a) FROM (`,
+          `      SELECT unnest(COALESCE(alias_conocidos,'{}')) AS a`,
+          `      UNION SELECT unnest(ARRAY[${nuevos.map((a) => `'${esc(a)}'`).join(', ')}])`,
+          `  ) t),`,
+          `  updated_at = NOW()`,
+          `WHERE id_proyecto_master = ${pm};`,
+          '',
+        ].join('\n');
+      }),
+      `SELECT id_proyecto_master, nombre_oficial, alias_conocidos FROM proyectos_master`,
+      `WHERE id_proyecto_master IN (${[...porPm.keys()].join(', ')});`,
+      '',
+      'COMMIT;',
+      '',
+    ].join('\n');
+    writeFileSync(sqlFile, sql);
+    console.log(`   📄 SQL listo (${porPm.size} edificios): ${sqlFile}`);
+    console.log(`      Aplicarlo evita que estos edificios vuelvan a la cola en la proxima tanda.`);
+  }
+
+  if (areasAbsurdas.length) {
+    console.log(`\n📐 ÁREA ABSURDA — anulada para que no ensucie el feed (corregir a mano si importa):`);
+    for (const a of areasAbsurdas) console.log(`   ${a.id}: ${a.area} m² (${a.deTexto ? 'del texto del aviso' : 'del portal'}) → guardada como NULL`);
+  }
+  if (preciosSospechosos.length) {
+    console.log(`\n💰 PRECIO EN BOLIVIANOS SOSPECHOSAMENTE BAJO (¿miles truncados por el portal?):`);
+    for (const p of preciosSospechosos) console.log(`   ${p.id}: Bs ${p.bs}${p.area ? ` / ${p.area} m²` : ''} — verificar contra el aviso`);
   }
   const sinMatch = reporte.filter((r) => r.pm == null && r.edif);
   if (sinMatch.length) console.log(`\n⚠️  Con nombre pero sin auto-match (revisar o al audit): ${sinMatch.map((r) => `${r.id}(${r.edif})`).join(', ')}`);
