@@ -10,9 +10,9 @@
 | | |
 |---|---|
 | **Equipetrol** | ✅ **auditoría CERRADA**. Matching 91,4% venta · 87,0% alquiler. Sin edificios pendientes |
-| **ZN venta en la base nueva** | **188 de 448**, matching 67,0% |
-| **Tanda leída sin aplicar** | **102 props** — `output/material-2026-07-29T12-13-12-zn.json`, 102/102 con veredicto |
-| **Edificios ZN por crear** | **18** (lista en `output/audit-cola-shadow-log.md`) |
+| **ZN venta en la base nueva** | **326 de 448**, matching **77,9%** (dos tandas aplicadas el 29-jul) |
+| **Edificios ZN** | 15 creados + Torres Soho 1y2 / Torre Soho 3 · **31 alias cargados** |
+| **Sin resolver en ZN** | solo 2: `2076` "Condominio Baruc norte" y `1996` "Condominio Ziri" — las dos por **nombre de cluster sin numeral** |
 | **SQL del audit ZN** | escrito, sin aplicar — 4 aprobar · 1 rechazar · 4 dedup |
 | **Migraciones** | 309-312 aplicadas **y** en el repo (el desfase 308↔311 se cerró) |
 | **Respaldo** | `Desktop/Censo inmobiliario/RESPALDO-ZN-2026-07-29` (la carpeta `output/` está gitignored) |
@@ -55,6 +55,29 @@ Las dos lecturas, y ninguna es técnica:
 🔑 **Y no es urgente: ZN no está publicada** (dark launch / noindex). Se puede aplicar, seguir
 releyendo, y decidir antes de publicar. Lo que lo zanja de verdad son **dos o tres llamadas** a
 captadores preguntando si aceptan bolivianos a ese cambio.
+
+## 🔴 REGLA NUEVA (29-jul): juez independiente ANTES del apply
+
+El audit tiene 3 superficies (sin-match · auto-match riesgoso · duplicados) y **ninguna mira los
+matches que fija el lector**. En la tanda 2 eso eran **51 matches, 15 con `confianza: media`** que
+nadie iba a revisar nunca — correr el audit después del apply habría levantado 3 de 18.
+
+Se armó un juez independiente sobre los dudosos ANTES de aplicar y **corrigió 3 (17%)**: dos falsos
+positivos que iban a entrar (`2019` "CONDOMINIO ONE 1" contra un pm sin numeral; `2052` "Ares", donde
+el cuerpo no nombra edificio) y un match que faltaba (`1992` Orange Residence).
+
+👉 **En cada tanda: filtrar los veredictos con `confianza != 'alta'` + los que quedaron sin pm pero
+con nombre, y mandarlos a un subagente-juez con el aviso, el pm propuesto y los candidatos.** Cuesta
+~2 agentes por tanda.
+Pendiente de código: darle al audit una **cuarta superficie** (`lector_fijo` + confianza media), que
+el punto ciego existe también en las capturas nocturnas de Equipetrol.
+
+## 🔢 El matcher confunde numerales romanos (causa viva)
+
+`buscar_proyecto_fuzzy` da **score 1,0 al edificio EQUIVOCADO** del mismo cluster cuando el numeral es
+romano: "Portofino IV" → "Portofino V" 1,0 · "Galil Parque II" → "III" y "I", los dos 1,0. Con
+arábigos anda bien ("Macororo 14" → "15" solo 0,667). Y el matcher **auto-aprueba desde 0,95**.
+Ídem la **eñe** ("Las Pinas" vs "Las Piñas"). Tapado con 31 alias, pero cada cluster nuevo lo repite.
 
 ## El orden recomendado para seguir
 
