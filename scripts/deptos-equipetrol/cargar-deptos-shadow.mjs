@@ -336,7 +336,12 @@ function construirFila(e, v, match) {
       // 🔎 CRUDO del portal (provenance para auditoría $0): lo que dijo el portal en bruto, ANTES del juicio del
       // lector → cada prop se vuelve auto-auditable sin depender de los materiales de prep (efímeros).
       senales_portal: e.senales ?? null,
-      trazabilidad: { scraper_version: SCRAPER_VERSION, fuente_precio: 'lector', fuente_amenidades: usaLector ? 'lector' : 'structured', metodo_match: match.metodo },
+      // `confianza_lector` se guarda desde el 29-jul-2026: sin esto el audit no puede distinguir
+      // un match que el lector fijó seguro de uno que fijó con dudas, y los `lector_fijo` no
+      // entran en ninguna de sus 3 superficies → nadie los revisa nunca. Medido en ZN: 51 matches
+      // del lector por tanda, 15 con confianza media. Un juez sobre esos 15 corrigió 2 falsos
+      // positivos que ya iban camino a la base. Es lo que alimenta la superficie 4 del audit.
+      trazabilidad: { scraper_version: SCRAPER_VERSION, fuente_precio: 'lector', fuente_amenidades: usaLector ? 'lector' : 'structured', metodo_match: match.metodo, confianza_lector: v.confianza ?? null },
     },
   };
 }

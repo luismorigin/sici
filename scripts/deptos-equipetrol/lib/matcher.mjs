@@ -56,6 +56,47 @@ export function mismoTokenSet(a, b) {
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// NUMERAL DE CLUSTER — romanos y arábigos son la MISMA cifra (29-jul-2026).
+// `buscar_proyecto_fuzzy` trata los romanos como ruido y devuelve score 1.000 apuntando al
+// edificio EQUIVOCADO del mismo cluster. Medido:
+//     "Portofino IV"    → "Portofino V" 1.000 · "Condominio Portofino" 1.000   (el correcto,
+//                          "CONDOMINIO PORTOFINO 4", quedaba 0.750 y afuera del umbral)
+//     "Galil Parque II" → "GALIL PARQUE III" 1.000 · "Galil Parque I" 1.000
+//     "Macororo 14"     → "Macororo 15" 0.667      (con arábigos el número SÍ distingue)
+// Como el matcher auto-aprueba desde 0.95, un cluster con un solo edificio cargado enganchaba
+// al equivocado EN SILENCIO. Lo cazó un lector el 29-jul (prop 843, Portofino IV).
+//
+// El fix vive acá y no en la RPC, por la misma razón de siempre: `buscar_proyecto_fuzzy` la
+// comparte el matching nocturno de PROD (n8n) y tocarla movería auto-aprobaciones sin medirlas.
+const ROMANOS = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10, xi: 11, xii: 12 };
+
+/** Cifras de cluster de un nombre, con los romanos ya convertidos. "Portofino IV" → {4} */
+export function numeralesDe(s) {
+  const out = new Set();
+  for (const t of tokensDe(s)) {
+    if (/^\d{1,3}$/.test(t)) out.add(Number(t));            // "Macororo 16/17" → {16,17}
+    else if (ROMANOS[t] !== undefined) out.add(ROMANOS[t]);  // "Limco II" → {2}
+  }
+  return out;
+}
+
+/**
+ * ¿Pueden ser el mismo edificio, mirando SOLO el numeral?
+ *  · ninguno tiene numeral            → sí (no aporta información)
+ *  · los dos tienen y coinciden       → sí — acá es donde "Portofino 4" ↔ "PORTOFINO IV" se unen
+ *  · difieren, o uno tiene y otro no  → NO. "Portofino IV" contra el genérico "Condominio
+ *    Portofino" tampoco pasa: sin saber qué fase representa el genérico, adivinarlo es el
+ *    falso positivo que esto viene a evitar (caso 2019, "CONDOMINIO ONE 1" vs "CONDOMINIO ONE").
+ */
+export function numeralCompatible(a, b) {
+  const A = numeralesDe(a), B = numeralesDe(b);
+  if (A.size === 0 && B.size === 0) return true;
+  if (A.size !== B.size) return false;
+  for (const n of A) if (!B.has(n)) return false;
+  return true;
+}
+
 /**
  * @returns {Promise<{pm:number|null, confianza:number, metodo:string, auto:boolean, candidatos:Array, motivo:string}>}
  */
@@ -82,7 +123,11 @@ export async function matchearPorNombre(sb, { nombre, zona, lat, lon } = {}) {
   // FUERTE = score alto del trigram  O  mismo conjunto de tokens distintivos (orden invertido).
   // `por_tokens` queda marcado para trazabilidad (el motivo lo explicita).
   for (const c of candidatos) c.por_tokens = c.score < SCORE_FUERTE && mismoTokenSet(nom, c.nombre);
-  const fuertes = candidatos.filter((c) => c.score >= SCORE_FUERTE || c.por_tokens);
+  // …pero el NUMERAL manda por encima del score: el trigram da 1.000 a "Portofino V" para un
+  // aviso que dice "Portofino IV". Un candidato con cifra distinta NO es fuerte, por más score
+  // que traiga; y "Portofino 4" ↔ "PORTOFINO IV" sí se unen, que antes no pasaba.
+  for (const c of candidatos) c.numeral_ok = numeralCompatible(nom, c.nombre);
+  const fuertes = candidatos.filter((c) => (c.score >= SCORE_FUERTE || c.por_tokens) && c.numeral_ok);
   const enZona = fuertes.filter((c) => normZona(c.zona) === normZona(zona));
 
   // 1 fuerte ÚNICO → auto SIEMPRE (el nombre manda; el GPS es secundario y el anunciante

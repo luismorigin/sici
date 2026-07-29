@@ -119,6 +119,10 @@ const COLS = 'id,fuente,url,tipo_operacion,latitud,longitud,zona,nombre_edificio
 // Superficie 1 con candidato score 1.0.
 const candado = (p, campo) => p?.campos_bloqueados?.[campo]?.bloqueado === true;
 
+// Confianza que declaró el lector al fijar el pm. Se guarda desde el 29-jul-2026 → las props
+// cargadas ANTES devuelven null y no entran a la superficie 4 (no hay con qué juzgarlas).
+const confianzaLector = (p) => p?.datos_json?.trazabilidad?.confianza_lector ?? null;
+
 async function main() {
   console.log(`\n🔎 AUDIT MATCHING SHADOW — ops: ${OPS.join('+')}${LIMIT ? ` (limit ${LIMIT}/op)` : ''}. READ-ONLY, $0 (sin fetch).\n`);
 
@@ -152,6 +156,7 @@ async function main() {
 
   const sup1 = [];
   let sup2 = [], sup2Auto = [];
+  const sup4 = [];   // el lector fijo el pm con confianza no-alta (superficie 4, 29-jul-2026)
   const pmRiesgoIds = new Set();
 
   // ── PINES GENÉRICOS DEL PORTAL (se detectan solos, no se hardcodean) ──────────
@@ -194,6 +199,19 @@ async function main() {
       sup2.push({ ...base, pm_actual: p.id_proyecto_master, metodo, pm_nombre: null, pm_zona: null, dist_metros: null });
       pmRiesgoIds.add(p.id_proyecto_master);
     }
+    // SUPERFICIE 4 — el LECTOR fijó el pm, pero con dudas (29-jul-2026)
+    // Punto ciego que existía desde el principio: las 3 superficies de arriba miran lo que el
+    // MATCHER hizo (o no hizo), y ninguna mira lo que decidió el LECTOR. Un `lector_fijo` se daba
+    // por bueno para siempre. Medido en la tanda 2 de ZN: 51 matches del lector, 15 con confianza
+    // media; un juez independiente sobre esos 15 corrigió 2 falsos positivos que ya iban a la base
+    // ("CONDOMINIO ONE 1" contra un pm sin numeral, y un "Ares" que el aviso no nombraba).
+    // Solo entran los de confianza NO alta: los que el propio lector marcó como dudosos.
+    else if (p.id_proyecto_master != null && metodo === 'lector_fijo'
+             && confianzaLector(p) && confianzaLector(p) !== 'alta'
+             && !candado(p, 'id_proyecto_master')) {
+      sup4.push({ ...base, pm_actual: p.id_proyecto_master, confianza_lector: confianzaLector(p), pm_nombre: null, pm_zona: null, dist_metros: null });
+      pmRiesgoIds.add(p.id_proyecto_master);
+    }
   }
 
   // Superficie 1: candidatos fuzzy del catálogo (prod, read-only) para que el juez tenga referencia
@@ -201,11 +219,13 @@ async function main() {
     const { data } = await sb.rpc('buscar_proyecto_fuzzy', { p_nombre: s.nombre_edificio, p_umbral_minimo: 0.3, p_limite: 5 });
     s.candidatos = (data || []).map((c) => ({ pm: c.id_proyecto, nombre: c.nombre, zona: c.zona, score: Number(c.score), tipo: c.match_tipo }));
   }
-  // Superficie 2: traer nombre + GPS del pm actual → dist prop↔pm (¿el match tiene sentido geográfico?)
+  // Superficies 2 y 4: traer nombre + GPS del pm actual → dist prop↔pm (¿el match tiene sentido
+  // geográfico?). La 4 lo necesita igual que la 2: el juez tiene que ver CONTRA QUÉ edificio lo
+  // ató el lector, no solo el número de pm.
   if (pmRiesgoIds.size) {
     const { data: pms } = await sb.from('proyectos_master').select('id_proyecto_master,nombre_oficial,zona,latitud,longitud').in('id_proyecto_master', [...pmRiesgoIds]);
     const byId = new Map((pms || []).map((r) => [r.id_proyecto_master, r]));
-    for (const s of sup2) {
+    for (const s of [...sup2, ...sup4]) {
       const pm = byId.get(s.pm_actual);
       if (pm) {
         s.pm_nombre = pm.nombre_oficial; s.pm_zona = pm.zona;
@@ -277,7 +297,7 @@ async function main() {
   const file = join(OUT, `audit-matching-shadow-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, ops: OPS, total_filas: filas.length,
-    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0) },
+    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length },
     superficie_1: sup1, superficie_2: sup2,
     // Se auto-confirmaron por ruido geográfico (pin genérico o <200 m). NO van al juez,
     // pero quedan acá para poder auditar el umbral si alguno saliera mal.
@@ -288,6 +308,7 @@ async function main() {
       dist_metros: s.dist_metros,
     })),
     superficie_3: sup3,
+    superficie_4: sup4,
   }, null, 2));
 
   console.log(`────────── RESUMEN AUDIT MATCHING SHADOW ──────────`);
@@ -304,11 +325,15 @@ async function main() {
   const dupProps = sup3.reduce((a, c) => a + c.duplicados.length, 0);
   console.log(`  Superficie 3 (duplicados apart-hotel/republicación): ${sup3.length} clusters · ${dupProps} props a deduplicar`);
   for (const c of sup3.slice(0, 20)) console.log(`     [${c.op}] "${c.edificio}"${c.pm ? ` pm${c.pm}` : ''} $${c.precio} ${c.area}m² → sobrevive ${c.sobreviviente}, duplicados: ${c.duplicados.join(',')} (${c.n} avisos)`);
+  console.log(`  Superficie 4 (el LECTOR fijó el pm, con dudas): ${sup4.length}`);
+  for (const s of sup4.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'})  confianza del lector: ${s.confianza_lector}${s.dist_metros != null ? ` · ${s.dist_metros}m` : ''}`);
+  if (!sup4.length) console.log(`     (las props cargadas antes del 29-jul no guardan la confianza del lector → no entran acá)`);
   console.log(`\n  📦 → ${file}`);
-  console.log(`     Siguiente: sup.1/sup.2 → subagentes-lectores (JUEZ). sup.3 → dedup determinístico (revisar y aplicar):`);
+  console.log(`     Siguiente: sup.1/sup.2/sup.4 → subagentes-lectores (JUEZ). sup.3 → dedup determinístico (revisar y aplicar):`);
   console.log(`       sup.1 → APROBAR(candidato) | PM_NUEVO(nombre_real) | SIN_NOMBRE`);
   console.log(`       sup.2 → CONFIRMAR el pm_actual | CORREGIR(otro pm) | RECHAZAR (nombre no aparece)`);
   console.log(`       sup.3 → UPDATE propiedades_v2_shadow SET duplicado_de=<sobreviviente> WHERE id IN (<duplicados>)`);
+  console.log(`       sup.4 → CONFIRMAR | CORREGIR(otro pm) | SIN_NOMBRE — el lector ya dudó; el juez decide`);
   console.log(`     SQL contra propiedades_v2_shadow lo aplica el humano (candado IS NULL / formato-objeto).\n`);
 }
 
