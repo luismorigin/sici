@@ -26,7 +26,38 @@ solo declara USD/moneda ("$us X", "dólares") · o CALLA. → normaliza **direct
 
 ### `oficial_viejo` (SOLO si el texto ancla EXPLÍCITO al rate muerto)
 Cuando el texto dice literal: **"6.96"** · **"Bs 7"** · **"TC 7"** · **"al cambio oficial 7"** · "tipo de cambio 6.96".
-→ se **descuenta** (fue coticado al rate viejo barato). Es el ÚNICO caso especial.
+
+> 🔴 **CORREGIDO 28-jul-2026 (mig 311): `oficial_viejo` YA NO DESCUENTA.**
+> El tag se sigue emitiendo igual — lo que cambió es qué se hace con él.
+>
+> **Por qué.** Se asumía que el tag probaba que el precio en dólares había salido de dividir por
+> 6,96, y por eso se descontaba (×6,96/TC_actual, ~−40%). Dos mediciones independientes lo
+> desmienten:
+>
+> | Test | Con el precio del anuncio | Descontado |
+> |---|---|---|
+> | **Mismo edificio** (15 edificios con unidades de las dos clases) | +3,7% vs sus vecinas | **−38%** |
+> | **Mismo captador** (7 captadores que publican de las dos formas) | +0,5% vs sus otros avisos | **−40%** |
+>
+> Y descontando, 47 de las 54 quedaban por debajo del **percentil 5** del mercado de Equipetrol.
+> No hay lectura de mercado que sostenga que casi todas las unidades que escriben "TC 7" son más
+> baratas que el 95% de la zona — ni que valen 38% menos que el departamento de al lado.
+>
+> **Qué significa entonces "TC 7".** Es la tasa que el vendedor ofrece a quien pague en bolivianos,
+> no el origen del precio en dólares. El monto en dólares es real.
+>
+> **Qué se hace en su lugar (criterio del founder, fiduciario):** se publica el precio del anuncio
+> y se enciende el badge **"Confirmar tipo de cambio"** (mig 227, extendido por la 311). Mostramos
+> lo que el vendedor dijo y declaramos la ambigüedad que no pudimos resolver — en vez de resolverla
+> nosotros por la vía de suponer.
+>
+> **Lo que NO se pudo comprobar:** de las 54, solo 30 tenían vecino o captador con qué contrastar.
+> Para las otras 24 se extrapola el patrón. El badge existe justamente por ellas.
+>
+> 🔜 **Refinamiento anotado, no implementado:** decidir caso por caso comparando contra los vecinos
+> del mismo edificio (la arquitectura del estado de obra inferido, migs 302/303). Requiere que la
+> zona esté releída — en Zona Norte hoy solo 4 de 18 tienen vecino releído, así que todavía no se
+> puede. Ver `RECONOCIMIENTO_ZN.md`.
 
 ### Interacción con la MONEDA del portal (lo delicado)
 - **Remax** trae el precio en **USD** (`price_in_dollars`) → `default` (USD real), salvo 6.96/7 explícito.
@@ -42,13 +73,18 @@ Cuando el texto dice literal: **"6.96"** · **"Bs 7"** · **"TC 7"** · **"al ca
 
 Función NUEVA aparte (NO sobrescribir la de prod hasta estar seguro):
 
+⚠️ El bloque de abajo es la versión ORIGINAL (con el descuento) — se deja como registro histórico.
+**La versión VIGENTE es la de la mig 311**, que sacó la rama de `oficial_viejo` (ver el recuadro de
+la Pieza 1). En la función viva, `oficial_viejo` cae en el `ELSE` y se publica directo.
+
 ```sql
+-- HISTÓRICO (pre mig 311) — ya NO es lo que corre
 CREATE OR REPLACE FUNCTION precio_normalizado_shadow(p_precio_usd numeric, p_tipo_cambio_detectado text)
 RETURNS numeric LANGUAGE sql STABLE AS $$
   SELECT CASE
     WHEN p_tipo_cambio_detectado = 'bob' THEN            -- crudo en BOLIVIANOS → USD real = BOB / tasa (LIVE)
       ROUND(p_precio_usd / (SELECT valor FROM config_global WHERE clave='tipo_cambio_paralelo'), 2)
-    WHEN p_tipo_cambio_detectado = 'oficial_viejo' THEN  -- 6.96/7 explícito → descuenta
+    WHEN p_tipo_cambio_detectado = 'oficial_viejo' THEN  -- ❌ RETIRADO por la mig 311 (28-jul-2026)
       ROUND(p_precio_usd * 6.96 / (SELECT valor FROM config_global WHERE clave='tipo_cambio_paralelo'), 2)
     ELSE p_precio_usd   -- default (paralelo/oficial-nuevo/no_especificado) = USD real directo; se va el ×1.47
   END;

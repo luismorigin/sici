@@ -24,4 +24,10 @@ for (const e of doc.entradas) {
 writeFileSync(matFile, JSON.stringify(doc, null, 2));
 console.log(`✅ ${ok}/${doc.entradas.length} veredictos inyectados a ${matFile}`);
 if (faltan.length) console.log(`⚠️  sin veredicto (${faltan.length}): ${faltan.join(', ')}`);
-console.log(`\n→ node cargar-alquiler-shadow.mjs --apply ${matFile}`);
+// El cargador depende de la OPERACIÓN del material, no del script: los materiales de alquiler se
+// llaman `material-alq-*`, los de venta `material-*`. Sugerir siempre el de alquiler (como hacía
+// antes) invita a aplicar una tanda de venta con el cargador equivocado.
+const esAlquiler = /(^|[\\/])material-alq-/.test(matFile);
+const cargador = esAlquiler ? 'cargar-alquiler-shadow.mjs' : 'cargar-deptos-shadow.mjs';
+const zona = doc.zona && doc.zona !== 'equipetrol' ? ` --zona=${doc.zona}` : '';
+console.log(`\n→ node ${cargador} --apply ${matFile}${zona}`);

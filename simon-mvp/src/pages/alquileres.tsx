@@ -3779,7 +3779,20 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
   prev.priceSnapshot?.bobActual === next.priceSnapshot?.bobActual &&
   prev.brokerComment === next.brokerComment &&
   prev.isDestacada === next.isDestacada &&
-  prev.isReported === next.isReported
+  prev.isReported === next.isReported &&
+  // 🔴 FIX 28-jul-2026 — faltaba `marketChip` acá, y por eso el chip "vs. similares"
+  // NUNCA se veía en mobile (medido con Playwright: 0 chips a 430px y 600px, 200 a 1024px;
+  // el preview interno no sirve para esto porque no hidrata, ver VERIFICAR_FEEDS_DESKTOP.md).
+  //
+  // Qué pasaba: el chip necesita la lista completa para calcular percentiles, así que se
+  // computa DESPUÉS del primer render. Cuando llegaba, React evaluaba la prop nueva (medido:
+  // la card recibía {pos:'dentro', count:8}) pero este comparador respondía "todo igual" y
+  // bloqueaba el re-render → el DOM se quedaba con la versión sin chip, para siempre.
+  //
+  // Se compara por CONTENIDO: el Map se reconstruye en cada cálculo, así que comparar por
+  // referencia daría siempre "distinto" y anularía la memoización de todo el feed.
+  prev.marketChip?.pos === next.marketChip?.pos &&
+  prev.marketChip?.count === next.marketChip?.count
 )
 
 // ===== PHOTO CAROUSEL (native scroll-snap) =====

@@ -76,12 +76,17 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 >   paralelo", "paralelo o dólares", "TC del día", "al día", "USD o TCP" — emití SIEMPRE el mismo tag
 >   **`no_especificado`** (todas normalizan directo igual; usar tags distintos para la misma frase ensucia la data).
 >   Reservá el tag `paralelo` para señal FUERTE y sola ("al paralelo", "TCP", "dólares físicos/billete").
-> - **`oficial_viejo`**: SOLO si el texto ancla EXPLÍCITO al rate muerto ("6.96" / "Bs 7" / "TC 7" / "al oficial 7") → se descuenta.
-> - **v4 — tag fiel a la cruda (NINGÚN tag infla: el feed shadow toma paralelo / oficial-nuevo / no_especificado
->   DIRECTO; solo `oficial_viejo` descuenta y `bob` convierte de bolivianos):**
+> - **`oficial_viejo`**: SOLO si el texto ancla EXPLÍCITO al rate muerto ("6.96" / "Bs 7" / "TC 7" / "al oficial 7").
+>   🔴 **Desde la mig 311 (28-jul-2026) este tag YA NO DESCUENTA** — el precio pasa tal cual y el tag dispara el badge
+>   "Confirmar tipo de cambio" en el feed. Verificado: `precio_normalizado_shadow(100000,'oficial_viejo') = 100000`.
+>   Poné el tag igual: es el registro fiel de lo que dice el aviso, y es lo que enciende el badge. **No lo evites por
+>   miedo a hundir el precio** — ese descuento ya no existe.
+> - **v4 — tag fiel a la cruda (NINGÚN tag infla: el feed shadow toma paralelo / oficial-nuevo / no_especificado /
+>   `oficial_viejo` DIRECTO; el ÚNICO que mueve el precio es `bob`, que convierte de bolivianos):**
 >   · **"oficial" solo** (sin número) = oficial NUEVO (≈paralelo) → `no_especificado`. `oficial_viejo` SOLO con el
->     número viejo explícito (6.96/7) — único que descuenta; la palabra "oficial" sola NO descuenta (subvaluaría: Onix
->     Art $1.800→$1.188/m²).
+>     número viejo explícito (6.96/7). *(Histórico: antes de la mig 311 este tag descontaba, y por eso la spec exigía
+>     que la palabra "oficial" sola NO lo llevara — habría subvaluado, caso Onix Art $1.800→$1.188/m². La distinción
+>     sigue siendo correcta para el badge, aunque ya no cambie el precio.)*
 >   · **"paralelo" DECLARADO solo** ("al paralelo", "TC/tipo de cambio paralelo", "dólares físicos/billete") → tag
 >     `paralelo` (registro fiel; hoy normaliza directo igual que no_especificado — no infla).
 >   · **"paralelo" EQUIPARADO** ("dólares O paralelo", "USD o TC del día") o **SILENCIO** → `no_especificado`.
@@ -95,11 +100,29 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 >   **NUNCA** guardes `BOB/tasa` (eso es crudo-falso) NI uses `precio_candidato` (BOB/6.96). Si el texto dice 6.96/7 explícito → `oficial_viejo`.
 > - Remax trae precio en USD → usá ese, tag según texto. `precio_usd` = CRUDO en su moneda nativa; el feed normaliza (keyed en el tag).
 >
+> ### 🎛️ La banda de $/m² es POR ZONA — no uses la de Equipetrol en otra zona (28-jul-2026)
+> Varias reglas de abajo desempatan por "$/m² coherente". Esa banda **depende de la zona**: aplicar la de
+> Equipetrol a una zona más barata hace clasificar mal el tipo de cambio, en silencio. La banda viene en el
+> material (`m2_tipico`); si no viene, usá la de la tabla:
+>
+> | Zona | Banda típica $/m² | Medido sobre |
+> |---|---|---|
+> | Equipetrol | **$1.700 – $2.200** | p50–p90, n=381 |
+> | Zona Norte | **$1.500 – $1.900** | p50–p90, n=428 · ZN es ~12% más barata |
+>
+> Método (para recalcular cuando haga falta): $/m² sobre el precio **crudo** de las activas con tag directo,
+> percentil 50 a 90. Validación: ese cálculo sobre Equipetrol reproduce el 1.700–2.200 que esta spec ya usaba.
+>
+> 🔴 **Modo `--local` (material armado desde lo guardado, sin ir al portal): `precio_bob_portal` viene NULL a
+> propósito.** En Zona Norte el `precio_bs` guardado resultó ser `precio_usd × 6.96` en **435 de 435** props —
+> lo calculó el pipeline viejo, no es un precio en bolivianos del anuncio. Tratarlo como BOB genuino lo
+> convertiría a la tasa de hoy y hundiría el precio ~40%. Si el aviso publica en bolivianos, está **en el texto**.
+>
 > ### Fallback C21 sin precio en el texto — elegir USD-directo vs bob por $/m² (RESUELTO 10-jul)
 > C21 expone SIEMPRE el precio en BOB (`senales.precio_bob_portal`) Y en USD (`senales.precio_candidato =
 > precio_bob_portal / 6.96`), con `senales.moneda='USD'`. Cuando el texto NO trae precio, el `precio_bob_portal`
 > puede ser (a) un precio genuino en bolivianos, o (b) el USD del vendedor × 6.96 (crudo-falso). **NO defaultear a
-> `bob` a ciegas** — elegí por **$/m² coherente** (~$1.500–2.300 Equipetrol; memoria `feedback_clasificacion_tc_por_m2`):
+> `bob` a ciegas** — elegí por **$/m² coherente** (banda de la zona, tabla de arriba; memoria `feedback_clasificacion_tc_por_m2`):
 > - `usd_m2 = precio_candidato / area` · `bob_m2 = (precio_bob_portal / tasa_paralelo) / area`.
 > - `usd_m2` en banda y `bob_m2` muy bajo → **USD directo** (`precio_usd = precio_candidato`, tag `no_especificado`,
 >   `moneda_original='USD'`). El vendedor pensó en dólares; el BOB era USD×6.96.

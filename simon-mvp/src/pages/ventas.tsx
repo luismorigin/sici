@@ -5,7 +5,7 @@ import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import type { GetStaticProps } from 'next'
 import type { UnidadVenta, FiltrosVentaSimple } from '@/lib/supabase'
-import { ZONAS_CANONICAS, ZONAS_EQUIPETROL_DB, displayZona } from '@/lib/zonas'
+import { ZONAS_CANONICAS, ZONAS_EQUIPETROL_DB, ZONAS_ZONA_NORTE, displayZona } from '@/lib/zonas'
 import { trackEvent } from '@/lib/analytics'
 import { fetchMercadoData, type MercadoData } from '@/lib/mercado-data'
 import type { Broker } from '@/lib/simon-brokers'
@@ -1012,6 +1012,11 @@ const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isA
       <div className="vlc-photo" style={hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
         {badgeNuevo && <span className="vlc-nueva">Nuevo</span>}
         {badgeReciente && <span className="vlc-nueva vlc-reciente-badge">{badgeRecienteLabel}</span>}
+        {/* El aviso de TC faltaba en esta vista (28-jul): la grilla, el mobile y el detalle lo
+            muestran, y la lista no. Con la mig 311 pasan a ser ~42 props, así que el hueco se nota:
+            en modo lista se veía el precio sin la advertencia. Va abajo-izquierda para no chocar
+            con "Nuevo/Reciente", que ocupan arriba-izquierda. */}
+        {p.tc_sospechoso && <span className="vlc-tc-badge"><span className="vlc-tc-badge-i">ⓘ</span>Confirmar tipo de cambio</span>}
         {!hasPhotos && <div className="vlc-nofoto">Sin fotos</div>}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="vlc-nav vlc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
@@ -2808,7 +2813,15 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     }
     if (typeof q.zonas === 'string') {
       q.zonas.split(',').map(s => s.trim().toLowerCase()).forEach(slug => {
+        // Acepta también las microzonas de Zona Norte (28-jul-2026). Motivo: `/zona-norte/ventas`
+        // es una copia que quedó 2.161 líneas atrás de este archivo (sin el rediseño desktop de
+        // julio), así que no hay dónde mirar la data de ZN con la ficha buena. Con esto,
+        // `/ventas?zonas=zn_...` la muestra acá, con el diseño de verdad.
+        // NO cambia el default: sin `?zonas`, la API acota a las 6 de Equipetrol como siempre.
+        // Es una herramienta de inspección — el título y el resumen de mercado de esta página
+        // siguen diciendo "Equipetrol", porque la página sigue siendo la de Equipetrol.
         const db = ZONAS_CANONICAS.find(z => z.slug === slug)?.db
+          ?? ZONAS_ZONA_NORTE.find(z => z.slug === slug)?.db
         if (db) { zonas.add(db); any = true }
       })
     }
@@ -4437,6 +4450,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* "Nueva" sobre la foto (solo recientes) — señal de atención */
         .vlc-nueva { position:absolute; top:10px; left:10px; z-index:3; font-family:'DM Sans',sans-serif; font-size:10.5px; font-weight:600; color:#0A3D1E; background:#7BB389; padding:3px 9px; border-radius:100px; letter-spacing:0.2px }
         .vlc-reciente-badge { background:rgba(255,255,255,0.92); color:#3A6A48 }
+        .vlc-tc-badge { position:absolute; bottom:10px; left:10px; z-index:3; display:inline-flex; align-items:center; gap:5px; background:rgba(20,20,20,0.62); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); color:rgba(237,232,220,0.92); font-family:'DM Sans',sans-serif; font-size:10.5px; font-weight:500; padding:4px 9px; border-radius:100px; border:1px solid rgba(237,232,220,0.22); letter-spacing:0.2px }
+        .vlc-tc-badge-i { font-size:11px; opacity:0.85 }
         .vlc-body { flex:1; min-width:0; padding:14px 18px; display:flex; flex-direction:column; font-family:'DM Sans',sans-serif }
         /* Precio héroe + favorito */
         .vlc-toprow { display:flex; align-items:flex-start; justify-content:space-between; gap:8px }
