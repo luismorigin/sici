@@ -21,11 +21,22 @@
 // contra propiedades_v2_shadow (candado IS NULL sup.1 / formato-objeto sup.2).
 //
 // Uso:
-//   node auditar-matching-shadow.mjs                  # ambas operaciones
+//   node auditar-matching-shadow.mjs                  # ambas operaciones, SOLO Equipetrol
 //   node auditar-matching-shadow.mjs --op venta
 //   node auditar-matching-shadow.mjs --op alquiler --limit 40
+//   node auditar-matching-shadow.mjs --zona=zona-norte  # auditar ZN (ver abajo)
+//   node auditar-matching-shadow.mjs --zona=todas       # auditar todo lo que haya en shadow
 //   node auditar-matching-shadow.mjs --sin-guarda     # saltear la guarda de orden (ver abajo)
 // Salida: output/audit-matching-shadow-<ts>.json (superficies para el juez) + summary.
+//
+// 🎛️ ALCANCE POR ZONA (29-jul-2026) — default `equipetrol`, igual que el resto del híbrido.
+// Cuando entraron 188 props de Zona Norte a shadow por el flujo manual, este audit pasó de 2 a
+// 26 casos en superficie 1 de una noche a la otra. No se rompió nada: `proyectos_master` se
+// construyó para Equipetrol y casi no conoce edificios de ZN, así que afloran todos juntos como
+// PM_NUEVO. Pero el audit NOCTURNO es desatendido y su salida son pendientes para el humano:
+// mezclar el goteo real de Equipetrol con el arrastre de una zona a medio releer hace que lo
+// urgente se pierda entre lo esperado. ZN se audita aparte y a propósito, con --zona=zona-norte,
+// cuando la zona esté cargada entera o casi.
 // ============================================================================
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
@@ -33,6 +44,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { detectarDuplicados } from '../auditoria-feed-ventas/lib/dup-checks.mjs';
+import { ZONAS_HIBRIDO } from './lib/zonas-hibrido.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -47,6 +59,19 @@ const opArg = (() => { const i = argv.indexOf('--op'); return i >= 0 ? argv[i + 
 const OPS = opArg === 'venta' ? ['venta'] : opArg === 'alquiler' ? ['alquiler'] : ['venta', 'alquiler'];
 const LIMIT = (() => { const i = argv.indexOf('--limit'); return i >= 0 ? Number(argv[i + 1]) : null; })();
 const SIN_GUARDA = argv.includes('--sin-guarda');
+
+// --zona=<id> · default 'equipetrol' (el audit nocturno no pasa nada → sigue auditando Equipetrol).
+// 'todas' = sin filtro, para cuando prod y shadow sean lo mismo (post-cutover).
+const ZONA_ID = (() => {
+  const a = argv.find((x) => x.startsWith('--zona='));
+  return a ? a.slice('--zona='.length) : (process.env.ZONA_HIBRIDO || 'equipetrol');
+})();
+if (ZONA_ID !== 'todas' && !ZONAS_HIBRIDO[ZONA_ID]) {
+  // Falla fuerte, no en silencio: una zona mal escrita auditando "todo" sería peor que no correr.
+  console.error(`\n🛑 Zona desconocida: "${ZONA_ID}". Válidas: ${Object.keys(ZONAS_HIBRIDO).join(', ')}, todas\n`);
+  process.exit(2);
+}
+const ZONAS_FILTRO = ZONA_ID === 'todas' ? null : ZONAS_HIBRIDO[ZONA_ID].zonas;
 
 // ---------------------------------------------------------------------------
 // 🔒 GUARDA DE ORDEN — el audit DEBE correr después de las capturas de esa noche.
@@ -116,12 +141,14 @@ async function main() {
   let filas = [];
   for (const op of OPS) {
     let q = sb.from('propiedades_v2_shadow').select(COLS).eq('tipo_operacion', op).eq('es_activa', true).order('id', { ascending: true });
+    if (ZONAS_FILTRO) q = q.in('zona', ZONAS_FILTRO);
     if (LIMIT) q = q.limit(LIMIT);
     const { data, error } = await q;
     if (error) throw error;
     filas.push(...(data || []));
   }
-  console.log(`   ${filas.length} filas activas en shadow.\n`);
+  const alcance = ZONAS_FILTRO ? `${ZONAS_HIBRIDO[ZONA_ID].nombre} (${ZONAS_FILTRO.length} zonas)` : 'TODAS las zonas de shadow';
+  console.log(`   ${filas.length} filas activas en shadow · alcance: ${alcance}.\n`);
 
   const sup1 = [];
   let sup2 = [], sup2Auto = [];
