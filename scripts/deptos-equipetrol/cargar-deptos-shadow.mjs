@@ -85,8 +85,17 @@ const COLS = 'id,fuente,url,tipo_propiedad_original,estado_construccion,precio_u
   (LOCAL ? ',datos_json' : '');   // solo en --local: es el fallback de la descripción (payload grande)
 
 async function traerLote() {
+  // PENTHOUSE entra igual que departamento (29-jul-2026). El filtro exigía exactamente
+  // "departamento" y dejaba afuera 4 props reales — 3 en ZN (mediana $260.000 / 237 m²) y 1 en
+  // Equipetrol ($1.040.000 / 699 m²) — que nunca llegaban al feed nuevo. Un penthouse es una
+  // unidad dentro de un edificio: mismo dueño, mismo captador, mismo comprador que filtra por
+  // dormitorios y precio. Su $/m² cae dentro de la banda ($1.488 el de Equipetrol), así que no
+  // distorsiona medianas; y sobre 326 props, cuatro no mueven ningún indicador.
+  // `ilike` (no `eq`) porque el valor viene "departamento" de C21 y "Departamento" de Remax.
   let q = sb.from('propiedades_v2').select(COLS)
-    .eq('tipo_operacion', 'venta').ilike('tipo_propiedad_original', 'departamento').in('fuente', ['century21', 'remax']);
+    .eq('tipo_operacion', 'venta')
+    .or('tipo_propiedad_original.ilike.departamento,tipo_propiedad_original.ilike.penthouse')
+    .in('fuente', ['century21', 'remax']);
   if (idsArg) { const { data, error } = await q.in('id', idsArg); if (error) throw error; return data; }
   q = q.in('zona', ZONAS_EQ).eq('status', 'completado').eq('es_activa', true)
     .not('datos_json_enrichment->>agente_telefono', 'is', null).order('id', { ascending: false }).limit(600);
