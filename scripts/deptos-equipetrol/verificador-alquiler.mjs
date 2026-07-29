@@ -50,7 +50,12 @@ async function chequear(url, fuente) {
   const agente = await crearAgente();   // agente del LOTE sticky (reusado); NO cerrar acá — lo gestiona el lote
   try {
     const signal = AbortSignal.timeout(15000);
-    const r = await fetch(fuente === 'remax' ? url : `${url}?json=true`, { headers: UA, redirect: 'manual', signal, ...(agente ? { dispatcher: agente } : {}) });
+    // 🔴 NO usar `?json=true` acá (bug cazado 29-jul-2026). Ese endpoint sirve el registro de la BD
+    // de Century21 y devuelve **200 con el aviso completo aunque la página pública esté 404**:
+    // medido 3 veces seguidas sobre el aviso 105863 (borrado) → 200 · 86 KB · `entity.id: 105863`,
+    // idéntico a uno vivo. Con esa señal el verificador NUNCA podía confirmar una baja de C21.
+    // La PÁGINA sí distingue: 404 el borrado, 200 el vivo — y encima pesa menos (24 KB vs 86 KB).
+    const r = await fetch(url, { headers: UA, redirect: 'manual', signal, ...(agente ? { dispatcher: agente } : {}) });
     // Cuenta el request + ESTIMA los bytes por `content-length` (el status-check NO lee el body, así que
     // sin esto el 📊 reportaba "0 MB" aunque el proxy sí transfiere → medición engañosa de los GB).
     trafico.requests++;
