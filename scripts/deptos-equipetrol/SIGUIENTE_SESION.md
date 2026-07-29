@@ -1,7 +1,106 @@
-# Dónde retomar — Zona Norte al híbrido (cierre del 28-jul-2026)
+# Dónde retomar — Zona Norte al híbrido (actualizado 29-jul-2026)
 
-> Rama `worktree-zn-perilla-zona`, worktree `.claude/worktrees/zn-perilla-zona`.
-> **3 commits, sin push.** Las routines nocturnas corren `main`, que no se tocó.
+> ✅ **TODO MERGEADO Y PUSHEADO A `main` el 29-jul** (commit `357103b`, 10 commits).
+> Las routines nocturnas ya corren con la perilla de zona, el discovery acotado y el
+> verificador arreglado. El worktree `.claude/worktrees/zn-perilla-zona` sigue existiendo
+> pero **ya no tiene nada exclusivo**: se puede trabajar directo en `main`.
+
+## ⚡ Estado al 29-jul (leer esto primero)
+
+| | |
+|---|---|
+| **Equipetrol** | ✅ **auditoría CERRADA**. Matching 91,4% venta · 87,0% alquiler. Sin edificios pendientes |
+| **ZN venta en la base nueva** | **188 de 448**, matching 67,0% |
+| **Tanda leída sin aplicar** | **102 props** — `output/material-2026-07-29T12-13-12-zn.json`, 102/102 con veredicto |
+| **Edificios ZN por crear** | **18** (lista en `output/audit-cola-shadow-log.md`) |
+| **SQL del audit ZN** | escrito, sin aplicar — 4 aprobar · 1 rechazar · 4 dedup |
+| **Migraciones** | 309-312 aplicadas **y** en el repo (el desfase 308↔311 se cerró) |
+| **Respaldo** | `Desktop/Censo inmobiliario/RESPALDO-ZN-2026-07-29` (la carpeta `output/` está gitignored) |
+
+🔴 **Lo único que bloquea la tanda: la decisión del tag `bob`** (ver abajo).
+
+## Los 3 bugs que se cazaron el 29-jul (ya arreglados en main)
+
+1. **El verificador era ciego a las bajas de Century21** — chequeaba `?json=true`, que devuelve
+   200 aunque la página esté 404. Nunca confirmaba una baja: *revivía* las props muertas cada
+   noche. 111 props de Equipetrol quedaron marcadas como desaparecidas; en la muestra, las 9
+   probadas estaban caídas **y en el feed**. Esperar decenas de "contadores arrancados" las
+   primeras noches: es el arreglo funcionando. Memoria `project_bug_verificador_json_true_ciego`.
+2. **El audit mezclaba ZN con Equipetrol** — ahora tiene perilla (`--zona`), default Equipetrol.
+3. **`inyectar-veredictos` sugería el cargador de alquiler** para tandas de venta.
+   ⚠️ Y **reemplaza, no acumula**: pasarle los 7 archivos en UNA corrida.
+
+## 🔴 La decisión que bloquea la tanda: el tag `bob`
+
+Los "+596%" de `medir-relectura` **no son subidas de precio**: el campo pasa de dólares a
+bolivianos crudos. Que el factor sea exactamente 6,96 confirma que el USD del portal era
+`Bs / 6,96` — el portal cotiza con un TC que ya no existe.
+
+El problema es lo que pasa después: **6 de 10 precios en bolivianos quedan bajo el p50 de su
+microzona**, y al dividir por 6,96 los diez caen en banda. No es de esta tanda: en las 188 ya
+cargadas, las `bob` promedian **$1.146/m²** contra 1.376 (`no_especificado`), 1.430
+(`oficial_viejo`) y 1.576 (`paralelo`). Verificado que **no es** el bug conocido de C21
+(confundir un USD con Bs): en los diez, `precio_bob_portal ≠ precio_candidato`.
+
+Las dos lecturas, y ninguna es técnica:
+
+1. **La normalización está bien y el portal está mal.** El vendedor pide Bs 500.000; con dólares
+   billete hoy son $42.963. El portal muestra $71.839 porque divide por el TC muerto. Bajo esta
+   lectura el $/m² bajo **es el dato valioso** — es la tesis del TC nuevo funcionando.
+2. **El "Bs" es etiqueta y el vendedor piensa en dólares.** Si no acepta bolivianos a 11,638,
+   mostrarlo a $42.963 subvalúa y el comprador se sorprende al llamar.
+
+**Aplicar la tanda adopta la lectura 1.** Es reversible (el crudo queda guardado).
+
+🔑 **Y no es urgente: ZN no está publicada** (dark launch / noindex). Se puede aplicar, seguir
+releyendo, y decidir antes de publicar. Lo que lo zanja de verdad son **dos o tres llamadas** a
+captadores preguntando si aceptan bolivianos a ese cambio.
+
+## El orden recomendado para seguir
+
+1. **Decidir el `bob`** (o dejarlo en la lectura 1 y verificar antes de publicar).
+2. **Aplicar la tanda de 102** → ZN pasa de 188 a ~290.
+   ```bash
+   cd scripts/deptos-equipetrol
+   node cargar-deptos-shadow.mjs --apply output/material-2026-07-29T12-13-12-zn.json --zona=zona-norte
+   ```
+   Después **archivar los veredictos** en `output/tanda-102-aplicada/`.
+3. **Aplicar el SQL del audit ZN** (`output/audit-cola-shadow-log.md`).
+4. **Re-correr el audit ya con ~290 props** → una lista consolidada de edificios:
+   ```bash
+   node auditar-matching-shadow.mjs --op venta --zona=zona-norte
+   ```
+5. **Crear TODOS los edificios de una sola vez** (evita hacerlo en dos pasadas).
+6. **Seguir con las tandas** (~158 de venta + 101 de alquiler).
+
+### 3 correcciones a mano de la tanda de 102
+- **2262** Palma de Mallorca: el portal declara **127.800 m²** (error ×1000, va ~127,8). Daría
+  $1,33 el m². **El cargador no tiene guardrail de área** — es el único caso de las 102.
+- **2123**: `precio_bob_portal` llegó truncado (504 en vez de 504.000). El lector lo reconstruyó.
+- **2339** Bless One: GPS corrido ~440 m → quedó en otra microzona que su gemela 2338.
+
+### 3 edificios que necesitan mirar el predio, no leer
+- **Torres Soho I** y **Soho 3** están a 49 m y 68 m del pm 509 "Torre Soho". O es un complejo
+  de torres numeradas, o el 509 ya es una de ellas mal nombrada.
+- **Condominio Jardín Sur**: su GPS es idéntico dígito a dígito al de otra prop que es un
+  edificio distinto → pin genérico del portal.
+
+## 🔑 La lección del 29-jul: dónde va una decisión de terreno
+
+Lucho confirmó en terreno que hay un solo "Luxe Suite". Quedó guardado en el candado de UNA
+propiedad — y por eso **no sirvió**: el aviso siguiente del mismo edificio llegó sin candado y el
+audit volvió a proponer crear el edificio. Igual con "YOU II".
+
+**El candado protege una PROPIEDAD; el alias protege el CONOCIMIENTO.** Toda decisión de terreno
+sobre *qué es* un edificio va a `proyectos_master.alias_conocidos` con la grafía exacta del
+captador, **además** del match. Sin eso, se repite en cada aviso nuevo — y es la causa concreta
+de las "cosas que se repiten" en los reportes nocturnos.
+Memoria `feedback_decision_terreno_va_al_catalogo`.
+
+---
+---
+
+# ⤵️ Contexto original (cierre del 28-jul-2026)
 
 ## Por qué estamos haciendo esto (leer antes de ejecutar nada)
 
