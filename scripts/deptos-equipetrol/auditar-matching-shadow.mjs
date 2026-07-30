@@ -168,6 +168,26 @@ const esNombreNoEdificio = (nombre) => NO_EDIFICIO_IDX.get(normNombre(nombre)) |
 // cargadas ANTES devuelven null y no entran a la superficie 4 (no hay con qué juzgarlas).
 const confianzaLector = (p) => p?.datos_json?.trazabilidad?.confianza_lector ?? null;
 
+// ── MATCH YA CONFIRMADO POR EL JUEZ (30-jul-2026) ─────────────────────────────────
+// Tercer caso del mismo bug: **un veredicto que no se escribe en la BD se vuelve a emitir todas las
+// noches.** Las superficies 2 y 4 miran matches que YA EXISTEN, y el veredicto CONFIRMAR (el más
+// frecuente de las dos) no dejaba rastro en ningún lado: la prop quedaba igual, el `.mjs` la volvía a
+// levantar y el juez gastaba una lectura en re-confirmar lo mismo.
+// Medido el 30-jul: las 13 props de superficie 4 se confirmaron 13/13 de madrugada y volvieron a
+// aparecer intactas 5 horas después; las de superficie 2 (8000275 / 8000145 / 8000187) llevaban
+// SEIS noches confirmándose. Ver `feedback_decision_terreno_va_al_catalogo`.
+//
+// El tag lo escribe el HUMANO con el SQL que genera este audit (el audit es read-only por diseño).
+//
+// ⚠️ POR QUÉ UN TAG Y NO subir `confianza_lector` a 'alta' (que también sacaría la prop de la
+//    superficie 4): porque eso la mandaría al PUNTO CIEGO — los `lector_fijo` de confianza alta no
+//    entran a NINGUNA superficie. El tag deja la confianza original intacta, así queda auditable
+//    quién confirmó qué y cuándo, y el día que se implemente el muestreo del punto ciego estas props
+//    siguen siendo elegibles.
+// ⚠️ El tag NO caduca. Si un match confirmado resultara malo, se revoca borrando el tag; el drift del
+//    anuncio lo cubre `/audit-deptos-shadow`, que es el que sí re-fetchea.
+const confirmadoPorAuditor = (p) => p?.datos_json?.trazabilidad?.confirmado_por ?? null;
+
 async function main() {
   console.log(`\n🔎 AUDIT MATCHING SHADOW — ops: ${OPS.join('+')}${LIMIT ? ` (limit ${LIMIT}/op)` : ''}. READ-ONLY, $0 (sin fetch).\n`);
 
@@ -225,7 +245,8 @@ async function main() {
   }
 
   const sup1 = [];
-  const sup1Ruido = [];   // nombres ya juzgados no-edificio (odónimo / familia ambigua) — no van al juez
+  const sup1Ruido = [];        // nombres ya juzgados no-edificio (odónimo / familia ambigua) — no van al juez
+  const supConfirmadas = [];   // matches de superficie 2/4 que el juez YA confirmó (tag confirmado_por)
   let sup2 = [], sup2Auto = [];
   const sup4 = [];   // el lector fijo el pm con confianza no-alta (superficie 4, 29-jul-2026)
   const pmRiesgoIds = new Set();
@@ -271,8 +292,12 @@ async function main() {
     }
     // SUPERFICIE 2 — auto-match riesgoso (nombre único, zona ≠)
     else if (p.id_proyecto_master != null && METODOS_RIESGO.has(metodo) && !candado(p, 'id_proyecto_master')) {
-      sup2.push({ ...base, pm_actual: p.id_proyecto_master, metodo, pm_nombre: null, pm_zona: null, dist_metros: null });
-      pmRiesgoIds.add(p.id_proyecto_master);
+      const yaConf = confirmadoPorAuditor(p);
+      if (yaConf) supConfirmadas.push({ ...base, superficie: 2, pm_actual: p.id_proyecto_master, confirmado_por: yaConf });
+      else {
+        sup2.push({ ...base, pm_actual: p.id_proyecto_master, metodo, pm_nombre: null, pm_zona: null, dist_metros: null });
+        pmRiesgoIds.add(p.id_proyecto_master);
+      }
     }
     // SUPERFICIE 4 — el LECTOR fijó el pm, pero con dudas (29-jul-2026)
     // Punto ciego que existía desde el principio: las 3 superficies de arriba miran lo que el
@@ -284,8 +309,12 @@ async function main() {
     else if (p.id_proyecto_master != null && metodo === 'lector_fijo'
              && confianzaLector(p) && confianzaLector(p) !== 'alta'
              && !candado(p, 'id_proyecto_master')) {
-      sup4.push({ ...base, pm_actual: p.id_proyecto_master, confianza_lector: confianzaLector(p), pm_nombre: null, pm_zona: null, dist_metros: null });
-      pmRiesgoIds.add(p.id_proyecto_master);
+      const yaConf = confirmadoPorAuditor(p);
+      if (yaConf) supConfirmadas.push({ ...base, superficie: 4, pm_actual: p.id_proyecto_master, confirmado_por: yaConf, confianza_lector: confianzaLector(p) });
+      else {
+        sup4.push({ ...base, pm_actual: p.id_proyecto_master, confianza_lector: confianzaLector(p), pm_nombre: null, pm_zona: null, dist_metros: null });
+        pmRiesgoIds.add(p.id_proyecto_master);
+      }
     }
   }
 
@@ -372,7 +401,7 @@ async function main() {
   const file = join(OUT, `audit-matching-shadow-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, ops: OPS, total_filas: filas.length,
-    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length },
+    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, ya_confirmados_por_auditor: supConfirmadas.length },
     superficie_1: sup1, superficie_2: sup2,
     // Nombres YA juzgados como no-edificio (odónimo / familia ambigua) → no van al juez.
     // Quedan acá para poder auditar la lista: si una de estas props resultara ser un edificio
@@ -391,6 +420,12 @@ async function main() {
     })),
     superficie_3: sup3,
     superficie_4: sup4,
+    // Matches de superficie 2/4 que un juez YA confirmó (tag `datos_json.trazabilidad.confirmado_por`).
+    // No vuelven al juez. Quedan acá para poder revocar una confirmación que hubiera salido mal.
+    ya_confirmados_por_auditor: supConfirmadas.map((s) => ({
+      prop_id: s.prop_id, op: s.op, superficie: s.superficie, nombre_edificio: s.nombre_edificio,
+      pm_actual: s.pm_actual, confirmado_por: s.confirmado_por, confianza_lector: s.confianza_lector ?? null,
+    })),
   }, null, 2));
 
   console.log(`────────── RESUMEN AUDIT MATCHING SHADOW ──────────`);
@@ -417,6 +452,12 @@ async function main() {
   console.log(`  Superficie 4 (el LECTOR fijó el pm, con dudas): ${sup4.length}`);
   for (const s of sup4.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'})  confianza del lector: ${s.confianza_lector}${s.dist_metros != null ? ` · ${s.dist_metros}m` : ''}`);
   if (!sup4.length) console.log(`     (las props cargadas antes del 29-jul no guardan la confianza del lector → no entran acá)`);
+  // Se DECLARA lo excluido por confirmación previa (mismo criterio que los otros dos filtros).
+  if (supConfirmadas.length) {
+    const n2 = supConfirmadas.filter((s) => s.superficie === 2).length;
+    console.log(`  └─ + ${supConfirmadas.length} match(es) YA confirmados por un juez (NO vuelven al juez): ${n2} de superficie 2 · ${supConfirmadas.length - n2} de superficie 4`);
+    for (const s of supConfirmadas.slice(0, 20)) console.log(`        ${s.prop_id} [${s.op}] sup${s.superficie} "${s.nombre_edificio}" → pm ${s.pm_actual} · ${s.confirmado_por}`);
+  }
   console.log(`\n  📦 → ${file}`);
   console.log(`     Siguiente: sup.1/sup.2/sup.4 → subagentes-lectores (JUEZ). sup.3 → dedup determinístico (revisar y aplicar):`);
   console.log(`       sup.1 → APROBAR(candidato) | PM_NUEVO(nombre_real) | SIN_NOMBRE`);

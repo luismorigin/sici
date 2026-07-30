@@ -116,6 +116,24 @@ solo tras verificación humana (el founder da el GPS en Google Maps). NO inventa
        'fecha','<YYYY-MM-DD>','razon','cluster numerado','valor_original',id_proyecto_master))
   ```
 - `metodo_match` (en `datos_json.trazabilidad`) → dejar traza `auditor_cola_shadow_<fecha>`.
+- 🔴 **CONFIRMAR también se ESCRIBE** (superficies 2 y 4) — desde el 30-jul-2026. Un CONFIRMAR que no
+  deja rastro hace que la prop vuelva al juez **todas las noches**: las 13 de superficie 4 se
+  confirmaron 13/13 de madrugada y reaparecieron intactas 5 h después; `8000275`/`8000145`/`8000187`
+  llevaban **6 noches** confirmándose. Emitir SIEMPRE, junto con los CORREGIR/RECHAZAR:
+  ```sql
+  datos_json = COALESCE(datos_json,'{}'::jsonb) || jsonb_build_object(
+    'trazabilidad', COALESCE(datos_json->'trazabilidad','{}'::jsonb) || jsonb_build_object(
+      'confirmado_por','auditor_cola_shadow_<fecha>',
+      'confirmado_evidencia','<la cita que sostiene el match>',
+      'confirmado_superficie', <2|4>))
+  -- candado: AND datos_json->'trazabilidad'->>'confirmado_por' IS NULL
+  ```
+  El `.mjs` excluye lo tagueado de las superficies 2 y 4 y lo **declara** aparte
+  (`ya_confirmados_por_auditor`). Revocable: `datos_json #- '{trazabilidad,confirmado_por}'`.
+  ⚠️ **NO** lograr el mismo efecto subiendo `confianza_lector` a `'alta'`: eso manda la prop al
+  **punto ciego** (los `lector_fijo` de confianza alta no entran a NINGUNA superficie). El tag deja la
+  confianza original intacta y mantiene la prop elegible para el muestreo del punto ciego.
+  Plantilla completa: `output/04-SHADOW-confirmados-2026-07-30.sql`.
 - **Superficie 3 (dedup):** `UPDATE propiedades_v2_shadow SET duplicado_de=<sobreviviente>, fecha_actualizacion=NOW()
   WHERE id IN (<duplicados>)`. La vista filtra `duplicado_de IS NULL` → salen del feed. **Reversible** (`=NULL`).
   Confirmá por lectura los clusters de 2 antes de aplicar; los apart-hotel grandes son directos.
