@@ -451,7 +451,11 @@ async function main() {
   for (const c of sup3.slice(0, 20)) console.log(`     [${c.op}] "${c.edificio}"${c.pm ? ` pm${c.pm}` : ''} $${c.precio} ${c.area}m² → sobrevive ${c.sobreviviente}, duplicados: ${c.duplicados.join(',')} (${c.n} avisos)`);
   console.log(`  Superficie 4 (el LECTOR fijó el pm, con dudas): ${sup4.length}`);
   for (const s of sup4.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'})  confianza del lector: ${s.confianza_lector}${s.dist_metros != null ? ` · ${s.dist_metros}m` : ''}`);
-  if (!sup4.length) console.log(`     (las props cargadas antes del 29-jul no guardan la confianza del lector → no entran acá)`);
+  // Con sup4 en 0 hay DOS motivos posibles y conviene no confundirlos en el parte matutino:
+  // que no haya nada que juzgar, o que lo que había ya esté confirmado y tagueado.
+  if (!sup4.length && !supConfirmadas.some((s) => s.superficie === 4)) {
+    console.log(`     (las props cargadas antes del 29-jul no guardan la confianza del lector → no entran acá)`);
+  }
   // Se DECLARA lo excluido por confirmación previa (mismo criterio que los otros dos filtros).
   if (supConfirmadas.length) {
     const n2 = supConfirmadas.filter((s) => s.superficie === 2).length;
