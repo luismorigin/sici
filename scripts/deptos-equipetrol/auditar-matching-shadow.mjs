@@ -119,6 +119,51 @@ const COLS = 'id,fuente,url,tipo_operacion,latitud,longitud,zona,nombre_edificio
 // Superficie 1 con candidato score 1.0.
 const candado = (p, campo) => p?.campos_bloqueados?.[campo]?.bloqueado === true;
 
+// ── NOMBRES QUE NO IDENTIFICAN UN EDIFICIO (30-jul-2026) ──────────────────────────
+// Problema que resuelve: hay props cuyo `nombre_edificio` NO alcanza para elegir un edificio, y
+// el veredicto correcto es SIN_NOMBRE. Pero SIN_NOMBRE **no deja rastro en la BD** (la prop queda
+// igual: sin pm y sin candado), así que la prop vuelve a Superficie 1 TODAS las noches y el juez
+// gasta una lectura en re-decidir lo mismo. Medido: 8000213 y 8000253 cayeron 6 noches seguidas.
+// Es el mismo patrón de `feedback_decision_terreno_va_al_catalogo` con una vuelta de tuerca: acá
+// NO hay pm al que colgarle un alias, porque el veredicto es "no existe tal edificio".
+//
+// Dos familias de caso:
+//   · odonimo        → el nombre es una CALLE, no un edificio ("Los Jazmines" en Sirari).
+//   · familia_ambigua → prefijo compartido por varios edificios reales, sin el sufijo que discrimina.
+//
+// 🔒 REGLAS DE ESTA LISTA (para que no se convierta en un tapa-agujeros):
+//   1. Comparación EXACTA del nombre normalizado, nunca `includes`. "Sky Collection" a secas es
+//      ambiguo; "Sky Collection Tulip" es un nombre válido y DEBE seguir yendo al juez.
+//   2. Solo entra lo YA DECIDIDO por el juez o el founder, con su fecha. No se anticipan casos.
+//   3. No se silencia: las props filtradas se listan aparte en el resumen y en el JSON
+//      (`superficie_1_ruido_conocido`). Un descarte invisible se lee como "no había nada".
+//   4. Si un caso deja de ser ambiguo (ej. el founder decide que "Ziri" ES Ziri Zwei), el arreglo
+//      va al ALIAS del catálogo y la entrada se saca de acá.
+//
+// NO están acá a propósito:
+//   · "Ziri" — decisión de terreno ABIERTA (podría ser alias de Ziri Zwei, pm 362). Mientras no se
+//     decida, tiene que seguir apareciendo.
+//   · "Holiday" — riesgo latente (pm 487 "Condominio Holiday" y 488 "Holiday Smart Studio" a 350 m),
+//     pero todavía no apareció ningún aviso así. La primera vez la tiene que ver el juez.
+const NOMBRES_NO_EDIFICIO = [
+  { nombre: 'jazmines',            tipo: 'odonimo',         decidido: '2026-07-24', razon: 'calle Los Jazmines (Sirari): 19 edificios del catalogo a <=250 m del pin y ninguno se llama Jazmines; los 2 PM "Jazmines" estan a 4,7 km' },
+  { nombre: 'los jazmines',        tipo: 'odonimo',         decidido: '2026-07-24', razon: 'idem "jazmines"' },
+  { nombre: 'edificio jazmines',   tipo: 'odonimo',         decidido: '2026-07-24', razon: 'idem "jazmines"' },
+  { nombre: 'sky collection',      tipo: 'familia_ambigua', decidido: '2026-07-28', razon: 'prefijo de 5 edificios (Tulip / Art Deco / Equipetrol + alias Plaza Italia y Magnolia); elegir uno es tirar una moneda' },
+  { nombre: 'galil',               tipo: 'familia_ambigua', decidido: '2026-07-30', razon: 'Galil Parque I (pm 518) y III (pm 358) estan a 10-30 m entre si, misma zona; precedente: se aprobo III con score 95 y era el I' },
+  { nombre: 'condominio galil',    tipo: 'familia_ambigua', decidido: '2026-07-30', razon: 'idem "galil"' },
+  { nombre: 'baruc',               tipo: 'familia_ambigua', decidido: '2026-07-30', razon: '6 edificios "Baruc" en el catalogo; se resuelve por GPS, no por nombre' },
+  { nombre: 'condominio baruc',    tipo: 'familia_ambigua', decidido: '2026-07-30', razon: 'idem "baruc"' },
+  { nombre: 'condominio norte',    tipo: 'familia_ambigua', decidido: '2026-07-29', razon: 'descriptivo de zona, no nombre propio (pm 409 / 500 empatan en 0.308)' },
+  { nombre: 'edificio condominio norte', tipo: 'familia_ambigua', decidido: '2026-07-29', razon: 'idem "condominio norte"' },
+];
+
+const normNombre = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
+
+const NO_EDIFICIO_IDX = new Map(NOMBRES_NO_EDIFICIO.map((e) => [normNombre(e.nombre), e]));
+const esNombreNoEdificio = (nombre) => NO_EDIFICIO_IDX.get(normNombre(nombre)) || null;
+
 // Confianza que declaró el lector al fijar el pm. Se guarda desde el 29-jul-2026 → las props
 // cargadas ANTES devuelven null y no entran a la superficie 4 (no hay con qué juzgarlas).
 const confianzaLector = (p) => p?.datos_json?.trazabilidad?.confianza_lector ?? null;
@@ -154,7 +199,33 @@ async function main() {
   const alcance = ZONAS_FILTRO ? `${ZONAS_HIBRIDO[ZONA_ID].nombre} (${ZONAS_FILTRO.length} zonas)` : 'TODAS las zonas de shadow';
   console.log(`   ${filas.length} filas activas en shadow · alcance: ${alcance}.\n`);
 
+  // ⚠️ AVISO DE ALCANCE PARCIAL (30-jul-2026) — un auditor que no ve la mitad del inventario
+  // deja de ser auditor. El default de la perilla es 'equipetrol' (bien pensado para el
+  // pipeline de CAPTURA: aislar ZN para que no arrastre a Equipetrol si algo sale mal), pero
+  // en un AUDIT ese mismo default hace que lo no auditado se lea como "limpio".
+  // Caso real: la noche del 30-jul la routine corrió sin `--zona` → habría reportado
+  // "nada que aplicar" con 793 filas de Equipetrol en cero, mientras ZN acumulaba 17 UPDATE
+  // y un PM_NUEVO en silencio. Falla en la dirección peligrosa: el silencio parece salud.
+  if (ZONAS_FILTRO) {
+    let fuera = 0;
+    for (const op of OPS) {
+      const { count } = await sb.from('propiedades_v2_shadow')
+        .select('id', { count: 'exact', head: true })
+        .eq('tipo_operacion', op).eq('es_activa', true).not('zona', 'in', `(${ZONAS_FILTRO.map((z) => `"${z}"`).join(',')})`);
+      fuera += count || 0;
+    }
+    if (fuera > 0) {
+      console.log(
+        `   🔴 ALCANCE PARCIAL — hay ${fuera} filas activas en shadow FUERA de este alcance y este audit NO las mira.\n` +
+        `      Lo no auditado NO es lo mismo que lo auditado y limpio. Para cubrir todo:\n` +
+        `        node auditar-matching-shadow.mjs --zona=todas\n` +
+        `      (o corré una vez por zona: --zona=equipetrol y --zona=zona-norte)\n`
+      );
+    }
+  }
+
   const sup1 = [];
+  const sup1Ruido = [];   // nombres ya juzgados no-edificio (odónimo / familia ambigua) — no van al juez
   let sup2 = [], sup2Auto = [];
   const sup4 = [];   // el lector fijo el pm con confianza no-alta (superficie 4, 29-jul-2026)
   const pmRiesgoIds = new Set();
@@ -192,7 +263,11 @@ async function main() {
     // SUPERFICIE 1 — sin match, con nombre → PM_NUEVO / fuzzy débil
     // (excluye las candadas: un humano ya decidió que van sin pm — no re-proponer)
     if (p.id_proyecto_master == null && p.nombre_edificio && !candado(p, 'id_proyecto_master')) {
-      sup1.push({ ...base, metodo: metodo || 'sin_match', candidatos: [] });
+      // Nombre ya juzgado como "no identifica un edificio" (odónimo / familia ambigua):
+      // no va al juez, pero se REPORTA aparte. Ver NOMBRES_NO_EDIFICIO.
+      const noEdif = esNombreNoEdificio(p.nombre_edificio);
+      if (noEdif) sup1Ruido.push({ ...base, metodo: metodo || 'sin_match', ruido: noEdif });
+      else sup1.push({ ...base, metodo: metodo || 'sin_match', candidatos: [] });
     }
     // SUPERFICIE 2 — auto-match riesgoso (nombre único, zona ≠)
     else if (p.id_proyecto_master != null && METODOS_RIESGO.has(metodo) && !candado(p, 'id_proyecto_master')) {
@@ -297,8 +372,15 @@ async function main() {
   const file = join(OUT, `audit-matching-shadow-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, ops: OPS, total_filas: filas.length,
-    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length },
+    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length },
     superficie_1: sup1, superficie_2: sup2,
+    // Nombres YA juzgados como no-edificio (odónimo / familia ambigua) → no van al juez.
+    // Quedan acá para poder auditar la lista: si una de estas props resultara ser un edificio
+    // real, la entrada de NOMBRES_NO_EDIFICIO está mal y hay que sacarla.
+    superficie_1_ruido_conocido: sup1Ruido.map((s) => ({
+      prop_id: s.prop_id, op: s.op, nombre_edificio: s.nombre_edificio, url: s.url,
+      tipo: s.ruido.tipo, decidido: s.ruido.decidido, razon: s.ruido.razon,
+    })),
     // Se auto-confirmaron por ruido geográfico (pin genérico o <200 m). NO van al juez,
     // pero quedan acá para poder auditar el umbral si alguno saliera mal.
     superficie_2_autoconfirmados: sup2Auto.map((s) => ({
@@ -314,6 +396,13 @@ async function main() {
   console.log(`────────── RESUMEN AUDIT MATCHING SHADOW ──────────`);
   console.log(`  Superficie 1 (sin match + con nombre → PM_NUEVO/fuzzy): ${sup1.length}`);
   for (const s of sup1.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}"  cands:${s.candidatos.length}${s.candidatos[0] ? ` (mejor ${s.candidatos[0].nombre} ${s.candidatos[0].score})` : ''}`);
+  // Se DECLARA lo filtrado (regla 3 de NOMBRES_NO_EDIFICIO): un descarte invisible se lee
+  // como "no había nada". Estas props siguen sin match — que es el veredicto correcto —,
+  // lo único que se evita es re-juzgarlas cada noche.
+  if (sup1Ruido.length) {
+    console.log(`  └─ + ${sup1Ruido.length} con nombre YA juzgado no-edificio (NO van al juez, siguen sin match):`);
+    for (const s of sup1Ruido.slice(0, 20)) console.log(`        ${s.prop_id} [${s.op}] "${s.nombre_edificio}" · ${s.ruido.tipo} (decidido ${s.ruido.decidido})`);
+  }
   console.log(`  Superficie 2 (auto-match riesgoso nombre_unico_zona_dif): ${sup2.length}`);
   for (const s of sup2.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'}, zona ${s.pm_zona || '?'} vs ${s.zona}) dist ${s.dist_metros ?? '?'}m`);
   // Se DECLARA lo silenciado: un filtro que no se ve es un filtro que nadie audita.

@@ -57,12 +57,30 @@ carga, eso lo cubre el otro comando, `/audit-deptos-shadow`, que sí re-fetchea 
 
 ### 1. Correr la fase mecánica ($0, sin fetch)
 ```
-node auditar-matching-shadow.mjs                 # ambas operaciones
-node auditar-matching-shadow.mjs --op venta
+node auditar-matching-shadow.mjs --zona=equipetrol    # ambas operaciones
+node auditar-matching-shadow.mjs --zona=zona-norte    # 🔴 SIEMPRE también esta
+node auditar-matching-shadow.mjs --op venta --zona=zona-norte
 node auditar-matching-shadow.mjs --op alquiler --limit 40
 ```
+🔴 **ALCANCE — pasá SIEMPRE la zona explícita, y cubrí las dos.** El default de la perilla
+(`lib/zonas-hibrido.mjs`) es `equipetrol`, pensado para el pipeline de **captura** (aislar ZN para que
+no arrastre a Equipetrol si algo sale mal). En un **audit** ese mismo default es una trampa: lo no
+auditado se lee como limpio. Pasó el **30-jul-2026** — la routine corrió sin `--zona`, Equipetrol dio
+cero y el parte habría dicho "nada que aplicar" con 17 UPDATE y un PM_NUEVO esperando en ZN.
+Desde el 30-jul el `.mjs` **avisa** cuando quedan filas activas fuera del alcance (`🔴 ALCANCE PARCIAL`):
+si aparece, corré la zona que falta o usá `--zona=todas`. Ver memoria `project_audit_nocturno_no_ve_zona_norte`.
+
 Escribe `output/audit-matching-shadow-<ts>.json` con `superficie_1` (+ `candidatos`) y `superficie_2`
 (+ `pm_actual`/`pm_nombre`/`pm_zona`/`dist_metros`). Si ambas están en 0 → nada que auditar, reportá.
+
+> **Superficie 1 · ruido conocido** (30-jul-2026): el `.mjs` desvía a `superficie_1_ruido_conocido` las
+> props cuyo `nombre_edificio` ya fue juzgado como **no-edificio** — odónimos ("Los Jazmines" es una
+> calle de Sirari) y prefijos-familia ambiguos ("Sky Collection", "Galil", "Baruc"). **No van al juez**
+> y siguen sin match, que es el veredicto correcto; lo que se evita es re-juzgar lo mismo cada noche
+> (8000213 y 8000253 cayeron 6 noches seguidas). La lista es `NOMBRES_NO_EDIFICIO` en el `.mjs`:
+> comparación **exacta** del nombre normalizado (nunca `includes` — "Sky Collection Tulip" sí va al
+> juez), solo casos **ya decididos** con su fecha, y siempre **declarados** en el resumen. Si un caso
+> deja de ser ambiguo, el arreglo va al **alias del catálogo** y la entrada se saca de la lista.
 
 > **Superficie 3 (duplicados) es DETERMINÍSTICA** — no necesita juez. El `.mjs` ya trae los clusters
 > (`sobreviviente` + `duplicados`). Confirmá por lectura los clusters de 2 y los de `área=0` (clave débil);
