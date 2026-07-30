@@ -330,6 +330,24 @@ intenta predecir todo. Se separa en:
     ejecutiva", "alta rentabilidad", "ideal para renta corta/Airbnb", "excelente inversión") Y el precio es de venta
     (6 cifras USD, no mensual). El adjetivo de inversión NO es la operación. **Señal dura:** precio mensual → alquiler;
     precio de venta + "renta" adjetivo → venta.
+  - **🔴 v5 (30-jul-2026) — AVISO MIXTO: se vende Y se alquila → ACEPTAR como venta.** Un dueño puede ofrecer las
+    dos cosas en la misma publicación; que el cuerpo mencione un alquiler **no prueba** que la operación sea
+    alquiler. ACEPTAR como venta (confianza media, anotando en `notas` que también se alquila y a cuánto) **solo si
+    el CUERPO declara un precio de VENTA explícito** (5-6 cifras USD) **y** ese precio es coherente en $/m² para la
+    zona. Si no hay precio de venta en el texto → rechazar como hasta ahora.
+    Es la simetría de la regla **v3 del spec de ALQUILER** (`READER_SPEC_ALQUILER.md`), nacida del mismo caso
+    (c21 `112448` Nano Tec, que se alquila **y** se vende).
+
+    ⚠️ **La condición NO es simétrica, y es a propósito — leer esto antes de "emparejarla":** en alquiler alcanza
+    con el mensual del **portal**, porque la **magnitud** discrimina sola (un precio de venta no puede ser
+    Bs 4.500/mes). Acá no: el portal **fabrica precios de venta plausibles**. Casos reales del 29 y 30-jul —
+    `8000329` traía `$69.800` del portal sobre 38 m² = **$1.837/m², perfectamente en banda**, y sin embargo el
+    aviso era un alquiler de Bs 3.200/mes; ídem `8000330` (`$75.000` del portal, aviso de USD 500/mes).
+    Si esta regla aceptara el precio del portal, esos dos entraban al feed de venta como inventario fantasma.
+    👉 **En venta, el precio de venta tiene que estar en el TEXTO.** El estructurado no sirve de prueba de
+    operación (sí como fallback de monto, ver §PRECIO).
+    Chequeo mental: `8000325` (texto: "Precio de alquiler: 4000 Bs") y `8000326` (anticrético, $459/m² fuera de
+    banda) siguen rechazados con v5, igual que hoy.
 - **🔴 v4.2 — BLOQUE / PISO COMPLETO / LOTE DE UNIDADES → `es_multiproyecto: true`** (caso real 17-jul, prop 3742
   Rhodium: *"SE VENDE PISO COMPLETO"*, 4 unidades en bloque, $429.000 / 250 m²). El aviso vende **N unidades juntas**,
   no un depto → **NO es una unidad comparable**: ensucia la mediana y al que busca un depto le aparece un piso entero.
