@@ -321,6 +321,26 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
        🔜 **Fase completa (BACKLOG, para independizar de la máquina + escalar a más zonas/Bolivia):**
        `reader-api` (LLM por API) + modelo barato medido vs ground truth + servidor/nube 24/7. Ver
        §Automatización. Memoria: `project_motor_hibrido_routine_local`.
+0b. [ ] 🔴 **LOS TRIGGERS DE ZONA — `propiedades_v2_shadow` NO tiene NINGUNO** (verificado 29-jul-2026:
+       0 triggers en shadow contra 5 en prod). Hoy no molesta porque el cargador escribe la `zona`
+       explícitamente, pero **el día que shadow sea la tabla principal cualquier corrección de GPS va a
+       dejar la zona vieja en silencio** — y la zona es lo que usan el feed para filtrar, el snapshot para
+       agrupar y las bandas de $/m² para comparar. Una prop en la zona equivocada contamina la mediana de
+       dos zonas: falta en la suya y sobra en la ajena.
+       **Ya pasó, medido:** 30 props de shadow tenían la zona desactualizada (27 también en prod). Se
+       corrigieron 22 el 29-jul; el caso que lo destapó fue Holiday Smart Studio (3823), donde al arreglar
+       un GPS la zona quedó en la microzona anterior y hubo que corregirla a mano.
+       🔑 **NO son "los 5" — hay que elegir. Analizado uno por uno el 29-jul:**
+       | trigger | ¿a shadow? | por qué |
+       |---|---|---|
+       | `trg_asignar_zona_venta` | ✅ **SÍ** | GPS → zona. Es el que evita este bug exacto |
+       | `trg_asignar_zona_alquiler` | ✅ **SÍ** | ídem para alquiler (mig 232: usa `zg.nombre`) |
+       | `tr_proteger_amenities_merge` | 🔶 probablemente | protege `datos_json->amenities` con candados = regla crítica #1. Merece su propia revisión |
+       | `trg_alquiler_matching` | ❌ **NO** | matchea alquiler en cada UPDATE → **pisaría el matcher del híbrido y el trabajo del lector** |
+       | `trg_sync_sin_match` | ❌ **NO** | alimenta la cola HITL de n8n (`matching_sugerencias`), que el híbrido no usa |
+       ⚠️ Al montar los dos de zona, ojo con el orden: son `BEFORE INSERT/UPDATE`, así que a partir de ese
+       momento **el trigger decide la zona, no el `SET` del cargador**. Verificar que el cargador no dependa
+       de escribirla a mano.
 1. [ ] **Archivar** `propiedades_v2` (NO borrar — respaldo del crudo histórico). Apagar **solo el workflow
        deptos-venta Equipetrol** en n8n (ZN/casas/alquiler siguen). El shadow de Equipetrol pasa a base.
 2. [ ] **Paquete TC junto:** swappear `precio_normalizado()` a la versión nueva + re-apuntar snapshots,
