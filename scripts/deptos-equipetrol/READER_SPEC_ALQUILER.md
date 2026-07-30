@@ -166,15 +166,48 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 ### GATE (aceptar/rechazar) — INVERSO al de venta
 En el feed de alquiler, la basura a rechazar es lo que NO es **alquiler mensual puro**:
 
-- **🔴 RECHAZAR VENTA colada** — si el CUERPO del aviso OFRECE una VENTA (verbo "se vende"/"en venta"/"venta
-  directa" **Y** un precio de **venta**: 5-6 cifras en USD, no un mensual) → `gate: rechazar`
-  (razon_gate: "venta tipeada como alquiler"). La contradicción de operación gana sobre la metadata del portal.
-  Ej real: 2705 "Se vende… 88.000 $us al paralelo" con slug de alquiler → RECHAZAR.
+- **🔴 RECHAZAR VENTA colada** — si el aviso OFRECE **solo** una VENTA (verbo "se vende"/"en venta"/"venta
+  directa" **Y** un precio de **venta**: 5-6 cifras en USD, no un mensual) **y NO hay un alquiler mensual
+  identificable** → `gate: rechazar` (razon_gate: "venta tipeada como alquiler").
+  ⚠️ **Esta regla se quedó sin ejemplo validado:** el único que tenía (2705 / Nano Tec) resultó ser un aviso
+  MIXTO y se corrigió en v3. Se mantiene por criterio — un aviso que solo vende no va al feed de alquiler —,
+  pero **el umbral real de decisión es v3**: antes de rechazar, buscá el mensual. Si aparece un caso legítimo
+  de venta pura publicada en alquiler, anotalo acá con su URL.
 - **🔴 v2 — el PRECIO es el discriminador DURO (verbo venta + precio de renta-magnitud = ACEPTAR):** si el verbo
   dice "venta"/"pre-venta" PERO el precio es **inequívocamente de renta** (Bs/mes, o USD de 3 cifras/mes tipo
   $460–$650) → es un **alquiler mal-etiquetado**, ACEPTALO como alquiler (confianza media, notá el mislabel). No
   existe venta a $460. Ej reales: 2802/2779/2778 (cuerpo "en venta" pero $460–$490/mes) → aceptar como alquiler.
-  Regla: rechazá solo si el precio TAMBIÉN es de venta (6 cifras USD); verbo venta + precio renta = renta.
+  Regla: rechazá solo si el precio TAMBIÉN es de venta (6 cifras USD) **y no hay mensual** (ver v3).
+- **🔴 v3 (30-jul-2026) — AVISO MIXTO: se alquila Y se vende → ACEPTAR como alquiler.** Un dueño puede ofrecer
+  las dos cosas en la misma publicación. Que el cuerpo hable de venta **no prueba** que la operación sea venta:
+  hay que mirar si además hay un **alquiler mensual real**. ACEPTAR (confianza media, anotando en `notas` que el
+  inmueble también está en venta y a cuánto) cuando se cumplen las **tres**:
+  1. hay señal de alquiler **independiente del cuerpo** — el título/encabezado dice "en Alquiler", **o** el
+     portal trae un precio **mensual**; **y**
+  2. ese mensual es **coherente en magnitud** para renta (≈**Bs 1.500–30.000**/mes, que cubre el rango real del
+     feed shadow: $172–$2.000/mes) — es la salvaguarda contra el **precio-fantasía del portal**, que es el
+     riesgo verdadero de esta regla. Los dos casos reales que hay que seguir rechazando son de ahí:
+     `precio_bob_portal = 500` (basura) y `$69.800` mensual (metadata de venta). Ante duda de magnitud,
+     cruzá con el $/m²: la banda de renta ronda $6–$12/m²/mes; **y**
+  3. el precio de venta es **del mismo inmueble** (no de otra unidad ni de un multiproyecto).
+
+  Es **el mismo principio que ya aplica el anticrético** en el ítem siguiente ("si el aviso ofrece alquiler Y
+  anticrético, y el alquiler mensual está claro → aceptar como alquiler; la otra operación es una alternativa,
+  no la operación"). Faltaba la simetría para la venta.
+
+  ⚠️ **Ej real corregido — c21 `112448` "Edificio Nano Tec"** (prop `2705` en prod). Este spec lo citaba como
+  ejemplo de RECHAZO ("Se vende… 88.000 $us al paralelo con slug de alquiler → RECHAZAR"), y el precedente
+  estaba **mal**: el aviso dice en su encabezado *"Departamento de 1 dormitorio **en Alquiler**"*, el portal
+  trae **Bs 4.500/mes** en BOB, y 4.500 Bs / 44 m² = **$387/mes**, plenamente coherente (mediana de alquiler
+  shadow ≈ $344). **Prod lo tiene publicado como alquiler activo con esos Bs 4.500 desde hace meses.** Lo que
+  el cuerpo agrega es que el mismo depto también se vende a $88.000 ($2.000/m², también coherente).
+  Costo del ejemplo mal congelado: el lector lo rechazó **3 noches seguidas en shadow** (28-jul, `8000313` el
+  29-jul, `8000321` el 30-jul), gastando una lectura por noche, y el alquiler nunca entró al feed shadow —
+  mientras prod lo publicaba sin problema. La contradicción prod↔shadow duró 3 noches sin que nadie la viera,
+  porque el log reportaba "rechazado por gate", que se lee como acierto.
+  🔑 **Lección de método:** un ejemplo dentro del spec es tan fuerte como una regla — el lector lo cita y lo
+  obedece. Antes de congelar un caso como precedente, verificar **qué hizo prod con esa misma URL**: si prod
+  la publica y el spec la rechaza, uno de los dos está mal y hay que resolverlo, no dejar la contradicción.
 - **🔴 RECHAZAR ANTICRÉTICO** — si el aviso OFRECE anticrético ("en anticrético", "anticretico", monto de
   anticrético = una suma grande única, no mensual) → `gate: rechazar` (razon_gate: "anticrético"). El anticrético
   NO se cubre en este pipeline. Si el aviso ofrece alquiler **Y** anticrético como opciones, y el alquiler mensual
