@@ -72,6 +72,33 @@ con nombre, y mandarlos a un subagente-juez con el aviso, el pm propuesto y los 
 Pendiente de código: darle al audit una **cuarta superficie** (`lector_fijo` + confianza media), que
 el punto ciego existe también en las capturas nocturnas de Equipetrol.
 
+## 🔴 ANTES DE CREAR UN EDIFICIO: chequear por PROXIMIDAD, no solo por nombre
+
+El 29-jul creamos un duplicado **con dos revisiones encima**: el pm 556 "Edificio Isuto by One",
+a **30 m** del pm 262 "ONE ISUTO". Es un edificio con dos nombres según el portal — Remax lo
+llama "ONE ISUTO", Century21 "Isuto by One" — y los tres avisos lo ubican igual ("Av. Canal
+Isuto casi 2do anillo").
+
+El matcher no devolvió candidatos y el juez lo dio por nuevo, **los dos con razón**: como TEXTO
+los nombres no se parecen. Lo que coincidía era la **ubicación**.
+
+👉 **Al crear un pm nuevo, correr siempre esto primero** (no alcanza con "¿existe un nombre
+parecido?"):
+
+```sql
+SELECT id_proyecto_master, nombre_oficial, zona,
+  ROUND(ST_DistanceSphere(ST_MakePoint(<lon>,<lat>), ST_MakePoint(longitud,latitud))::numeric,0) AS dist_m
+FROM proyectos_master
+WHERE ST_DistanceSphere(ST_MakePoint(<lon>,<lat>), ST_MakePoint(longitud,latitud)) < 120
+ORDER BY dist_m;
+```
+Si aparece algo a <60 m, mirar si los **tokens** coinciden en cualquier orden (One+Isuto ↔
+Isuto+by+One) antes de crear. Al fusionar: sobrevive el que tiene más props colgadas; los alias
+de **las dos grafías** van al que queda, o el duplicado vuelve a nacer con el próximo aviso.
+
+Ya se usó bien en el mismo día (Sky Mint, Lisboa, los 8 de alquiler): ahí los vecinos a <200 m
+eran edificios con nombres claramente distintos y se creó sin problema.
+
 ## 🔢 El matcher confunde numerales romanos (causa viva)
 
 `buscar_proyecto_fuzzy` da **score 1,0 al edificio EQUIVOCADO** del mismo cluster cuando el numeral es
