@@ -339,7 +339,12 @@ function construirFila(e, v, match) {
       // lector. Guardar el checkbox/estructurado al lado del texto → cada prop se vuelve auto-auditable sin depender
       // de los materiales de prep (efímeros). Ej: comparar acepta_mascotas vs senales_portal.mascotas_portal.
       senales_portal: e.senales ?? null,
-      trazabilidad: { scraper_version: SCRAPER_VERSION, fuente_precio: 'lector', fuente_amenidades: usaLector ? 'lector' : 'structured', metodo_match: match.metodo },
+      // `confianza_lector` (29-jul-2026): alimenta la superficie 4 del audit — los matches que el
+      // LECTOR fijó con dudas, que ninguna de las otras 3 superficies mira. Se agregó primero al
+      // cargador de venta y se me pasó acá; la primera tanda de alquiler de ZN entró sin el campo
+      // y el audit reportó "superficie 4 = 0" con el mensaje de props viejas, que era engañoso:
+      // se habían cargado ese mismo día. Ahora los dos cargadores lo escriben igual.
+      trazabilidad: { scraper_version: SCRAPER_VERSION, fuente_precio: 'lector', fuente_amenidades: usaLector ? 'lector' : 'structured', metodo_match: match.metodo, confianza_lector: v.confianza ?? null },
     },
   };
 }
