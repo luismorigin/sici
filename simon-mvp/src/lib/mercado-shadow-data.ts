@@ -132,8 +132,11 @@ export async function fetchVentasShadowExtra(): Promise<VentasShadowExtra | null
     // números salen mezclados. Medido antes del fix: "edificios" decía 257 cuando eran 135,
     // y el spread preventa→entrega se BORRABA (1.668 vs 1.661 = sin spread, cuando el real
     // es 1.707 → 1.780, +4,3 %). Justo la métrica del inversor.
-    // El snapshot lleva `macrozona` desde la mig 313; antes de esa migración solo existían
-    // filas de Equipetrol (mig 312), así que el filtro es correcto en los dos escenarios.
+    // 🔴 `macrozona` EXISTE SOLO DESDE LA MIG 313 — este archivo la REQUIERE aplicada.
+    // Si el deploy sale antes que la migración, la query del snapshot falla con
+    // "column ... does not exist"; `Promise.all` no rechaza (el error viene dentro del
+    // objeto), así que la página NO se cae: simplemente se queda SIN yield por zona.
+    // Pasó el 31-jul-2026 — el commit salió y la migración quedó sin aplicar.
     const [viewRes, snapRes, alqDomRes] = await Promise.all([
       sb.from('v_mercado_venta_shadow')
         .select('precio_m2, estado_construccion, dias_en_mercado, id_proyecto_master')
