@@ -36,8 +36,17 @@ if (error) {
 }
 
 const filas = data?.length ?? 0;
-const globales = (data || []).filter((r) => r.zona_out === 'global').length;
-const zonasVenta = new Set((data || []).filter((r) => r.zona_out !== 'global' && !r.zona_out.endsWith('[alq]')).map((r) => r.zona_out));
+// 🔴 MULTI-MACROZONA (mig 313): la función ya no devuelve `zona_out = 'global'` a secas,
+// sino `'global [<macrozona>]'` — una tanda de 4 (dorms 0-3) POR macrozona. Este chequeo
+// buscaba el string exacto 'global' y daba 0/4 aunque las filas se hubieran escrito bien:
+// alerta falsa a Slack, con la serie del día perfectamente guardada (pasó el 31-jul-2026).
+// El piso sigue siendo 4 — una macrozona sana — pero se cuenta por prefijo y se reporta
+// cuántas macrozonas entraron, que es lo que de verdad hay que mirar al agregar una zona.
+const esGlobal = (z) => z === 'global' || z.startsWith('global [');
+const globales = (data || []).filter((r) => esGlobal(r.zona_out)).length;
+const macrozonas = new Set((data || []).filter((r) => esGlobal(r.zona_out))
+  .map((r) => (r.zona_out.match(/^global \[(.+)\]$/)?.[1] ?? 'global')));
+const zonasVenta = new Set((data || []).filter((r) => !esGlobal(r.zona_out) && !r.zona_out.endsWith('[alq]')).map((r) => r.zona_out));
 const zonasAlq = new Set((data || []).filter((r) => r.zona_out.endsWith('[alq]')).map((r) => r.zona_out));
 
 // Sanity mínimo: si no escribió las 4 filas globales, algo está mal (vistas
@@ -50,7 +59,7 @@ if (globales < 4) {
   process.exit(1);
 }
 
-const resumen = `📸 Snapshot shadow OK: ${filas} filas (4 globales · ${zonasVenta.size} zonas venta · ${zonasAlq.size} zonas alquiler)`;
+const resumen = `📸 Snapshot shadow OK: ${filas} filas (${globales} globales · ${macrozonas.size} macrozona(s): ${[...macrozonas].join(', ')} · ${zonasVenta.size} zonas venta · ${zonasAlq.size} zonas alquiler)`;
 console.log(resumen);
 if (!quiet) {
   for (const r of data) console.log(`   dorm ${r.dormitorios_out} · ${r.zona_out}`);
