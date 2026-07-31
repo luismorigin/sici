@@ -266,8 +266,21 @@ async function prepNuevas(discoveryFile, n) {
     console.log(`   ${id} ${nv.fuente} nueva  zona=${nv.zona}  precio_cand=${h.precio_fuente_usd}  slug:${(slugDe(nv.url) || '').slice(0, 44)}`);
     await pace(500);
   }
-  const file = join(OUT, `material-nuevas-${TS}.json`);
-  writeFileSync(file, JSON.stringify({ generado: TS, spec: 'READER_SPEC.md', origen: 'discovery-nuevas', total: entradas.length, entradas }, null, 2));
+  // 🔴 `zona` + `m2_tipico` + sufijo de zona, IGUAL que el `--prep` de arriba (bug cazado 30-jul-2026,
+  // en el estreno de `/cron-deptos-ventas-zn`). Este modo nació cuando shadow era 100% Equipetrol y
+  // quedó sin la perilla: escribía `material-nuevas-<ts>.json` sin declarar de qué zona era.
+  // Dos daños, los dos SILENCIOSOS:
+  //   1. `partir-lectura.mjs` hace `doc.zona || 'equipetrol'` → con `zona` undefined los chunks de ZN
+  //      salían llamándose `lectura-venta-<fecha>-cN.json`, exactamente el nombre que usa Equipetrol
+  //      → vuelve la colisión que se arregló el 28-jul (el que escribe segundo pisa al primero).
+  //   2. Sin `m2_tipico` el lector se queda SIN la banda de $/m² de su zona y juzga el TC contra la
+  //      de Equipetrol ($1.700-2.200) cuando la de ZN es $1.280-1.900 → un precio correcto de ZN
+  //      parece bajo y el lector puede "corregirlo" mal. Es error de DATOS, no de archivo.
+  const file = join(OUT, conSufijo(`material-nuevas-${TS}.json`, ZONA));
+  writeFileSync(file, JSON.stringify({
+    generado: TS, spec: 'READER_SPEC.md', zona: ZONA.id, origen: 'discovery-nuevas',
+    m2_tipico: ZONA.m2Tipico, total: entradas.length, entradas,
+  }, null, 2));
   console.log(`\n💾 ${file}`);
   console.log(`   📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
   console.log(`   → LÉELO y llená "veredicto" (READER_SPEC.md), después: node cargar-deptos-shadow.mjs --apply ${file}\n`);

@@ -48,14 +48,14 @@ zona**. Circuit breaker → no insistir; avisa solo por Slack con diagnóstico D
 
 ### 2b. Prep NUEVAS (read-only)
 ```
-node cargar-alquiler-shadow.mjs --nuevas output/discovery-alquiler-<ts>-zn.json 40
+node cargar-alquiler-shadow.mjs --nuevas output/discovery-alquiler-zn-<ts>.json 40
 ```
 ⚠️ **El `--prep` de existentes no se usa acá**: el discovery es shadow-relativo, así que lo que está
 en prod pero no en shadow ya viene como NUEVA.
 
 ### 3. MOAT — subagentes-lectores (el juez)
 ```
-node partir-lectura.mjs output/material-alq-<ts>-zn.json 10   # → lectura-alquiler-zn-<fecha>-c1..N.json
+node partir-lectura.mjs output/material-alq-nuevas-<ts>-zn.json 10   # → lectura-alquiler-zn-<fecha>-c1..N.json
 ```
 Cada subagente lee su chunk + **`READER_SPEC_ALQUILER.md`** (¡no el de venta!) y escribe
 `output/veredictos-alquiler-zn-<fecha>-cK.json`. El chunk trae `"operacion": "alquiler"` y
@@ -75,13 +75,13 @@ Si un subagente falla por error de **servicio** (`529 Overloaded`, `500`, timeou
 > **166 props en 13 chunks** sin problema. Es inestabilidad del servicio, no escala.
 
 ```
-node inyectar-veredictos.mjs output/material-alq-<ts>-zn.json output/veredictos-alquiler-zn-<fecha>-c*.json --zona=zona-norte
+node inyectar-veredictos.mjs output/material-alq-nuevas-<ts>-zn.json output/veredictos-alquiler-zn-<fecha>-c*.json --zona=zona-norte
 ```
 ⚠️ **Reemplaza, no acumula**: todos los archivos en UNA corrida.
 
 ### 4. Apply
 ```
-node cargar-alquiler-shadow.mjs --apply output/material-alq-<ts>-zn.json --zona=zona-norte
+node cargar-alquiler-shadow.mjs --apply output/material-alq-nuevas-<ts>-zn.json --zona=zona-norte
 ```
 Gate: rechaza venta pura / anticrético / baulera-parqueo. La **basura estructural** se materializa como
 descarte; la **operación mal tipeada** solo se rechaza → si un aviso reaparece noche tras noche,

@@ -41,9 +41,15 @@ inventario sano de la otra.
   queda ciego en ~60% de los avisos). El fetch es el camino normal.
 - **El tag `bob` es normal acá y no requiere decisión**: crudo en Bs + tag, y la normalización hace
   `crudo / tasa` en vivo. Cerrado el 30-jul, ver `SIGUIENTE_SESION.md`.
-- **Backlog inicial: ~119 props** (medido 30-jul). El discovery es shadow-relativo, así que entran
-  solas como NUEVAS. **No las acotes con `--limit`**: el 29-jul se leyeron 166 props en 13 chunks sin
-  problema. Si aun así preferís partirlo, que sea por cuota, no por miedo al MOAT.
+- **Backlog inicial: 84 nuevas** (medido en el estreno, 30-jul). ⚠️ **No confundir con las "119 que
+  faltan"** de comparar prod contra shadow: el discovery además excluye los **~102 multiproyecto ya
+  clasificados** (viven en `proyectos_detectados`), y no ve las que cayeron del portal. El número que
+  manda es el del discovery. Entran solas como NUEVAS porque el diff es shadow-relativo.
+  **No las acotes con `--limit`**: el 29-jul se leyeron 166 props en 13 chunks sin problema.
+- ⏱️ **Costo real medido en el estreno** (para dimensionar el horario): discovery **~30 min**
+  (374 cuadrantes contra los ~81 de Equipetrol · 276 req · **22,9 MB**) + prep de 82 detalles
+  (82 req · **6,4 MB**) + 9 subagentes-lectores. **Es MUY superior a una nocturna de Equipetrol
+  (~15 min, ~14 MB)** — al agendarla, darle una ventana ancha y no pegarla a la routine siguiente.
 
 ## Pasos (en orden, desde `scripts/deptos-equipetrol/`)
 
@@ -59,7 +65,7 @@ zona** (sin ese filtro marcaría toda Equipetrol como desaparecida). Mirá **NUE
 
 ### 2b. Prep NUEVAS (read-only)
 ```
-node cargar-deptos-shadow.mjs --nuevas output/discovery-deptos-<ts>-zn.json 40
+node cargar-deptos-shadow.mjs --nuevas output/discovery-deptos-zn-<ts>.json 40
 ```
 ⚠️ **El `--prep` de existentes NO se usa acá.** En ZN las "existentes" de prod entran por el camino
 de NUEVAS: el discovery es shadow-relativo (prod no participa), así que lo que está en prod pero no
@@ -67,7 +73,7 @@ en shadow ya viene marcado como NUEVA. Ese es justamente el mecanismo que drena 
 
 ### 3. MOAT — subagentes-lectores (el juez)
 ```
-node partir-lectura.mjs output/material-<ts>-zn.json 10   # → lectura-venta-zn-<AAAA-MM-DD>-c1..N.json
+node partir-lectura.mjs output/material-nuevas-<ts>-zn.json 10   # → lectura-venta-zn-<AAAA-MM-DD>-c1..N.json
 ```
 Lanzá **N subagentes en paralelo**. Cada uno lee su `lectura-venta-zn-<fecha>-cK.json` +
 **`READER_SPEC.md`** y escribe `output/veredictos-venta-zn-<fecha>-cK.json`.
@@ -93,13 +99,13 @@ Si un subagente-lector falla por error de **servicio** (`529 Overloaded`, `500`,
 > el backlog. (Anthropic estuvo inestable ese día.)
 
 ```
-node inyectar-veredictos.mjs output/material-<ts>-zn.json output/veredictos-venta-zn-<fecha>-c*.json --zona=zona-norte
+node inyectar-veredictos.mjs output/material-nuevas-<ts>-zn.json output/veredictos-venta-zn-<fecha>-c*.json --zona=zona-norte
 ```
 ⚠️ **Reemplaza, no acumula**: pasale **todos** los archivos en UNA corrida.
 
 ### 4. Apply — escribe a shadow
 ```
-node cargar-deptos-shadow.mjs --apply output/material-<ts>-zn.json --zona=zona-norte
+node cargar-deptos-shadow.mjs --apply output/material-nuevas-<ts>-zn.json --zona=zona-norte
 ```
 Match name-first (score≥0.95+zona → AUTO; ambiguo → sin match, lo levanta el audit; **nunca fuerza
 por GPS**). Imprime escritos / rechazados por gate / alias sugeridos / con-nombre-sin-match.
