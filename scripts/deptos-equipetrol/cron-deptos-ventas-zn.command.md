@@ -1,0 +1,154 @@
+# /cron-deptos-ventas-zn — Captura híbrida de deptos ZONA NORTE → SHADOW (bajo Max, gratis)
+
+> **Gemelo de `/cron-deptos-ventas`** (Equipetrol). Misma maquinaria, otra zona: **todo pasa
+> `--zona=zona-norte`**. Para el detalle conceptual del ciclo (qué es el MOAT, por qué el juez es el
+> lector y no el script, el régimen TC) leé `cron-deptos-ventas.command.md` — acá está lo operativo
+> y **lo que cambia en ZN**.
+>
+> **Fuente de verdad** de este comando. Copiar a `.claude/commands/cron-deptos-ventas-zn.md`
+> (las skills viven gitignored en `.claude/commands/`; el repo guarda el `.command.md`).
+>
+> ⏰ **Agendar DESPUÉS de las de Equipetrol** (venta ~1:17 · alquiler ~2:11 · audit ~3:10). Sugerido:
+> **~4:10**, para no competir por la cuota Max ni tener dos crawls simultáneos.
+
+## 🔴 LA PERILLA VA EN TODOS LOS PASOS QUE LA ACEPTAN
+
+El default de `lib/zonas-hibrido.mjs` es **`equipetrol`**. Un paso sin `--zona=zona-norte` no falla:
+**hace la cosa equivocada en silencio**. El riesgo concreto está en el discovery y el verificador —
+sus `desaparecidas` se calculan contra lo que vio el crawl, así que mezclar zonas puede dar de baja
+inventario sano de la otra.
+
+| paso | script | zona |
+|---|---|---|
+| 1 Discovery | `discovery-deptos.mjs` | ✅ **pasar `--zona=zona-norte`** |
+| 2b Prep NUEVAS | `cargar-deptos-shadow.mjs` | ✅ **pasar** |
+| 3 Partir chunks | `partir-lectura.mjs` | ⚙️ la toma del **material** (no lleva flag) |
+| 3 Inyectar | `inyectar-veredictos.mjs` | ✅ **pasar** |
+| 4 Apply | `cargar-deptos-shadow.mjs` | ✅ **pasar** |
+| 5 Verificador | `verificador-deptos.mjs` | ✅ **pasar** |
+| 5b pet_friendly | `derivar-pet-friendly.mjs` | ⚪ **global a propósito** (los edificios no son de una zona) |
+| 5c Snapshot | `snapshot-shadow.mjs` | ⚪ **global a propósito** (la serie mide todo shadow) |
+
+## Lo que cambia en Zona Norte (leer antes de la primera corrida)
+
+- **Banda de $/m²: `1280–1900`** (Equipetrol es `1700–2200`). Viaja sola en el material como
+  `m2_tipico` → el lector desempata el TC con la banda de SU zona. **Y es un respaldo ancho a
+  propósito: la banda real es por MICROZONA**, del 3er-4to Banzer/Alemana (~$1.693) al 8vo Viru Viru
+  (~$1.051) hay 38% de diferencia. No uses la banda de zona para descartar un precio raro sin mirar
+  la microzona.
+- **El precio del portal en ZN viene inflado ~1,4×**: el captador carga bolivianos a ~10 y C21 divide
+  por 6,96. Por eso **el modo `--local` NO alcanza** (sin el precio en bolivianos del portal el lector
+  queda ciego en ~60% de los avisos). El fetch es el camino normal.
+- **El tag `bob` es normal acá y no requiere decisión**: crudo en Bs + tag, y la normalización hace
+  `crudo / tasa` en vivo. Cerrado el 30-jul, ver `SIGUIENTE_SESION.md`.
+- **Backlog inicial: ~119 props** (medido 30-jul). El discovery es shadow-relativo, así que entran
+  solas como NUEVAS. **No las acotes con `--limit`**: el 29-jul se leyeron 166 props en 13 chunks sin
+  problema. Si aun así preferís partirlo, que sea por cuota, no por miedo al MOAT.
+
+## Pasos (en orden, desde `scripts/deptos-equipetrol/`)
+
+### 1. Discovery + diff (read-only)
+```
+node discovery-deptos.mjs --zona=zona-norte
+```
+Sale a C21 + Remax con la red de las **14 microzonas de ZN** y diffea contra shadow **filtrado por
+zona** (sin ese filtro marcaría toda Equipetrol como desaparecida). Mirá **NUEVAS** / **desaparecidas**.
+- Circuit breaker (🛑) → **no insistas**, esperá unas horas. Él mismo avisa por Slack con diagnóstico
+  DNS (portal caído vs IP bloqueada).
+- Cooldown 20 min entre corridas (`--force` con criterio).
+
+### 2b. Prep NUEVAS (read-only)
+```
+node cargar-deptos-shadow.mjs --nuevas output/discovery-deptos-<ts>-zn.json 40
+```
+⚠️ **El `--prep` de existentes NO se usa acá.** En ZN las "existentes" de prod entran por el camino
+de NUEVAS: el discovery es shadow-relativo (prod no participa), así que lo que está en prod pero no
+en shadow ya viene marcado como NUEVA. Ese es justamente el mecanismo que drena el backlog de 119.
+
+### 3. MOAT — subagentes-lectores (el juez)
+```
+node partir-lectura.mjs output/material-<ts>-zn.json 10   # → lectura-venta-zn-<AAAA-MM-DD>-c1..N.json
+```
+Lanzá **N subagentes en paralelo**. Cada uno lee su `lectura-venta-zn-<fecha>-cK.json` +
+**`READER_SPEC.md`** y escribe `output/veredictos-venta-zn-<fecha>-cK.json`.
+
+> 🔴 **Nombres namespaceados por operación Y zona — no inventes otros.** El chunk trae
+> `"operacion": "venta"` y `"zona": "zona-norte"` adentro: **si no coinciden, parar y avisar**.
+> El 28-jul venta y alquiler compartieron nombres y el segundo pisó al primero; la pérdida es
+> **silenciosa** (se pierden veredictos y las props se caen del apply sin error).
+
+#### 🔁 Reintento con backoff (obligatorio en corrida desatendida)
+Si un subagente-lector falla por error de **servicio** (`529 Overloaded`, `500`, timeout, "API Error"):
+
+1. **Reintentá ese chunk hasta 3 veces**, esperando **60s → 180s → 300s** entre intentos.
+2. Si a la 3ª sigue fallando, **seguí con los otros chunks** y reintentá el que falló **al final**.
+3. Recién si TODO falló, leé inline en la sesión con el mismo `READER_SPEC.md` — el juez sigue siendo
+   un LLM, que es la regla que importa. **Con muchos chunks esto es inviable**: si tuviste que leer
+   más de 2 inline, **abortá y avisá por Slack** en vez de entregar una corrida a medias.
+4. **Registrá en el log** cuántos chunks reintentaron y cuántos se leyeron inline.
+
+> 🔑 **Por qué reintentar y NO achicar la tanda:** el 30-jul los dos intentos murieron con `529`
+> **con 4 props**, mientras que el 29-jul se leyeron **166 props en 13 chunks** sin drama. Un `529`
+> es del lado del servicio, no del tamaño del payload. Achicar la tanda no lo evita — solo alarga
+> el backlog. (Anthropic estuvo inestable ese día.)
+
+```
+node inyectar-veredictos.mjs output/material-<ts>-zn.json output/veredictos-venta-zn-<fecha>-c*.json --zona=zona-norte
+```
+⚠️ **Reemplaza, no acumula**: pasale **todos** los archivos en UNA corrida.
+
+### 4. Apply — escribe a shadow
+```
+node cargar-deptos-shadow.mjs --apply output/material-<ts>-zn.json --zona=zona-norte
+```
+Match name-first (score≥0.95+zona → AUTO; ambiguo → sin match, lo levanta el audit; **nunca fuerza
+por GPS**). Imprime escritos / rechazados por gate / alias sugeridos / con-nombre-sin-match.
+Los alias quedan en `output/alias-sugeridos-<fecha>.sql` — **importan**: en ZN la mayoría de los
+matches los hace el LECTOR, no el matcher, y cada alias perdido es lectura que se repite.
+
+### 5. Verificador
+```
+node verificador-deptos.mjs --zona=zona-norte              # DRY-RUN
+node verificador-deptos.mjs --zona=zona-norte --apply      # aplica
+```
+Baja solo con **2 señales** (ausencia del crawl + HTTP 404/redirect) sostenidas >2d. Disyuntor 40%.
+
+### 5b / 5c — globales, SIN `--zona`
+```
+node derivar-pet-friendly.mjs
+node snapshot-shadow.mjs
+```
+⚠️ **El snapshot es idempotente por fecha**: si las routines de Equipetrol ya corrieron esa noche,
+esta pasada **re-fresca la foto del día con ZN incluida**. Eso es correcto, pero recordá que
+**un salto de nivel en la serie shadow al entrar ZN es COMPOSICIÓN, no mercado** (ya pasó el 29-jul:
+`venta_activas` 894 → 1.007 y las zonas 7 → 18). Declararlo al leer la serie.
+
+### 6. Verificación por SQL (sin browser en corrida desatendida)
+Contra `buscar_unidades_simple_shadow` filtrando zonas ZN: que las nuevas con match entren al feed,
+que el $/m² caiga en la banda de su **microzona**, y que las sin `id_proyecto_master` **no** entren
+(la RPC hace INNER JOIN con `proyectos_master` — es lo esperado, no un bug: quedan retenidas hasta
+que el audit las matchee).
+
+### 7. Log + Slack
+Registrá en **`output/cron-deptos-ventas-zn-log.md`** (archivo PROPIO, no el de Equipetrol — así
+`/revisar-routines` puede leer las dos zonas por separado y no se mezclan los conteos).
+
+```
+node notificar-slack.mjs "<resumen>"
+```
+El mensaje **debe empezar diciendo la zona** (`🌆 Cron deptos-VENTA ZONA NORTE`), o se confunde con
+el de Equipetrol. Formato: `N nuevas → X escritas · Y rechazadas por gate` + `Verificador: A bajas ·
+B revividas` + `📊 MB` + reintentos del MOAT si los hubo + cola de excepciones (o **`Sin cola
+pendiente`** explícito). Distinguir **✅ OK** / **⚠️ con observación** / **🛑 abortada**.
+
+## Reglas
+
+- **SHADOW, prod intacto.** El `--apply` solo muta `propiedades_v2_shadow`. A prod solo SELECT + RPC
+  read-only. Los alias se REGISTRAN, no se escriben a `proyectos_master`.
+- **El juez manda, no el script.** El `.mjs` filtra/fetchea/matchea; el veredicto lo dan los lectores.
+- **Antes de crear un edificio nuevo: chequear por PROXIMIDAD, no solo por nombre.** El 29-jul se creó
+  un duplicado a 30 m (pm 556 "Edificio Isuto by One" ↔ pm 262 "ONE ISUTO"): el mismo edificio con dos
+  grafías según el portal. Correr el `SELECT` de vecinos <120 m de `SIGUIENTE_SESION.md` y mirar si los
+  **tokens** coinciden en cualquier orden.
+- **El matcher confunde romanos** ("Portofino IV" → "Portofino V" con score 1,0) y la **eñe**. Cada
+  cluster numerado nuevo lo repite. Confianza no-alta → juez ANTES del apply.

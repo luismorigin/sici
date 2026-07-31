@@ -83,6 +83,21 @@ Reglas v2 críticas del veredicto:
   checkbox portal), **uso_inmueble** (residencial/mixto), servicios_incluidos.
 - **dormitorios** (0=mono, la SUITE cuenta), **banos** (dorms≤1→1), **nombre_edificio_canonico** (arábigo, sin
   prefijo; el matcher normaliza romano↔arábigo; `id_proyecto_master` null salvo certeza).
+
+#### 🔁 Reintento con backoff (obligatorio en corrida desatendida — agregado 30-jul-2026)
+Si un subagente-lector falla por error de **servicio** (`529 Overloaded`, `500`, timeout, "API Error"):
+
+1. **Reintentá ese chunk hasta 3 veces**, esperando **60s → 180s → 300s** entre intentos.
+2. Si a la 3ª sigue fallando, **seguí con los otros chunks** y reintentá el que falló **al final**.
+3. Recién si TODO falló, leé inline con el mismo `READER_SPEC_ALQUILER.md`. **Si tuviste que leer más
+   de 2 chunks inline, abortá y avisá por Slack** en vez de entregar una corrida a medias.
+4. **Registrá en el log** cuántos chunks reintentaron y cuántos se leyeron inline.
+
+> 🔑 **Por qué reintentar y NO achicar la tanda:** el 30-jul los dos intentos murieron con `529`
+> **con 4 props** y la lectura se hizo inline; el 29-jul, en cambio, se leyeron **166 props en 13
+> chunks** sin problema. Es inestabilidad del servicio, no escala. Con una tanda grande, leer inline
+> no es viable — por eso el reintento.
+
 ```
 node inyectar-veredictos.mjs output/material-alq-<ts>.json output/veredictos-alquiler-<fecha>-c*.json
 ```

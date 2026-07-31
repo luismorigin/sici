@@ -85,6 +85,21 @@ Lanzá **N subagentes en paralelo** (patrón `/audit-cola-matching`). Cada uno l
 > props se caen del apply sin aviso. El chunk trae `"operacion": "venta"` adentro: **si no coincide,
 > parar y avisar**.
 
+#### 🔁 Reintento con backoff (obligatorio en corrida desatendida — agregado 30-jul-2026)
+Si un subagente-lector falla por error de **servicio** (`529 Overloaded`, `500`, timeout, "API Error"):
+
+1. **Reintentá ese chunk hasta 3 veces**, esperando **60s → 180s → 300s** entre intentos.
+2. Si a la 3ª sigue fallando, **seguí con los otros chunks** y reintentá el que falló **al final**.
+3. Recién si TODO falló, leé inline en la sesión con el mismo `READER_SPEC.md` — el juez sigue siendo
+   un LLM, que es la regla que importa. **Si tuviste que leer más de 2 chunks inline, abortá y avisá
+   por Slack** en vez de entregar una corrida a medias.
+4. **Registrá en el log** cuántos chunks reintentaron y cuántos se leyeron inline.
+
+> 🔑 **Por qué reintentar y NO achicar la tanda:** el 30-jul los dos intentos de subagente murieron
+> con `529` **con 4 props** (la lectura terminó haciéndose inline), mientras que el 29-jul se leyeron
+> **166 props en 13 chunks** sin drama. Un `529` es del lado del servicio, no del tamaño del payload
+> — ese día Anthropic estuvo inestable. Achicar la tanda no lo evita: solo alarga el backlog.
+
 Cada `veredicto` sigue el schema de `READER_SPEC.md`. Lo esencial:
 - **gate**: `aceptar` | `rechazar` (+ `razon_gate`). Rechazar = multiproyecto, anticrético, baulera,
   parqueo, o precio irrecuperablemente contradictorio. Es lo más importante — un error acá mete basura.
