@@ -127,17 +127,28 @@ export async function fetchVentasShadowExtra(): Promise<VentasShadowExtra | null
     const sb = serverClient()
     if (!sb) return null
 
+    // 🔴 FILTRAR SIEMPRE POR MACROZONA. Esta página es /mercado/equipetrol: sin el filtro,
+    // las vistas shadow traen TAMBIÉN Zona Norte (378 props de venta al 31-jul-2026) y los
+    // números salen mezclados. Medido antes del fix: "edificios" decía 257 cuando eran 135,
+    // y el spread preventa→entrega se BORRABA (1.668 vs 1.661 = sin spread, cuando el real
+    // es 1.707 → 1.780, +4,3 %). Justo la métrica del inversor.
+    // El snapshot lleva `macrozona` desde la mig 313; antes de esa migración solo existían
+    // filas de Equipetrol (mig 312), así que el filtro es correcto en los dos escenarios.
     const [viewRes, snapRes, alqDomRes] = await Promise.all([
       sb.from('v_mercado_venta_shadow')
-        .select('precio_m2, estado_construccion, dias_en_mercado, id_proyecto_master'),
+        .select('precio_m2, estado_construccion, dias_en_mercado, id_proyecto_master')
+        .eq('zona_general', 'Equipetrol'),
       sb.from('market_absorption_snapshots_shadow')
         .select('fecha, zona, dormitorios, roi_bruto_anual')
         .eq('dormitorios', 1)
+        .eq('macrozona', 'Equipetrol')
         .neq('zona', 'global')
         .not('roi_bruto_anual', 'is', null)
         .order('fecha', { ascending: false })
         .limit(24),
-      sb.from('v_mercado_alquiler_shadow').select('dias_en_mercado'),
+      sb.from('v_mercado_alquiler_shadow')
+        .select('dias_en_mercado')
+        .eq('zona_general', 'Equipetrol'),
     ])
 
     const rows = (viewRes.data || []) as Array<{
@@ -217,7 +228,10 @@ export async function fetchAlquilerShadowExtra(): Promise<AlquilerShadowExtra | 
         .select('id, datos_json')
         .eq('tipo_operacion', 'alquiler')
         .eq('status', 'completado'),
-      sb.from('v_mercado_venta_shadow').select('dias_en_mercado'),
+      // Mismo motivo que arriba: sin el filtro, el DOM de venta mezcla Zona Norte.
+      sb.from('v_mercado_venta_shadow')
+        .select('dias_en_mercado')
+        .eq('zona_general', 'Equipetrol'),
     ])
 
     const rows = (viewRes.data || []) as Array<{

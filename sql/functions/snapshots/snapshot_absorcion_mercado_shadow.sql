@@ -1,13 +1,23 @@
 -- ============================================================================
 -- snapshot_absorcion_mercado_shadow() — serie diaria SHADOW (régimen TC nuevo)
 -- ============================================================================
--- FUENTE CANÓNICA: sql/migrations/286_snapshot_shadow_concentracion_dom.sql
--- (última versión de la función). Historia: mig 283 (tabla + función + grants) ·
--- 284 (fix de grants: REVOKE anon/authenticated) · 285 (ROI honesto: conteos del
--- mix de amoblado + gate n>=5) · 286 (concentración de edificios + días en mercado).
+-- FUENTE CANÓNICA: sql/migrations/313_snapshot_shadow_por_macrozona.sql
+-- (última versión COMPLETA de la función — la 313 la reescribe entera, no la parchea).
+-- Historia: mig 283 (tabla + función + grants) · 284 (fix de grants: REVOKE
+-- anon/authenticated) · 285 (ROI honesto: conteos del mix de amoblado + gate n>=5) ·
+-- 286 (concentración de edificios + días en mercado) · 311 (TC 7 no descuenta) ·
+-- 312 (blindaje temporal a Equipetrol mientras ZN estaba a media relectura) ·
+-- **313 (MULTI-MACROZONA: levanta el blindaje de la 312 + columna `macrozona`)**.
 --
--- Resumen: foto diaria de Equipetrol en el régimen TC nuevo, escrita a
+-- ⚠️ Las migs 311 y 312 parchearon la función DIRECTAMENTE sobre la base con
+-- `pg_get_functiondef()` + `replace()`, así que este puntero estuvo desactualizado
+-- entre el 29 y el 31-jul. La 313 re-exportó la versión viva y la reescribió completa.
+--
+-- Resumen: foto diaria POR MACROZONA en el régimen TC nuevo, escrita a
 -- `market_absorption_snapshots_shadow` (tabla APARTE de la serie prod).
+-- 🔑 `zona='global'` es el agregado DE SU MACROZONA, no el total: `('global','Equipetrol')`
+-- mantiene la continuidad de la serie desde el 21-jul y `('global','Zona Norte')` arranca
+-- la suya. Nada está hardcodeado por zona — agregar una macrozona no requiere tocar la función.
 -- NO es espejo de snapshot_absorcion_mercado() — diferencias deliberadas
 -- (normalización shadow, alquiler USD = precio_mensual, pending = gracia del
 -- verificador, filtros en las vistas, cortes preventa/entrega + amoblado/
