@@ -401,8 +401,22 @@ Al cutover: **quitar / volver default los `?shadow=1` en TODOS** (feed + shortli
        resultó NO abierta: la función de prod YA lo tenía (LOOP 3 "A2") — el doc estaba desactualizado
        (regla 7: exportar de prod). NO-espejos deliberados (alquiler USD=`precio_mensual`, pending=gracia
        del verificador) en el header de la mig 283. Caveats: absorción arranca en 0; `nuevas_30d` inflada
-       hasta ~20-ago. 🔜 Pendiente del CUTOVER (no de ahora): re-apuntar el snapshot de PROD / decidir si
-       esta serie pasa a ser LA serie.
+       hasta ~20-ago.
+
+       ✅ **MULTI-MACROZONA (mig 313, 31-jul-2026)** — la serie ya no es solo de Equipetrol.
+       Columna `macrozona` (DEFAULT `Equipetrol`, así la historia queda etiquetada sin backfill) +
+       UNIQUE `(fecha, dormitorios, zona, macrozona)`. **`zona='global'` es el agregado DE SU MACROZONA**:
+       `('global','Equipetrol')` conserva la serie desde el 21-jul —verificado, sin escalón— y
+       `('global','Zona Norte')` arrancó el 31-jul. La función se reescribió COMPLETA (no se parcheó con
+       `replace()` como la 312: eran ~8 cambios estructurales y un parche a medias la deja
+       sintácticamente válida y semánticamente rota, ensuciando la serie en silencio).
+       Antes estuvo blindada a Equipetrol a propósito (mig 312) mientras ZN estaba a media relectura;
+       se levantó al llegar al 97,1 % de cobertura. ⚠️ **Toda consulta a la tabla filtra por `macrozona`**
+       — `simon-mvp/src/lib/mercado-shadow-data.ts` lo hace desde el mismo commit.
+
+       🔜 **Lo que SIGUE pendiente del cutover** (la 313 no lo resuelve): **re-apuntar el snapshot de
+       PROD** (`snapshot_absorcion_mercado()` sigue leyendo `propiedades_v2` + `precio_normalizado()`
+       viejo) y **decidir si la serie shadow pasa a ser LA serie** — decisión de producto, no técnica.
 5. [ ] **Serie de precios/yields:** decidir corte declarado (recomendado) vs recompute aproximado.
 6. [~] **Métricas de inversión** nuevas: cada una con su etiqueta de la matriz fiduciaria.
        ⚠️ **Límite del yield ya identificado y declarado (mig 285, 21-jul):** el ROI cruza mix distinto —
