@@ -21,8 +21,8 @@
 -- precios de un día para el otro. La serie viene corrida desde el 21-jul.
 --
 -- DISEÑO — una columna `macrozona`, NO una función por zona
---   · `('global','equipetrol')` → EXACTAMENTE lo que era. Continuidad total.
---   · `('global','zona-norte')` → serie nueva, arranca hoy, sin mezclarse.
+--   · `('global','Equipetrol')` → EXACTAMENTE lo que era. Continuidad total.
+--   · `('global','Zona Norte')` → serie nueva, arranca hoy, sin mezclarse.
 --   · Las filas POR ZONA ya escalaban solas (los LOOP 2/3 iteran `DISTINCT zona`); lo único
 --     hardcodeado era el filtro de macrozona.
 --   · La próxima macrozona (Urubó, otra ciudad) NO requiere tocar la función: sale sola,
@@ -43,16 +43,23 @@
 -- sintácticamente válida y semánticamente rota — con la serie de mercado ensuciándose en
 -- silencio durante días. Esta versión ya incluye los parches de la 311 y la 312.
 --
--- REVERSIÓN: restaurar la función de la mig 312 + `DELETE FROM ... WHERE macrozona <> 'equipetrol'`
+-- REVERSIÓN: restaurar la función de la mig 312 + `DELETE FROM ... WHERE macrozona <> 'Equipetrol'`
 -- + volver el UNIQUE a (fecha, dormitorios, zona) + `DROP COLUMN macrozona`.
 -- ============================================================================
 
 BEGIN;
 
--- ─── 1. La columna. DEFAULT 'equipetrol' deja toda la historia bien etiquetada ───────────
+-- ─── 1. La columna. DEFAULT 'Equipetrol' deja toda la historia bien etiquetada ───────────
+-- 🔴 LA GRAFÍA IMPORTA — 'Equipetrol' con mayúscula, NO 'equipetrol'.
+-- La función escribe `v_macro`, que sale de `zonas_geograficas.zona_general`, y ahí los valores
+-- son 'Equipetrol' y 'Zona Norte' (capitalizados). Un DEFAULT en minúscula rompería dos cosas
+-- de forma silenciosa: (a) el UNIQUE trataría 'equipetrol' y 'Equipetrol' como macrozonas
+-- DISTINTAS → el snapshot del día insertaría filas nuevas en vez de actualizar las de la
+-- historia, duplicando cada fecha; (b) el frontend filtra `.eq('macrozona','Equipetrol')` →
+-- no vería ni un día de la serie vieja. (Bug detectado antes de aplicar, 31-jul-2026.)
 -- No hay backfill que hacer: por la 312, hasta hoy el snapshot SOLO escribió Equipetrol.
 ALTER TABLE market_absorption_snapshots_shadow
-  ADD COLUMN IF NOT EXISTS macrozona TEXT NOT NULL DEFAULT 'equipetrol';
+  ADD COLUMN IF NOT EXISTS macrozona TEXT NOT NULL DEFAULT 'Equipetrol';
 
 COMMENT ON COLUMN market_absorption_snapshots_shadow.macrozona IS
   'Macrozona de la fila (Equipetrol | Zona Norte | ...). Las filas anteriores al 31-jul-2026 '
