@@ -6,8 +6,9 @@
 >
 > **Fuente de verdad** de este comando. Copiar a `.claude/commands/cron-deptos-alquiler-zn.md`.
 >
-> ⏰ **Agendar después de `/cron-deptos-ventas-zn`.** Sugerido: **~5:10** (Equipetrol venta ~1:17 ·
-> Equipetrol alquiler ~2:11 · audit ~3:10 · ZN venta ~4:10 · ZN alquiler ~5:10). Nunca dos crawls a la vez.
+> ⏰ **AGENDADA (31-jul-2026)** como routine local (`~/.claude/scheduled-tasks/cron-deptos-alquiler-zn/`),
+> CUARTA de la cadena: después de `/cron-deptos-ventas-zn` y antes del audit. Nunca dos crawls a la vez.
+> Horario exacto en la tabla de `revisar-routines.command.md` (única fuente de horarios).
 
 ## 🔴 LA PERILLA VA EN TODOS LOS PASOS QUE LA ACEPTAN
 

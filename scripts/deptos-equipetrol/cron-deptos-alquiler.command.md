@@ -1,8 +1,9 @@
 # /cron-deptos-alquiler — Captura híbrida de deptos ALQUILER Equipetrol → SHADOW (bajo Max, gratis)
 
-> ⏰ **AGENDADO (21-jul-2026): corre SOLO todas las noches a la ~2:11 AM** como routine local
-> (`~/.claude/scheduled-tasks/cron-deptos-alquiler-nocturno/`), escalonado tras ventas (~1:17) y seguido
-> por `/audit-cola-shadow` (~3:10). Avisa por **Slack** al terminar. **Las routines NO están en git** ni
+> ⏰ **AGENDADO (21-jul-2026): corre SOLO todas las noches como routine local, SEGUNDO de la cadena**
+> (`~/.claude/scheduled-tasks/cron-deptos-alquiler-nocturno/`), escalonado tras la captura de ventas de
+> Equipetrol y seguido por las dos de Zona Norte y el audit. Horarios exactos en la tabla de `revisar-routines.command.md` (única fuente de horarios).
+> Avisa por **Slack** al terminar. **Las routines NO están en git** ni
 > corren en un servidor: viven en `~/.claude/scheduled-tasks/` de la máquina del founder; si está apagada,
 > la corrida se ejecuta al siguiente arranque (no se pierde el día — el discovery es shadow-relativo).
 > Ver `cron-deptos-ventas.command.md` (gemelo) y `CUTOVER_DATA_PLAN.md` §Automatización.
@@ -133,7 +134,7 @@ juicio → se automatiza). Las RPCs shadow (migs 279/280) la exponen como chip y
 node snapshot-shadow.mjs
 ```
 Re-fresca la foto del día en `market_absorption_snapshots_shadow` con el alquiler recién capturado
-(la primera pasada la hizo el cron de venta ~1:17; el upsert por fecha es idempotente). Incluye el
+(la primera pasada la hizo el cron de venta de Equipetrol; el upsert por fecha es idempotente). Incluye el
 yield venta×alquiler del día. Si falla avisa por Slack él mismo.
 
 ### 6. Verificar el feed shadow

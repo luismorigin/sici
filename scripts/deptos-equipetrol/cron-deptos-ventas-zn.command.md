@@ -8,8 +8,9 @@
 > **Fuente de verdad** de este comando. Copiar a `.claude/commands/cron-deptos-ventas-zn.md`
 > (las skills viven gitignored en `.claude/commands/`; el repo guarda el `.command.md`).
 >
-> ⏰ **Agendar DESPUÉS de las de Equipetrol** (venta ~1:17 · alquiler ~2:11 · audit ~3:10). Sugerido:
-> **~4:10**, para no competir por la cuota Max ni tener dos crawls simultáneos.
+> ⏰ **AGENDADA (31-jul-2026)** como routine local (`~/.claude/scheduled-tasks/cron-deptos-ventas-zn/`),
+> TERCERA de la cadena: después de las dos capturas de Equipetrol y antes de ZN alquiler y del audit —
+> así nunca hay dos crawls simultáneos ni compiten por la cuota Max. Horario exacto en la tabla de `revisar-routines.command.md` (única fuente de horarios).
 
 ## 🔴 LA PERILLA VA EN TODOS LOS PASOS QUE LA ACEPTAN
 

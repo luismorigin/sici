@@ -29,9 +29,17 @@ no en el del audit. Si solo se mira el audit, se pasa.
 |---|---|---|
 | `cron-deptos-equipetrol` (captura VENTA Eq → shadow) | 01:17 | `cron-deptos-ventas-log.md` |
 | `cron-deptos-alquiler-nocturno` (captura ALQUILER Eq → shadow) | 02:11 | `cron-deptos-alquiler-log.md` |
-| `audit-cola-shadow-nocturno` (audit matching + dedup, **las 2 zonas**) | 03:10 | `audit-cola-shadow-log.md` |
-| 🆕 `cron-deptos-ventas-zn` (captura VENTA **Zona Norte**) | ~04:10 | `cron-deptos-ventas-zn-log.md` |
-| 🆕 `cron-deptos-alquiler-zn` (captura ALQUILER **Zona Norte**) | ~05:10 | `cron-deptos-alquiler-zn-log.md` |
+| `cron-deptos-ventas-zn` (captura VENTA **Zona Norte**) | 02:46 | `cron-deptos-ventas-zn-log.md` |
+| `cron-deptos-alquiler-zn` (captura ALQUILER **Zona Norte**) | 04:11 | `cron-deptos-alquiler-zn-log.md` |
+| `audit-cola-shadow-nocturno` (audit matching + dedup, **las 2 zonas**) | 04:53 | `audit-cola-shadow-log.md` |
+
+> 📌 **Esta tabla es la ÚNICA fuente de horarios.** Los demás `.command.md` declaran su **orden**
+> relativo, no la hora — el mismo número repetido en 6 archivos se desincroniza solo (pasó el 31-jul:
+> tres de ellos quedaron con horarios tentativos que nunca se usaron). El dato vivo está en
+> `scheduled-tasks` (listalas para ver `nextRunAt`/`lastRunAt` reales); esta tabla es el mapa
+> routine ↔ log, que es lo que este comando necesita.
+> ⚠️ Los horarios llevan un **jitter** de varios minutos que asigna el runtime, así que "01:17" es
+> el cron 01:07 + su jitter. No te alarmes si el log dice un minuto distinto.
 
 > 🔴 **Son CINCO desde que ZN entró al híbrido (30-jul-2026), y cada zona tiene su log propio.**
 > Leer solo los 3 de Equipetrol deja Zona Norte invisible — exactamente el error que se cazó el 30-jul

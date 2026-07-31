@@ -1,9 +1,10 @@
 # /cron-deptos-ventas — Captura híbrida de deptos Equipetrol → SHADOW (bajo Max, gratis)
 
-> ⏰ **AGENDADO (21-jul-2026): corre SOLO todas las noches a la ~1:17 AM** como routine local
-> (`~/.claude/scheduled-tasks/cron-deptos-equipetrol/`). Gemelos: **alquiler ~2:11** y
-> **`/audit-cola-shadow` ~3:10** (escalonados: el audit audita lo que la captura cargó, y nunca hay dos
-> crawls simultáneos). Avisan por **Slack** al terminar (`notificar-slack.mjs`).
+> ⏰ **AGENDADO (21-jul-2026): corre SOLO todas las noches como routine local, PRIMERO de la cadena**
+> (`~/.claude/scheduled-tasks/cron-deptos-equipetrol/`). Gemelos: **alquiler Equipetrol**, las dos de
+> **Zona Norte** y **`/audit-cola-shadow` al final** (escalonados: el audit audita lo que las capturas
+> cargaron, y nunca hay dos crawls simultáneos). Horarios exactos en la tabla de `revisar-routines.command.md` (única fuente de horarios).
+> Avisan por **Slack** al terminar (`notificar-slack.mjs`).
 > ⚠️ **Las routines NO están en git** — viven en `~/.claude/scheduled-tasks/`, como las skills de
 > `.claude/commands/`. Son config de la máquina del founder. Si migrás de máquina, hay que recrearlas.
 > ⚠️ **Corren en la máquina del founder, no en un servidor.** Si está apagada/dormida a esa hora, la
@@ -151,7 +152,7 @@ node snapshot-shadow.mjs
 Guarda la foto del día en `market_absorption_snapshots_shadow` (tabla APARTE de la serie prod — su
 UNIQUE no distingue versiones): inventario, precios TC-nuevo, absorción, spread preventa/entrega,
 cortes amoblado/equipado/parqueo y yield venta×alquiler. **Idempotente** (upsert por fecha): también
-corre en el cron de alquiler (~2:11) y esa segunda pasada re-fresca la foto con el alquiler del día —
+corre en los crons posteriores (alquiler Eq y los dos de ZN) y cada pasada re-fresca la foto del día —
 verlo dos veces NO es un error. Si falla avisa por Slack él mismo (la foto de un día no se reconstruye).
 
 ### 6. Verificar el feed shadow (que la data rica renderice)
