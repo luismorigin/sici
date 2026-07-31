@@ -17,7 +17,7 @@
 | **Migraciones** | 309-312 aplicadas **y** en el repo (el desfase 308↔311 se cerró) |
 | **Respaldo** | `Desktop/Censo inmobiliario/RESPALDO-ZN-2026-07-29` (la carpeta `output/` está gitignored) |
 
-🔴 **Lo único que bloquea la tanda: la decisión del tag `bob`** (ver abajo).
+✅ **Nada bloquea la tanda.** (El tag `bob` figuraba acá como bloqueo hasta el 30-jul — resuelto, ver abajo.)
 
 ## Los 3 bugs que se cazaron el 29-jul (ya arreglados en main)
 
@@ -30,31 +30,34 @@
 3. **`inyectar-veredictos` sugería el cargador de alquiler** para tandas de venta.
    ⚠️ Y **reemplaza, no acumula**: pasarle los 7 archivos en UNA corrida.
 
-## 🔴 La decisión que bloquea la tanda: el tag `bob`
+## ✅ El tag `bob` — CERRADO (30-jul-2026). No vuelve a discutirse por macrozona.
 
-Los "+596%" de `medir-relectura` **no son subidas de precio**: el campo pasa de dólares a
-bolivianos crudos. Que el factor sea exactamente 6,96 confirma que el USD del portal era
-`Bs / 6,96` — el portal cotiza con un TC que ya no existe.
+> Esta sección decía "la decisión que bloquea la tanda". **Ya no bloquea nada.** Se deja el
+> razonamiento porque explica por qué los `bob` dan $/m² más bajo, no porque haya algo que decidir.
 
-El problema es lo que pasa después: **6 de 10 precios en bolivianos quedan bajo el p50 de su
-microzona**, y al dividir por 6,96 los diez caen en banda. No es de esta tanda: en las 188 ya
-cargadas, las `bob` promedian **$1.146/m²** contra 1.376 (`no_especificado`), 1.430
-(`oficial_viejo`) y 1.576 (`paralelo`). Verificado que **no es** el bug conocido de C21
-(confundir un USD con Bs): en los diez, `precio_bob_portal ≠ precio_candidato`.
+**La solución ya existe y es de arquitectura, no de macrozona:** el precio en bolivianos se guarda
+**crudo con tag `bob`** y `precio_normalizado_shadow()` hace `crudo / tasa` **en vivo**
+(`TC_NUEVO_DECISION.md:85`). Es el principio de siempre: *crudo + tag adentro, normalizado afuera*.
+No hay una segunda decisión que tomar cuando la misma situación aparece en otra zona.
 
-Las dos lecturas, y ninguna es técnica:
+**Equipetrol ya lo demuestra en producción** (medido 30-jul, venta activa en shadow, $/m² promedio):
 
-1. **La normalización está bien y el portal está mal.** El vendedor pide Bs 500.000; con dólares
-   billete hoy son $42.963. El portal muestra $71.839 porque divide por el TC muerto. Bajo esta
-   lectura el $/m² bajo **es el dato valioso** — es la tesis del TC nuevo funcionando.
-2. **El "Bs" es etiqueta y el vendedor piensa en dólares.** Si no acepta bolivianos a 11,638,
-   mostrarlo a $42.963 subvalúa y el comprador se sorprende al llamar.
+| tag | Equipetrol | Zona Norte |
+|---|---|---|
+| `no_especificado` | $1.730 (340) | $1.398 (195) |
+| `paralelo` | $1.716 (61) | $1.500 (31) |
+| `oficial_viejo` | $1.881 (40) | $1.462 (66) |
+| **`bob`** | **$1.634 (27)** | **$1.150 (29)** |
 
-**Aplicar la tanda adopta la lectura 1.** Es reversible (el crudo queda guardado).
+En Equipetrol el `bob` queda **6% abajo** del `no_especificado` — dentro de la dispersión normal
+entre tags, conviviendo sin problema desde el lanzamiento del TC nuevo. En ZN la brecha es mayor
+(-18%), pero ZN es un mercado más barato y la muestra es de 29 props.
 
-🔑 **Y no es urgente: ZN no está publicada** (dark launch / noindex). Se puede aplicar, seguir
-releyendo, y decidir antes de publicar. Lo que lo zanja de verdad son **dos o tres llamadas** a
-captadores preguntando si aceptan bolivianos a ese cambio.
+🔑 **Por qué se cierra y no se re-litiga:** si cada macrozona vuelve a discutir cómo interpretar un
+tag que la arquitectura ya resuelve, el trabajo no escala — hay 14 microzonas en ZN y detrás viene
+el resto de Santa Cruz. La decisión se toma una vez, a nivel de la normalización, y las zonas la
+heredan. Lo que sí sigue valiendo es el **contraste con el terreno** (preguntarle a un captador si
+acepta bolivianos a ese cambio), pero como validación de mercado, **no como bloqueo de pipeline**.
 
 ## 🔴 REGLA NUEVA (29-jul): juez independiente ANTES del apply
 
@@ -106,22 +109,36 @@ romano: "Portofino IV" → "Portofino V" 1,0 · "Galil Parque II" → "III" y "I
 arábigos anda bien ("Macororo 14" → "15" solo 0,667). Y el matcher **auto-aprueba desde 0,95**.
 Ídem la **eñe** ("Las Pinas" vs "Las Piñas"). Tapado con 31 alias, pero cada cluster nuevo lo repite.
 
-## El orden recomendado para seguir
+## El orden recomendado para seguir — actualizado 30-jul-2026
 
-1. **Decidir el `bob`** (o dejarlo en la lectura 1 y verificar antes de publicar).
-2. **Aplicar la tanda de 102** → ZN pasa de 188 a ~290.
-   ```bash
-   cd scripts/deptos-equipetrol
-   node cargar-deptos-shadow.mjs --apply output/material-2026-07-29T12-13-12-zn.json --zona=zona-norte
-   ```
-   Después **archivar los veredictos** en `output/tanda-102-aplicada/`.
-3. **Aplicar el SQL del audit ZN** (`output/audit-cola-shadow-log.md`).
-4. **Re-correr el audit ya con ~290 props** → una lista consolidada de edificios:
-   ```bash
-   node auditar-matching-shadow.mjs --op venta --zona=zona-norte
-   ```
-5. **Crear TODOS los edificios de una sola vez** (evita hacerlo en dos pasadas).
-6. **Seguir con las tandas** (~158 de venta + 101 de alquiler).
+> Los pasos 1-5 de la versión anterior **ya se hicieron** (tanda de 102 aplicada, SQL del audit
+> aplicado el 30-jul, edificios creados). El `bob` dejó de ser un paso. Lo que queda es esto:
+
+**Estado medido hoy (por URL y por id, dan lo mismo):**
+
+| | activas en prod | ya en shadow | faltan |
+|---|---|---|---|
+| ZN venta | 448 | 329 | **119** |
+| ZN alquiler | 101 | 96 | **5** (2 son de Bien Inmuebles → fuera del alcance del híbrido) |
+
+🔑 **Las 119 NO necesitan una relectura manual en tandas.** El discovery es **shadow-relativo**:
+`nuevas = portal − shadow`, prod no participa (`discovery-deptos.mjs:199`, exclusión por prod
+retirada el 20-jul). Al correr el discovery de ZN, esas 119 entran solas como NUEVAS — siempre que
+sigan publicadas en el portal. Las que ya cayeron no se releen nunca, y está bien: son inventario muerto.
+
+1. **Crear la variante ZN del comando de captura** (`/cron-deptos-ventas-zn` + `/cron-deptos-alquiler-zn`).
+   Es lo único que falta: **no falta código**, faltan los comandos. 5 de los 7 pasos ya son zona-aware
+   (`discovery` · `cargar` vía `resolverZona()` · `partir-lectura` vía el material · `inyectar` ·
+   `verificador`); los 2 globales (`derivar-pet-friendly`, `snapshot-shadow`) están bien globales.
+   ⚠️ El `.command.md` de Equipetrol invoca los 7 pasos **sin `--zona`** → la variante ZN tiene que
+   pasarla en todos.
+2. **Agendarlas de noche**, después de las de Equipetrol. Las 119 entran en una o dos noches sin
+   competir por la cuota Max con las routines que ya funcionan.
+3. **Reintento con backoff en el paso 3 (MOAT).** El 30-jul los dos intentos de subagente murieron con
+   `529 Overloaded` **con 4 props** — mientras que el 29-jul se leyeron **166 props en 13 chunks** sin
+   drama. No es un límite de escala: era inestabilidad del servicio. El arreglo es reintentar, NO achicar
+   la tanda. Hoy el paso 3 no reintenta: cuando falla hay que leer inline a mano (con 12 chunks, inviable).
+4. El audit ya cubre las dos zonas (arreglado el 30-jul) y avisa `🔴 ALCANCE PARCIAL` si algo queda fuera.
 
 ### 3 correcciones a mano de la tanda de 102
 - **2262** Palma de Mallorca: el portal declara **127.800 m²** (error ×1000, va ~127,8). Daría
