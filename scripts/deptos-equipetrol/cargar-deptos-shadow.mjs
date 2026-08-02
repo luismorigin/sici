@@ -31,6 +31,7 @@ import { reBucket } from './lib/canonicalizar.mjs';
 import { reservarIdsShadow } from './lib/reservar-ids-shadow.mjs';
 import { resolverZona, conSufijo } from './lib/zonas-hibrido.mjs';
 import { detalleDesdeBase } from './lib/detalle-desde-base.mjs';
+import { leerRechazados, guardarRechazados, TTL_DIAS } from './lib/rechazados.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -74,9 +75,10 @@ const slugDe = (url) => (url ? String(url).replace(/^https?:\/\/[^/]+\//, '').re
 // fecha_publicacion protegida: la más ANTIGUA gana (nunca pisar hacia adelante — anti re-scrape/bump)
 const fechaDia = (v) => (v ? String(v).slice(0, 10) : null);
 const fechaMin = (a, b) => { const xs = [fechaDia(a), fechaDia(b)].filter(Boolean); return xs.length ? xs.sort()[0] : null; };
-// Memoria de rechazados (gate) → no reaparecen en lotes frescos (basura: anticrético/baulera/parqueo/multiproyecto)
+// Memoria de rechazados (gate) → no reaparecen en lotes frescos (basura: anticrético/baulera/parqueo/multiproyecto).
+// Indexada por URL desde el 2-ago-2026 (antes: array de ids, y a cada NUEVA se le reserva un id 8M
+// distinto por corrida → el filtro no enganchaba nunca). Ver lib/rechazados.mjs.
 const REJ_FILE = join(OUT, 'rechazados.json');
-const leerRechazados = () => { try { return new Set(JSON.parse(readFileSync(REJ_FILE, 'utf8'))); } catch { return new Set(); } };
 
 const COLS = 'id,fuente,url,tipo_propiedad_original,estado_construccion,precio_usd,tipo_cambio_detectado,' +
   'moneda_original,area_total_m2,dormitorios,banos,piso,estacionamientos,latitud,longitud,zona,microzona,' +
@@ -106,7 +108,7 @@ async function traerLote() {
   //   sin esto reaparecen en cada prep y consumen slots del lote. Se excluyen por url.
   const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', ZONA.macrozona);
   const urlsProy = new Set((yaProy || []).map((r) => r.url));
-  const cargados = new Set([...(yaEn || []).map((r) => r.id), ...leerRechazados()]);
+  const cargados = new Set([...(yaEn || []).map((r) => r.id), ...leerRechazados(REJ_FILE).ids]);
   const frescos = data.filter((d) => !cargados.has(d.id) && !urlsProy.has(d.url));
   // N = TOTAL agnóstico a la fuente (NO N-por-portal): si un portal tiene mucho más inventario
   // que el otro (C21 278 vs Remax 124), el cap simétrico dejaba la fuente grande atrás. Así drena parejo.
@@ -210,8 +212,17 @@ async function prepNuevas(discoveryFile, n) {
   const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('url');
   const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', ZONA.macrozona);
   const urlsShadow = new Set([...(yaEn || []).map((r) => r.url), ...(yaProy || []).map((r) => r.url)]);
-  const pendientes = (disc.nuevas || []).filter((nv) => !urlsShadow.has(nv.url));
+  // + los RECHAZADOS por gate, por URL (2-ago-2026). Acá estaba el agujero: la memoria de rechazos se
+  // consultaba por `id` (en traerLote), pero una NUEVA todavía no tiene id de prod — se le reserva uno
+  // del rango 8M distinto en cada corrida. Así, un anticrético o un alquiler mal tipeado volvía a
+  // fetchearse y a leerse TODAS las noches. El 2-ago fue el 100% de la tanda de venta ZN y de alquiler ZN.
+  // Caduca a los TTL_DIAS: si el captador corrige el aviso, vuelve a evaluarse solo (ver lib/rechazados.mjs).
+  const rej = leerRechazados(REJ_FILE);
+  const pendientes = (disc.nuevas || []).filter((nv) => !urlsShadow.has(nv.url) && !rej.urls.has(nv.url));
   const yaCargadas = (disc.nuevas || []).length - pendientes.length;
+  const salteadasPorRechazo = (disc.nuevas || []).filter((nv) => !urlsShadow.has(nv.url) && rej.urls.has(nv.url)).length;
+  if (salteadasPorRechazo) console.log(`   ⏭️  ${salteadasPorRechazo} salteadas por memoria de RECHAZO (ya juzgadas y rechazadas por gate; se re-evalúan a los ${TTL_DIAS}d)`);
+  if (rej.vencidas) console.log(`   ♻️  ${rej.vencidas} rechazos vencidos (>${TTL_DIAS}d) vuelven a evaluarse`);
   const nuevas = pendientes.slice(0, n);
   const { data: tcRow } = await sb.from('config_global').select('valor').eq('clave', 'tipo_cambio_paralelo').single();
   const tasaParalelo = tcRow?.valor != null ? Number(tcRow.valor) : null;
@@ -408,7 +419,8 @@ async function apply(file) {
       // Basura estructural (baulera/parqueo suelto) → se escribe como DESCARTE (no vuelve al MOAT cada
       // noche; la vista la excluye). Operación mal tipeada → se sigue rechazando como antes.
       if (esBasuraEstructural(v)) { descartes.push(construirFilaDescarte(e, v)); continue; }
-      rechazados.push({ id: e.id, razon: v.razon_gate }); continue;
+      // La URL es la identidad estable del aviso; el id de una NUEVA cambia en cada corrida.
+      rechazados.push({ id: e.id, url: e._apply?.url ?? e.url ?? null, razon: v.razon_gate }); continue;
     }
 
     // MULTIPROYECTO → NO va a propiedades_v2_shadow (viola check_multiproperty_completo_v2 y el
@@ -495,7 +507,11 @@ async function apply(file) {
     const { error } = await sb.from('propiedades_v2_shadow').upsert(d, { onConflict: 'id' });
     if (!error) descartadas++; else console.log(`⚠️  descarte ${d.id} NO escrito: ${(error.message.split('\n')[0] || '').slice(0, 70)}`);
   }
-  if (rechazados.length) { const prev = leerRechazados(); for (const r of rechazados) prev.add(r.id); writeFileSync(REJ_FILE, JSON.stringify([...prev])); }
+  if (rechazados.length) {
+    const m = guardarRechazados(REJ_FILE, rechazados);
+    const sinUrl = rechazados.filter((r) => !r.url).length;
+    console.log(`   🧠 memoria de rechazos: ${m.total} entradas (${m.urls_con_url} con URL)${m.repetidos ? ` · ${m.repetidos} ya estaban (re-lectura que el filtro debería evitar)` : ''}${sinUrl ? ` · ⚠️ ${sinUrl} sin URL (no van a filtrar)` : ''}`);
+  }
   console.log(`✅ ${escritas} escritos en propiedades_v2_shadow.  Rechazados (gate): ${rechazados.length}${rechazados.length ? ' → ' + rechazados.map((r) => `${r.id}(${r.razon})`).join(', ') : ''}${descartes.length ? `  ·  Descartes basura (baulera/parqueo, fuera del feed): ${descartadas}/${descartes.length}` : ''}${protegidas ? `  ·  fecha_publicacion protegida (LEAST) en ${protegidas}` : ''}`);
   if (fallidas.length) console.log(`⚠️  ${fallidas.length} NO escritas (constraint): ${fallidas.map((f) => `${f.id}${f.mp ? '[multiproyecto]' : ''}(${f.motivo})`).join(', ')}`);
   // Multiproyectos → cola proyectos_detectados (mig 273; upsert por url+fuente → la cruda no se pierde)
