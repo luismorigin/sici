@@ -4,6 +4,7 @@
 // la página /zona-norte/ventas. v1: KPIs básicos (conteo + mediana m²);
 // la serie de absorción es Equipetrol-only (snapshot 'global') → no aplica a ZN.
 import { supabase } from './supabase'
+import { fetchAllRows } from './supabase-paginado'
 import { normalizarPrecio } from './precio-utils'
 import { getMicrozonasZN, displayZona } from './zonas'
 
@@ -124,15 +125,20 @@ export async function fetchMercadoDataZN(): Promise<MercadoData> {
     const tcPar = parseFloat(tcData?.valor) || 0
 
     // Fetch all qualifying properties in one query (microzonas ZN)
-    const { data: rawProps } = await supabase
-      .from('propiedades_v2')
-      .select('precio_usd, area_total_m2, tipo_cambio_detectado, dormitorios, zona, estado_construccion, fecha_publicacion, fecha_discovery, es_multiproyecto, tipo_propiedad_original')
-      .eq('tipo_operacion', 'venta')
-      .in('status', ['completado', 'actualizado'])
-      .is('duplicado_de', null)
-      .gte('area_total_m2', 20)
-      .gt('precio_usd', 0)
-      .in('zona', microzonasZN)
+    // PAGINADO (ver lib/supabase-paginado.ts): 550 filas hoy, pero lee `propiedades_v2`
+    // directo —la tabla más grande— y PostgREST corta en 1.000 sin error.
+    const rawProps = await fetchAllRows<any>(
+      supabase
+        .from('propiedades_v2')
+        .select('precio_usd, area_total_m2, tipo_cambio_detectado, dormitorios, zona, estado_construccion, fecha_publicacion, fecha_discovery, es_multiproyecto, tipo_propiedad_original')
+        .eq('tipo_operacion', 'venta')
+        .in('status', ['completado', 'actualizado'])
+        .is('duplicado_de', null)
+        .gte('area_total_m2', 20)
+        .gt('precio_usd', 0)
+        .in('zona', microzonasZN),
+      'mercado venta ZN: propiedades_v2',
+    )
 
     if (!rawProps || rawProps.length === 0) throw new Error('No properties found')
 

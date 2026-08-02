@@ -3,6 +3,7 @@
 // Regla del proyecto: los números NUNCA van hardcodeados en producción — se leen
 // de la BD en build (ISR) con fallbacks reales por si Supabase falla.
 import { supabase, obtenerZonasAlquiler, obtenerMicrozonas } from './supabase'
+import { fetchAllRows } from './supabase-paginado'
 import { ZONAS_EQUIPETROL_DB, displayZona } from './zonas'
 
 export interface SuperficiesMarketData {
@@ -171,14 +172,20 @@ export async function fetchContextoVenta(
 
     // La vista ya aplica filtros de calidad; macrozona se filtra acá (ticket #15)
     // Shadow = precios TC nuevo, misma base que el feed (lanzamiento TC nuevo).
-    const { data, error } = await supabase
-      .from('v_mercado_venta_shadow')
-      .select('zona, precio_norm, area_total_m2, dormitorios')
-      .in('zona', ZONAS_EQUIPETROL_DB)
-      .not('precio_norm', 'is', null)
-      .gte('area_total_m2', 20)
-
-    if (error || !data) return null
+    // PAGINADO (ver lib/supabase-paginado.ts): PostgREST corta en 1.000 sin error.
+    let data: any[]
+    try {
+      data = await fetchAllRows<any>(
+        supabase
+          .from('v_mercado_venta_shadow')
+          .select('zona, precio_norm, area_total_m2, dormitorios')
+          .in('zona', ZONAS_EQUIPETROL_DB)
+          .not('precio_norm', 'is', null)
+          .gte('area_total_m2', 20),
+        'superficies: v_mercado_venta_shadow',
+      )
+    } catch { return null }
+    if (!data.length) return null
 
     const rows = (data as any[])
       .map(r => ({

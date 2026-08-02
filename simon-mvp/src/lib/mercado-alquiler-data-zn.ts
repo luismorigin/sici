@@ -3,6 +3,7 @@
 // en vez de las 6 zonas Equipetrol. NO toca la experiencia de Equipetrol.
 // Alimenta el SEO/KPIs de la página /zona-norte/alquileres.
 import { supabase } from './supabase'
+import { fetchAllRows } from './supabase-paginado'
 import { getMicrozonasZN, displayZona } from './zonas'
 
 // --- Types ---
@@ -98,9 +99,14 @@ export async function fetchMercadoAlquilerDataZN(): Promise<MercadoAlquilerData>
     const microzonasZN = getMicrozonasZN()
 
     // Fetch alquiler properties from the view
-    const { data: rawProps } = await supabase
-      .from('v_mercado_alquiler')
-      .select('precio_mensual_bob, precio_mensual_usd, area_total_m2, dormitorios, zona, id_proyecto_master, es_multiproyecto, tipo_propiedad_original')
+    // PAGINADO: sin filtro de zona en el query (se filtra abajo en JS por microzonas ZN)
+    // → crece con todo el inventario de alquiler. Ver lib/supabase-paginado.ts.
+    const rawProps = await fetchAllRows<any>(
+      supabase
+        .from('v_mercado_alquiler')
+        .select('precio_mensual_bob, precio_mensual_usd, area_total_m2, dormitorios, zona, id_proyecto_master, es_multiproyecto, tipo_propiedad_original'),
+      'mercado alquiler ZN: v_mercado_alquiler',
+    )
 
     if (!rawProps || rawProps.length === 0) {
       console.warn('fetchMercadoAlquilerDataZN: no data, using fallback')
@@ -186,9 +192,12 @@ export async function fetchMercadoAlquilerDataZN(): Promise<MercadoAlquilerData>
     // --- Yield (cruce con venta) ---
     let yieldData: YieldZonaRow[] = []
     try {
-      const { data: ventaProps } = await supabase
-        .from('v_mercado_venta')
-        .select('zona, precio_m2')
+      // PAGINADO: trae la vista ENTERA (el filtro por zona se hace abajo en JS).
+      // 801 filas al 2-ago-2026 contra el corte de 1.000 de PostgREST, que es silencioso.
+      const ventaProps = await fetchAllRows<{ zona: string; precio_m2: number }>(
+        supabase.from('v_mercado_venta').select('zona, precio_m2'),
+        'yield ZN: v_mercado_venta',
+      )
 
       if (ventaProps && ventaProps.length > 0) {
         // Avg precio_m2 por zona venta

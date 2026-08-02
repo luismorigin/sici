@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { fetchAllRows } from './supabase-paginado'
 import { ZONAS_EQUIPETROL_DB } from './zonas'
 
 // --- Types ---
@@ -128,9 +129,14 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
 
     // Lanzamiento TC nuevo: vista SHADOW (display Bs igual; misma base que el
     // feed). Al cutover se repointea a v_mercado_alquiler (CUTOVER_DATA_PLAN).
-    const { data: rawProps } = await supabase
-      .from('v_mercado_alquiler_shadow')
-      .select('precio_mensual_bob, precio_mensual_usd, area_total_m2, dormitorios, zona, id_proyecto_master, es_multiproyecto, tipo_propiedad_original, amoblado')
+    // PAGINADO: sin filtro de zona en el query (se filtra abajo en JS) → crece con todo el
+    // inventario de alquiler. Ver lib/supabase-paginado.ts.
+    const rawProps = await fetchAllRows<any>(
+      supabase
+        .from('v_mercado_alquiler_shadow')
+        .select('precio_mensual_bob, precio_mensual_usd, area_total_m2, dormitorios, zona, id_proyecto_master, es_multiproyecto, tipo_propiedad_original, amoblado'),
+      'mercado alquiler: v_mercado_alquiler_shadow',
+    )
 
     if (!rawProps || rawProps.length === 0) {
       console.warn('fetchMercadoAlquilerData: no data, using fallback')
@@ -233,9 +239,14 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
     try {
       // Shadow: el $/m² de venta baja al régimen nuevo → el yield bruto sube
       // (~×1.45). Coherente con el marco TC nuevo, no es un bug.
-      const { data: ventaProps } = await supabase
-        .from('v_mercado_venta_shadow')
-        .select('zona, precio_m2')
+      // PAGINADO: trae la vista ENTERA (el filtro por zona se hace abajo en JS), así que es
+      // la consulta más grande del front — 833 filas al 2-ago-2026 contra el corte de 1.000
+      // de PostgREST, que es silencioso. Si se cortara, el yield de las zonas que quedan al
+      // final saldría con menos comparables (o vacío) sin que nada lo indique.
+      const ventaProps = await fetchAllRows<{ zona: string; precio_m2: number }>(
+        supabase.from('v_mercado_venta_shadow').select('zona, precio_m2'),
+        'yield: v_mercado_venta_shadow',
+      )
 
       if (ventaProps && ventaProps.length > 0) {
         // Avg precio_m2 por zona venta

@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { fetchAllRows } from './supabase-paginado'
 import { ZONAS_EQUIPETROL_DB } from './zonas'
 
 // --- Types ---
@@ -140,12 +141,17 @@ export async function fetchMercadoData(): Promise<MercadoData> {
     // Lanzamiento TC nuevo: la vista SHADOW ya normaliza (precio_norm, régimen
     // nuevo) y aplica los filtros de calidad canónicos. Al cutover se repointea
     // a v_mercado_venta (CUTOVER_DATA_PLAN). Macrozona se filtra acá (ticket #15).
-    const { data: rawProps } = await supabase
-      .from('v_mercado_venta_shadow')
-      .select('precio_norm, area_total_m2, dormitorios, zona, estado_construccion, fecha_publicacion, fecha_discovery, es_multiproyecto, tipo_propiedad_original')
-      .gte('area_total_m2', 20)
-      .gt('precio_norm', 0)
-      .in('zona', ZONAS_EQUIPETROL_DB)
+    // PAGINADO (ver lib/supabase-paginado.ts): hoy filtra por macrozona y queda holgado,
+    // pero PostgREST corta en 1.000 sin error y estos son los KPIs de /mercado.
+    const rawProps = await fetchAllRows<any>(
+      supabase
+        .from('v_mercado_venta_shadow')
+        .select('precio_norm, area_total_m2, dormitorios, zona, estado_construccion, fecha_publicacion, fecha_discovery, es_multiproyecto, tipo_propiedad_original')
+        .gte('area_total_m2', 20)
+        .gt('precio_norm', 0)
+        .in('zona', ZONAS_EQUIPETROL_DB),
+      'mercado venta: v_mercado_venta_shadow',
+    )
 
     if (!rawProps || rawProps.length === 0) throw new Error('No properties found')
 

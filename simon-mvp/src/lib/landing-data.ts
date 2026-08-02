@@ -1,4 +1,5 @@
 import { supabase, obtenerSnapshot24h, obtenerMicrozonas, obtenerZonasAlquiler, type Snapshot24h, type MicrozonaData, type ZonaAlquilerData } from './supabase'
+import { fetchAllRows } from './supabase-paginado'
 import { normalizarPrecio } from './precio-utils'
 import { ZONAS_EQUIPETROL_DB } from './zonas'
 
@@ -63,16 +64,21 @@ export async function fetchLandingData(): Promise<LandingData> {
       .in('zona', ZONAS_EQUIPETROL_DB)
 
     // Query 3: Precio promedio /m² (filtros limpios, SOLO Equipetrol)
-    const { data: priceData } = await supabase
-      .from('propiedades_v2')
-      .select('precio_usd, area_total_m2, tipo_cambio_detectado')
-      .eq('status', 'completado')
-      .eq('tipo_operacion', 'venta')
-      .gte('area_total_m2', 20)
-      .gte('precio_usd', 30000)
-      .is('duplicado_de', null)
-      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
-      .in('zona', ZONAS_EQUIPETROL_DB)
+    // PAGINADO (ver lib/supabase-paginado.ts): PostgREST corta en 1.000 sin error, y de
+    // esto sale el "precio promedio /m²" que se muestra en la home.
+    const priceData = await fetchAllRows<any>(
+      supabase
+        .from('propiedades_v2')
+        .select('precio_usd, area_total_m2, tipo_cambio_detectado')
+        .eq('status', 'completado')
+        .eq('tipo_operacion', 'venta')
+        .gte('area_total_m2', 20)
+        .gte('precio_usd', 30000)
+        .is('duplicado_de', null)
+        .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+        .in('zona', ZONAS_EQUIPETROL_DB),
+      'landing: precio promedio m2',
+    )
 
     // Fetch TC paralelo for normalization
     const { data: tcData } = await supabase
