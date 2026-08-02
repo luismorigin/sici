@@ -33,6 +33,7 @@ import { reservarIdsShadow } from './lib/reservar-ids-shadow.mjs';
 import { resolverZona, conSufijo } from './lib/zonas-hibrido.mjs';
 import { detalleDesdeBase } from './lib/detalle-desde-base.mjs';
 import { leerRechazados, guardarRechazados, TTL_DIAS } from './lib/rechazados.mjs';
+import { traerTodo } from './lib/traer-todo.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -209,9 +210,11 @@ async function prepNuevas(discoveryFile, n) {
   // ARRANCANDO DESDE EL MÁXIMO ya en shadow — mismo fix que venta (cargar-deptos-shadow.mjs, 17-jul).
   // Con `slice(0,n)` + `8_000_000+i` cada corrida reprocesaba las mismas y reiniciaba los ids →
   // colisión que PISA props reales en el upsert (el rango 8M lo comparten venta y alquiler).
-  const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('url');
+  // 🔴 PAGINADO: shadow pasó las 1.000 filas y PostgREST corta ahí sin avisar (ver
+  // lib/traer-todo.mjs). Sin esto el filtro "ya está cargado" quedaba incompleto.
+  const yaEn = await traerTodo(sb.from('propiedades_v2_shadow').select('url'));
   const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', ZONA.macrozona);
-  const urlsShadow = new Set([...(yaEn || []).map((r) => r.url), ...(yaProy || []).map((r) => r.url)]);
+  const urlsShadow = new Set([...yaEn.map((r) => r.url), ...(yaProy || []).map((r) => r.url)]);
   // + los RECHAZADOS por gate, por URL (2-ago-2026). Mismo agujero que en venta: la memoria se
   // consultaba por `id`, pero una NUEVA recibe un id 8M distinto cada corrida. El 2-ago las 5
   // "nuevas" de alquiler ZN eran las MISMAS 5 de la noche anterior (2 leídas + 3 zombis 404).

@@ -11,6 +11,7 @@
 // no la devuelve). NO es un juicio → se automatiza (a diferencia de alias/PMs).
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { traerTodo } from './lib/traer-todo.mjs';
 
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
 dotenv.config({ path: `${ROOT}/simon-mvp/.env.local` });
@@ -21,12 +22,18 @@ const tienePet = (p) =>
   (Array.isArray(p.datos_json?.amenities?.lista) && p.datos_json.amenities.lista.includes('Pet Friendly'));
 
 async function main() {
-  const { data, error } = await sb
-    .from('propiedades_v2_shadow')
-    .select('id_proyecto_master, acepta_mascotas, datos_json')
-    .eq('es_activa', true)
-    .not('id_proyecto_master', 'is', null);
-  if (error) { console.error('ERROR leyendo shadow:', error.message); process.exit(1); }
+  // 🔴 PAGINADO (2-ago-2026): este select devuelve 1.047 filas y PostgREST corta en 1.000 sin
+  // avisar → 47 unidades quedaban fuera del cálculo, y el chip "pet friendly" del feed es del
+  // EDIFICIO: basta que se pierda la única unidad que lo declara para que el edificio entero
+  // salga como `false`. Falla en la dirección silenciosa. Ver lib/traer-todo.mjs.
+  let data;
+  try {
+    data = await traerTodo(sb
+      .from('propiedades_v2_shadow')
+      .select('id_proyecto_master, acepta_mascotas, datos_json')
+      .eq('es_activa', true)
+      .not('id_proyecto_master', 'is', null));
+  } catch (error) { console.error('ERROR leyendo shadow:', error.message); process.exit(1); }
 
   const conUnidades = new Set();   // edificios con unidades en shadow (se evalúan)
   const conSenal = new Set();      // edificios con señal pet positiva

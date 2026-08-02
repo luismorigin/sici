@@ -32,6 +32,7 @@ import { reservarIdsShadow } from './lib/reservar-ids-shadow.mjs';
 import { resolverZona, conSufijo } from './lib/zonas-hibrido.mjs';
 import { detalleDesdeBase } from './lib/detalle-desde-base.mjs';
 import { leerRechazados, guardarRechazados, TTL_DIAS } from './lib/rechazados.mjs';
+import { traerTodo } from './lib/traer-todo.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -209,9 +210,12 @@ async function prepNuevas(discoveryFile, n) {
   // Con el filtro, corridas sucesivas AVANZAN sobre el inventario nuevo (mismo criterio que traerLote).
   // + los multiproyecto YA detectados (viven en proyectos_detectados, NO en shadow): sin esto se
   //   re-fetchean los mismos brochures en cada corrida y consumen slots del lote (mismo criterio que traerLote).
-  const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('url');
+  // 🔴 PAGINADO: shadow pasó las 1.000 filas y PostgREST corta ahí sin avisar. Sin esto el
+  // filtro "ya está cargado" veía ~1.000 de 1.376 urls → props existentes volvían a fetchearse
+  // como si fueran nuevas. Ver lib/traer-todo.mjs.
+  const yaEn = await traerTodo(sb.from('propiedades_v2_shadow').select('url'));
   const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', ZONA.macrozona);
-  const urlsShadow = new Set([...(yaEn || []).map((r) => r.url), ...(yaProy || []).map((r) => r.url)]);
+  const urlsShadow = new Set([...yaEn.map((r) => r.url), ...(yaProy || []).map((r) => r.url)]);
   // + los RECHAZADOS por gate, por URL (2-ago-2026). Acá estaba el agujero: la memoria de rechazos se
   // consultaba por `id` (en traerLote), pero una NUEVA todavía no tiene id de prod — se le reserva uno
   // del rango 8M distinto en cada corrida. Así, un anticrético o un alquiler mal tipeado volvía a
