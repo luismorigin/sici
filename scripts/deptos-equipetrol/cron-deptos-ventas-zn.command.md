@@ -24,7 +24,7 @@ inventario sano de la otra.
 | 1 Discovery | `discovery-deptos.mjs` | ✅ **pasar `--zona=zona-norte`** |
 | 2b Prep NUEVAS | `cargar-deptos-shadow.mjs` | ✅ **pasar** |
 | 3 Partir chunks | `partir-lectura.mjs` | ⚙️ la toma del **material** (no lleva flag) |
-| 3 Inyectar | `inyectar-veredictos.mjs` | ✅ **pasar** |
+| 3 Inyectar | `inyectar-veredictos.mjs` | 🚫 **NO pasar** — no parsea el flag: trata todo argumento posterior al material como archivo de veredictos → revienta con ENOENT. La zona la toma del material |
 | 4 Apply | `cargar-deptos-shadow.mjs` | ✅ **pasar** |
 | 5 Verificador | `verificador-deptos.mjs` | ✅ **pasar** |
 | 5b pet_friendly | `derivar-pet-friendly.mjs` | ⚪ **global a propósito** (los edificios no son de una zona) |
@@ -100,7 +100,7 @@ Si un subagente-lector falla por error de **servicio** (`529 Overloaded`, `500`,
 > el backlog. (Anthropic estuvo inestable ese día.)
 
 ```
-node inyectar-veredictos.mjs output/material-nuevas-<ts>-zn.json output/veredictos-venta-zn-<fecha>-c*.json --zona=zona-norte
+node inyectar-veredictos.mjs output/material-nuevas-<ts>-zn.json output/veredictos-venta-zn-<fecha>-c*.json
 ```
 ⚠️ **Reemplaza, no acumula**: pasale **todos** los archivos en UNA corrida.
 
