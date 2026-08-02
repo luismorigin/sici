@@ -207,9 +207,32 @@ async function main() {
     console.log(`   ⚠️  --sin-guarda: las capturas de hoy (${guarda.hoy}) no corrieron. Audito el inventario tal como está.\n`);
   }
 
+  // ── Qué se audita (1-ago-2026) ──────────────────────────────────────────
+  // `es_activa` NO alcanza: es "el aviso sigue publicado en el portal", y sigue
+  // siendo true en props que el sistema ya sacó del inventario (`excluida_zona`,
+  // `excluido_operacion`, `excluido_calidad`). Sin este filtro vuelven al juez
+  // todas las noches para volver a decidir lo mismo — el patrón de siempre: un
+  // veredicto que no deja rastro se repite.
+  //
+  // 🔴 El corte es por STATUS, **NO** por "tiene id_proyecto_master".
+  // Filtrar por proyecto asignado parecería razonable ("audito lo que el feed
+  // muestra") y sería un error grave: el feed exige pm (INNER JOIN), pero las
+  // VISTAS DE MERCADO no — `v_mercado_venta_shadow` tiene hoy 795 filas, 99 de
+  // ellas SIN pm (12,5%), y todas cuentan para medianas, $/m² y absorción.
+  // Las props sin match son, además, justo las que este audit existe para
+  // resolver. Auditar "lo que se muestra" dejaría fuera al 12,5% del inventario
+  // que sí pesa en los estudios de mercado.
+  //
+  // `STATUS_INVENTARIO` es el MISMO corte de `v_mercado_venta_shadow` /
+  // `v_mercado_alquiler_shadow` y de `buscar_unidades_simple_shadow`: alinea el
+  // audit con lo que el resto del sistema considera inventario vivo, sin
+  // inventar un criterio propio.
+  const STATUS_INVENTARIO = ['completado', 'actualizado'];
+
   let filas = [];
   for (const op of OPS) {
-    let q = sb.from('propiedades_v2_shadow').select(COLS).eq('tipo_operacion', op).eq('es_activa', true).order('id', { ascending: true });
+    let q = sb.from('propiedades_v2_shadow').select(COLS).eq('tipo_operacion', op)
+      .eq('es_activa', true).in('status', STATUS_INVENTARIO).order('id', { ascending: true });
     if (ZONAS_FILTRO) q = q.in('zona', ZONAS_FILTRO);
     if (LIMIT) q = q.limit(LIMIT);
     const { data, error } = await q;
@@ -231,7 +254,8 @@ async function main() {
     for (const op of OPS) {
       const { count } = await sb.from('propiedades_v2_shadow')
         .select('id', { count: 'exact', head: true })
-        .eq('tipo_operacion', op).eq('es_activa', true).not('zona', 'in', `(${ZONAS_FILTRO.map((z) => `"${z}"`).join(',')})`);
+        .eq('tipo_operacion', op).eq('es_activa', true).in('status', STATUS_INVENTARIO)  // mismo corte que arriba, si no el aviso de alcance miente
+        .not('zona', 'in', `(${ZONAS_FILTRO.map((z) => `"${z}"`).join(',')})`);
       fuera += count || 0;
     }
     if (fuera > 0) {
