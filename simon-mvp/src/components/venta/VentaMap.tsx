@@ -19,10 +19,23 @@ interface VentaMapProperty {
   longitud: number | null
 }
 
+// Encuadre visible del mapa, en grados (para el filtro "Buscar en esta zona").
+export interface MapViewBounds {
+  north: number
+  south: number
+  east: number
+  west: number
+}
+
 interface VentaMapProps {
   properties: VentaMapProperty[]
   onSelectProperty: (id: number) => void
   selectedId?: number | null
+  // Emite el encuadre tras cada movimiento del USUARIO (drag/zoom/cluster).
+  // Los movimientos programáticos (fitBounds por cambio de filtro, panTo del
+  // highlight, invalidateSize) NO emiten — si emitieran, el botón "Buscar en
+  // esta zona" aparecería solo. Opcional: broker/mobile/modal no lo pasan.
+  onUserMove?: (bounds: MapViewBounds) => void
 }
 
 // Teardown seguro: si el mapa muere en plena animación (unmount por toggle de
@@ -48,7 +61,7 @@ function formatPricePin(price: number): string {
 // sin tocar la instancia Leaflet: antes, cualquier cambio de identidad del
 // array o del handler reconstruía el mapa entero y el fitBounds reseteaba
 // zoom/centro (deuda 24-jun, y bloqueante para el filtro por área del mapa).
-export default function VentaMap({ properties, onSelectProperty, selectedId }: VentaMapProps) {
+export default function VentaMap({ properties, onSelectProperty, selectedId, onUserMove }: VentaMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
@@ -63,6 +76,17 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
   // Firma de lo ya dibujado: si los avisos (id+precio) no cambiaron, un array
   // nuevo con el mismo contenido no redibuja ni re-encuadra nada.
   const drawnKeyRef = useRef<string | null>(null)
+  const onUserMoveRef = useRef(onUserMove)
+  onUserMoveRef.current = onUserMove
+  // Ventana de supresión para movimientos programáticos: moveend no distingue
+  // usuario de código, así que antes de cada fitBounds/setView/panTo se abre
+  // una ventana corta en la que el listener no emite. Timestamp (no contador):
+  // un setView a la misma vista puede NO disparar moveend y un contador
+  // quedaría desincronizado tragándose el próximo movimiento real.
+  const suppressUntilRef = useRef(0)
+  const suppressMoves = useCallback((ms: number) => {
+    suppressUntilRef.current = Math.max(suppressUntilRef.current, Date.now() + ms)
+  }, [])
 
   const makeIcon = useCallback((price: string, isSelected: boolean) => {
     return L.divIcon({
@@ -136,6 +160,18 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
     clusterGroupRef.current = clusterGroup
     mapInstance.current = map
 
+    // Toda la secuencia de construcción (setView inicial + populate + fitBounds
+    // + invalidateSize, repartida en timers) es programática: ventana ancha.
+    suppressMoves(1500)
+
+    map.on('moveend', () => {
+      if (Date.now() < suppressUntilRef.current) return
+      const emit = onUserMoveRef.current
+      if (!emit) return
+      const b = map.getBounds()
+      emit({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() })
+    })
+
     const style = document.createElement('style')
     style.textContent = `
       .venta-map .leaflet-tile { filter: brightness(1.05) saturate(0.4) sepia(0.15); }
@@ -146,6 +182,7 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
     mapRef.current.appendChild(style)
 
     setTimeout(() => {
+      suppressMoves(400)
       map.invalidateSize()
       // Una sola propiedad (mapa del modal de detalle): tras recalcular el
       // tamaño real del contenedor, re-centrar EXACTO en el pin y acercar un
@@ -156,7 +193,7 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
     }, 100)
 
     return map
-  }, [])
+  }, [suppressMoves])
 
   // Sincronización de markers: limpia y repuebla el cluster cuando cambia el
   // dataset. NO reconstruye el mapa; re-encuadra (fitBounds) solo cuando los
@@ -221,6 +258,7 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
         markersRef.current.set(p.id, marker)
       })
 
+      suppressMoves(400)
       if (validProps.length > 1) {
         const bounds = L.latLngBounds(validProps.map(p => [p.latitud!, p.longitud!] as [number, number]))
         map.fitBounds(bounds, { padding: [40, 40] })
@@ -238,13 +276,16 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
       cancelled = true
       clearTimeout(timer)
     }
-  }, [properties, makeIcon, buildBase])
+  }, [properties, makeIcon, buildBase, suppressMoves])
 
   // Teardown SOLO al desmontar.
   useEffect(() => {
     const markers = markersRef.current
     return () => {
       if (mapInstance.current) {
+        // map.stop() puede disparar un último moveend en el mapa moribundo →
+        // emitiría un falso "movimiento de usuario" justo al cambiar de vista.
+        suppressUntilRef.current = Number.MAX_SAFE_INTEGER
         safeRemoveMap(mapInstance.current)
         mapInstance.current = null
         clusterGroupRef.current = null
@@ -284,11 +325,11 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
       }
       // Solo re-centra si el punto está fuera de vista (evita paneos bruscos
       // al recorrer la lista cuando la propiedad ya se ve en el mapa).
-      try { if (!map.getBounds().contains(ll)) map.panTo(ll, { animate: true, duration: 0.35 }) } catch { /* best-effort */ }
+      try { if (!map.getBounds().contains(ll)) { suppressMoves(900); map.panTo(ll, { animate: true, duration: 0.35 }) } } catch { /* best-effort */ }
     } else if (highlightRef.current && map.hasLayer(highlightRef.current)) {
       map.removeLayer(highlightRef.current)
     }
-  }, [selectedId, properties, makeIcon])
+  }, [selectedId, properties, makeIcon, suppressMoves])
 
   return <div ref={mapRef} className="venta-map" style={{ width: '100%', height: '100%' }} />
 }

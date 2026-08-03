@@ -34,6 +34,7 @@ import ShortlistBottomBar from '@/components/shortlist/ShortlistBottomBar'
 import ShortlistMenu from '@/components/shortlist/ShortlistMenu'
 import ShortlistCardChip from '@/components/shortlist/ShortlistCardChip'
 import { computeVentaShortlistStats } from '@/lib/shortlist-context'
+import type { MapViewBounds } from '@/components/venta/VentaMap'
 // WhatsApp oficial de Simon (negocio) — NO el personal del fundador.
 const SIMON_WHATSAPP = '59177066308'
 
@@ -2632,6 +2633,26 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   // pasa a 2 columnas (densidad máxima). Con el side sheet abierto vuelve
   // al split mientras dure, y al cerrarlo retoma la lista pura.
   const [listOnly, setListOnly] = useState(false)
+  // Filtro "Buscar en esta zona" (patrón Airbnb, solo splitDesktop): mover el
+  // mapa muestra el botón; al apretarlo la lista/contador/resumen se acotan al
+  // rectángulo visible. mapArea = rect APLICADO (chip limpiable en count-row);
+  // mapMoved = hubo movimiento de usuario sin aplicar todavía. El mapa NUNCA
+  // recibe la lista acotada — recibiría su propio filtro y se re-encuadraría.
+  const [mapArea, setMapArea] = useState<MapViewBounds | null>(null)
+  const [mapMoved, setMapMoved] = useState(false)
+  const pendingMapBoundsRef = useRef<MapViewBounds | null>(null)
+  const onMapUserMove = useCallback((b: MapViewBounds) => { pendingMapBoundsRef.current = b; setMapMoved(true) }, [])
+  const applyMapArea = useCallback(() => {
+    if (!pendingMapBoundsRef.current) return
+    setMapArea(pendingMapBoundsRef.current)
+    setMapMoved(false)
+    trackEvent('map_area_filter_venta', { accion: 'aplicar' })
+  }, [])
+  const clearMapArea = useCallback(() => {
+    setMapArea(null)
+    setMapMoved(false)
+    trackEvent('map_area_filter_venta', { accion: 'limpiar' })
+  }, [])
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
   const [proyectoNames, setProyectoNames] = useState<string[]>(() => [...new Set(initialProps.map(p => p.proyecto).filter(Boolean))].sort())
@@ -3037,12 +3058,25 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     amenActivo ? displayedProperties.filter(p => propMatchesAmen(p, amenSel)) : displayedProperties
   , [displayedProperties, amenSel, amenActivo])
 
+  // Lista acotada al "área del mapa" aplicada (Buscar en esta zona). De acá
+  // comen la lista, el contador y el resumen de mercado; el mapa sigue
+  // comiendo `confirmados` completo (al alejar el zoom los pins reaparecen y
+  // no hay loop de re-encuadre). Guard splitDesktop: mobile/broker inmunes.
+  const confirmadosEnBounds = useMemo(() => {
+    if (!splitDesktop || !mapArea) return confirmados
+    return confirmados.filter(p =>
+      p.latitud != null && p.longitud != null &&
+      p.latitud >= mapArea.south && p.latitud <= mapArea.north &&
+      p.longitud >= mapArea.west && p.longitud <= mapArea.east)
+  }, [confirmados, mapArea, splitDesktop])
+
   // Resumen de mercado del filtro actual — panel derecho del layout split
-  // (estado sin propiedad seleccionada). Client-side sobre la lista visible;
+  // (estado sin propiedad seleccionada). Client-side sobre la lista visible
+  // (incluida el área del mapa si está aplicada — coherencia lista/resumen);
   // lenguaje fiduciario: mediana + rango observado + base declarada.
   const panelMarketSummary = useMemo(() => {
     if (!splitDesktop) return null
-    const base = confirmados
+    const base = confirmadosEnBounds
     const conM2 = base.filter(q => q.precio_m2 > 0).map(q => q.precio_m2).sort((a, b) => a - b)
     if (conM2.length < 5) return { count: base.length, mediana: null, rangoLow: null, rangoHigh: null, preventaPct: null }
     const pctl = (pct: number) => {
@@ -3058,7 +3092,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       rangoHigh: pctl(0.75),
       preventaPct: base.length > 0 ? Math.round((preventa / base.length) * 100) : null,
     }
-  }, [splitDesktop, confirmados])
+  }, [splitDesktop, confirmadosEnBounds])
 
   // Chip fiduciario por card — posición del precio/m² vs el rango típico
   // (p25-p75) de su tipología. Misma filosofía de cascada que el sheet:
@@ -3979,7 +4013,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   {/* Título + contador + toggle lista|mixto|mapa */}
                   <div className="vd-count-row">
                     <h1 className="vd-h1">Departamentos en venta en {filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : 'Equipetrol'}</h1>
-                    <span className="vd-count-num2"><b>{amenActivo ? confirmados.length : displayedProperties.length}</b> {amenActivo ? `de ${displayedProperties.length}` : isFiltered ? `de ${unfilteredCount}` : 'activos'}</span>
+                    <span className="vd-count-num2">{mapArea
+                      ? <><b>{confirmadosEnBounds.length}</b> en esta área</>
+                      : <><b>{amenActivo ? confirmados.length : displayedProperties.length}</b> {amenActivo ? `de ${displayedProperties.length}` : isFiltered ? `de ${unfilteredCount}` : 'activos'}</>}</span>
+                    {mapArea && (
+                      <button type="button" className="vd-area-chip" onClick={clearMapArea} title="Quitar el filtro del área del mapa">
+                        Área del mapa <span className="vd-area-chip-x" aria-hidden>&times;</span>
+                      </button>
+                    )}
                     <div className="vd-viewtoggle" role="tablist" aria-label="Modo de vista">
                       <button type="button" title="Solo lista" aria-selected={listOnly} className={`vd-vt-btn ${listOnly ? 'active' : ''}`}
                         onClick={() => { setListOnly(true); trackEvent('switch_view_venta', { view_mode: 'lista' }) }}>
@@ -3999,6 +4040,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 <div className="vd-list">
                   {loading && displayedProperties.length === 0 && <div className="ventas-status" style={{ minHeight: 160 }}>Cargando departamentos en venta...</div>}
                   {!loading && displayedProperties.length === 0 && <div className="ventas-status" style={{ minHeight: 160 }}>{buildEmptyMessage(filters)}</div>}
+                  {!loading && confirmados.length > 0 && confirmadosEnBounds.length === 0 && (
+                    <div className="ventas-status" style={{ minHeight: 160 }}>
+                      No hay departamentos dentro del área del mapa.{' '}
+                      <button type="button" className="vd-area-clear-link" onClick={clearMapArea}>Quitar área</button>
+                    </div>
+                  )}
                   {spotlightProperty && (
                     <div className="vd-spotlight">
                       <div className="ds-spotlight-banner">
@@ -4014,10 +4061,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   {amenActivo && (
                     <div className="vd-amen-note">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
-                      <span>Mostramos los {confirmados.length} que {confirmados.length === 1 ? 'confirma' : 'confirman'} <b>{[...amenSel].join(' · ')}</b> en el aviso. Algún depto podría tenerla sin listarla.</span>
+                      <span>Mostramos los {confirmadosEnBounds.length} que {confirmadosEnBounds.length === 1 ? 'confirma' : 'confirman'} <b>{[...amenSel].join(' · ')}</b> en el aviso. Algún depto podría tenerla sin listarla.</span>
                     </div>
                   )}
-                  {(spotlightProperty ? confirmados.filter(p => p.id !== spotlightId) : confirmados).map(p => (
+                  {(spotlightProperty ? confirmadosEnBounds.filter(p => p.id !== spotlightId) : confirmadosEnBounds).map(p => (
                     <VentaListCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
                       isActive={sheetOpen && sheetProperty?.id === p.id}
                       marketChip={cardChips?.get(p.id) ?? null}
@@ -4035,7 +4082,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                       <div className="vd-map">
                         <VentaMap properties={confirmados}
                           onSelectProperty={onPanelMapSelect}
-                          selectedId={hoveredId} />
+                          selectedId={hoveredId}
+                          onUserMove={onMapUserMove} />
+                        {mapMoved && (
+                          <button type="button" className="vd-map-search-btn" onClick={applyMapArea}>
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            Buscar en esta zona
+                          </button>
+                        )}
                         <button className="vd-map-full" onClick={() => { setViewMode('map'); trackEvent('switch_view_venta', { view_mode: 'map', origen: 'panel' }) }}>
                           Ver mapa completo
                           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -4046,7 +4100,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                           <div className="vd-mkt-head">
                             <div>
                               <div className="vd-mkt-title">Mercado de ventas</div>
-                              <div className="vd-mkt-sub">{filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : 'Equipetrol'} · publicaciones activas</div>
+                              <div className="vd-mkt-sub">{filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : 'Equipetrol'}{mapArea ? ' · área del mapa' : ''} · publicaciones activas</div>
                             </div>
                             <a className="vd-mkt-link" href="/mercado/equipetrol/ventas">Ver mercado completo →</a>
                           </div>
@@ -4113,7 +4167,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             )}
             {displayedProperties.length > 0 && viewMode === 'map' && (
               <div className="ventas-map-container">
-                <VentaMap properties={confirmados} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
+                <VentaMap properties={confirmados} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId}
+                  onUserMove={splitDesktop ? onMapUserMove : undefined} />
+                {splitDesktop && mapMoved && (
+                  <button type="button" className="vd-map-search-btn" onClick={applyMapArea}>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    Buscar en esta zona
+                  </button>
+                )}
                 {mapSelectedId && (() => {
                   const sp = properties.find(x => x.id === mapSelectedId)
                   if (!sp) return null
@@ -4488,6 +4549,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vd-map .venta-map { position:absolute; inset:0 }
         .vd-map-full { position:absolute; top:12px; right:12px; z-index:1100; display:inline-flex; align-items:center; gap:6px; background:#141414; color:#EDE8DC; border:1px solid rgba(237,232,220,0.15); padding:8px 14px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.35) }
         .vd-map-full:hover { background:#1e1e1e }
+        /* Filtro "Buscar en esta zona": botón flotante sobre el mapa (aparece al moverlo) */
+        .vd-map-search-btn { position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:1100; display:inline-flex; align-items:center; gap:7px; background:#FAFAF8; color:#141414; border:1px solid #D8D0BC; padding:9px 16px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.35); white-space:nowrap }
+        .vd-map-search-btn:hover { background:#fff }
+        /* Chip del área aplicada — vive en la count-row (FUERA de las pills: se remontan con filterComponentVersion) */
+        .vd-area-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:100px; border:1px solid rgba(237,232,220,0.35); background:rgba(237,232,220,0.12); color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap }
+        .vd-area-chip:hover { background:rgba(237,232,220,0.2) }
+        .vd-area-chip-x { font-size:14px; line-height:1 }
+        .vd-area-clear-link { background:none; border:none; padding:0; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:inherit; font-weight:600; text-decoration:underline; cursor:pointer }
         .vd-mkt { flex:0 0 auto; background:#1e1e1e; border:1px solid rgba(237,232,220,0.08); border-radius:14px; padding:18px 20px; font-family:'DM Sans',sans-serif }
         .vd-mkt-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:14px }
         .vd-mkt-title { font-family:'Figtree',sans-serif; font-size:19px; font-weight:500; color:#EDE8DC }
