@@ -80,9 +80,11 @@ function nombreApareceEnAnuncio(nombre, textos) {
 }
 
 // ---- fila shadow → baseline + decisión del reader (según operación) ----
-const COLS_VENTA = 'id,fuente,url,precio_usd,tipo_cambio_detectado,moneda_original,dormitorios,banos,piso,nombre_edificio,id_proyecto_master,estado_construccion,es_activa,status,datos_json';
+// `primera_ausencia_at` se trae SOLO para el corte de posibles bajas (ver §RESIDUAL más abajo):
+// es la señal de si el verificador ya tiene esa prop en su cola.
+const COLS_VENTA = 'id,fuente,url,precio_usd,tipo_cambio_detectado,moneda_original,dormitorios,banos,piso,nombre_edificio,id_proyecto_master,estado_construccion,es_activa,status,primera_ausencia_at,datos_json';
 // `equipado` NO es columna de shadow (vive en datos_json.equipado) → se lee del JSON en el snapshot.
-const COLS_ALQ = 'id,fuente,url,precio_mensual_bob,precio_mensual_usd,moneda_original,amoblado,acepta_mascotas,dormitorios,banos,nombre_edificio,id_proyecto_master,es_activa,status,datos_json';
+const COLS_ALQ = 'id,fuente,url,precio_mensual_bob,precio_mensual_usd,moneda_original,amoblado,acepta_mascotas,dormitorios,banos,nombre_edificio,id_proyecto_master,es_activa,status,primera_ausencia_at,datos_json';
 
 async function traerFilas() {
   let q = sb.from('propiedades_v2_shadow').select(OP === 'venta' ? COLS_VENTA : COLS_ALQ).eq('tipo_operacion', OP);
@@ -126,8 +128,14 @@ async function main() {
     try { h = await fetchDetalleDepto(p.fuente, p.url); } catch (e) { err = String(e.message); }
     if (!h) {
       buckets.fetch_fallo++;
-      bajas.push({ id: p.id, fuente: p.fuente, url: p.url, motivo: err || 'sin respuesta' });
-      console.log(`   ${p.id} ${p.fuente} ✗ fetch (posible baja — cruzar con verificador): ${(err || '').slice(0, 40)}`);
+      // El cruce con el verificador se hace ACÁ, no "después a mano" (ver §RESIDUAL en el resumen).
+      const cubierta = !p.es_activa ? 'ya_inactiva' : (p.primera_ausencia_at ? 'en_cola' : null);
+      bajas.push({
+        id: p.id, fuente: p.fuente, url: p.url, motivo: err || 'sin respuesta',
+        es_activa: p.es_activa, primera_ausencia_at: p.primera_ausencia_at || null,
+        cubierta_por_verificador: cubierta,          // null = NADIE la está mirando
+      });
+      console.log(`   ${p.id} ${p.fuente} ✗ fetch${cubierta ? ` (${cubierta === 'ya_inactiva' ? 'ya de baja' : 'ya en cola del verificador'})` : ' 🔴 RESIDUAL — activa y fuera del radar del verificador'}: ${(err || '').slice(0, 40)}`);
       await pace(400);
       continue;
     }
@@ -224,12 +232,34 @@ async function main() {
   // ---- persistir material + summary ----
   const revisados = filas.length - (buckets.fetch_fallo || 0);
   const driftPct = revisados ? Math.round((buckets.reescrita + buckets.cambio_relevante) / revisados * 1000) / 10 : 0;
+  // ── §RESIDUAL — el corte que hace útil la lista de posibles bajas ────────────────────
+  // Antes esto era una lista cruda de "fetch falló" con la nota "cruzar con verificador", y ese
+  // cruce no lo hacía nadie. Medido el 3-ago-2026 sobre esta misma corrida: de 53 fichas que no
+  // respondían, **36 ya estaban de baja** y **15 ya estaban en la cola del verificador** (se cierran
+  // solas con la gracia de 2d). Solo **2** eran el hallazgo. Con 51/53 de ruido, la lista se ignora.
+  //
+  // El residual es el punto ciego real: la ficha no responde, la prop SIGUE ACTIVA y el verificador
+  // NUNCA la va a mirar, porque su universo es `desaparecidas del discovery OR primera_ausencia_at
+  // no nulo` — y el portal la sigue mostrando en su LISTADO aunque la ficha ya no exista. Lo que
+  // cae ahí no sale nunca: `8000009` (Element Sirari) llevaba **83 días** en el feed de alquiler
+  // siendo un aviso inexistente, y `3821` (Cozumel) encima había pasado a venta.
+  //
+  // Este audit NO da de baja: eso es autoridad del verificador (2 señales + gracia). Acá solo se
+  // SEÑALA lo que nadie está mirando, para que el humano lo confirme.
+  const bajasResidual = bajas.filter((b) => !b.cubierta_por_verificador);
+  const bajasEnCola = bajas.filter((b) => b.cubierta_por_verificador === 'en_cola');
+  const bajasYaInactivas = bajas.filter((b) => b.cubierta_por_verificador === 'ya_inactiva');
+
   const file = join(OUT, `audit-shadow-${OP}-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, operacion: OP, spec: OP === 'venta' ? 'READER_SPEC.md' : 'READER_SPEC_ALQUILER.md',
     total: filas.length, revisados, buckets, drift_pct: driftPct,
-    resumen: { al_juez: material.length, posibles_bajas: bajas.length, cambios_precio: preciosCambio.length, matching_sospecha: matchingSospecha.length, sin_match_con_nombre: sinMatchConNombre.length, fotos_rotas: fotosRotas.length },
-    material, bajas, sin_match_con_nombre: sinMatchConNombre, fotos_rotas: fotosRotas,
+    resumen: {
+      al_juez: material.length, posibles_bajas: bajas.length,
+      bajas_residual: bajasResidual.length, bajas_en_cola: bajasEnCola.length, bajas_ya_inactivas: bajasYaInactivas.length,
+      cambios_precio: preciosCambio.length, matching_sospecha: matchingSospecha.length, sin_match_con_nombre: sinMatchConNombre.length, fotos_rotas: fotosRotas.length,
+    },
+    material, bajas, bajas_residual: bajasResidual, sin_match_con_nombre: sinMatchConNombre, fotos_rotas: fotosRotas,
   }, null, 2));
 
   console.log(`\n────────── RESUMEN AUDIT SHADOW (${OP}) ──────────`);
@@ -238,7 +268,17 @@ async function main() {
   console.log(`  💲 Cambios de precio en portal: ${preciosCambio.length}${preciosCambio.length ? '  → ' + preciosCambio.slice(0, 12).map((x) => `${x.id}(${x.dir}${x.pct}%)`).join(', ') : ''}`);
   console.log(`  🏷️  Matching sospechoso (nombre no aparece): ${matchingSospecha.length}${matchingSospecha.length ? '  → ' + matchingSospecha.slice(0, 12).map((x) => `${x.id}(${x.edif})`).join(', ') : ''}`);
   console.log(`  ⚠️  Sin match pero con nombre (cola PM_NUEVO/fuzzy): ${sinMatchConNombre.length}`);
-  console.log(`  💀 Posibles bajas (fetch falló): ${bajas.length}${bajas.length ? '  → ids: ' + bajas.slice(0, 20).map((b) => b.id).join(',') : ''}`);
+  // La lista cruda queda como contexto (chica, entre paréntesis); lo que se GRITA es el residual.
+  console.log(`  💀 Fichas que no responden: ${bajas.length}  (ya de baja: ${bajasYaInactivas.length} · ya en cola del verificador: ${bajasEnCola.length} · se cierran solas)`);
+  if (bajasResidual.length) {
+    console.log(`  🔴 BAJAS QUE NADIE ESTÁ MIRANDO: ${bajasResidual.length} — activas, ficha muerta, y FUERA del radar del verificador`);
+    for (const b of bajasResidual) console.log(`       ${b.id} ${b.fuente}  ${b.url}`);
+    console.log(`     → El portal las sigue mostrando en su LISTADO aunque la ficha ya no exista, así que`);
+    console.log(`       nunca entran a la cola del verificador y NO se van a arreglar solas.`);
+    console.log(`       Confirmá el status HTTP (C21: 404 · Remax: 302) y dales de baja a mano.`);
+  } else {
+    console.log(`  ✅ Sin bajas residuales: todo lo que no responde ya está de baja o en cola del verificador.`);
+  }
   console.log(`  📷 Fotos reemplazadas por el captador (card sale VACÍA en el feed): ${fotosRotas.length}${fotosRotas.length ? '  → ids: ' + fotosRotas.slice(0, 20).map((f) => f.id).join(',') : ''}`);
   if (fotosRotas.length) console.log(`     → se arregla re-leyendo esos avisos: el portal ya tiene las fotos nuevas.`);
   console.log(`\n  📦 ${material.length} al JUEZ → ${file}`);
