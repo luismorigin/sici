@@ -53,7 +53,16 @@ en el anuncio?). Escribe `output/audit-shadow-<op>-<ts>.json` con el array `mate
 **sospechosos** (drift fuerte / cambio de precio / matching / flag semántico) con `veredicto_audit: null`.
 - Circuit breaker (🛑) → IP bloqueada, **no insistas**, reintentá en horas. Pausa+jitter entre requests.
 - El resumen impreso ya te da el panorama: buckets de drift, cambios de precio, matching sospechoso,
-  sin-match-con-nombre, y **posibles bajas** (fetch falló → cruzar con `verificador-deptos/alquiler.mjs`).
+  sin-match-con-nombre, y **fichas que no responden**.
+- 🔴 **El cruce con el verificador ya lo hace el script (3-ago-2026), no lo repitas a mano.** Cada ficha
+  muerta se clasifica sola en `ya de baja` / `ya en cola del verificador` (se cierra sola con la gracia
+  de 2d) / **RESIDUAL**. El residual es lo único que hay que mirar: prop **activa**, ficha muerta, y
+  **fuera del universo del verificador** (`desaparecidas del discovery OR primera_ausencia_at no nulo`)
+  porque el portal la sigue mostrando en su LISTADO aunque la ficha ya no exista → **no se arregla sola
+  nunca**. Sale gritado con sus URLs, y también en el JSON como `bajas_residual`.
+  Medido el 3-ago: de **53** fichas muertas, 36 ya de baja + 15 en cola + **2 residuales**. Mirar la
+  lista cruda es mirar 51 de ruido. Si no hay residual imprime `✅ Sin bajas residuales` — explícito,
+  para no confundir "revisé y está limpio" con "no revisé".
 
 ### 2. MOAT — el juez (subagentes-lectores en paralelo)
 Leé el `output/audit-shadow-<op>-<ts>.json`. Dividí el array `material` en chunks de ~10 y lanzá
@@ -75,8 +84,13 @@ Con los `veredicto_audit` mergeados, armá el reporte ejecutivo:
 - **🔴 Correcciones confirmadas** (precio/TC/estado cambió en el anuncio) → `UPDATE propiedades_v2_shadow
   SET ... , fecha_actualizacion=NOW() WHERE id=X;` (+ refrescar `datos_json.contenido.descripcion` con la
   de hoy, para que no reaparezca en cada corrida — mismo patrón §4.5 de la mensual).
-- **💀 Posibles bajas** (fetch falló) → cruzá con el verificador; NO das de baja acá (el verificador es la
-  autoridad, con 2 señales + gracia 2d).
+- **💀 Bajas residuales** (`bajas_residual` del JSON) → las únicas que requieren acción. Confirmá el
+  status HTTP a mano (**C21: 404 · Remax: 302**, que son las mismas señales que usa el verificador) y
+  recién ahí proponé el `UPDATE ... status='inactivo_confirmed', es_activa=false,
+  razon_inactiva='aviso_terminado'`. El resto de las fichas muertas NO se tocan: o ya están de baja o
+  el verificador las cierra esta noche. 🔑 **El audit señala, no da de baja por su cuenta** — la
+  autoridad sigue siendo `verificador-deptos/alquiler.mjs` (2 señales + gracia 2d), porque una regla
+  de bajas mal hecha saca del feed propiedades que SÍ existen.
 - **🏷️ Matching sospechoso** (nombre no aparece / sin-match-con-nombre) → juez decide ALIAS vs MISMATCH vs
   PM_NUEVO (mismo criterio que `/audit-cola-matching`); candar `id_proyecto_master` si es cluster numerado.
 - **Preguntá al usuario** antes de aplicar cualquier `UPDATE`. NUNCA mutar sin OK.
@@ -109,7 +123,9 @@ node notificar-slack.mjs "<resumen>"
 ## Pendientes / futuro
 - **Loop de re-lectura automática:** hoy el drift señala QUÉ re-leer y el juez lo hace en sesión. El
   camino al cutover es que las correcciones confirmadas se apliquen por API (`reader-api.mjs`).
-- **Persistencia histórica:** hoy solo escribe el JSON de la corrida. Al cutover se puede enganchar a
-  `audit_descripciones_*` (mig 242/267) para tendencia de drift, como la mensual de prod.
+- **Persistencia histórica EN BD:** el JSON de la corrida + `output/audit-shadow-log.md` (bitácora en
+  archivo, primera entrada 3-ago) alcanzan para leer una corrida, pero no dan **tendencia**. Al cutover
+  se puede enganchar a `audit_descripciones_*` (mig 242/267), como la mensual de prod.
 - **Bajas:** este audit solo las FLAGEA; la baja la confirma `verificador-deptos/alquiler.mjs` (2 señales).
+  Lo que sí cambió el 3-ago es que ya no las flagea todas juntas: separa el residual del ruido (ver §1).
 - Contexto: `AUDITORIAS_POST_CUTOVER.md` (mapa de alineación al cutover) + memoria `project_checkpoint_deptos_hibrido`.

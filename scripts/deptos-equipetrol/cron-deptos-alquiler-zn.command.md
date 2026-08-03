@@ -89,6 +89,13 @@ descarte; la **operación mal tipeada** solo se rechaza → si un aviso reaparec
 **leelo antes de suprimirlo**: puede ser un alquiler real que el gate está tirando (caso Nano Tec,
 30-jul → memoria `feedback_ejemplo_en_spec_pesa_como_regla`).
 
+🏷️ **Los alias sugeridos quedan en `output/alias-sugeridos-alq-<fecha>-zn.sql`** (desde el 3-ago-2026).
+Antes solo se imprimían en consola y, siendo esta una corrida desatendida, se perdían: así se perdió
+`pm 411 (Atlantis Towers) ← "Edificio Atlantis"`, que hubo que rescatar del log de la routine.
+Ojo con el nombre: lleva **`-alq-`** porque `alias-sugeridos-<fecha>.sql` es el de VENTA y las dos
+operaciones corren la misma noche sobre la misma carpeta. `proyectos_master` es **PROD** → el `.sql`
+queda listo pero **lo aplica el humano**, nunca la routine.
+
 ### 5. Verificador
 ```
 node verificador-alquiler.mjs --zona=zona-norte              # DRY-RUN

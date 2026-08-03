@@ -110,7 +110,8 @@ node cargar-deptos-shadow.mjs --apply output/material-nuevas-<ts>-zn.json --zona
 ```
 Match name-first (score≥0.95+zona → AUTO; ambiguo → sin match, lo levanta el audit; **nunca fuerza
 por GPS**). Imprime escritos / rechazados por gate / alias sugeridos / con-nombre-sin-match.
-Los alias quedan en `output/alias-sugeridos-<fecha>.sql` — **importan**: en ZN la mayoría de los
+Los alias quedan en `output/alias-sugeridos-<fecha>-zn.sql` (**con sufijo `-zn`**: sin él es el archivo
+de Equipetrol, que se escribe la misma noche en la misma carpeta) — **importan**: en ZN la mayoría de los
 matches los hace el LECTOR, no el matcher, y cada alias perdido es lectura que se repite.
 
 ### 5. Verificador
