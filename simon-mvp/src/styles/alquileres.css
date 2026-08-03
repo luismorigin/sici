@@ -1254,6 +1254,14 @@
 .ad-map > div { position: absolute; inset: 0; }
 .ad-map-full { position: absolute; top: 12px; right: 12px; z-index: 1100; display: inline-flex; align-items: center; gap: 6px; background: #141414; color: #EDE8DC; border: none; padding: 8px 14px; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
 .ad-map-full:hover { background: #3A3530; }
+/* Filtro "Buscar en esta zona": botón flotante sobre el mapa (aparece al moverlo) — tema claro */
+.ad-map-search-btn { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 1100; display: inline-flex; align-items: center; gap: 7px; background: #141414; color: #EDE8DC; border: none; padding: 9px 16px; border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.25); white-space: nowrap; }
+.ad-map-search-btn:hover { background: #3A3530; }
+/* Chip del área aplicada — vive en la count-row (FUERA de las pills: se remontan con filterComponentVersion) */
+.ad-area-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 100px; border: 1px solid #D8D0BC; background: #FAFAF8; color: #141414; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.ad-area-chip:hover { background: #F1EDE2; }
+.ad-area-chip-x { font-size: 14px; line-height: 1; }
+.ad-area-clear-link { background: none; border: none; padding: 0; color: #141414; font-family: 'DM Sans', sans-serif; font-size: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
 /* Resumen de mercado (tema claro) */
 .ad-mkt { flex: 0 0 auto; background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; padding: 18px 20px; font-family: 'DM Sans', sans-serif; }
 .ad-mkt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }

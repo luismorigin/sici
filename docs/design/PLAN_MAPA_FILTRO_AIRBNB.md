@@ -49,7 +49,14 @@ Bug: `buildMap` depende de `[properties, onSelectProperty, makeIcon]` (`VentaMap
 - **Interacción con pills**: al cambiar un filtro server-side (refetch), el área del mapa SE MANTIENE y se re-intersecta sobre la nueva lista (el chip sigue visible y limpiable).
 - Aplica en modo mixto y en modo mapa full (`viewMode==='map'`); al pasar a `listOnly` el chip se conserva y sigue filtrando.
 
-## Fase 2 — /alquileres desktop (espejo)
+## Fase 2 — /alquileres desktop (espejo) — ✅ HECHA (3-ago)
+
+> Verificada con Playwright (mismos 8 escenarios que ventas, todos verdes). La
+> asimetría de ramas se resolvió con el predicado único `inMapBounds()` a nivel
+> módulo, aplicado en `confirmadosEnBounds` (lista) y dentro de
+> `panelMarketSummary` (resumen). Gotcha del gemelo: el tile layer de alquileres
+> no define `maxZoom` (default 18) vs 20 en ventas — el control de zoom se
+> deshabilita antes; no afecta la feature.
 
 - Misma mecánica con `AlquilerMapMulti` + clases `ad-*` en `styles/alquileres.css`, tema claro.
 - Resolver la asimetría: el bounds-filter debe afectar `gridProperties`→`confirmados` (lista) Y `panelMarketSummary` (que deriva de `displayedProperties`) de forma coherente — un solo predicado `enBounds()` compartido aplicado en ambas ramas.

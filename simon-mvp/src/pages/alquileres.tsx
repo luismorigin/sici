@@ -34,6 +34,7 @@ import ShortlistBottomBar from '@/components/shortlist/ShortlistBottomBar'
 import ShortlistMenu from '@/components/shortlist/ShortlistMenu'
 import ShortlistCardChip from '@/components/shortlist/ShortlistCardChip'
 import { computeAlquilerShortlistStats } from '@/lib/shortlist-context'
+import type { MapViewBounds } from '@/components/alquiler/AlquilerMapMulti'
 
 // --- SEO types ---
 interface AlquileresSEO {
@@ -61,6 +62,15 @@ function formatMesAnioSEO(dateStr: string): string {
 function formatFechaCortaSEO(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00')
   return d.toLocaleDateString('es-BO', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+// Predicado ÚNICO del filtro "área del mapa": lo comparten la rama de la lista
+// (confirmadosEnBounds) y la del resumen (panelMarketSummary) — alquileres
+// deriva mapa y lista por ramas distintas y un filtro duplicado divergiría.
+function inMapBounds(p: { latitud?: number | null; longitud?: number | null }, b: MapViewBounds): boolean {
+  return p.latitud != null && p.longitud != null &&
+    p.latitud >= b.south && p.latitud <= b.north &&
+    p.longitud >= b.west && p.longitud <= b.east
 }
 
 // Leaflet: dynamic import SSR-safe
@@ -508,6 +518,25 @@ export default function AlquileresPage({
   // Modo "solo lista" del layout split: oculta el panel derecho y la lista
   // pasa a 2 columnas. Con el side sheet abierto vuelve al split mientras dure.
   const [listOnly, setListOnly] = useState(false)
+  // Filtro "Buscar en esta zona" (patrón Airbnb, solo splitDesktop) — espejo de
+  // ventas: mover el mapa muestra el botón; aplicarlo acota lista/contador/
+  // resumen al rectángulo visible. El mapa NUNCA recibe la lista acotada
+  // (recibiría su propio filtro y se re-encuadraría en loop).
+  const [mapArea, setMapArea] = useState<MapViewBounds | null>(null)
+  const [mapMoved, setMapMoved] = useState(false)
+  const pendingMapBoundsRef = useRef<MapViewBounds | null>(null)
+  const onMapUserMove = useCallback((b: MapViewBounds) => { pendingMapBoundsRef.current = b; setMapMoved(true) }, [])
+  const applyMapArea = useCallback(() => {
+    if (!pendingMapBoundsRef.current) return
+    setMapArea(pendingMapBoundsRef.current)
+    setMapMoved(false)
+    trackEvent('map_area_filter', { accion: 'aplicar' })
+  }, [])
+  const clearMapArea = useCallback(() => {
+    setMapArea(null)
+    setMapMoved(false)
+    trackEvent('map_area_filter', { accion: 'limpiar' })
+  }, [])
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   // Chrome mobile de la shortlist: menú hamburguesa + señal para reabrir el resumen
@@ -1058,7 +1087,10 @@ export default function AlquileresPage({
   const petFilterActive = filters.acepta_mascotas === true
   const panelMarketSummary = useMemo(() => {
     if (!splitDesktop) return null
-    const base = amenSel.size > 0 ? displayedProperties.filter(p => propMatchesAmenAlq(p, amenSel)) : displayedProperties
+    let base = amenSel.size > 0 ? displayedProperties.filter(p => propMatchesAmenAlq(p, amenSel)) : displayedProperties
+    // Área del mapa aplicada → el resumen se acota igual que la lista
+    // (coherencia lista/resumen; mismo predicado inMapBounds).
+    if (mapArea) base = base.filter(p => inMapBounds(p, mapArea))
     const petConfirmados = filters.acepta_mascotas === true ? base.filter(p => p.acepta_mascotas === true).length : 0
     const precios = base.filter(q => q.precio_mensual_bob > 0).map(q => q.precio_mensual_bob).sort((a, b) => a - b)
     if (precios.length < 5) return { count: base.length, petConfirmados, mediana: null, rangoLow: null, rangoHigh: null, amobladoPct: null }
@@ -1076,7 +1108,7 @@ export default function AlquileresPage({
       rangoHigh: pctl(0.75),
       amobladoPct: base.length > 0 ? Math.round((amoblados / base.length) * 100) : null,
     }
-  }, [splitDesktop, displayedProperties, amenSel, filters.acepta_mascotas])
+  }, [splitDesktop, displayedProperties, amenSel, filters.acepta_mascotas, mapArea])
   function markAllVisible() {
     if (visibleNotMarked.length === 0) return
     trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug, tipo_operacion: 'alquiler' })
@@ -1327,6 +1359,12 @@ export default function AlquileresPage({
   const confirmados = useMemo(() => (
     amenActivo ? gridProperties.filter(p => propMatchesAmenAlq(p, amenSel)) : gridProperties
   ), [gridProperties, amenSel, amenActivo])
+  // Lista acotada al "área del mapa" aplicada (Buscar en esta zona). De acá
+  // comen la lista y el contador; el mapa sigue comiendo mapProperties
+  // completo (al alejar el zoom los pins reaparecen, sin loop de re-encuadre).
+  const confirmadosEnBounds = useMemo(() => (
+    (!splitDesktop || !mapArea) ? confirmados : confirmados.filter(p => inMapBounds(p, mapArea))
+  ), [confirmados, mapArea, splitDesktop])
   const mapProperties = useMemo(() => (
     amenActivo ? displayedProperties.filter(p => propMatchesAmenAlq(p, amenSel)) : displayedProperties
   ), [displayedProperties, amenSel, amenActivo])
@@ -1820,7 +1858,14 @@ export default function AlquileresPage({
                       {/* Título + contador + toggle lista|mixto|mapa */}
                       <div className="ad-count-row">
                         <h1 className="ad-h1">Departamentos en alquiler en {filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(id => ZONAS_ALQUILER_UI.find(z => z.id === id)?.label || id).join(', ') : 'Equipetrol'}</h1>
-                        <span className="ad-count-num2"><b>{amenActivo ? confirmados.length : displayedProperties.length}</b> {amenActivo ? `de ${displayedProperties.length}` : isFiltered ? `de ${totalCount}` : 'activos'}</span>
+                        <span className="ad-count-num2">{mapArea
+                          ? <><b>{confirmadosEnBounds.length}</b> en esta área</>
+                          : <><b>{amenActivo ? confirmados.length : displayedProperties.length}</b> {amenActivo ? `de ${displayedProperties.length}` : isFiltered ? `de ${totalCount}` : 'activos'}</>}</span>
+                        {mapArea && (
+                          <button type="button" className="ad-area-chip" onClick={clearMapArea} title="Quitar el filtro del área del mapa">
+                            Área del mapa <span className="ad-area-chip-x" aria-hidden>&times;</span>
+                          </button>
+                        )}
                         <div className="ad-viewtoggle" role="tablist" aria-label="Modo de vista">
                           <button type="button" title="Solo lista" aria-selected={listOnly} className={`ad-vt-btn ${listOnly ? 'active' : ''}`}
                             onClick={() => { setListOnly(true); trackEvent('switch_view', { view_mode: 'lista' }) }}>
@@ -1840,6 +1885,12 @@ export default function AlquileresPage({
                     <div className="ad-list">
                       {loading && gridProperties.length === 0 && <div className="desktop-loading" style={{ minHeight: 160 }}>Cargando alquileres...</div>}
                       {!loading && gridProperties.length === 0 && <div className="desktop-loading" style={{ minHeight: 160 }}>{buildEmptyMessage(filters)}</div>}
+                      {!loading && confirmados.length > 0 && confirmadosEnBounds.length === 0 && (
+                        <div className="desktop-loading" style={{ minHeight: 160 }}>
+                          No hay departamentos dentro del área del mapa.{' '}
+                          <button type="button" className="ad-area-clear-link" onClick={clearMapArea}>Quitar área</button>
+                        </div>
+                      )}
                       {spotlightProperty && (
                         <div className="ad-spotlight">
                           <div className="alq-spotlight-banner">
@@ -1855,11 +1906,11 @@ export default function AlquileresPage({
                       {amenActivo && (
                         <div className="ad-amen-note">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
-                          <span>Mostramos los {confirmados.length} que {confirmados.length === 1 ? 'confirma' : 'confirman'} <b>{[...amenSel].join(' · ')}</b> en el aviso. Algún depto podría tenerla sin listarla.</span>
+                          <span>Mostramos los {confirmadosEnBounds.length} que {confirmadosEnBounds.length === 1 ? 'confirma' : 'confirman'} <b>{[...amenSel].join(' · ')}</b> en el aviso. Algún depto podría tenerla sin listarla.</span>
                         </div>
                       )}
-                      {confirmados.map((p, idx) => {
-                        const showDivider = filters.acepta_mascotas && idx > 0 && confirmados[idx - 1]?.acepta_mascotas === true && p.acepta_mascotas !== true
+                      {confirmadosEnBounds.map((p, idx) => {
+                        const showDivider = filters.acepta_mascotas && idx > 0 && confirmadosEnBounds[idx - 1]?.acepta_mascotas === true && p.acepta_mascotas !== true
                         return (
                           <Fragment key={p.id}>
                             {showDivider && <div className="alq-pet-divider">🐾 También podrían aceptar mascotas · consultar con el anunciante</div>}
@@ -1883,7 +1934,14 @@ export default function AlquileresPage({
                           <div className="ad-map">
                             <MapMultiComponent properties={mapProperties}
                               onSelectProperty={onPanelMapSelect}
-                              selectedId={hoveredId} />
+                              selectedId={hoveredId}
+                              onUserMove={onMapUserMove} />
+                            {mapMoved && (
+                              <button type="button" className="ad-map-search-btn" onClick={applyMapArea}>
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                Buscar en esta zona
+                              </button>
+                            )}
                             <button className="ad-map-full" onClick={() => { setViewMode('map'); trackEvent('switch_view', { view_mode: 'map', origen: 'panel' }) }}>
                               Ver mapa completo
                               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -1894,7 +1952,7 @@ export default function AlquileresPage({
                               <div className="ad-mkt-head">
                                 <div>
                                   <div className="ad-mkt-title">Mercado de alquileres</div>
-                                  <div className="ad-mkt-sub">{filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : 'Equipetrol'} · publicaciones activas</div>
+                                  <div className="ad-mkt-sub">{filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : 'Equipetrol'}{mapArea ? ' · área del mapa' : ''} · publicaciones activas</div>
                                 </div>
                                 <a className="ad-mkt-link" href="/mercado/equipetrol/alquileres">Ver mercado completo →</a>
                               </div>
@@ -1992,8 +2050,15 @@ export default function AlquileresPage({
                     properties={mapProperties}
                     onSelectProperty={handleMapSelect}
                     selectedId={mapSelectedId}
+                    onUserMove={splitDesktop ? onMapUserMove : undefined}
                   />
                 </div>
+                {splitDesktop && mapMoved && (
+                  <button type="button" className="ad-map-search-btn" onClick={applyMapArea}>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    Buscar en esta zona
+                  </button>
+                )}
                 {/* Floating card when a pin is selected */}
                 {mapSelectedId && (() => {
                   const sp = displayedProperties.find(x => x.id === mapSelectedId)
