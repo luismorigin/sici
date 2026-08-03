@@ -25,10 +25,10 @@ interface VentaMapProps {
   selectedId?: number | null
 }
 
-// Teardown seguro: si el mapa muere en plena animación (rebuild por cambio de
-// properties, unmount por toggle de vista), Leaflet puede disparar
-// _onZoomTransitionEnd sobre un pane ya removido → "_leaflet_pos undefined".
-// stop() corta animaciones en curso y el try/catch traga cualquier resto.
+// Teardown seguro: si el mapa muere en plena animación (unmount por toggle de
+// vista), Leaflet puede disparar _onZoomTransitionEnd sobre un pane ya
+// removido → "_leaflet_pos undefined". stop() corta animaciones en curso y el
+// try/catch traga cualquier resto.
 function safeRemoveMap(map: L.Map | null) {
   if (!map) return
   try { map.stop() } catch { /* ya detenido */ }
@@ -43,6 +43,11 @@ function formatPricePin(price: number): string {
   return `$us ${price}`
 }
 
+// El mapa se construye UNA vez (cuando llega el primer dataset con GPS) y solo
+// se destruye al desmontar. Los cambios de `properties` repueblan los markers
+// sin tocar la instancia Leaflet: antes, cualquier cambio de identidad del
+// array o del handler reconstruía el mapa entero y el fitBounds reseteaba
+// zoom/centro (deuda 24-jun, y bloqueante para el filtro por área del mapa).
 export default function VentaMap({ properties, onSelectProperty, selectedId }: VentaMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
@@ -51,6 +56,13 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
   // Anillo de resalte (hover en la card): marca el punto EXACTO por encima de
   // los clusters, así se ubica la propiedad aunque su pin esté agrupado.
   const highlightRef = useRef<L.Marker | null>(null)
+  // Los markers llaman siempre la versión más reciente del handler: su
+  // identidad deja de importar (los feeds lo pasan como arrow inline).
+  const onSelectRef = useRef(onSelectProperty)
+  onSelectRef.current = onSelectProperty
+  // Firma de lo ya dibujado: si los avisos (id+precio) no cambiaron, un array
+  // nuevo con el mismo contenido no redibuja ni re-encuadra nada.
+  const drawnKeyRef = useRef<string | null>(null)
 
   const makeIcon = useCallback((price: string, isSelected: boolean) => {
     return L.divIcon({
@@ -75,19 +87,9 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
     })
   }, [])
 
-  const buildMap = useCallback(() => {
-    if (!mapRef.current) return
-
-    if (mapInstance.current) {
-      safeRemoveMap(mapInstance.current)
-      mapInstance.current = null
-    }
-    markersRef.current.clear()
-    clusterGroupRef.current = null
-    highlightRef.current = null
-
-    const validProps = properties.filter(p => p.latitud && p.longitud)
-    if (validProps.length === 0) return
+  // Construcción base (una vez): instancia, tiles, cluster vacío, estilos.
+  const buildBase = useCallback((validProps: VentaMapProperty[]) => {
+    if (!mapRef.current) return null
 
     const centerLat = validProps.reduce((s, p) => s + p.latitud!, 0) / validProps.length
     const centerLng = validProps.reduce((s, p) => s + p.longitud!, 0) / validProps.length
@@ -96,8 +98,8 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
       zoomControl: true,
       attributionControl: false,
       // Sin animación CSS de zoom: elimina la clase entera de crashes
-      // _onZoomTransitionEnd/_leaflet_pos cuando el mapa se reconstruye o
-      // desmonta en medio de un zoom (feed re-renderiza seguido).
+      // _onZoomTransitionEnd/_leaflet_pos cuando el mapa se desmonta en medio
+      // de un zoom (feed re-renderiza seguido).
       zoomAnimation: false,
       markerZoomAnimation: false,
     }).setView([centerLat, centerLng], 15)
@@ -130,49 +132,8 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
       },
     })
 
-    // Mapa del modal de detalle (una sola propiedad): pin clásico de gota que
-    // apunta EXACTO al punto (la punta), en vez del bocadillo de precio.
-    const singleProperty = validProps.length === 1
-    const pinIcon = L.divIcon({
-      className: '',
-      html: `<svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
-        <path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 26 16 26s16-15 16-26C32 7.2 24.8 0 16 0z" fill="#3A6A48" stroke="#2C5138" stroke-width="1"/>
-        <circle cx="16" cy="16" r="5.5" fill="#FBFAF7"/>
-      </svg>`,
-      iconSize: [32, 42],
-      iconAnchor: [16, 42],
-    })
-
-    validProps.forEach(p => {
-      const priceLabel = formatPricePin(p.precio_usd)
-      const icon = singleProperty ? pinIcon : makeIcon(priceLabel, false)
-
-      const marker = L.marker([p.latitud!, p.longitud!], { icon })
-        .on('click', () => onSelectProperty(p.id))
-
-      // Sin dato de tipología se OMITE el segmento (antes imprimía "null dorm" en el globo).
-      const dorms = dormLabelOrNull(p.dormitorios)
-      marker.bindTooltip(`
-        <div style="font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.4;">
-          <strong style="font-family:'Figtree',sans-serif;font-size:14px;font-weight:500;">${p.proyecto}</strong><br/>
-          <span style="color:#7A7060;">${displayZona(p.zona)}${dorms ? ` · ${dorms}` : ''} · ${Math.round(p.area_m2)}m²</span><br/>
-          <span style="color:#141414;font-weight:600;font-variant-numeric:tabular-nums;">$us ${Math.round(p.precio_usd).toLocaleString('en-US')}</span>
-          <span style="color:#7A7060;font-size:11px;"> · $us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>
-        </div>
-      `, { direction: 'top', offset: [0, -10] })
-
-      clusterGroup.addLayer(marker)
-      markersRef.current.set(p.id, marker)
-    })
-
     map.addLayer(clusterGroup)
     clusterGroupRef.current = clusterGroup
-
-    if (validProps.length > 1) {
-      const bounds = L.latLngBounds(validProps.map(p => [p.latitud!, p.longitud!] as [number, number]))
-      map.fitBounds(bounds, { padding: [40, 40] })
-    }
-
     mapInstance.current = map
 
     const style = document.createElement('style')
@@ -193,18 +154,106 @@ export default function VentaMap({ properties, onSelectProperty, selectedId }: V
         map.setView([validProps[0].latitud!, validProps[0].longitud!], 16)
       }
     }, 100)
-  }, [properties, onSelectProperty, makeIcon])
 
+    return map
+  }, [])
+
+  // Sincronización de markers: limpia y repuebla el cluster cuando cambia el
+  // dataset. NO reconstruye el mapa; re-encuadra (fitBounds) solo cuando los
+  // avisos realmente cambiaron (filtro/refetch), nunca por re-renders.
   useEffect(() => {
-    const timer = setTimeout(buildMap, 200)
+    const validProps = properties.filter(p => p.latitud && p.longitud)
+    const key = validProps.map(p => `${p.id}:${p.precio_usd}`).join('|')
+    if (key === drawnKeyRef.current && mapInstance.current) return
+
+    let cancelled = false
+    const draw = () => {
+      if (cancelled || !mapRef.current) return
+
+      if (validProps.length === 0) {
+        // Filtro sin resultados: pins fuera, el encuadre se queda donde estaba.
+        clusterGroupRef.current?.clearLayers()
+        markersRef.current.clear()
+        drawnKeyRef.current = key
+        return
+      }
+
+      if (!mapInstance.current) buildBase(validProps)
+      const map = mapInstance.current
+      const clusterGroup = clusterGroupRef.current
+      if (!map || !clusterGroup) return
+
+      clusterGroup.clearLayers()
+      markersRef.current.clear()
+
+      // Mapa del modal de detalle (una sola propiedad): pin clásico de gota que
+      // apunta EXACTO al punto (la punta), en vez del bocadillo de precio.
+      const singleProperty = validProps.length === 1
+      const pinIcon = L.divIcon({
+        className: '',
+        html: `<svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 26 16 26s16-15 16-26C32 7.2 24.8 0 16 0z" fill="#3A6A48" stroke="#2C5138" stroke-width="1"/>
+          <circle cx="16" cy="16" r="5.5" fill="#FBFAF7"/>
+        </svg>`,
+        iconSize: [32, 42],
+        iconAnchor: [16, 42],
+      })
+
+      validProps.forEach(p => {
+        const priceLabel = formatPricePin(p.precio_usd)
+        const icon = singleProperty ? pinIcon : makeIcon(priceLabel, false)
+
+        const marker = L.marker([p.latitud!, p.longitud!], { icon })
+          .on('click', () => onSelectRef.current(p.id))
+
+        // Sin dato de tipología se OMITE el segmento (antes imprimía "null dorm" en el globo).
+        const dorms = dormLabelOrNull(p.dormitorios)
+        marker.bindTooltip(`
+          <div style="font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.4;">
+            <strong style="font-family:'Figtree',sans-serif;font-size:14px;font-weight:500;">${p.proyecto}</strong><br/>
+            <span style="color:#7A7060;">${displayZona(p.zona)}${dorms ? ` · ${dorms}` : ''} · ${Math.round(p.area_m2)}m²</span><br/>
+            <span style="color:#141414;font-weight:600;font-variant-numeric:tabular-nums;">$us ${Math.round(p.precio_usd).toLocaleString('en-US')}</span>
+            <span style="color:#7A7060;font-size:11px;"> · $us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>
+          </div>
+        `, { direction: 'top', offset: [0, -10] })
+
+        clusterGroup.addLayer(marker)
+        markersRef.current.set(p.id, marker)
+      })
+
+      if (validProps.length > 1) {
+        const bounds = L.latLngBounds(validProps.map(p => [p.latitud!, p.longitud!] as [number, number]))
+        map.fitBounds(bounds, { padding: [40, 40] })
+      } else {
+        map.setView([validProps[0].latitud!, validProps[0].longitud!], 16)
+      }
+
+      drawnKeyRef.current = key
+    }
+
+    // La primera construcción espera a que el contenedor tenga tamaño real;
+    // los redibujados posteriores son inmediatos.
+    const timer = setTimeout(draw, mapInstance.current ? 0 : 200)
     return () => {
+      cancelled = true
       clearTimeout(timer)
+    }
+  }, [properties, makeIcon, buildBase])
+
+  // Teardown SOLO al desmontar.
+  useEffect(() => {
+    const markers = markersRef.current
+    return () => {
       if (mapInstance.current) {
         safeRemoveMap(mapInstance.current)
         mapInstance.current = null
+        clusterGroupRef.current = null
+        highlightRef.current = null
+        markers.clear()
+        drawnKeyRef.current = null
       }
     }
-  }, [buildMap])
+  }, [])
 
   useEffect(() => {
     // Una sola propiedad (modal): usa pin de gota fijo, no re-iconar con el

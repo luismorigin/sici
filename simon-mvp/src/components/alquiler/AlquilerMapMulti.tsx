@@ -26,10 +26,10 @@ interface AlquilerMapMultiProps {
   selectedId?: number | null
 }
 
-// Teardown seguro: si el mapa muere en plena animación (rebuild por cambio de
-// properties, unmount por toggle de vista), Leaflet puede disparar
-// _onZoomTransitionEnd sobre un pane ya removido → "_leaflet_pos undefined".
-// stop() corta animaciones en curso y el try/catch traga cualquier resto.
+// Teardown seguro: si el mapa muere en plena animación (unmount por toggle de
+// vista), Leaflet puede disparar _onZoomTransitionEnd sobre un pane ya
+// removido → "_leaflet_pos undefined". stop() corta animaciones en curso y el
+// try/catch traga cualquier resto.
 function safeRemoveMap(map: L.Map | null) {
   if (!map) return
   try { map.stop() } catch { /* ya detenido */ }
@@ -38,12 +38,24 @@ function safeRemoveMap(map: L.Map | null) {
 
 const TILES_CALLE = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 
+// El mapa se construye UNA vez (cuando llega el primer dataset con GPS) y solo
+// se destruye al desmontar. Los cambios de `properties` repueblan los markers
+// sin tocar la instancia Leaflet: antes, cualquier cambio de identidad del
+// array o del handler reconstruía el mapa entero y el fitBounds reseteaba
+// zoom/centro (deuda 24-jun, y bloqueante para el filtro por área del mapa).
 export default function AlquilerMapMulti({ properties, onSelectProperty, selectedId }: AlquilerMapMultiProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null)
   const highlightRef = useRef<L.Marker | null>(null)
+  // Los markers llaman siempre la versión más reciente del handler: su
+  // identidad deja de importar (los feeds lo pasan como arrow inline).
+  const onSelectRef = useRef(onSelectProperty)
+  onSelectRef.current = onSelectProperty
+  // Firma de lo ya dibujado: si los avisos (id+precio) no cambiaron, un array
+  // nuevo con el mismo contenido no redibuja ni re-encuadra nada.
+  const drawnKeyRef = useRef<string | null>(null)
 
   const makeIcon = useCallback((price: string, isSelected: boolean) => {
     return L.divIcon({
@@ -68,19 +80,9 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
     })
   }, [])
 
-  // Build map only when properties change (NOT selectedId)
-  const buildMap = useCallback(() => {
-    if (!mapRef.current) return
-
-    if (mapInstance.current) {
-      safeRemoveMap(mapInstance.current)
-      mapInstance.current = null
-    }
-    markersRef.current.clear()
-    clusterGroupRef.current = null
-
-    const validProps = properties.filter(p => p.latitud && p.longitud)
-    if (validProps.length === 0) return
+  // Construcción base (una vez): instancia, tiles, cluster vacío, estilos.
+  const buildBase = useCallback((validProps: Property[]) => {
+    if (!mapRef.current) return null
 
     const centerLat = validProps.reduce((s, p) => s + p.latitud!, 0) / validProps.length
     const centerLng = validProps.reduce((s, p) => s + p.longitud!, 0) / validProps.length
@@ -89,8 +91,8 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
       zoomControl: true,
       attributionControl: false,
       // Sin animación CSS de zoom: elimina la clase entera de crashes
-      // _onZoomTransitionEnd/_leaflet_pos cuando el mapa se reconstruye o
-      // desmonta en medio de un zoom (feed re-renderiza seguido).
+      // _onZoomTransitionEnd/_leaflet_pos cuando el mapa se desmonta en medio
+      // de un zoom (feed re-renderiza seguido).
       zoomAnimation: false,
       markerZoomAnimation: false,
     }).setView([centerLat, centerLng], 15)
@@ -123,35 +125,8 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
       },
     })
 
-    validProps.forEach(p => {
-      const name = p.nombre_edificio || p.nombre_proyecto || 'Depto'
-      const price = 'Bs ' + p.precio_mensual_bob.toLocaleString('es-BO')
-
-      const icon = makeIcon(price, false)
-
-      const marker = L.marker([p.latitud!, p.longitud!], { icon })
-        .on('click', () => onSelectProperty(p.id))
-
-      marker.bindTooltip(`
-        <div style="font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.4;">
-          <strong style="font-family:'Figtree',sans-serif;font-size:14px;font-weight:500;">${name}</strong><br/>
-          <span style="color:#7A7060;">${p.zona} · ${dormLabel(p.dormitorios)} · ${p.area_m2}m²</span><br/>
-          <span style="color:#141414;font-weight:600;font-variant-numeric:tabular-nums;">${price}/mes</span>
-        </div>
-      `, { direction: 'top', offset: [0, -10] })
-
-      clusterGroup.addLayer(marker)
-      markersRef.current.set(p.id, marker)
-    })
-
     map.addLayer(clusterGroup)
     clusterGroupRef.current = clusterGroup
-
-    if (validProps.length > 1) {
-      const bounds = L.latLngBounds(validProps.map(p => [p.latitud!, p.longitud!] as [number, number]))
-      map.fitBounds(bounds, { padding: [40, 40] })
-    }
-
     mapInstance.current = map
 
     const style = document.createElement('style')
@@ -164,18 +139,92 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
     mapRef.current.appendChild(style)
 
     setTimeout(() => map.invalidateSize(), 100)
-  }, [properties, onSelectProperty, makeIcon])
 
+    return map
+  }, [])
+
+  // Sincronización de markers: limpia y repuebla el cluster cuando cambia el
+  // dataset. NO reconstruye el mapa; re-encuadra (fitBounds) solo cuando los
+  // avisos realmente cambiaron (filtro/refetch), nunca por re-renders.
   useEffect(() => {
-    const timer = setTimeout(buildMap, 200)
+    const validProps = properties.filter(p => p.latitud && p.longitud)
+    const key = validProps.map(p => `${p.id}:${p.precio_mensual_bob}`).join('|')
+    if (key === drawnKeyRef.current && mapInstance.current) return
+
+    let cancelled = false
+    const draw = () => {
+      if (cancelled || !mapRef.current) return
+
+      if (validProps.length === 0) {
+        // Filtro sin resultados: pins fuera, el encuadre se queda donde estaba.
+        clusterGroupRef.current?.clearLayers()
+        markersRef.current.clear()
+        drawnKeyRef.current = key
+        return
+      }
+
+      if (!mapInstance.current) buildBase(validProps)
+      const map = mapInstance.current
+      const clusterGroup = clusterGroupRef.current
+      if (!map || !clusterGroup) return
+
+      clusterGroup.clearLayers()
+      markersRef.current.clear()
+
+      validProps.forEach(p => {
+        const name = p.nombre_edificio || p.nombre_proyecto || 'Depto'
+        const price = 'Bs ' + p.precio_mensual_bob.toLocaleString('es-BO')
+
+        const icon = makeIcon(price, false)
+
+        const marker = L.marker([p.latitud!, p.longitud!], { icon })
+          .on('click', () => onSelectRef.current(p.id))
+
+        marker.bindTooltip(`
+          <div style="font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.4;">
+            <strong style="font-family:'Figtree',sans-serif;font-size:14px;font-weight:500;">${name}</strong><br/>
+            <span style="color:#7A7060;">${p.zona} · ${dormLabel(p.dormitorios)} · ${p.area_m2}m²</span><br/>
+            <span style="color:#141414;font-weight:600;font-variant-numeric:tabular-nums;">${price}/mes</span>
+          </div>
+        `, { direction: 'top', offset: [0, -10] })
+
+        clusterGroup.addLayer(marker)
+        markersRef.current.set(p.id, marker)
+      })
+
+      if (validProps.length > 1) {
+        const bounds = L.latLngBounds(validProps.map(p => [p.latitud!, p.longitud!] as [number, number]))
+        map.fitBounds(bounds, { padding: [40, 40] })
+      } else {
+        map.setView([validProps[0].latitud!, validProps[0].longitud!], 16)
+      }
+
+      drawnKeyRef.current = key
+    }
+
+    // La primera construcción espera a que el contenedor tenga tamaño real;
+    // los redibujados posteriores son inmediatos.
+    const timer = setTimeout(draw, mapInstance.current ? 0 : 200)
     return () => {
+      cancelled = true
       clearTimeout(timer)
+    }
+  }, [properties, makeIcon, buildBase])
+
+  // Teardown SOLO al desmontar.
+  useEffect(() => {
+    const markers = markersRef.current
+    return () => {
       if (mapInstance.current) {
         safeRemoveMap(mapInstance.current)
         mapInstance.current = null
+        clusterGroupRef.current = null
+        highlightRef.current = null
+        markers.clear()
+        drawnKeyRef.current = null
       }
     }
-  }, [buildMap])
+  }, [])
 
   // Update marker icons when selection changes (no map rebuild)
   useEffect(() => {
