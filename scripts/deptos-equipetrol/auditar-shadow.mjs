@@ -60,7 +60,16 @@ const gradoPrecio = (pct) => (pct >= 10 ? 'alta' : pct >= 3 ? 'media' : pct >= 1
 
 // ---- matching-lite: ¿el nombre del edificio (shadow) aún aparece en el anuncio de hoy? ----
 const GENERICOS = /^(condominio|edificio|torre|residencia|residence|residencial|suites?|studios?|apartments?|tower|departamento|depto)$/i;
-const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+// 🔑 `NFKD` ANTES de `toLowerCase()`, y ese orden importa tanto como la forma.
+// Los captadores escriben el nombre del edificio en unicode matemático decorativo
+// (𝐄𝐝𝐢𝐟𝐢𝐜𝐢𝐨 𝐒𝐭𝐨𝐧𝐞 𝟑, 𝐌𝐀𝐑𝐄, 𝑵𝒂𝒏𝒐𝒕𝒆𝒄): son codepoints U+1D400+, no letras ASCII, así que el
+// filtro `[^a-z0-9\s]` se los comía enteros y el nombre "no aparecía" aunque estuviera en la
+// primera línea. Con `NFD` no alcanza —no descompone compatibilidad—; hace falta `NFKD`.
+// Y con `toLowerCase()` primero tampoco: 𝐒 (bold capital) no tiene minúscula, sobrevive al
+// lower, NFKD lo pliega a "S" mayúscula y el filtro la borra igual → quedaba "tone" en vez de
+// "stone", una letra menos por palabra. Medido sobre la corrida del 3-ago: 14 de los 43
+// `nombre_no_aparece` (33 %) eran este falso positivo, incluidas las 7 props de Maré.
+const norm = (s) => (s || '').normalize('NFKD').toLowerCase().replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
 function nombreApareceEnAnuncio(nombre, textos) {
   if (!nombre) return null; // sin nombre → no aplica
   const heno = norm(textos.filter(Boolean).join(' · '));
