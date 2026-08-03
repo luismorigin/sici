@@ -54,6 +54,20 @@ en el anuncio?). Escribe `output/audit-shadow-<op>-<ts>.json` con el array `mate
 - Circuit breaker (🛑) → IP bloqueada, **no insistas**, reintentá en horas. Pausa+jitter entre requests.
 - El resumen impreso ya te da el panorama: buckets de drift, cambios de precio, matching sospechoso,
   sin-match-con-nombre, y **fichas que no responden**.
+- 💰 **`precio_bajo_el_portal` (3-ago-2026) — el único chequeo que NO mira el portal de hoy.** Compara,
+  dentro de la misma fila, `precio_usd` contra `senales_portal.precio_candidato` (el testigo que el
+  portal traía al capturar) y levanta lo que quedó **3-15% POR DEBAJO**. Todo el resto de este audit
+  vigila si el MUNDO cambió; esto vigila si **nosotros copiamos mal** — un error que nació entre el
+  portal y el lector es invisible para el drift, porque el aviso siempre va a coincidir consigo mismo.
+  Caso testigo: `8000432` (K1) guardado a $82.692 con el portal cobrando $88.027, clonado de su gemela.
+  **Solo VENTA**, y no por decisión: ninguna fila de alquiler tiene ese testigo (0 de 340).
+  La banda es angosta a propósito — diferencias grandes suelen ser el lector corrigiendo BIEN un "USD"
+  que el portal fabricó dividiendo Bs por 6,96 (108 de 498 difieren >3%). Por debajo, en 3-15%, no hay
+  explicación de moneda.
+  🔑 **Al resolver un caso hay que taguear**, o vuelve cada noche y la alerta muere de ruido:
+  `datos_json.precio_confirmado_por = {quien, cuando, precio: <el precio_usd de ESE momento>, veredicto, nota}`.
+  Guardar el precio es lo que hace que el tag **se invalide solo**: si el captador lo cambia deja de
+  coincidir y el caso vuelve. Un "ya revisado" sin esa condición tapa un error nuevo por meses.
 - 🔴 **El cruce con el verificador ya lo hace el script (3-ago-2026), no lo repitas a mano.** Cada ficha
   muerta se clasifica sola en `ya de baja` / `ya en cola del verificador` (se cierra sola con la gracia
   de 2d) / **RESIDUAL**. El residual es lo único que hay que mirar: prop **activa**, ficha muerta, y

@@ -116,6 +116,7 @@ async function main() {
   const material = [];          // los que van al JUEZ (drift / precio / matching / baja)
   const buckets = { identicas: 0, cambio_menor: 0, cambio_relevante: 0, reescrita: 0, fetch_fallo: 0 };
   const bajas = [], preciosCambio = [], matchingSospecha = [], sinMatchConNombre = [], fotosRotas = [];
+  const precioBajoElPortal = [];   // ver §COPIA MAL más abajo
 
   for (const p of filas) {
     if (circuit.tripped) { console.log('🛑 circuit breaker — IP probablemente bloqueada. Cortando; reintentá en horas.\n'); break; }
@@ -123,6 +124,50 @@ async function main() {
     const descGuardada = dj.contenido?.descripcion || '';
     const sp = dj.senales_portal || null;
     const moneda = p.moneda_original || (OP === 'venta' ? null : null);
+
+    // ── §COPIA MAL — el único chequeo que NO necesita el portal de hoy ──────────────────
+    // Todo el resto de este audit compara "el portal de hoy" contra "el portal del día que
+    // capturamos": vigila si el MUNDO cambió. Esto vigila si NOSOTROS copiamos mal, y por eso
+    // es estructuralmente ciego para el resto: el error vive entre lo que el portal decía y lo
+    // que el lector guardó, en la misma fila, desde el día uno. Re-leer el anuncio mil veces
+    // nunca lo va a mostrar — siempre va a coincidir consigo mismo.
+    //   Caso testigo: 8000432 (K1) guardado a $82.692 con el portal cobrando $88.027.
+    //
+    // VENTA ÚNICAMENTE, y no por decisión: al 3-ago-2026 **ninguna** fila de alquiler tiene
+    // `senales_portal.precio_candidato` (0 de 340) → no hay testigo contra qué comparar.
+    //
+    // La banda 3–15% por DEBAJO es angosta a propósito. Diferencias grandes hacia arriba o
+    // hacia abajo son casi siempre el lector corrigiendo bien un "USD" que el portal fabricó
+    // dividiendo bolivianos por 6,96 — el MOAT haciendo su trabajo (108 de 498 difieren >3%).
+    // Guardar POR DEBAJO del portal en ese rango no tiene explicación de moneda: o se comió un
+    // dígito o leyó el número equivocado.
+    //
+    // Corre ANTES del fetch a propósito: no lo necesita, y así una ficha muerta igual se chequea.
+    if (OP === 'venta') {
+      const testigo = Number(sp?.precio_candidato) || null;
+      const guardado = Number(p.precio_usd) || null;
+      if (testigo && guardado && guardado < testigo) {
+        const pct = (testigo - guardado) / testigo;
+        if (pct >= 0.03 && pct <= 0.15) {
+          // 🔑 MEMORIA. Sin esto la alerta repite cada noche lo que ya decidiste y muere de ruido
+          // en una semana — el mismo agujero que ya se tapó tres veces este mes (rechazados.json
+          // por URL, `confirmado_por` del matching, la 6ta reincidencia del dedup de K1).
+          // El tag guarda el precio del momento de la confirmación: si el captador lo cambia,
+          // deja de coincidir y el caso VUELVE solo. Una marca de "ya revisado" sin esa condición
+          // es peor que nada — te tapa un error nuevo en una prop que miraste hace tres meses.
+          const conf = dj.precio_confirmado_por || null;
+          const vigente = conf && Number(conf.precio) === guardado;
+          if (!vigente) {
+            precioBajoElPortal.push({
+              id: p.id, edificio: p.nombre_edificio || null, url: p.url,
+              guardado, dice_el_portal: testigo, pct: Math.round(pct * 1000) / 10,
+              area_total_m2: p.area_total_m2 ?? null,
+              confirmacion_vencida: conf ? { ...conf, precio_actual: guardado } : null,
+            });
+          }
+        }
+      }
+    }
 
     let h = null, err = null;
     try { h = await fetchDetalleDepto(p.fuente, p.url); } catch (e) { err = String(e.message); }
@@ -258,8 +303,10 @@ async function main() {
       al_juez: material.length, posibles_bajas: bajas.length,
       bajas_residual: bajasResidual.length, bajas_en_cola: bajasEnCola.length, bajas_ya_inactivas: bajasYaInactivas.length,
       cambios_precio: preciosCambio.length, matching_sospecha: matchingSospecha.length, sin_match_con_nombre: sinMatchConNombre.length, fotos_rotas: fotosRotas.length,
+      precio_bajo_el_portal: precioBajoElPortal.length,
     },
     material, bajas, bajas_residual: bajasResidual, sin_match_con_nombre: sinMatchConNombre, fotos_rotas: fotosRotas,
+    precio_bajo_el_portal: precioBajoElPortal,
   }, null, 2));
 
   console.log(`\n────────── RESUMEN AUDIT SHADOW (${OP}) ──────────`);
@@ -278,6 +325,20 @@ async function main() {
     console.log(`       Confirmá el status HTTP (C21: 404 · Remax: 302) y dales de baja a mano.`);
   } else {
     console.log(`  ✅ Sin bajas residuales: todo lo que no responde ya está de baja o en cola del verificador.`);
+  }
+  if (OP === 'venta') {
+    if (precioBajoElPortal.length) {
+      console.log(`  💰 PRECIO GUARDADO POR DEBAJO DEL PORTAL (3-15%): ${precioBajoElPortal.length} — sospecha de dígito comido al LEER, no de cambio en el aviso`);
+      for (const x of precioBajoElPortal) {
+        console.log(`       ${x.id} ${(x.edificio || '—').slice(0, 26).padEnd(27)} guardado $${x.guardado}  ·  el portal dice $${Math.round(x.dice_el_portal)}  (−${x.pct}%)${x.confirmacion_vencida ? '  ⚠️ confirmación VENCIDA: el precio cambió desde que se revisó' : ''}`);
+      }
+      console.log(`     → Este chequeo NO sale al portal: compara la fila contra su propio testigo. Es el único`);
+      console.log(`       error que el drift no puede ver (nació entre el portal y el lector, no en el aviso).`);
+      console.log(`       Al resolver cada caso, tagueá para que no vuelva cada noche:`);
+      console.log(`       datos_json.precio_confirmado_por = {quien, cuando, precio: <el precio_usd de ese momento>}`);
+    } else {
+      console.log(`  ✅ Sin precios por debajo del portal sin revisar.`);
+    }
   }
   console.log(`  📷 Fotos reemplazadas por el captador (card sale VACÍA en el feed): ${fotosRotas.length}${fotosRotas.length ? '  → ids: ' + fotosRotas.slice(0, 20).map((f) => f.id).join(',') : ''}`);
   if (fotosRotas.length) console.log(`     → se arregla re-leyendo esos avisos: el portal ya tiene las fotos nuevas.`);
