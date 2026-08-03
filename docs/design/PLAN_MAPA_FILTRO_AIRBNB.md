@@ -62,7 +62,12 @@ Bug: `buildMap` depende de `[properties, onSelectProperty, makeIcon]` (`VentaMap
 - Resolver la asimetría: el bounds-filter debe afectar `gridProperties`→`confirmados` (lista) Y `panelMarketSummary` (que deriva de `displayedProperties`) de forma coherente — un solo predicado `enBounds()` compartido aplicado en ambas ramas.
 - El mapa mobile de alquileres usa `properties` crudo (`alquileres.tsx:2558`) — no tocar, ya está aislado.
 
-## Fase 3 — Verificación (Playwright, según `docs/design/VERIFICAR_FEEDS_DESKTOP.md`)
+## Fase 3 — Verificación (Playwright, según `docs/design/VERIFICAR_FEEDS_DESKTOP.md`) — ✅ HECHA (3-ago)
+
+> Los 7 casos pasaron (repartidos entre las verificaciones de F1/F2 y una pasada
+> final): pill con área activa → chip persiste y re-intersecta (341→103 con
+> "2 dormitorios"); mobile 390px sin botón/chip en ambos feeds; broker queda
+> protegido a nivel código (`onUserMove` solo se pasa desde paths `splitDesktop`).
 
 El preview interno no hidrata el layout desktop → Playwright headless. Casos:
 1. Mover mapa → aparece botón; click → lista+resumen+contador acotados, chip visible.
