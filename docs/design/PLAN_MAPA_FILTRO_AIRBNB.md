@@ -78,6 +78,21 @@ El preview interno no hidrata el layout desktop → Playwright headless. Casos:
 6. Mobile (viewport 390px): feed TikTok y overlay de mapa idénticos a hoy.
 7. Broker mode: grid clásico intacto, sin botón.
 
+## Feeds que HEREDAN el fix del mapa (sin recibir el botón) — ✅ verificados (3-ago)
+
+`VentaMap`/`AlquilerMapMulti` son componentes únicos: el fix de Fase 0 le llega también a
+`/zona-norte/ventas`, `/zona-norte/alquileres` y `/ventas/casas` (que NO tienen layout split
+— usan el toggle viejo grid|mapa — y por eso no reciben el botón). Verificados con Playwright:
+
+| Feed | Pins | Zoom sobrevive al click en pin | Rebuild | Botón/chip | Errores consola |
+|---|---|---|---|---|---|
+| `/zona-norte/ventas` | 40→77 | ✅ 16→16 | ✅ no | ✅ ausentes | ninguno |
+| `/zona-norte/alquileres` | 19→59 | ✅ 15→15 | ✅ no | ✅ ausentes | ninguno |
+| `/ventas/casas` | 12→50 | ✅ 14→14 | ✅ no | ✅ ausentes | ninguno |
+
+Para ellos el cambio es **solo mejora**: antes seleccionar un pin reseteaba zoom/centro.
+Card flotante, highlight del pin y clustering siguen funcionando.
+
 ## Fuera de scope v1 (anotado, no perdido)
 
 - `?bbox` en la URL (sería el primer filtro con escritura bidireccional a la URL — hoy no existe ninguna).
