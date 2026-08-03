@@ -110,7 +110,10 @@ function haversine(lat1, lon1, lat2, lon2) {
   return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-const COLS = 'id,fuente,url,tipo_operacion,latitud,longitud,zona,nombre_edificio,id_proyecto_master,piso,duplicado_de,campos_bloqueados,precio_usd,precio_mensual_usd,precio_mensual_bob,area_total_m2,datos_json';
+// `fecha_publicacion` (2-ago-2026): no decide el dedup, pero DESEMPATA para el humano.
+// Dos avisos del mismo piso publicados el MISMO día son casi con seguridad el mismo depto;
+// publicados con días de diferencia, pueden ser dos unidades del piso. Se muestra en sup.3.
+const COLS = 'id,fuente,url,tipo_operacion,latitud,longitud,zona,nombre_edificio,id_proyecto_master,piso,duplicado_de,campos_bloqueados,precio_usd,precio_mensual_usd,precio_mensual_bob,area_total_m2,fecha_publicacion,datos_json';
 
 // 🔒 REGLA CRÍTICA #1 del proyecto: `campos_bloqueados` SIEMPRE se respetan (Manual > Automatic).
 // Si un humano ya decidió sobre este campo (ej. "este match es un FP, dejar sin pm"), el audit NO
@@ -389,7 +392,7 @@ async function main() {
   const precioDe = (p) => p.tipo_operacion === 'venta'
     ? (Number(p.precio_usd) || 0)
     : (Number(p.precio_mensual_usd) || Number(p.precio_mensual_bob) || 0);
-  const realPorId = new Map(filas.map((p) => [p.id, { nombre: p.nombre_edificio, pm: p.id_proyecto_master, precio: precioDe(p), op: p.tipo_operacion }]));
+  const realPorId = new Map(filas.map((p) => [p.id, { nombre: p.nombre_edificio, pm: p.id_proyecto_master, precio: precioDe(p), op: p.tipo_operacion, piso: p.piso, pub: p.fecha_publicacion ? String(p.fecha_publicacion).slice(0, 10) : null }]));
   const sup3 = [];
   for (const op of OPS) {
     // SOLO props que NO traen `duplicado_de` (heredado de prod / verificador). Sin este filtro, el dedup
@@ -411,6 +414,14 @@ async function main() {
       precio: precioDe(p),
       area: Number(p.area_total_m2) || 0,
       descripcion: p.datos_json?.contenido?.descripcion || '',
+      // CLAVE FUERTE (2-ago-2026): el aviso DECLARA piso → la clave del grupo ya identifica
+      // la unidad, no solo la tipología. Con eso el dedup no necesita que los textos se
+      // parezcan. Cazó Macororó 18 (3543/3544: mismo pm, piso 13, 42,5 m², $75.000, misma
+      // fecha_publicacion) que se escapaba porque el captador escribió dos textos distintos.
+      // 🔑 Solo con piso EXPLÍCITO. Con piso null la clave vuelve a ser la tipología, y ahí
+      // precio+área iguales son UNA coincidencia, no dos (el precio sale del área) — es el
+      // caso K1 y Sky Equinox, donde deduplicar escondería unidades reales.
+      clave_fuerte: p.piso != null,
     }));
     for (const c of detectarDuplicados(props)) {
       const r = realPorId.get(c.sobreviviente) || {};
@@ -418,6 +429,12 @@ async function main() {
         op, edificio: r.nombre || c.nombre_edificio, pm: r.pm ?? null,
         precio: c.precio, area: c.area,
         sobreviviente: c.sobreviviente, duplicados: c.duplicados, n: c.n, ejemplo: c.ejemplo,
+        por_clave_fuerte: c.por_clave_fuerte === true,
+        piso: r.piso ?? null,
+        // Refuerzo para el humano (NO cambia el veredicto): ¿todos los avisos del cluster
+        // se publicaron el mismo día? Mismo piso + misma fecha = casi seguro el mismo depto.
+        // Fechas distintas = pueden ser dos unidades del piso, o una republicación.
+        fechas_pub: [...new Set([c.sobreviviente, ...c.duplicados].map((id) => realPorId.get(id)?.pub ?? '—'))],
       });
     }
   }
@@ -472,7 +489,7 @@ async function main() {
   }
   const dupProps = sup3.reduce((a, c) => a + c.duplicados.length, 0);
   console.log(`  Superficie 3 (duplicados apart-hotel/republicación): ${sup3.length} clusters · ${dupProps} props a deduplicar`);
-  for (const c of sup3.slice(0, 20)) console.log(`     [${c.op}] "${c.edificio}"${c.pm ? ` pm${c.pm}` : ''} $${c.precio} ${c.area}m² → sobrevive ${c.sobreviviente}, duplicados: ${c.duplicados.join(',')} (${c.n} avisos)`);
+  for (const c of sup3.slice(0, 20)) console.log(`     [${c.op}] "${c.edificio}"${c.pm ? ` pm${c.pm}` : ''} $${c.precio} ${c.area}m² → sobrevive ${c.sobreviviente}, duplicados: ${c.duplicados.join(',')} (${c.n} avisos)${c.por_clave_fuerte ? ` · ⚑ por PISO ${c.piso}+área+precio (textos DIFIEREN) · publicados ${c.fechas_pub.length === 1 ? `el MISMO día (${c.fechas_pub[0]}) → fuerte` : `en fechas DISTINTAS (${c.fechas_pub.join(' vs ')}) → mirar`}` : ''}`);
   console.log(`  Superficie 4 (el LECTOR fijó el pm, con dudas): ${sup4.length}`);
   for (const s of sup4.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'})  confianza del lector: ${s.confianza_lector}${s.dist_metros != null ? ` · ${s.dist_metros}m` : ''}`);
   // Con sup4 en 0 hay DOS motivos posibles y conviene no confundirlos en el parte matutino:
