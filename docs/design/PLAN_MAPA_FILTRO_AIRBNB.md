@@ -32,7 +32,13 @@ Bug: `buildMap` depende de `[properties, onSelectProperty, makeIcon]` (`VentaMap
 - Respetar los gotchas existentes: el mapa nunca se desmonta (`_leaflet_pos` crash), `zoomAnimation:false` se queda como está.
 - Verificar de paso que se cierra la deuda del 24-jun (seleccionar pin ya no resetea zoom) → actualizar `DEUDA_TECNICA.md`.
 
-## Fase 1 — /ventas desktop
+## Fase 1 — /ventas desktop — ✅ HECHA (3-ago, commit e687ad3)
+
+> Verificada con Playwright. Hallazgo de implementación: además de suprimir los
+> movimientos programáticos (fitBounds/panTo/invalidateSize), hay que suprimir el
+> `map.stop()` del TEARDOWN — dispara un último moveend en el mapa moribundo y
+> marcaba "movimiento de usuario" al cambiar lista↔mapa full. Supresión por
+> timestamp, no contador (un setView a la misma vista no dispara moveend).
 
 - **`onBoundsChange?` opcional** en `VentaMap` (emitir en `moveend`/`zoomend`). Solo se pasa desde el path `splitDesktop` — broker no lo recibe.
 - Estado `mapBounds` (aplicado) + `pendingBounds` (encuadre actual): cuando difieren, aparece el botón flotante "Buscar en esta zona" sobre el mapa. Click → `mapBounds = pendingBounds`.
