@@ -73,6 +73,9 @@ function inMapBounds(p: { latitud?: number | null; longitud?: number | null }, b
     p.longitud >= b.west && p.longitud <= b.east
 }
 
+// Tope de tarjetas del carrusel del mapa mobile (ver railCards en la página).
+const RAIL_MAX = 30
+
 // Leaflet: dynamic import SSR-safe
 const MapComponent = dynamic(() => import('@/components/alquiler/AlquilerMap'), { ssr: false })
 const MapMultiComponent = dynamic(() => import('@/components/alquiler/AlquilerMapMulti'), { ssr: false })
@@ -535,8 +538,17 @@ export default function AlquileresPage({
   const clearMapArea = useCallback(() => {
     setMapArea(null)
     setMapMoved(false)
+    setMobileViewport(null)
     trackEvent('map_area_filter', { accion: 'limpiar' })
   }, [])
+  // Mobile: el mapa a pantalla completa lleva un carrusel de mini-tarjetas que
+  // se actualiza SOLO con lo que se ve (sin botón de confirmar). Sigue el
+  // encuadre en vivo, no el aplicado. Espejo de ventas.
+  const [mobileViewport, setMobileViewport] = useState<MapViewBounds | null>(null)
+  const [railIndex, setRailIndex] = useState(0)
+  const railRef = useRef<HTMLDivElement>(null)
+  const railLockRef = useRef(false)
+  const onMobileViewport = useCallback((b: MapViewBounds) => setMobileViewport(b), [])
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   // Chrome mobile de la shortlist: menú hamburguesa + señal para reabrir el resumen
@@ -1362,9 +1374,93 @@ export default function AlquileresPage({
   // Lista acotada al "área del mapa" aplicada (Buscar en esta zona). De acá
   // comen la lista y el contador; el mapa sigue comiendo mapProperties
   // completo (al alejar el zoom los pins reaparecen, sin loop de re-encuadre).
+  // El filtro por área corre en el feed público (desktop split y mobile).
+  const mapAreaEnabled = !brokerMode && !publicShareMode
   const confirmadosEnBounds = useMemo(() => (
-    (!splitDesktop || !mapArea) ? confirmados : confirmados.filter(p => inMapBounds(p, mapArea))
-  ), [confirmados, mapArea, splitDesktop])
+    (!mapAreaEnabled || !mapArea) ? confirmados : confirmados.filter(p => inMapBounds(p, mapArea))
+  ), [confirmados, mapArea, mapAreaEnabled])
+
+  // Mobile: lo que entra en el encuadre EN VIVO alimenta el carrusel. Sobre
+  // displayedProperties (los mismos que ve el mapa mobile), no el universo.
+  const mapVisibles = useMemo(() => (
+    !mobileViewport ? displayedProperties : displayedProperties.filter(p => inMapBounds(p, mobileViewport))
+  ), [displayedProperties, mobileViewport])
+
+  // El carrusel NO renderiza todo lo que entra: alejando el mapa entran
+  // cientos y el celular no lo aguanta. Muestra las RAIL_MAX más cercanas al
+  // centro y el contador DECLARA el recorte (truncar en silencio se leería
+  // como "esto es todo"). El botón sí ofrece el total del área.
+  const railCards = useMemo(() => {
+    if (mapVisibles.length <= RAIL_MAX) return mapVisibles
+    const cLat = mobileViewport ? (mobileViewport.north + mobileViewport.south) / 2 : 0
+    const cLon = mobileViewport ? (mobileViewport.east + mobileViewport.west) / 2 : 0
+    const d = (p: UnidadAlquiler) => Math.pow((p.latitud ?? 0) - cLat, 2) + Math.pow((p.longitud ?? 0) - cLon, 2)
+    const top = [...mapVisibles].sort((a, b) => d(a) - d(b)).slice(0, RAIL_MAX)
+    if (mapSelectedId != null && !top.some(p => p.id === mapSelectedId)) {
+      const sel = mapVisibles.find(p => p.id === mapSelectedId)
+      if (sel) return [sel, ...top.slice(0, RAIL_MAX - 1)]
+    }
+    return top
+  }, [mapVisibles, mobileViewport, mapSelectedId])
+  const mapVisiblesKey = railCards.map(p => p.id).join(',')
+
+  // Al cambiar lo que se ve, el carrusel se reposiciona: conserva la
+  // propiedad seleccionada si sigue a la vista; si no, vuelve al principio.
+  useEffect(() => {
+    if (!mobileMapOpen) return
+    const keep = mapSelectedId != null ? railCards.findIndex(p => p.id === mapSelectedId) : -1
+    const k = keep >= 0 ? keep : 0
+    setRailIndex(k)
+    const rail = railRef.current
+    const el = rail?.querySelector<HTMLElement>(`[data-rail-idx="${k}"]`)
+    if (rail) {
+      railLockRef.current = true
+      rail.scrollLeft = el ? el.offsetLeft - rail.offsetLeft - (rail.clientWidth - el.clientWidth) / 2 : 0
+      setTimeout(() => { railLockRef.current = false }, 120)
+    }
+    if (keep < 0) setMapSelectedId(railCards[0]?.id ?? null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapVisiblesKey, mobileMapOpen])
+
+  // Carrusel → mapa: al frenar el desliz, resalta el pin de la tarjeta centrada.
+  const onRailScroll = useCallback(() => {
+    if (railLockRef.current) return
+    const rail = railRef.current
+    if (!rail) return
+    const mid = rail.scrollLeft + rail.clientWidth / 2
+    let best = -1, bestD = Infinity
+    rail.querySelectorAll<HTMLElement>('[data-rail-idx]').forEach(el => {
+      const c = el.offsetLeft - rail.offsetLeft + el.clientWidth / 2
+      const dd = Math.abs(c - mid)
+      if (dd < bestD) { bestD = dd; best = Number(el.dataset.railIdx) }
+    })
+    if (best >= 0) { setRailIndex(best); setMapSelectedId(railCards[best]?.id ?? null) }
+  }, [railCards])
+
+  // Mapa → carrusel: al tocar un pin, desliza hasta su tarjeta.
+  const onMobilePinSelect = useCallback((id: number) => {
+    setMapSelectedId(id)
+    const k = railCards.findIndex(p => p.id === id)
+    if (k < 0) return
+    setRailIndex(k)
+    const rail = railRef.current
+    const el = rail?.querySelector<HTMLElement>(`[data-rail-idx="${k}"]`)
+    if (!rail || !el) return
+    railLockRef.current = true
+    rail.scrollTo({ left: el.offsetLeft - rail.offsetLeft - (rail.clientWidth - el.clientWidth) / 2, behavior: 'smooth' })
+    setTimeout(() => { railLockRef.current = false }, 420)
+  }, [railCards])
+
+  // El puente: cierra el mapa y deja el feed acotado a lo que se estaba viendo.
+  const applyMobileArea = useCallback(() => {
+    if (!mobileViewport || mapVisibles.length === 0) return
+    setMapArea(mobileViewport)
+    setMobileMapOpen(false)
+    setMapSelectedId(null)
+    setActiveCardIndex(0)
+    if (feedRef.current) feedRef.current.scrollTop = 0
+    trackEvent('map_area_filter', { accion: 'aplicar_mobile', resultados: mapVisibles.length })
+  }, [mobileViewport, mapVisibles.length])
   const mapProperties = useMemo(() => (
     amenActivo ? displayedProperties.filter(p => propMatchesAmenAlq(p, amenSel)) : displayedProperties
   ), [displayedProperties, amenSel, amenActivo])
@@ -1391,11 +1487,17 @@ export default function AlquileresPage({
     } else {
       mobileProps = properties
     }
+    // Área del mapa aplicada desde el mapa a pantalla completa: el feed sigue
+    // al área igual que la lista del desktop. El spotlight (te compartieron
+    // este depto) NO se filtra — es el motivo por el que entraste.
+    if (mapAreaEnabled && mapArea) {
+      mobileProps = mobileProps.filter((p, i) => (i === 0 && !!spotlightProperty) || inMapBounds(p, mapArea))
+    }
     mobileProps.forEach((p, i) => {
       items.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
     })
     return items
-  }, [properties, spotlightProperty, spotlightId, isFiltered])
+  }, [properties, spotlightProperty, spotlightId, isFiltered, mapArea, mapAreaEnabled])
 
   // Drawers de menú/perfil — compartidos entre el layout mobile y el nav desktop
   // (misma lógica y clases mfd-*/mfp-*; el scrim funciona en ambos viewports).
@@ -1508,7 +1610,7 @@ export default function AlquileresPage({
           shortlist (leakage del flujo del broker).
           Oculto en brokerMode: el broker está armando shortlist, no necesita
           el chat sugiriéndole alquileres. */}
-      {widgetsReady && !publicShareMode && !brokerMode && <SimonChatWidget
+      {widgetsReady && !publicShareMode && !brokerMode && !mobileMapOpen && <SimonChatWidget
         properties={properties}
         sheetOpen={sheetOpen}
         onOpenDetail={(id) => {
@@ -2145,8 +2247,13 @@ export default function AlquileresPage({
                 {activeFilterCount > 0 && <span className="mfh-filter-badge">{activeFilterCount}</span>}
               </button>
             </div>
-            {(natChips.length > 0 || natAviso) && (
+            {(natChips.length > 0 || natAviso || mapArea) && (
               <div className="mfh-under">
+                {mapArea && (
+                  <button type="button" className="alq-area-chip" onClick={clearMapArea}>
+                    Área del mapa <span aria-hidden>&times;</span>
+                  </button>
+                )}
                 {natChips.length > 0 && <div className="mfh-chips"><span className="mfh-chips-label">Entendí:</span>{natChips.map(c => <span key={c} className="mfh-chip">{c}</span>)}</div>}
                 {natAviso === 'moneda' && <div className="mfh-aviso">Los alquileres van en Bs — el monto en $us no se aplicó.</div>}
                 {natAviso === 'venta' && <a className="mfh-aviso mfh-aviso-link" href="/ventas">Parece que buscás comprar → Ver departamentos en venta</a>}
@@ -2620,12 +2727,43 @@ export default function AlquileresPage({
             <button className="alq-mobile-map-close" onClick={() => setMobileMapOpen(false)}>&times;</button>
           </div>
           <div className="alq-mobile-map-body">
+            {/* El mapa recibe displayedProperties COMPLETO: si le pasáramos la
+                lista ya acotada se re-encuadraría en loop. */}
             <MapMultiComponent
-              properties={properties}
-              onSelectProperty={handleMapSelect}
+              properties={displayedProperties}
+              onSelectProperty={mapAreaEnabled ? onMobilePinSelect : handleMapSelect}
               selectedId={mapSelectedId}
+              onViewportChange={mapAreaEnabled ? onMobileViewport : undefined}
             />
-            {mapSelectedId && (() => {
+            {mapAreaEnabled ? (
+              <>
+                {mapVisibles.length > 0 && (
+                  <button type="button" className="alq-map-apply" onClick={applyMobileArea}>
+                    {mapVisibles.length === 1 ? 'Ver el único de esta zona' : `Ver los ${mapVisibles.length} de esta zona`}
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.6"><path d="M9 6l6 6-6 6"/></svg>
+                  </button>
+                )}
+                <div className="alq-rail-wrap">
+                  <div className="alq-rail-meta">
+                    <span>{mapVisibles.length === 1 ? '1 en pantalla' : `${mapVisibles.length} en pantalla`}
+                      {railCards.length < mapVisibles.length && ` · las ${railCards.length} más cercanas`}</span>
+                    {railCards.length > 0 && <span>{railIndex + 1} de {railCards.length}</span>}
+                  </div>
+                  {railCards.length === 0 ? (
+                    <div className="alq-rail-empty">No hay departamentos en esta parte del mapa. Movelo o alejalo un poco.</div>
+                  ) : (
+                    <div className="alq-rail" ref={railRef} onScroll={onRailScroll}>
+                      {railCards.map((p, k) => (
+                        <MapRailCardAlq key={p.id} property={p} idx={k}
+                          isFavorite={favorites.has(p.id)}
+                          onToggleFavorite={() => toggleFavorite(p.id)}
+                          onOpen={() => { setMobileMapOpen(false); setMapSelectedId(null); openDetail(p) }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : mapSelectedId && (() => {
               const sp = properties.find(x => x.id === mapSelectedId)
               if (!sp) return null
               return (
@@ -3376,6 +3514,37 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
 }
 
 // ===== MAP FLOATING CARD (own state to avoid re-rendering the map) =====
+// Mini-tarjeta del carrusel del mapa mobile. Horizontal (foto al costado) para
+// tapar lo menos posible del mapa. Espejo de MapRailCard en ventas, tema claro.
+const MapRailCardAlq = memo(function MapRailCardAlq({ property: p, idx, isFavorite, onToggleFavorite, onOpen }: {
+  property: UnidadAlquiler; idx: number; isFavorite: boolean; onToggleFavorite: () => void; onOpen: () => void
+}) {
+  const foto = p.fotos_urls?.[0]
+  const amob = p.amoblado === 'si' ? 'Amoblado' : p.amoblado === 'semi' ? 'Semi amoblado' : null
+  return (
+    <article className="alq-rc" data-rail-idx={idx} onClick={onOpen} role="button" tabIndex={0}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }}>
+      <div className="alq-rc-photo">
+        {foto ? <img src={foto} alt="" loading="lazy" /> : <span className="alq-rc-nophoto">Sin foto</span>}
+        <button className={`alq-rc-fav ${isFavorite ? 'active' : ''}`}
+          aria-label={isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos'}
+          onClick={e => { e.stopPropagation(); onToggleFavorite() }}>
+          <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05B49' : 'none'} stroke={isFavorite ? '#E05B49' : '#fff'} strokeWidth="2">
+            <path d="M12 21l-1.4-1.3C5.4 15 2 12 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.5-3.4 6.5-8.6 11.2L12 21z"/>
+          </svg>
+        </button>
+        {(p.fotos_urls?.length || 0) > 1 && <span className="alq-rc-n">1/{p.fotos_urls!.length}</span>}
+      </div>
+      <div className="alq-rc-body">
+        <div className="alq-rc-name">{nombreAlquiler(p)}</div>
+        <div className="alq-rc-specs">{displayZona(p.zona)} · {dormLabel(p.dormitorios)}{p.area_m2 ? ` · ${Math.round(p.area_m2)} m²` : ''}</div>
+        <div className="alq-rc-price">{formatPriceBob(p.precio_mensual_bob)}<span className="alq-rc-mes">/mes</span></div>
+        {amob && <span className="alq-rc-tag">{amob}</span>}
+      </div>
+    </article>
+  )
+})
+
 function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onOpenDetail, mobile, publicShareBroker = null, contactoDirecto = false, brokerMode = false }: {
   property: UnidadAlquiler; isFavorite: boolean; mobile?: boolean
   onClose: () => void; onToggleFavorite: () => void; onOpenDetail: () => void

@@ -32,6 +32,11 @@ interface AlquilerMapMultiProps {
   // highlight, invalidateSize, teardown) NO emiten. Opcional: broker/mobile
   // no lo pasan. Espejo de VentaMap.
   onUserMove?: (bounds: MapViewBounds) => void
+  // Como onUserMove, pero además emite el encuadre INICIAL (una vez, tras
+  // dibujar). Lo usa el carrusel mobile. Respeta la misma supresión: el panTo
+  // del highlight movería el mapa → nuevo encuadre → nueva lista → nuevo
+  // highlight → panTo… (bucle real, detectado el 3-ago).
+  onViewportChange?: (bounds: MapViewBounds) => void
 }
 
 // Teardown seguro: si el mapa muere en plena animación (unmount por toggle de
@@ -51,7 +56,7 @@ const TILES_CALLE = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 // sin tocar la instancia Leaflet: antes, cualquier cambio de identidad del
 // array o del handler reconstruía el mapa entero y el fitBounds reseteaba
 // zoom/centro (deuda 24-jun, y bloqueante para el filtro por área del mapa).
-export default function AlquilerMapMulti({ properties, onSelectProperty, selectedId, onUserMove }: AlquilerMapMultiProps) {
+export default function AlquilerMapMulti({ properties, onSelectProperty, selectedId, onUserMove, onViewportChange }: AlquilerMapMultiProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
@@ -66,6 +71,8 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
   const drawnKeyRef = useRef<string | null>(null)
   const onUserMoveRef = useRef(onUserMove)
   onUserMoveRef.current = onUserMove
+  const onViewportRef = useRef(onViewportChange)
+  onViewportRef.current = onViewportChange
   // Ventana de supresión para movimientos programáticos: moveend no distingue
   // usuario de código, así que antes de cada fitBounds/setView/panTo se abre
   // una ventana corta en la que el listener no emite. Timestamp (no contador):
@@ -154,10 +161,10 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
 
     map.on('moveend', () => {
       if (Date.now() < suppressUntilRef.current) return
-      const emit = onUserMoveRef.current
-      if (!emit) return
       const b = map.getBounds()
-      emit({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() })
+      const box = { north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() }
+      onViewportRef.current?.(box)
+      onUserMoveRef.current?.(box)
     })
 
     const style = document.createElement('style')
@@ -232,6 +239,15 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
       }
 
       drawnKeyRef.current = key
+
+      // Encuadre inicial para quien se actualiza solo (carrusel mobile).
+      if (onViewportRef.current) {
+        setTimeout(() => {
+          if (cancelled || !mapInstance.current) return
+          const b = mapInstance.current.getBounds()
+          onViewportRef.current?.({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() })
+        }, 160)
+      }
     }
 
     // La primera construcción espera a que el contenedor tenga tamaño real;

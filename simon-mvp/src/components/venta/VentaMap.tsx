@@ -36,6 +36,13 @@ interface VentaMapProps {
   // highlight, invalidateSize) NO emiten — si emitieran, el botón "Buscar en
   // esta zona" aparecería solo. Opcional: broker/mobile/modal no lo pasan.
   onUserMove?: (bounds: MapViewBounds) => void
+  // Como onUserMove, pero además emite el encuadre INICIAL (una vez, tras
+  // dibujar). Lo usa el carrusel mobile, que se actualiza solo y necesita
+  // saber qué se ve desde que el mapa abre, sin esperar a que lo muevan.
+  // 🔴 Respeta la misma supresión de movimientos programáticos: el panTo del
+  // highlight movería el mapa → nuevo encuadre → nueva lista → nuevo
+  // highlight → panTo… (bucle real, detectado el 3-ago).
+  onViewportChange?: (bounds: MapViewBounds) => void
 }
 
 // Teardown seguro: si el mapa muere en plena animación (unmount por toggle de
@@ -61,7 +68,7 @@ function formatPricePin(price: number): string {
 // sin tocar la instancia Leaflet: antes, cualquier cambio de identidad del
 // array o del handler reconstruía el mapa entero y el fitBounds reseteaba
 // zoom/centro (deuda 24-jun, y bloqueante para el filtro por área del mapa).
-export default function VentaMap({ properties, onSelectProperty, selectedId, onUserMove }: VentaMapProps) {
+export default function VentaMap({ properties, onSelectProperty, selectedId, onUserMove, onViewportChange }: VentaMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
@@ -78,6 +85,8 @@ export default function VentaMap({ properties, onSelectProperty, selectedId, onU
   const drawnKeyRef = useRef<string | null>(null)
   const onUserMoveRef = useRef(onUserMove)
   onUserMoveRef.current = onUserMove
+  const onViewportRef = useRef(onViewportChange)
+  onViewportRef.current = onViewportChange
   // Ventana de supresión para movimientos programáticos: moveend no distingue
   // usuario de código, así que antes de cada fitBounds/setView/panTo se abre
   // una ventana corta en la que el listener no emite. Timestamp (no contador):
@@ -166,10 +175,10 @@ export default function VentaMap({ properties, onSelectProperty, selectedId, onU
 
     map.on('moveend', () => {
       if (Date.now() < suppressUntilRef.current) return
-      const emit = onUserMoveRef.current
-      if (!emit) return
       const b = map.getBounds()
-      emit({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() })
+      const box = { north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() }
+      onViewportRef.current?.(box)
+      onUserMoveRef.current?.(box)
     })
 
     const style = document.createElement('style')
@@ -267,6 +276,17 @@ export default function VentaMap({ properties, onSelectProperty, selectedId, onU
       }
 
       drawnKeyRef.current = key
+
+      // Encuadre inicial para quien se actualiza solo (carrusel mobile): el
+      // fitBounds de arriba dispara moveend, pero con una sola propiedad —o si
+      // la vista no cambió— puede no hacerlo. Emitimos explícitamente.
+      if (onViewportRef.current) {
+        setTimeout(() => {
+          if (cancelled || !mapInstance.current) return
+          const b = mapInstance.current.getBounds()
+          onViewportRef.current?.({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() })
+        }, 160)
+      }
     }
 
     // La primera construcción espera a que el contenedor tenga tamaño real;

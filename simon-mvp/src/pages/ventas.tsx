@@ -84,6 +84,14 @@ function formatFechaCortaSEO(dateStr: string): string {
 
 const PhotoViewer = dynamic(() => import('@/components/alquiler/PhotoViewer'), { ssr: false })
 const VentaMap = dynamic(() => import('@/components/venta/VentaMap'), { ssr: false })
+
+// Predicado ÚNICO del filtro "área del mapa": lo comparten la lista desktop,
+// el feed mobile y el carrusel del mapa. Un filtro duplicado divergiría.
+function inMapBounds(p: { latitud?: number | null; longitud?: number | null }, b: MapViewBounds): boolean {
+  return p.latitud != null && p.longitud != null &&
+    p.latitud >= b.south && p.latitud <= b.north &&
+    p.longitud >= b.west && p.longitud <= b.east
+}
 const CompareSheet = dynamic(() => import('@/components/venta/CompareSheet'), { ssr: false })
 
 // ===== Constants =====
@@ -94,6 +102,8 @@ const FILTER_CARD_POSITION = 1 // legacy — kept for reference
 const MAX_FAVORITES = 3
 
 const VIRTUAL_WINDOW = 3
+// Tope de tarjetas del carrusel del mapa mobile (ver railCards).
+const RAIL_MAX = 30
 const ORDEN_OPTIONS: Array<{ value: FiltrosVentaSimple['orden']; label: string }> = [
   { value: 'recientes', label: 'Recientes' },
   { value: 'precio_asc', label: 'Precio \u2191' },
@@ -1419,6 +1429,40 @@ function MapFloatCard({ property: p, isFavorite, onClose, onOpenDetail, onToggle
   )
 }
 
+// Mini-tarjeta del carrusel del mapa mobile. Horizontal (foto al costado) para
+// tapar lo menos posible del mapa. Toda la tarjeta abre el detalle; el corazón
+// no propaga. La foto es <img> a propósito (regla del repo: no next/image en
+// los feeds, por el límite de transformaciones de Vercel).
+const MapRailCard = memo(function MapRailCard({ property: p, idx, isFavorite, onToggleFavorite, onOpen }: {
+  property: UnidadVenta; idx: number; isFavorite: boolean; onToggleFavorite: () => void; onOpen: () => void
+}) {
+  const foto = p.fotos_urls?.[0]
+  const dorms = dormLabelOrNull(p.dormitorios)
+  const estado = p.estado_construccion === 'preventa' ? 'Preventa'
+    : p.estado_construccion === 'entrega_inmediata' ? 'Entrega inmediata' : null
+  return (
+    <article className="mt-rc" data-rail-idx={idx} onClick={onOpen} role="button" tabIndex={0}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }}>
+      <div className="mt-rc-photo">
+        {foto ? <img src={foto} alt="" loading="lazy" /> : <span className="mt-rc-nophoto">Sin foto</span>}
+        <button className={`mt-rc-fav ${isFavorite ? 'active' : ''}`}
+          aria-label={isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos'}
+          onClick={e => { e.stopPropagation(); onToggleFavorite() }}>
+          <HeartIcon filled={isFavorite} />
+        </button>
+        {(p.fotos_urls?.length || 0) > 1 && <span className="mt-rc-n">1/{p.fotos_urls!.length}</span>}
+      </div>
+      <div className="mt-rc-body">
+        <div className="mt-rc-name">{p.proyecto}</div>
+        <div className="mt-rc-specs">{displayZona(p.zona)}{dorms ? ` · ${dorms}` : ''} · {Math.round(p.area_m2)} m²</div>
+        <div className="mt-rc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
+        {p.precio_m2 > 0 && <div className="mt-rc-m2">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</div>}
+        {estado && <span className="mt-rc-tag">{estado}</span>}
+      </div>
+    </article>
+  )
+})
+
 // ===== Bottom Sheet Gallery =====
 function BottomSheetGallery({ photos, propertyId }: { photos: string[]; propertyId?: number }) {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -2651,8 +2695,18 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const clearMapArea = useCallback(() => {
     setMapArea(null)
     setMapMoved(false)
+    setMobileViewport(null)
     trackEvent('map_area_filter_venta', { accion: 'limpiar' })
   }, [])
+  // Mobile: el mapa a pantalla completa lleva un carrusel de mini-tarjetas que
+  // se actualiza SOLO con lo que se ve (sin botón de confirmar — decisión de
+  // producto: en el celular el resultado tiene que verse al instante). Por eso
+  // sigue el encuadre en vivo, no el aplicado.
+  const [mobileViewport, setMobileViewport] = useState<MapViewBounds | null>(null)
+  const [railIndex, setRailIndex] = useState(0)
+  const railRef = useRef<HTMLDivElement>(null)
+  const railLockRef = useRef(false)
+  const onMobileViewport = useCallback((b: MapViewBounds) => setMobileViewport(b), [])
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
   const [proyectoNames, setProyectoNames] = useState<string[]>(() => [...new Set(initialProps.map(p => p.proyecto).filter(Boolean))].sort())
@@ -3014,7 +3068,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   // de estas funciones nunca cambia entre renders (así React.memo de las cards
   // sigue siendo válido), pero siempre ejecutan la versión más reciente de la
   // lógica vía ref — sin closures viejos sobre favorites/properties.
-  const openCardMap = (p: UnidadVenta) => { setMapSelectedId(p.id); setMobileMapOpen(true); trackEvent('open_map_mobile_venta', { origen: 'card' }) }
+  // Abre el mapa a pantalla completa. Si la card tiene GPS queda seleccionada
+  // (y centrada en el carrusel); si no, el mapa abre igual para explorar la
+  // zona — desde el carrusel el mapa dejó de ser solo "¿dónde queda esta?".
+  const openCardMap = (p: UnidadVenta | null) => {
+    setMapSelectedId(p && p.latitud && p.longitud ? p.id : null)
+    setMobileMapOpen(true)
+    trackEvent('open_map_mobile_venta', { origen: p ? 'card' : 'barra' })
+  }
   // Pin del mapa del panel → abre el side sheet. Vive acá (y no inline en el
   // JSX) porque VentaMap RECONSTRUYE el mapa entero cuando cambia la identidad
   // de onSelectProperty — un lambda inline lo reconstruía en cada render.
@@ -3058,17 +3119,105 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     amenActivo ? displayedProperties.filter(p => propMatchesAmen(p, amenSel)) : displayedProperties
   , [displayedProperties, amenSel, amenActivo])
 
-  // Lista acotada al "área del mapa" aplicada (Buscar en esta zona). De acá
-  // comen la lista, el contador y el resumen de mercado; el mapa sigue
-  // comiendo `confirmados` completo (al alejar el zoom los pins reaparecen y
-  // no hay loop de re-encuadre). Guard splitDesktop: mobile/broker inmunes.
+  // El filtro por área corre en el feed público (desktop split y mobile); en
+  // broker y public-share nunca, que conservan su grid clásico.
+  const mapAreaEnabled = !brokerMode && !publicShareMode
+
+  // Lista acotada al "área del mapa" aplicada. De acá comen la lista, el
+  // contador y el resumen de mercado; el mapa sigue comiendo `confirmados`
+  // completo (al alejar el zoom los pins reaparecen y no hay loop).
   const confirmadosEnBounds = useMemo(() => {
-    if (!splitDesktop || !mapArea) return confirmados
-    return confirmados.filter(p =>
-      p.latitud != null && p.longitud != null &&
-      p.latitud >= mapArea.south && p.latitud <= mapArea.north &&
-      p.longitud >= mapArea.west && p.longitud <= mapArea.east)
-  }, [confirmados, mapArea, splitDesktop])
+    if (!mapAreaEnabled || !mapArea) return confirmados
+    return confirmados.filter(p => inMapBounds(p, mapArea))
+  }, [confirmados, mapArea, mapAreaEnabled])
+
+  // Mobile: lo que entra en el encuadre EN VIVO → alimenta el carrusel del
+  // mapa a pantalla completa. Sobre `confirmados` (respeta los filtros), no
+  // sobre el universo.
+  const mapVisibles = useMemo(() => {
+    if (!mobileViewport) return confirmados
+    return confirmados.filter(p => inMapBounds(p, mobileViewport))
+  }, [confirmados, mobileViewport])
+
+  // El carrusel NO renderiza todo lo que entra en el encuadre: alejando el
+  // mapa entran cientos y el celular no lo aguanta. Se muestran las RAIL_MAX
+  // más cercanas al centro de la pantalla (lo que el usuario está mirando) y
+  // el contador declara el recorte — truncar en silencio se leería como
+  // "esto es todo lo que hay". El botón sí ofrece el total del área.
+  const railCards = useMemo(() => {
+    if (mapVisibles.length <= RAIL_MAX) return mapVisibles
+    const cLat = mobileViewport ? (mobileViewport.north + mobileViewport.south) / 2 : 0
+    const cLon = mobileViewport ? (mobileViewport.east + mobileViewport.west) / 2 : 0
+    const d = (p: UnidadVenta) => Math.pow((p.latitud ?? 0) - cLat, 2) + Math.pow((p.longitud ?? 0) - cLon, 2)
+    const top = [...mapVisibles].sort((a, b) => d(a) - d(b)).slice(0, RAIL_MAX)
+    // El pin que el usuario tocó siempre tiene su tarjeta, esté o no en el top.
+    if (mapSelectedId != null && !top.some(p => p.id === mapSelectedId)) {
+      const sel = mapVisibles.find(p => p.id === mapSelectedId)
+      if (sel) return [sel, ...top.slice(0, RAIL_MAX - 1)]
+    }
+    return top
+  }, [mapVisibles, mobileViewport, mapSelectedId])
+  const mapVisiblesKey = railCards.map(p => p.id).join(',')
+
+  // Al cambiar lo que se ve, el carrusel se reposiciona: si la propiedad ya
+  // seleccionada sigue a la vista la conserva (abriste el mapa desde una card
+  // → esa queda centrada); si no, vuelve al principio. Depende de la KEY (no
+  // del array) para no dispararse en cada render.
+  useEffect(() => {
+    if (!mobileMapOpen) return
+    const keep = mapSelectedId != null ? railCards.findIndex(p => p.id === mapSelectedId) : -1
+    const k = keep >= 0 ? keep : 0
+    setRailIndex(k)
+    const rail = railRef.current
+    const el = rail?.querySelector<HTMLElement>(`[data-rail-idx="${k}"]`)
+    if (rail) {
+      railLockRef.current = true
+      rail.scrollLeft = el ? el.offsetLeft - rail.offsetLeft - (rail.clientWidth - el.clientWidth) / 2 : 0
+      setTimeout(() => { railLockRef.current = false }, 120)
+    }
+    if (keep < 0) setMapSelectedId(railCards[0]?.id ?? null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapVisiblesKey, mobileMapOpen])
+
+  // Carrusel → mapa: al frenar el desliz, resalta el pin de la tarjeta centrada.
+  const onRailScroll = useCallback(() => {
+    if (railLockRef.current) return
+    const rail = railRef.current
+    if (!rail) return
+    const mid = rail.scrollLeft + rail.clientWidth / 2
+    let best = -1, bestD = Infinity
+    rail.querySelectorAll<HTMLElement>('[data-rail-idx]').forEach(el => {
+      const c = el.offsetLeft - rail.offsetLeft + el.clientWidth / 2
+      const d = Math.abs(c - mid)
+      if (d < bestD) { bestD = d; best = Number(el.dataset.railIdx) }
+    })
+    if (best >= 0) { setRailIndex(best); setMapSelectedId(railCards[best]?.id ?? null) }
+  }, [railCards])
+
+  // Mapa → carrusel: al tocar un pin, desliza hasta su tarjeta.
+  const onMobilePinSelect = useCallback((id: number) => {
+    setMapSelectedId(id)
+    const k = railCards.findIndex(p => p.id === id)
+    if (k < 0) return
+    setRailIndex(k)
+    const rail = railRef.current
+    const el = rail?.querySelector<HTMLElement>(`[data-rail-idx="${k}"]`)
+    if (!rail || !el) return
+    railLockRef.current = true
+    rail.scrollTo({ left: el.offsetLeft - rail.offsetLeft - (rail.clientWidth - el.clientWidth) / 2, behavior: 'smooth' })
+    setTimeout(() => { railLockRef.current = false }, 420)
+  }, [railCards])
+
+  // El puente: cierra el mapa y deja el feed acotado a lo que se estaba viendo.
+  const applyMobileArea = useCallback(() => {
+    if (!mobileViewport || mapVisibles.length === 0) return
+    setMapArea(mobileViewport)
+    setMobileMapOpen(false)
+    setMapSelectedId(null)
+    setActiveCardIndex(0)
+    if (feedRef.current) feedRef.current.scrollTop = 0
+    trackEvent('map_area_filter_venta', { accion: 'aplicar_mobile', resultados: mapVisibles.length })
+  }, [mobileViewport, mapVisibles.length])
 
   // Resumen de mercado del filtro actual — panel derecho del layout split
   // (estado sin propiedad seleccionada). Client-side sobre la lista visible
@@ -3427,6 +3576,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     if (brokerMode && onlySelectedFilter) {
       baseList = baseList.filter(p => favorites.has(p.id))
     }
+    // Área del mapa aplicada desde el mapa a pantalla completa: el feed sigue
+    // al área igual que la lista del desktop. El spotlight (te compartieron
+    // esta propiedad) NO se filtra — es el motivo por el que entraste.
+    if (mapAreaEnabled && mapArea) {
+      baseList = baseList.filter(p => inMapBounds(p, mapArea))
+    }
     const mobileProps = spotlightProperty
       ? [spotlightProperty, ...baseList.filter(p => p.id !== spotlightId)]
       : baseList
@@ -3434,7 +3589,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       items.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
     })
     return items
-  }, [properties, favorites, brokerMode, onlySelectedFilter, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax, spotlightProperty, spotlightId])
+  }, [properties, favorites, brokerMode, onlySelectedFilter, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax, spotlightProperty, spotlightId, mapArea, mapAreaEnabled])
   // Hint "Desliza para más fotos": una sola vez, en la primera card con galería.
   const swipeHintIdx = useMemo(() => feedItems.findIndex(it => (it.data.fotos_urls?.length || 0) > 1), [feedItems])
 
@@ -4219,8 +4374,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 {activeFilterCount > 0 && <span className="mfh-filter-badge">{activeFilterCount}</span>}
               </button>
             </div>
-            {(natChips.length > 0 || natAviso) && (
+            {(natChips.length > 0 || natAviso || mapArea) && (
               <div className="mfh-under">
+                {mapArea && (
+                  <button type="button" className="mt-area-chip" onClick={clearMapArea}>
+                    Área del mapa <span aria-hidden>&times;</span>
+                  </button>
+                )}
                 {natChips.length > 0 && <div className="mfh-chips"><span className="mfh-chips-label">Entendí:</span>{natChips.map(c => <span key={c} className="mfh-chip">{c}</span>)}</div>}
                 {natAviso === 'moneda' && <div className="mfh-aviso">Los precios de venta van en $us — el monto en Bs no se aplicó.</div>}
                 {natAviso === 'alquiler' && <a className="mfh-aviso mfh-aviso-link" href="/alquileres">Parece que buscás alquilar → Ver alquileres</a>}
@@ -4242,7 +4402,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             </div>
           )}
 
-          {/* Full-screen mobile map */}
+          {/* Mapa a pantalla completa (mobile) — explorar por zona: el carrusel
+              de abajo lleva lo que se ve y se actualiza solo al mover el mapa
+              (sin botón de confirmar). El mapa recibe `confirmados` COMPLETO:
+              si le pasáramos la lista ya acotada se re-encuadraría en loop. */}
           {mobileMapOpen && (
             <div className="mt-map-overlay">
               <div className="mt-map-header">
@@ -4250,8 +4413,37 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 <button className="mt-map-close" aria-label="Cerrar mapa" onClick={() => { setMobileMapOpen(false); setMapSelectedId(null) }}>&times;</button>
               </div>
               <div className="mt-map-body">
-                <VentaMap properties={confirmados} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
-                {mapSelectedId && (() => {
+                <VentaMap properties={confirmados} onSelectProperty={onMobilePinSelect} selectedId={mapSelectedId}
+                  onViewportChange={mapAreaEnabled ? onMobileViewport : undefined} />
+                {mapAreaEnabled ? (
+                  <>
+                    {mapVisibles.length > 0 && (
+                      <button type="button" className="mt-map-apply" onClick={applyMobileArea}>
+                        {mapVisibles.length === 1 ? 'Ver el único de esta zona' : `Ver los ${mapVisibles.length} de esta zona`}
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.6"><path d="M9 6l6 6-6 6"/></svg>
+                      </button>
+                    )}
+                    <div className="mt-rail-wrap">
+                      <div className="mt-rail-meta">
+                        <span>{mapVisibles.length === 1 ? '1 en pantalla' : `${mapVisibles.length} en pantalla`}
+                          {railCards.length < mapVisibles.length && ` · las ${railCards.length} más cercanas`}</span>
+                        {railCards.length > 0 && <span>{railIndex + 1} de {railCards.length}</span>}
+                      </div>
+                      {railCards.length === 0 ? (
+                        <div className="mt-rail-empty">No hay departamentos en esta parte del mapa. Movelo o alejalo un poco.</div>
+                      ) : (
+                        <div className="mt-rail" ref={railRef} onScroll={onRailScroll}>
+                          {railCards.map((p, k) => (
+                            <MapRailCard key={p.id} property={p} idx={k}
+                              isFavorite={favorites.has(p.id)}
+                              onToggleFavorite={() => toggleFavorite(p.id)}
+                              onOpen={() => { setMobileMapOpen(false); setMapSelectedId(null); openSheet(p) }} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : mapSelectedId && (() => {
                   const sp = displayedProperties.find(x => x.id === mapSelectedId)
                   if (!sp) return null
                   return <MapFloatCard mobile property={sp} isFavorite={favorites.has(sp.id)} onClose={() => setMapSelectedId(null)} onOpenDetail={() => { setMapSelectedId(null); setMobileMapOpen(false); openSheet(sp) }} onToggleFavorite={() => toggleFavorite(sp.id)} />
@@ -4267,6 +4459,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             </div>}
             {loading && properties.length === 0 && !loadError && <div className="mc" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7A7060' }}>Cargando...</div>}
             {!loading && properties.length === 0 && !loadError && <div className="mc" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7A7060', textAlign: 'center', padding: '0 32px' }}>{buildEmptyMessage(filters)}</div>}
+            {!loading && properties.length > 0 && feedItems.length === 0 && (
+              <div className="mc" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', justifyContent: 'center', color: '#7A7060', textAlign: 'center', padding: '0 32px' }}>
+                <span>No hay departamentos dentro del área del mapa.</span>
+                <button onClick={clearMapArea} style={{ padding: '9px 20px', background: '#EDE8DC', color: '#141414', border: 'none', borderRadius: 100, cursor: 'pointer', fontWeight: 600, fontFamily: "'DM Sans',sans-serif", fontSize: 13 }}>Quitar área</button>
+              </div>
+            )}
             {feedItems.map((item, idx) => {
               const isNearby = Math.abs(idx - activeCardIndex) <= VIRTUAL_WINDOW
               if (!isNearby) {
@@ -4289,10 +4487,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
               Reemplaza los botones flotantes sobre la card. */}
           {properties.length > 0 && (() => {
             const ac = feedItems[activeCardIndex]?.data
-            const conGps = ac && ac.latitud && ac.longitud
             return (
               <div className="mt-bottombar">
-                <button className="mt-bb-map" disabled={!conGps} onClick={() => conGps && openCardMap(ac)}>
+                <button className="mt-bb-map" onClick={() => openCardMap(ac ?? null)}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ width: 17, height: 17 }}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
                   Ver mapa
                 </button>
@@ -5097,6 +5294,33 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mt-map-close { width:44px; height:44px; border-radius:10px; border:none; background:rgba(237,232,220,0.08); color:#B8AD9E; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer }
         .mt-map-body { flex:1; position:relative; overflow:hidden }
         .mt-map-body .venta-map { position:absolute; inset:0 }
+        /* Carrusel del mapa mobile — se actualiza solo con lo que se ve */
+        .mt-map-apply { position:absolute; left:50%; transform:translateX(-50%); bottom:calc(178px + env(safe-area-inset-bottom)); z-index:1200; display:inline-flex; align-items:center; gap:7px; background:#3A6A48; color:#F2F5F0; border:none; padding:11px 20px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:13.5px; font-weight:600; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,0.45); white-space:nowrap }
+        /* El degradado hace legible el contador sobre el mapa claro */
+        .mt-rail-wrap { position:absolute; left:0; right:0; bottom:0; z-index:1150; padding:22px 0 calc(12px + env(safe-area-inset-bottom)); background:linear-gradient(transparent, rgba(20,20,20,0.5) 60%); pointer-events:none }
+        .mt-rail-wrap > * { pointer-events:auto }
+        /* Cada texto lleva su propia píldora: legible sobre el mapa claro sin
+           tener que oscurecer media pantalla. */
+        .mt-rail-meta { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:0 14px 8px; font-family:'DM Sans',sans-serif; font-size:11.5px; font-variant-numeric:tabular-nums; pointer-events:none }
+        .mt-rail-meta span { background:rgba(20,20,20,0.78); color:#EDE8DC; padding:3px 10px; border-radius:100px; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px) }
+        .mt-rail { display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; padding:0 14px; scrollbar-width:none; -webkit-overflow-scrolling:touch }
+        .mt-rail::-webkit-scrollbar { display:none }
+        .mt-rail-empty { margin:0 14px; padding:18px 16px; border-radius:14px; background:#1a1a1a; border:1px solid rgba(237,232,220,0.1); color:#B8AD9E; font-family:'DM Sans',sans-serif; font-size:12.5px; text-align:center }
+        .mt-rc { flex:0 0 78%; scroll-snap-align:center; display:flex; background:#1a1a1a; border:1px solid rgba(237,232,220,0.1); border-radius:14px; overflow:hidden; box-shadow:0 8px 26px rgba(0,0,0,0.4); cursor:pointer; text-align:left }
+        .mt-rc-photo { width:104px; flex-shrink:0; position:relative; background:#242220; display:grid; place-items:center }
+        .mt-rc-photo img { width:100%; height:100%; object-fit:cover; display:block }
+        .mt-rc-nophoto { font-family:'DM Sans',sans-serif; font-size:10px; color:rgba(237,232,220,0.4) }
+        .mt-rc-fav { position:absolute; right:6px; top:6px; width:26px; height:26px; border-radius:50%; border:none; background:rgba(0,0,0,0.45); display:grid; place-items:center; cursor:pointer; padding:0 }
+        .mt-rc-fav svg { width:13px; height:13px }
+        .mt-rc-n { position:absolute; left:6px; bottom:6px; background:rgba(0,0,0,0.6); color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:9.5px; padding:1.5px 5px; border-radius:5px }
+        .mt-rc-body { flex:1; min-width:0; padding:10px 12px; display:flex; flex-direction:column; justify-content:center; gap:2px }
+        .mt-rc-name { font-family:'Figtree',sans-serif; font-size:13.5px; font-weight:600; color:#EDE8DC; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+        .mt-rc-specs { font-family:'DM Sans',sans-serif; font-size:11.5px; color:#9A8E7A }
+        .mt-rc-price { font-family:'DM Sans',sans-serif; font-size:16px; font-weight:600; color:#EDE8DC; font-variant-numeric:tabular-nums; margin-top:2px }
+        .mt-rc-m2 { font-family:'DM Sans',sans-serif; font-size:10.5px; color:#9A8E7A; font-variant-numeric:tabular-nums }
+        .mt-rc-tag { align-self:flex-start; margin-top:4px; font-family:'DM Sans',sans-serif; font-size:9.5px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; padding:2px 7px; border-radius:100px; background:rgba(58,106,72,0.2); color:#9CC4A6; border:1px solid rgba(58,106,72,0.35) }
+        /* Chip del área aplicada en el header mobile */
+        .mt-area-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:100px; border:1px solid rgba(237,232,220,0.35); background:rgba(237,232,220,0.12); color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap }
 
         .mt-feed { height:calc(100dvh - var(--mfh-h, 0px)); margin-top:var(--mfh-h, 0px); overflow-y:scroll; scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
         .mt-feed::-webkit-scrollbar { display:none }

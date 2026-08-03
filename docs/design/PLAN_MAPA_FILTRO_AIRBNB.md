@@ -93,6 +93,36 @@ El preview interno no hidrata el layout desktop → Playwright headless. Casos:
 Para ellos el cambio es **solo mejora**: antes seleccionar un pin reseteaba zoom/centro.
 Card flotante, highlight del pin y clustering siguen funcionando.
 
+## Fase 4 — MOBILE: carrusel de mini-tarjetas en el mapa — ✅ HECHA (3-ago)
+
+Entró después de medir el tráfico: **204 de 240 usuarios (85%) son mobile**, y la
+feature de escritorio no les llegaba. Decisiones de Lucho sobre la maqueta:
+**las tarjetas se actualizan solas** (sin botón de confirmar — en el celular el
+resultado tiene que verse al instante) y **tarjeta horizontal** (foto al costado,
+tapa menos mapa).
+
+- El mapa a pantalla completa pasa de "¿dónde queda esta?" a **explorar la zona**:
+  abajo va un carrusel con lo que se ve, sincronizado en ambos sentidos con los
+  pines (deslizar → resalta el pin; tocar un pin → desliza a su tarjeta).
+- **El puente al feed**: botón "Ver los N de esta zona" → cierra el mapa y deja el
+  feed acotado, con el chip "Área del mapa ×" en el header mobile.
+- El mapa recibe la lista COMPLETA (nunca la acotada) — misma regla que desktop.
+- `onViewportChange` en ambos componentes de mapa: como `onUserMove` pero además
+  emite el encuadre inicial (el carrusel necesita saber qué se ve desde que abre).
+
+🔴 **Bug real encontrado y corregido — bucle de retroalimentación:** al principio
+`onViewportChange` emitía SIEMPRE, también en movimientos programáticos. El `panTo`
+del resalte movía el mapa → nuevo encuadre → nueva lista → nuevo resalte → `panTo`…
+El síntoma era el scroll del carrusel reseteándose solo. **Respeta la misma
+supresión que `onUserMove`**; el encuadre inicial se emite aparte, explícitamente.
+
+🔴 **Tope declarado (`RAIL_MAX = 30`):** alejando el mapa entraban 372 tarjetas y el
+celular no lo aguanta. Se muestran las 30 más cercanas al centro y el contador lo
+**declara** ("372 en pantalla · las 30 más cercanas") — truncar en silencio se
+leería como "esto es todo lo que hay". El botón sí ofrece el total real del área.
+
+Verificado con Playwright a 390×844 (iPhone) en ambos feeds + regresión desktop.
+
 ## Fuera de scope v1 (anotado, no perdido)
 
 - `?bbox` en la URL (sería el primer filtro con escritura bidireccional a la URL — hoy no existe ninguna).
