@@ -92,7 +92,7 @@ ok(ajenasV.every((r) => !setEq.has(r.zona)), '🔑 lo que el filtro saca es SOLO
 ok(filtradas.every((r) => setEq.has(r.zona)), 'lo que deja es todo de las 6 zonas de Equipetrol');
 ok(todas.filter((r) => !r.zona).length === 0, 'ninguna prop sin zona (que quedaría invisible al verificador)');
 
-console.log('\n=== 6. Alquiler: el filtro por zona y su ÚNICA diferencia conocida ===');
+console.log('\n=== 6. Alquiler: el filtro por zona saca Zona Norte, y NADA de Equipetrol ===');
 const alq = [];
 for (let from = 0; ; from += 1000) {
   const { data, error } = await sb.from('propiedades_v2_shadow')
@@ -103,11 +103,15 @@ for (let from = 0; ; from += 1000) {
 const alqEq = alq.filter((r) => setEq.has(r.zona));
 const ajenas = alq.filter((r) => !setEq.has(r.zona));
 console.log(`     sin filtro: ${alq.length} · con filtro: ${alqEq.length} · de otras zonas: ${ajenas.length}`);
-if (ajenas.length) console.log(`     las de afuera: ${ajenas.map((r) => `${r.id} (${r.zona})`).join(', ')}`);
-// A diferencia de venta, acá el filtro SÍ saca algo: hay 1 prop de Zona Norte colada en shadow
-// alquiler. Es correcto que salga (el crawl de Equipetrol nunca la ve, y hoy figura como
-// "desaparecida" todas las noches). Se afirma el número exacto para que un cambio no pase inadvertido.
-ok(ajenas.length <= 1, `el filtro saca como mucho 1 prop ajena (saca ${ajenas.length})`);
+console.log(`     zonas distintas afuera: ${new Set(ajenas.map((r) => r.zona)).size}`);
+// Este assert afirmaba `ajenas.length <= 1`, escrito cuando había UNA sola prop de Zona Norte
+// colada en shadow alquiler. Desde que ZN entró al híbrido (30-jul) hay 140 y son legítimas, así
+// que el número exacto dejó de describir el mundo y el test fallaba por envejecer, no por romperse.
+// Lo que el test tiene que defender no es CUÁNTAS salen sino QUE NINGUNA SEA DE EQUIPETROL: la
+// perilla es correcta si particiona bien, sin importar el tamaño de la otra macrozona.
+const zonasZN = new Set(ZONAS_HIBRIDO['zona-norte'].zonas);
+ok(ajenas.every((r) => zonasZN.has(r.zona)),
+   `todo lo que saca el filtro es de una zona conocida de ZN (${ajenas.filter((r) => !zonasZN.has(r.zona)).length} fuera de catálogo)`);
 ok(ajenas.every((r) => !setEq.has(r.zona)), 'lo que saca es de otra zona, no de Equipetrol');
 ok(alq.filter((r) => !r.zona).length === 0, 'ninguna prop de alquiler sin zona');
 

@@ -278,8 +278,23 @@ async function prepNuevas(discoveryFile, n) {
     console.log(`   ${id} ${nv.fuente} nueva  crudo=${crudo} ${moneda || '?'}  slug:${(slugDe(nv.url) || '').slice(0, 44)}`);
     await pace(500);
   }
-  const file = join(OUT, `material-alq-nuevas-${TS}.json`);
-  writeFileSync(file, JSON.stringify({ generado: TS, spec: 'READER_SPEC_ALQUILER.md', origen: 'discovery-nuevas', total: entradas.length, entradas }, null, 2));
+  // El material declara de qué ZONA es, igual que --prep (arriba) y que su gemelo de venta.
+  // Este camino quedó sin la perilla y el daño era SILENCIOSO: `partir-lectura.mjs` resuelve la
+  // zona con `doc.zona || 'equipetrol'`, así que un material de ZN sin el campo producía chunks
+  // llamados `lectura-alquiler-<fecha>-cN.json` — exactamente el nombre que usa Equipetrol. La
+  // noche que las dos zonas tengan nuevas a la vez, el segundo pisa al primero y los veredictos
+  // del primero se pierden sin un solo error en pantalla. Es el mismo bug que se arregló para
+  // venta el 30-jul (commit bbb9d22); acá sobrevivió porque el camino `--nuevas` es otro archivo.
+  //
+  // `m2_tipico` NO se incluye a propósito: es el rango de $/m² de VENTA. El
+  // READER_SPEC_ALQUILER.md no lo lee y meterlo en un material de alquiler es darle al lector una
+  // banda que no corresponde a lo que está juzgando ($/m²/mes). `--prep` sí lo arrastra — vale
+  // sacarlo de ahí, pero es otro cambio.
+  const file = join(OUT, conSufijo(`material-alq-nuevas-${TS}.json`, ZONA));
+  writeFileSync(file, JSON.stringify({
+    generado: TS, spec: 'READER_SPEC_ALQUILER.md', zona: ZONA.id, origen: 'discovery-nuevas',
+    total: entradas.length, entradas,
+  }, null, 2));
   console.log(`\n💾 ${file}`);
   console.log(`   📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);
   console.log(`   → LÉELO y llená "veredicto" (READER_SPEC_ALQUILER.md), después: node cargar-alquiler-shadow.mjs --apply ${file}\n`);
@@ -454,9 +469,59 @@ async function apply(file) {
   if (fallidas.length) console.log(`⚠️  ${fallidas.length} NO escritas (constraint): ${fallidas.map((f) => `${f.id}(${f.motivo})`).join(', ')}`);
   console.log('');
   for (const r of reporte) console.log(`   ${r.id}  ${r.crudo} ${r.moneda} [${r.tc}]  ${r.dorm}d  edif="${r.edif || '—'}" → pm ${r.pm ?? '—'} [${r.match}]${r.motivo ? '  ·  ' + r.motivo : ''}`);
+  // Los alias no se escriben solos —`proyectos_master` es PROD y el invariante shadow es no
+  // tocarlo— pero SÍ tienen que quedar en un archivo. Imprimirlos nomás es perderlos: la corrida
+  // es desatendida y nadie mira esa consola. El 3-ago se perdió así el alias
+  // `pm 411 (Atlantis Towers) ← "Edificio Atlantis"`; se recuperó del log de la routine, no del
+  // script. Venta ya escribía su .sql desde el 30-jul; este camino se quedó atrás.
   if (aliasSugeridos.length) {
-    console.log(`\n🏷️  Alias sugeridos (NO se escriben a prod en fase shadow):`);
+    console.log(`\n🏷️  Alias sugeridos (NO se escriben a prod en fase shadow) (${aliasSugeridos.length}):`);
     for (const a of aliasSugeridos) console.log(`   pm ${a.pm} (${a.edif}) ← alias "${a.alias}"`);
+
+    // Dedup por (pm, alias): la misma grafía aparece una vez por propiedad del edificio.
+    const porPm = new Map();
+    for (const a of aliasSugeridos) {
+      if (!porPm.has(a.pm)) porPm.set(a.pm, { edif: a.edif, alias: new Set() });
+      porPm.get(a.pm).alias.add(a.alias);
+    }
+    const fecha = new Date().toISOString().slice(0, 10);
+    // `-alq-` en el nombre, NO el mismo base que venta: `alias-sugeridos-<fecha>.sql` ya es de
+    // cargar-deptos-shadow.mjs, y las dos operaciones corren la misma noche sobre el mismo output/.
+    // Copiar el nombre de venta habría cambiado una colisión por otra.
+    const sqlFile = join(OUT, conSufijo(`alias-sugeridos-alq-${fecha}.sql`, ZONA));
+    const esc = (s) => String(s).replace(/'/g, "''");
+    const sql = [
+      `-- Alias sugeridos por el --apply de ALQUILER de ${fecha} · zona: ${ZONA.nombre}`,
+      `-- Los propuso el LECTOR al reconocer el edificio; sin esto, el proximo aviso con la`,
+      `-- misma grafia vuelve a caer sin match y hay que leerlo de nuevo.`,
+      `-- Revisar antes de aplicar: un alias equivocado ata avisos al edificio incorrecto.`,
+      `-- proyectos_master es PROD (compartido con n8n y ZN): es aditivo, no cambia matches existentes.`,
+      '',
+      'BEGIN;',
+      '',
+      ...[...porPm.entries()].map(([pm, { edif, alias }]) => [
+        `-- pm ${pm} — ${edif}`,
+        // UNION contra los que ya están: idempotente de verdad. Un `array_cat` con candado
+        // `AND NOT (a AND b)` parece equivalente pero NO lo es — si uno de los alias ya existe
+        // y el otro no, el candado deja pasar el UPDATE y duplica el que ya estaba.
+        `UPDATE proyectos_master SET`,
+        `  alias_conocidos = (SELECT array_agg(DISTINCT a) FROM (`,
+        `      SELECT unnest(COALESCE(alias_conocidos,'{}')) AS a`,
+        `      UNION SELECT unnest(ARRAY[${[...alias].map((a) => `'${esc(a)}'`).join(', ')}])`,
+        `  ) t),`,
+        `  updated_at = NOW()`,
+        `WHERE id_proyecto_master = ${pm};`,
+        '',
+      ].join('\n')),
+      `SELECT id_proyecto_master, nombre_oficial, alias_conocidos FROM proyectos_master`,
+      `WHERE id_proyecto_master IN (${[...porPm.keys()].join(', ')});`,
+      '',
+      'COMMIT;',
+      '',
+    ].join('\n');
+    writeFileSync(sqlFile, sql);
+    console.log(`   📄 SQL listo (${porPm.size} edificios): ${sqlFile}`);
+    console.log(`      Aplicarlo evita que estos edificios vuelvan a la cola en la proxima tanda.`);
   }
   const sinMatch = reporte.filter((r) => r.pm == null && r.edif);
   if (sinMatch.length) console.log(`\n⚠️  Con nombre pero sin auto-match: ${sinMatch.map((r) => `${r.id}(${r.edif})`).join(', ')}`);
