@@ -310,8 +310,8 @@ Fecha de generación, total listings, match rate, cobertura GPS, versión de fil
 
 | Sección | Razón | Cobertura actual en BD |
 |---------|-------|----------------------|
-| Comparativa equipamiento (ej. CVI vs Terrazzo) | `equipamiento_base` en `proyectos_master` | **25.8%** (61 de 236 proyectos) |
-| Comparativa amenidades proyecto vs proyecto | `amenidades_edificio` en `proyectos_master` | **47.5%** (112 de 236 proyectos) |
+| Comparativa equipamiento (ej. CVI vs Terrazzo) | `equipamiento_base` en `proyectos_master` | **25.8%** (61 de 236 PMs — universo de la fecha del doc, ⚠️ re-medir) |
+| Comparativa amenidades proyecto vs proyecto | `amenidades_edificio` en `proyectos_master` | **47.5%** (112 de 236 PMs — universo de la fecha del doc, ⚠️ re-medir) |
 | Scorecard equipamiento (tabla de items por competidor) | Requiere que todos los competidores tengan datos | Mismo 25.8% |
 | Tiers curados (Premium / Segmento / Entry) | El corte es editorial, no derivable solo de la data | Automatizable con heurística p75/p25, pero pierde matiz |
 | Recomendaciones | 100% editorial, juicio cualitativo | No automatizable |
@@ -319,6 +319,8 @@ Fecha de generación, total listings, match rate, cobertura GPS, versión de fil
 | Ficha head-to-head completa | Mezcla data + curación manual | Datos de desarrollador no están en BD |
 | Inventario real (unidades vendidas/disponibles) | Viene del desarrollador, no de portales | `total_unidades` en **1.7%** de proyectos |
 | Forma de pago detallada | Viene del desarrollador | No sistematizado |
+
+> ⚠️ **Los porcentajes de cobertura de esta tabla están medidos sobre un universo de 236 proyectos master, el que había a la fecha del doc.** Hoy el universo es bastante mayor (**441 PMs activos al 4-ago-2026**), así que **hay que re-medirlos antes de usarlos**. El numerador de hoy no está medido, y sin él no se puede saber si la cobertura subió o bajó: re-correr el conteo contra `proyectos_master` antes de citar cualquiera de estas cifras.
 
 **Estrategia**: el formulario del desarrollador (sección 4) llena los gaps de las secciones no automatizables. A medida que más desarrolladores completan formularios, las secciones "no automatizables" se vuelven automatizables progresivamente.
 

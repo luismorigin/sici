@@ -60,6 +60,14 @@ node discovery-deptos.mjs --zona=zona-norte
 ```
 Sale a C21 + Remax con la red de las **14 microzonas de ZN** y diffea contra shadow **filtrado por
 zona** (sin ese filtro marcaría toda Equipetrol como desaparecida). Mirá **NUEVAS** / **desaparecidas**.
+- 🔁 **4ª señal — SLUG REESCRITO por C21** (PR #64, 4-ago-2026): C21 reescribe el slug de
+  `/propiedad/<codigo>_<slug>` al editar el aviso → entraría como NUEVO y duplicaría el depto con dos
+  precios. Se detecta por el código: `🔁 N con SLUG REESCRITO por C21`. **NO se filtran, se capturan**
+  (el precio nuevo es el vigente) y el cargador marca la vieja en el paso 4.
+- 🔴 **ÚNICA EXCEPCIÓN al filtro de zona de este paso**: el índice de códigos C21 se arma contra shadow
+  **COMPLETO, sin filtrar por zona** — el código es único en todo C21, así que un aviso que además cambió
+  de zona se detecta igual. Por eso puede salir `⚠️ cambió de zona (X → Y), revisar`: no es un bug del
+  filtro, es la excepción funcionando. Miralo igual, porque es raro.
 - Circuit breaker (🛑) → **no insistas**, esperá unas horas. Él mismo avisa por Slack con diagnóstico
   DNS (portal caído vs IP bloqueada).
 - Cooldown 20 min entre corridas (`--force` con criterio).
@@ -113,6 +121,11 @@ por GPS**). Imprime escritos / rechazados por gate / alias sugeridos / con-nombr
 Los alias quedan en `output/alias-sugeridos-<fecha>-zn.sql` (**con sufijo `-zn`**: sin él es el archivo
 de Equipetrol, que se escribe la misma noche en la misma carpeta) — **importan**: en ZN la mayoría de los
 matches los hace el LECTOR, no el matcher, y cada alias perdido es lectura que se repite.
+
+🔁 **MUTACIÓN ADICIONAL sobre filas PREEXISTENTES (PR #64):** si una fila traía `reemplaza_a` (slug
+reescrito, paso 1), tras escribir la nueva marca **la vieja** con `duplicado_de = <id nuevo>`. Imprime
+`🔁 slug reescrito por C21: N/M viejas marcadas...`. Es el ÚNICO punto donde el apply toca filas fuera
+del material. Candado `duplicado_de IS NULL`, se saltea si la nueva falló, `datos_json` se mergea. Reversible.
 
 ### 5. Verificador
 ```

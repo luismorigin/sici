@@ -55,6 +55,7 @@ leer el anuncio una sola vez.
 |---|---|---|
 | **Matching** (regex 3.1 + juez LLM 3.1b + GPS 3.2 + prefijos 3.3/3.4) | ✅ **SOBREVIVE** | La más portable — es intrínseca al matcheo por nombre, no al pipeline. |
 | **Duplicados** (apart-hoteles, `dup-checks.mjs`) | ✅ **SOBREVIVE — plegado en `/audit-cola-shadow` (Superficie 3)** | El dedup dejó de ser capa separada de `/audit-feed-*`: ahora vive DENTRO de `auditar-matching-shadow.mjs` como Superficie 3 (agrupa por `pm+precio+área` con guarda por piso, reusa `dup-checks.mjs`). |
+| **Duplicados por slug reescrito de C21** | 🔁 **SE MOVIÓ AGUAS ARRIBA — al pipeline de CAPTURA** (PR #64, 4-ago-2026) | Ya no es una capa de auditoría: el discovery lo caza por el código de la URL y el cargador marca la vieja en el `--apply`. **Sobrevive al cutover por diseño** (vive en el híbrido, no en n8n). Ver la nota de la Superficie 3 abajo: esa superficie **no podía** cazarlo, porque agrupa por precio y en estos casos el precio cambió. |
 | **Drift portal** (Capa 1) | 🟢 **CRÍTICO — es el disparador de re-lectura** | Ver "Gap del híbrido" abajo. NO es "menos volumen": es la única red que detecta cambios post-captura. La gemela `-fetch` ya usa el fetcher del híbrido. |
 | similarity / reporter / persistencia (`audit_descripciones_*`, mig 242/267) | ✅ **SOBREVIVE** | Agnósticos del pipeline. `modo='fetch'` ya preparado. |
 | Precio explícito (2.3), $/m² (2.4 base), nombre basura (2.6), booleanos (2.7), área/desc corta (4.1/4.2) | ✅ **SOBREVIVE** | QA independiente. Repuntar la columna de desc. |
@@ -85,9 +86,14 @@ leer el anuncio una sola vez.
   La Salle, 3660 Hamburgo) / **fuzzy débil** (1674 Sky Collection).
 - **Superficie 2:** auto-matches riesgosos, sobre todo `nombre_unico_zona_dif` confianza 85 (nombre único
   pero zona no coincide — hoy: Sky Luxury, Maré, Stone 3, Uptown Drei). Falsos positivos.
-- **Superficie 3 (nueva — DEDUP):** duplicados apart-hotel / republicación, agrupando por `pm+precio+área` con
-  **guarda por piso** (reusa `dup-checks.mjs`). Es el dedup que antes vivía como capa separada de las
-  `/audit-feed-*`, plegado ahora DENTRO de esta skill. Determinístico (no juez LLM).
+- **Superficie 3 (nueva — DEDUP):** duplicados apart-hotel / republicación **sin código repetido**,
+  agrupando por `pm+precio+área` con **guarda por piso** (reusa `dup-checks.mjs`). Es el dedup que antes
+  vivía como capa separada de las `/audit-feed-*`, plegado ahora DENTRO de esta skill. Determinístico
+  (no juez LLM).
+  🔴 **Límite declarado (4-ago-2026):** agrupar por `precio` **no puede** cazar el slug reescrito de C21,
+  porque en esos casos **el precio cambió** — es justamente el motivo por el que el captador editó el
+  aviso. Esa clase se resuelve ahora en la captura (PR #64) por el código de la URL. Los 2 que esta
+  superficie levantó el 4-ago fueron coincidencia (precio igual), no diseño.
 - **Respeta `campos_bloqueados` en las 3 superficies** (Regla Crítica #1: Manual > Automatic).
 - Cambio ya hecho: `lib/db.mjs` consulta `propiedades_v2_shadow WHERE ... id_proyecto_master IS NULL AND
   tiene_nombre` en vez de `getColaPendiente`. El juez-subagente y el generador de SQL no cambiaron.

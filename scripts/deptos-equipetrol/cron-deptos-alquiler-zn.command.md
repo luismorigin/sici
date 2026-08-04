@@ -46,6 +46,12 @@ node discovery-alquiler.mjs --zona=zona-norte
 ```
 C21 (renta) + Remax (alquiler) sobre las 14 microzonas de ZN, diffeado contra shadow **filtrado por
 zona**. Circuit breaker → no insistir; avisa solo por Slack con diagnóstico DNS.
+- 🔁 **4ª señal — SLUG REESCRITO por C21** (PR #64, 4-ago-2026): C21 reescribe el slug al editar el aviso
+  → entraría como NUEVO, duplicando el depto. Se detecta por el código: `🔁 N con SLUG REESCRITO por C21`.
+  **NO se filtran, se capturan**; el cargador marca la vieja `duplicado_de` en el paso 4.
+- 🔴 **Excepción al filtro de zona**: el índice de códigos se arma contra shadow **completo, sin filtrar**
+  (el código es único en todo C21). Si sale `⚠️ cambió de zona (X → Y), revisar`, es la excepción
+  funcionando — miralo igual.
 
 ### 2b. Prep NUEVAS (read-only)
 ```
@@ -88,6 +94,11 @@ Gate: rechaza venta pura / anticrético / baulera-parqueo. La **basura estructur
 descarte; la **operación mal tipeada** solo se rechaza → si un aviso reaparece noche tras noche,
 **leelo antes de suprimirlo**: puede ser un alquiler real que el gate está tirando (caso Nano Tec,
 30-jul → memoria `feedback_ejemplo_en_spec_pesa_como_regla`).
+
+🔁 **MUTACIÓN ADICIONAL sobre filas PREEXISTENTES (PR #64):** si la fila traía `reemplaza_a` (slug
+reescrito), tras escribir la nueva marca **la vieja** `duplicado_de = <id nuevo>`. Imprime
+`🔁 slug reescrito por C21: N/M viejas marcadas...`. Candado `duplicado_de IS NULL`, `datos_json` se
+mergea, reversible.
 
 🏷️ **Los alias sugeridos quedan en `output/alias-sugeridos-alq-<fecha>-zn.sql`** (desde el 3-ago-2026).
 Antes solo se imprimían en consola y, siendo esta una corrida desatendida, se perdían: así se perdió

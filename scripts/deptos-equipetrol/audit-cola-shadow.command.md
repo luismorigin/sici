@@ -1,5 +1,5 @@
 ---
-description: Audita MATCHING + DUPLICADOS del feed SHADOW del híbrido (venta + alquiler) — tres superficies: sin-match-con-nombre (PM_NUEVO/fuzzy), auto-matches riesgosos (nombre_unico_zona_dif) y duplicados (apart-hotel/republicación, agrupa por pm+precio+área). El .mjs filtra $0 SIN fetch (lee el anuncio ya guardado); el VEREDICTO de matching lo dan subagentes-lectores (juez), el dedup es determinístico. SQL contra propiedades_v2_shadow que aplica el humano. Read-only.
+description: Audita MATCHING + DUPLICADOS del feed SHADOW del híbrido (venta + alquiler) — tres superficies: sin-match-con-nombre (PM_NUEVO/fuzzy), auto-matches riesgosos (nombre_unico_zona_dif) y duplicados SIN código repetido (apart-hotel/republicación, agrupa por pm+precio+área; el slug reescrito de C21 ya lo caza el discovery desde el PR #64). El .mjs filtra $0 SIN fetch (lee el anuncio ya guardado); el VEREDICTO de matching lo dan subagentes-lectores (juez), el dedup es determinístico. SQL contra propiedades_v2_shadow que aplica el humano. Read-only.
 ---
 
 # /audit-cola-shadow — Audit de matching del feed SHADOW (híbrido)
@@ -45,8 +45,17 @@ carga, eso lo cubre el otro comando, `/audit-deptos-shadow`, que sí re-fetchea 
    (confianza 85: nombre único exacto pero **zona ≠**). Falsos positivos: Sky Luxury, Maré, Uptown Drei.
    El `.mjs` trae `pm_actual` + `dist_metros` prop↔pm → **priorizá por distancia**: `dist≈0` con mismo
    nombre = casi seguro correcto (solo cruza el borde de zona); `dist` grande (>300m) = revisar en serio.
-3. **DUPLICADOS** (apart-hoteles / republicaciones) — el detector del pipeline NO los caza (cada aviso
-   tiene código único). Reusa `dup-checks.mjs` de prod. **MEJORA shadow:** agrupa por **pm** cuando existe
+3. **DUPLICADOS** (apart-hoteles / republicaciones **sin código repetido**) — Reusa `dup-checks.mjs` de prod.
+   🔴 **Corregido el 4-ago-2026:** acá decía *"el detector del pipeline NO los caza (cada aviso tiene código
+   único)"*. La premisa estaba **invertida**: el código de C21 es único por **AVISO**, y un mismo aviso puede
+   tener **varias URLs** — C21 reescribe el slug cuando el captador edita. Desde el PR #64 **el pipeline sí caza
+   esa clase**, en el discovery y por ese mismo código (ver `discovery-deptos.mjs`, "slug reescrito"). Lo que
+   queda para esta superficie es lo que el código NO puede resolver: apart-hoteles y republicaciones con
+   códigos distintos.
+   ⚠️ **Y esta superficie no podía cazar el slug reescrito ni por casualidad**: agrupa por `pm+precio+área`, y
+   en esos casos **el precio cambió** (es el motivo de la reescritura). Cuando el audit del 4-ago levantó 2 de
+   esos 3 dedups fue por coincidencia (precio igual), no por diseño.
+   **MEJORA shadow:** agrupa por **pm** cuando existe
    (más certero que el string del nombre — el pm ya matcheado deja el dedup servido), + precio + área, y
    compara descripciones (**≥90% = mismo aviso replicado**; descripciones distintas = unidades legítimas del
    mismo edificio, NO se tocan). **GUARDA POR PISO**: si dos avisos del mismo grupo declaran `piso` distinto,
@@ -138,9 +147,11 @@ solo tras verificación humana (el founder da el GPS en Google Maps). NO inventa
 - **Superficie 3 (dedup):** `UPDATE propiedades_v2_shadow SET duplicado_de=<sobreviviente>, fecha_actualizacion=NOW()
   WHERE id IN (<duplicados>)`. La vista filtra `duplicado_de IS NULL` → salen del feed. **Reversible** (`=NULL`).
   Confirmá por lectura los clusters de 2 antes de aplicar; los apart-hotel grandes son directos.
-  ⚠️ **El `.mjs` ya ignora props con `duplicado_de` heredado de prod** (si no, marcaría un sobreviviente ya
-  elegido → CICLO A↔B → el edificio se oculta entero; bug cazado 14-jul, Santorini/Lofty). No re-introducir
-  props ya deduplicadas al cluster.
+  ⚠️ **El `.mjs` ya ignora props con `duplicado_de`** (si no, marcaría un sobreviviente ya elegido →
+  CICLO A↔B → el edificio se oculta entero; bug cazado 14-jul, Santorini/Lofty). No re-introducir props
+  ya deduplicadas al cluster. 🔴 **Desde el 4-ago `duplicado_de` ya NO viene solo heredado de prod**: lo
+  escribe también el cargador en `--apply` cuando C21 reescribió el slug (`dedup_por='cargador_slug_reescrito'`).
+  El filtro aplica igual — pero no asumas que una fila con `duplicado_de` nació en el régimen viejo.
 - Temp tables con VALUES multilínea para listas de IDs. Cerrar con SELECT de verificación; el humano
   hace COMMIT/ROLLBACK. **PM_NUEVO**: si el catálogo es prod (read-only en fase shadow), los alias/PM
   nuevos se REGISTRAN para el cutover — NO se escriben a `proyectos_master` ahora (invariante shadow).
