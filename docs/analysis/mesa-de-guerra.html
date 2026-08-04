@@ -108,6 +108,9 @@
   .uni .um2{color:var(--gris);font-size:11px}
   .uni .u2{font-size:10.5px;color:var(--gris);margin-top:3px}
   .pos-mini{font-size:9.5px;font-weight:800;border-radius:999px;padding:2px 8px;margin-left:auto;font-family:'Figtree'}
+  .lib-tabs{display:flex;gap:6px;margin:14px 0 10px}
+  .lib-tabs button{flex:1;border:1px solid var(--linea);background:var(--panel2);color:var(--gris);font-family:'Figtree';font-weight:700;font-size:12px;padding:8px 10px;border-radius:9px;cursor:pointer}
+  .lib-tabs button.on{background:var(--arena);color:var(--negro);border-color:var(--arena)}
 
   /* Máquina del tiempo */
   .tm-caja{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:24px}
@@ -558,6 +561,8 @@ var BA=[
 [218,"Edificio Macororó 11",-17.76349,-63.19328,"EC"],[297,"Eurodesign Residences",-17.76516,-63.19181,"EC"],
 [299,"Edificio Lateris",-17.77275,-63.19133,"EC"],[306,"Infinity by Elite",-17.76676,-63.20277,"SI"],
 [312,"Condominio Domus Deluxe",-17.76449,-63.19327,"EC"],[320,"Condominio Metta",-17.76136,-63.19902,"SI"]];
+/* libro de ALQUILER por edificio: "dorms|m2|bob_mes|amoblado|dias" (BD 3-ago, 189 avisos) */
+var UA={3:"1|42|3800|si|36",5:"1|38|4000|-|19;1|48|5000|si|54",6:"2|100|7600|si|52;2|145|11500|si|60;2|100|16000|-|41",7:"0|36|3900|si|80",9:"0|38|3350|-|11",11:"0|27|2800|-|11;0|27|3500|si|75",13:"1|42|-|-|11;2|86|7000|-|12",15:"0|42|4300|si|84;0|42|4500|si|82;0|42|4600|si|105;0|42|4800|si|105;0|42|4800|si|141;0|42|4800|si|81;1|74|7000|-|27;2|84|8500|-|18;2|105|10500|-|47",18:"0|32|4000|si|15;1|61|4000|-|57",22:"0|45|4700|si|40;1|53|5000|-|71;1|67|5000|-|76;1|53|5200|si|28",23:"1|83|11500|si|68;1|96|-|si|48",28:"3|104|8800|-|34",30:"0|40|4300|si|43;0|42|4500|-|27;0|40|4500|si|89;0|42|5000|-|91;1|68|5300|-|119;1|65|5900|si|41;2|95|7500|-|50;2|105|7500|-|73;2|105|9500|si|50;2|106|9800|si|42",33:"0|31|3500|si|48",36:"0|33|3300|si|113;0|32|3350|si|35;0|32|3650|si|54;1|46|-|si|7",38:"1|52|4200|-|14;1|59|4470|-|83",41:"0|42|3700|-|22;1|48|4200|-|19;1|74|5500|si|15;1|47|-|-|50;1|45|-|-|50",42:"1|45|3200|-|83;1|46|4500|si|110",45:"0|35|3500|si|19;1|78|-|si|6",54:"1|50|4200|-|31",57:"0|39|3500|-|28",60:"3|168|-|si|13",61:"1|47|4200|si|39",64:"0|41|3000|-|29;2|73|-|-|53",65:"0|44|4900|si|75;0|43|5200|-|6;0|44|5500|si|41;1|50|5000|-|26;1|42|5500|si|34;1|45|6500|-|47;1|52|7000|si|35;2|94|9000|-|5;2|84|10000|si|20",67:"0|39|2600|-|20;0|32|3000|si|24",70:"0|32|3500|si|8",71:"2|107|5900|-|138;3|213|12500|-|32",74:"0|40|3300|si|40",76:"1|51|-|-|4",77:"0|35|3250|si|14",84:"1|43|3500|-|29;1|37|4200|-|64",87:"0|41|3700|si|40",89:"1|44|3500|semi|50",95:"0|31|3000|si|97",101:"0|36|3500|si|54;1|47|4500|-|29;1|48|4500|si|54;1|48|-|si|81",109:"1|55|6000|-|15;2|73|7300|-|41",112:"1|56|5800|-|6",129:"1|42|4200|si|40;1|44|4500|si|56;1|44|5000|semi|82;2|65|5800|si|20",135:"1|42|4100|si|53;1|42|5000|si|18",140:"0|55|3200|si|103",141:"2|103|7656|-|46;2|103|8004|-|76",144:"1|44|4000|-|14;2|80|5800|si|55",147:"0|34|2800|si|25",162:"1|56|3200|si|54",166:"3|148|9800|semi|40;3|168|-|-|71",169:"1|30|3500|si|76",218:"3|103|6264|-|43",219:"1|43|4200|si|27",222:"0|38|2900|-|76;0|40|4000|si|27;0|38|4200|si|62",226:"0|35|3500|si|62;1|34|3500|-|105",228:"2|73|8500|si|57",249:"1|60|5500|si|117",252:"1|46|4000|si|104",278:"2|102|8000|si|92;2|138|9800|-|13;2|130|10200|si|102",282:"0|33|3400|si|18;1|37|3300|-|28",284:"1|40|3000|-|28",288:"0|33|3300|si|13;0|33|3300|si|57",289:"0|38|3000|si|8",297:"3|115|-|-|71",299:"3|177|7100|si|147",305:"2|75|6500|-|62;2|75|-|si|14",306:"0|60|4200|si|41",312:"0|38|3650|si|18",320:"2|80|6500|si|138",323:"3|137|9200|si|52",324:"1|37|3500|si|56",326:"0|37|3500|si|13",336:"1|54|4500|si|33",339:"1|43|4000|si|118",347:"0|38|3000|si|33",348:"0|31|3000|si|43",350:"0|34|2800|si|1;0|36|3600|si|29;2|60|4500|-|22",351:"2|86|7500|si|102",516:"0|33|2800|si|48;0|31|3400|-|74",520:"1|54|4500|si|81",526:"1|80|6800|si|45",530:"2|80|4500|-|22"};
 function colAlq(bob){ if(bob==null)return '#555';
   var t=Math.max(0,Math.min(1,(bob-3000)/(9000-3000)));
   return t<0.5? mix('#5E9C72','#E0CE96',t*2) : mix('#E0CE96','#D07A4A',(t-0.5)*2);}
@@ -724,6 +729,7 @@ function fichaAlq(ba){
    '<div class="stat"><div class="v">'+al[0]+'</div><div class="l">avisos de alquiler activos</div></div>'+
    '<div class="stat"><div class="v">'+(al[1]?'Bs '+fm(al[1]):'—')+'</div><div class="l">alquiler mediano mensual</div></div>'+
    '</div>'+
+   (function(){var fa=filasAlquiler(ba[0]); return fa?'<h3 style="margin:6px 0 8px">Libro de unidades — alquiler ('+fa.n+')</h3>'+fa.html:''})()+
    '<div class="mini">Que un edificio tenga renta activa y cero venta publicada dice dos cosas: está ENTREGADO y habitado, y sus dueños hoy retienen en vez de vender. Alquileres pedidos en Bs (la moneda real de ese mercado), no contratos.</div></div>';
 }
 document.addEventListener('keydown',function(e){
@@ -733,27 +739,59 @@ document.addEventListener('keydown',function(e){
   if(pin){pin=null;dibujarSim();el('sim-clear').onclick&&el('sim-clear').click();}
 });
 function fm(x){return (x==null)?'—':x.toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
-function libroUnidades(b){
-  var raw=UN[Math.floor(b[0])]; if(!raw)return '';
+var tipLbl=function(d){return d==='0'?'Mono':(d==='-'?'s/tip':d+'D')};
+function filasVenta(b){
+  var raw=UN[Math.floor(b[0])]; if(!raw)return null;
   var us=raw.split(';').filter(Boolean).map(function(s){var f=s.split('|');
     return {d:f[0],a:+f[1],p:+f[2],piso:f[3],dias:+f[4],pq:f[5],ec:f[6],m2:Math.round(+f[2]/+f[1])}});
-  /* ancla = la más barata de su tipología (solo si hay 2+) */
   var minP={},cnt={};
   us.forEach(function(u){cnt[u.d]=(cnt[u.d]||0)+1; if(!(u.d in minP)||u.p<minP[u.d])minP[u.d]=u.p;});
-  var tip=function(d){return d==='0'?'Mono':(d==='-'?'s/tip':d+'D')};
   var filas=us.map(function(u){
-    var rz=R[b[4]]&&R[b[4]][+u.d], pos='',cls='pos-sin',lbl='s/base';
+    var rz=R[b[4]]&&R[b[4]][+u.d], cls='pos-sin',lbl='s/base';
     if(rz){ if(u.m2>rz[2]){cls='pos-sobre';lbl='sobre'} else if(u.m2<rz[0]){cls='pos-bajo';lbl='bajo'} else {cls='pos-dentro';lbl='dentro'} }
     var ancla=(cnt[u.d]>=2&&u.p===minP[u.d])?' 🎯':'';
     var viejo=u.dias>=180?' 🕰':'';
-    return '<div class="uni"><div class="u1"><b>'+tip(u.d)+'</b> · '+u.a+' m² · $'+fm(u.p)+ancla+viejo+
+    return '<div class="uni"><div class="u1"><b>'+tipLbl(u.d)+'</b> · '+u.a+' m² · $'+fm(u.p)+ancla+viejo+
       ' <span class="um2">$'+fm(u.m2)+'/m²</span><span class="pos-mini '+cls+'">'+lbl+'</span></div>'+
       '<div class="u2">piso '+(u.piso==='-'?'s/d':u.piso)+' · '+u.dias+' días públ. · '+
       (u.pq==='1'?'parqueo incl.':(u.pq==='0'?'sin parqueo':'parqueo s/d'))+' · '+
       (u.ec==='prev'?'preventa':(u.ec==='entr'?'entrega inm.':'estado s/d'))+'</div></div>';
   }).join('');
-  return '<h3 style="margin:14px 0 8px">Libro de unidades ('+us.length+')</h3><div class="uni-lista">'+filas+'</div>'+
-   '<div class="mini" style="margin-bottom:10px">Cada fila es un AVISO — dos pueden ser la misma unidad publicada por dos agencias. 🎯 = la más barata de su tipología: el precio ancla que el comprador le va a nombrar a su sala de ventas. 🕰 = 180+ días publicado. Posición vs rango p25-75 de la zona (indicativa).</div>';
+  return {n:us.length, html:'<div class="uni-lista">'+filas+'</div>'+
+   '<div class="mini" style="margin-bottom:10px">Cada fila es un AVISO — dos pueden ser la misma unidad publicada por dos agencias. 🎯 = la más barata de su tipología: el precio ancla que el comprador le va a nombrar a su sala de ventas. 🕰 = 180+ días publicado. Posición vs rango p25-75 de la zona (indicativa).</div>'};
+}
+function filasAlquiler(pm){
+  var raw=UA[pm]; if(!raw)return null;
+  var us=raw.split(';').filter(Boolean).map(function(s){var f=s.split('|');
+    return {d:f[0],a:f[1]==='-'?null:+f[1],bob:f[2]==='-'?null:+f[2],am:f[3],dias:+f[4]}});
+  var minB={},cnt={};
+  us.forEach(function(u){cnt[u.d]=(cnt[u.d]||0)+1; if(u.bob!=null&&(!(u.d in minB)||u.bob<minB[u.d]))minB[u.d]=u.bob;});
+  var filas=us.map(function(u){
+    var ancla=(u.bob!=null&&cnt[u.d]>=2&&u.bob===minB[u.d])?' 🎯':'';
+    return '<div class="uni"><div class="u1"><b>'+tipLbl(u.d)+'</b>'+(u.a?' · '+u.a+' m²':'')+' · '+
+      (u.bob!=null?'Bs '+fm(u.bob)+'/mes':'precio s/d')+ancla+'</div>'+
+      '<div class="u2">'+(u.am==='si'?'amoblado':(u.am==='semi'?'semi amoblado':'amoblado s/d'))+' · '+u.dias+' días públ.</div></div>';
+  }).join('');
+  return {n:us.length, html:'<div class="uni-lista">'+filas+'</div>'+
+   '<div class="mini" style="margin-bottom:10px">Alquileres PEDIDOS en Bs, no contratos. 🎯 = el más barato de su tipología: la renta de referencia del edificio. La oferta casi nunca declara "sin amoblar" — asuma mercado mayormente amoblado.</div>'};
+}
+function libroTab(w){
+  var v=el('lib-v'),a=el('lib-a'); if(!v||!a)return;
+  v.style.display=(w==='v')?'':'none'; a.style.display=(w==='a')?'':'none';
+  el('libt-v').classList.toggle('on',w==='v'); el('libt-a').classList.toggle('on',w==='a');
+}
+function libroUnidades(b){
+  var v=filasVenta(b), a=filasAlquiler(Math.floor(b[0]));
+  if(!v&&!a)return '';
+  if(v&&!a)return '<h3 style="margin:14px 0 8px">Libro de unidades — venta ('+v.n+')</h3>'+v.html;
+  if(!v&&a)return '<h3 style="margin:14px 0 8px">Libro de unidades — alquiler ('+a.n+')</h3>'+a.html;
+  /* ambos: pestañas; la capa activa elige el default (la pregunta que el usuario está haciendo) */
+  var defA=(capaActual==='alquiler');
+  return '<div class="lib-tabs">'+
+   '<button id="libt-v" class="'+(defA?'':'on')+'" onclick="libroTab(\'v\')">🏷 Venta ('+v.n+')</button>'+
+   '<button id="libt-a" class="'+(defA?'on':'')+'" onclick="libroTab(\'a\')">🏠 Alquiler ('+a.n+')</button></div>'+
+   '<div id="lib-v" style="'+(defA?'display:none':'')+'">'+v.html+'</div>'+
+   '<div id="lib-a" style="'+(defA?'':'display:none')+'">'+a.html+'</div>';
 }
 function ficha(b){
   var sl=SAL[b[0]]||0;
