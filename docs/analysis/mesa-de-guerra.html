@@ -161,6 +161,7 @@
         <button class="capa" data-capa="velocidad">⚡ Velocidad</button>
         <button class="capa" data-capa="oferta">🏢 Concentración</button>
         <button class="capa" data-capa="salidas">🚪 Salidas de julio</button>
+        <button class="capa" data-capa="entregas">⏳ Preventa y entregas</button>
         <button class="capa" id="btn-tour" style="margin-left:auto">▶ Recorrido</button>
       </div>
       <div class="capa-nota" id="capa-nota"></div>
@@ -523,6 +524,18 @@ var POLY=[
 ["EN",[[-63.198673,-17.760397],[-63.196742,-17.763310],[-63.192972,-17.760959],[-63.195368,-17.758393],[-63.198673,-17.760397]]],
 ["A3",[[-63.202862,-17.767992],[-63.201675,-17.769368],[-63.199799,-17.767324],[-63.191766,-17.762294],[-63.191720,-17.760389],[-63.199413,-17.765142],[-63.202862,-17.767992]]]
 ];
+/* preventa por edificio: [avisos_preventa, "fechas de entrega declaradas"] (BD 3-ago) */
+var PV={1:[3,"Enero 2026;Mayo 2026"],2:[8,"Mayo 2026"],3:[2,"Junio 2027"],8:[1,null],12:[5,"Diciembre 2025"],16:[5,"Diciembre 2026"],17:[16,"Julio 2026;Septiembre 2026"],19:[2,"Diciembre 2026"],47:[3,"Noviembre 2026"],48:[4,"Julio 2026;Junio 2026"],49:[5,"Diciembre 2026;Octubre 2026"],50:[2,"Junio 2027"],84:[2,null],112:[2,"Febrero 2026"],113:[2,"Junio 2027"],248:[6,"Julio 2026"],321:[4,null],326:[1,"Septiembre 2026"],332:[2,null],346:[2,"Diciembre 2026;Septiembre 2026"],523:[1,null],524:[10,"Marzo 2028"],525:[2,null],529:[4,null]};
+var MESNUM={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12};
+function entregaInfo(pm){
+  var v=PV[pm]; if(!v)return null;
+  var fs=(v[1]?v[1].split(';'):[]).map(function(s){var p=s.trim().toLowerCase().split(/\s+/);
+    return {y:+p[1],m:MESNUM[p[0]]||6,txt:s};}).sort(function(a,b){return (a.y*100+a.m)-(b.y*100+b.m)});
+  var HOY=2026*100+8, bucket='sinfecha';
+  if(fs.length){var k=fs[0].y*100+fs[0].m;
+    bucket = k<HOY?'vencida':(fs[0].y===2026?'a2026':(fs[0].y===2027?'a2027':'a2028'));}
+  return {prev:v[0],fechas:fs,bucket:bucket};
+}
 /* serie 1D global [MM-DD, usd_m2, bs_m2] */
 var SERIE=[["01-05",2002,19360],["01-15",2057,19987],["01-21",2075,20170],["01-27",2092,19874],["01-31",2064,18892],["02-05",2091,19353],["02-10",2055,19165],["02-17",2052,19007],["02-24",2055,18931],["03-04",2055,18516],["03-08",2002,18731],["03-11",1996,18868],["03-15",2002,18575],["03-22",2002,18583],["04-15",1957,18164],["04-18",1911,17845],["04-22",1903,17996],["04-28",1800,17514],["05-01",1813,18297],["05-06",1821,18040],["05-08",1906,18976],["05-12",1810,17973],["05-21",1800,18010],["05-30",1800,18347],["06-13",1789,17780],["06-20",1800,17784],["06-24",1780,17728],["06-29",1797,17882],["07-02",1750,17321],["07-09",1718,17561],["07-12",1703,17948],["07-15",1716,17964],["07-18",1711,18275],["07-21",1700,18285]];
 var MES={"01":"enero","02":"febrero","03":"marzo","04":"abril","05":"mayo","06":"junio","07":"julio"};
@@ -568,6 +581,10 @@ function estiloCapa(b){ /* [color, r, opacidad] según la capa activa */
   if(capaActual==='precio')return [colPrecio(b[6]),radio(b[5]),0.92];
   if(capaActual==='velocidad')return [colVel(b[7]),radio(b[5]),0.92];
   if(capaActual==='oferta')return ['#5E9C72',radio(b[5]),0.92];
+  if(capaActual==='entregas'){var ei=entregaInfo(Math.floor(b[0]));
+    if(!ei)return ['#3A3934',3,0.45];
+    var col={vencida:'#D07A4A',a2026:'#5E9C72',a2027:'#E0CE96',a2028:'#B9AEDB',sinfecha:'#5A6B5E'}[ei.bucket];
+    return [col,4+Math.sqrt(ei.prev)*3,0.95];}
   var sl=SAL[b[0]]||0;
   return sl>0? ['#D07A4A',4+Math.sqrt(sl)*3.4,0.95] : ['#3A3934',3,0.55];
 }
@@ -589,7 +606,8 @@ function dibujarMapa(){
    precio:'<b>¿Qué estoy viendo?</b> Verde = m² accesible, terracota = caro. Sirari y Eq. Norte concentran el color cálido: ahí el mercado pide más. Acerque con la rueda, arrastre para moverse.',
    velocidad:'<b>¿Qué estoy viendo?</b> Verde = la oferta activa de ese edificio lleva menos de 60 días publicada. Es la edad del stock, no el tiempo de venta — sirve para COMPARAR zonas y edificios entre sí. Mire Sirari: cara y con stock joven a la vez.',
    oferta:'<b>¿Qué estoy viendo?</b> El tamaño del punto es cuántas unidades compiten ahí. Los planetas grandes (Maré, Rhodium, Stone 3) definen el precio de su cuadra.',
-   salidas:'<b>¿Qué estoy viendo?</b> Solo se encienden los edificios de donde salió inventario en julio. Salida ≠ venta: incluye retiros y rotación de agencia — lo declaramos siempre.'};
+   salidas:'<b>¿Qué estoy viendo?</b> Solo se encienden los edificios de donde salió inventario en julio. Salida ≠ venta: incluye retiros y rotación de agencia — lo declaramos siempre.',
+   entregas:'<b>¿Qué estoy viendo?</b> Solo los edificios con preventa activa (tamaño = avisos en pozo), coloreados por la entrega que DECLARAN sus avisos. Terracota = declaran una entrega que YA venció: atraso de obra o aviso desactualizado — ambas cosas son información para usted.'};
   document.getElementById('capa-nota').innerHTML=NOTAS[capaActual];
 }
 function leyenda(){
@@ -597,7 +615,8 @@ function leyenda(){
   if(capaActual==='precio')h='<span><span class="sw" style="background:#5E9C72"></span>≈$1.300/m²</span><span><span class="sw" style="background:#E0CE96"></span>≈$1.800</span><span><span class="sw" style="background:#D07A4A"></span>≈$2.300+</span><span style="margin-left:auto">tamaño = unidades en oferta</span>';
   else if(capaActual==='velocidad')h='<span><span class="sw" style="background:#5E9C72"></span>≤60 días</span><span><span class="sw" style="background:#E0CE96"></span>61-100</span><span><span class="sw" style="background:#D07A4A"></span>+100 días</span><span style="margin-left:auto">antigüedad mediana de la oferta activa (no tiempo de venta)</span>';
   else if(capaActual==='oferta')h='<span><span class="sw" style="background:#5E9C72"></span>tamaño del punto = unidades activas (1 a 22)</span>';
-  else h='<span><span class="sw" style="background:#D07A4A"></span>edificios con salidas en julio (tamaño = salidas)</span><span><span class="sw" style="background:#3A3934"></span>sin salidas</span><span style="margin-left:auto">salida ≠ venta (retiros incluidos)</span>';
+  else if(capaActual==='salidas')h='<span><span class="sw" style="background:#D07A4A"></span>edificios con salidas en julio (tamaño = salidas)</span><span><span class="sw" style="background:#3A3934"></span>sin salidas</span><span style="margin-left:auto">salida ≠ venta (retiros incluidos)</span>';
+  else h='<span><span class="sw" style="background:#D07A4A"></span>entrega VENCIDA</span><span><span class="sw" style="background:#5E9C72"></span>resto 2026</span><span><span class="sw" style="background:#E0CE96"></span>2027</span><span><span class="sw" style="background:#B9AEDB"></span>2028+</span><span><span class="sw" style="background:#5A6B5E"></span>preventa sin fecha</span><span><span class="sw" style="background:#3A3934"></span>sin preventa</span>';
   L.innerHTML=h;
 }
 function kpisMapa(){
@@ -606,7 +625,8 @@ function kpisMapa(){
   if(capaActual==='precio')h=kpi('$1.692/m²','mediana general pedida')+kpi('$1.893','Eq. Norte, la zona más cara')+kpi('$1.557','V. Brígida, la más accesible')+kpi('±7%','error metodológico declarado');
   else if(capaActual==='velocidad')h=kpi('78 días','antigüedad mediana del stock activo')+kpi('71','Sirari — el stock más joven')+kpi('113','V. Brígida — el más viejo')+kpi('69 vs 83','antigüedad: dentro vs sobre el rango');
   else if(capaActual==='oferta')h=kpi('138','edificios con oferta activa')+kpi('29%','del inventario en 10 edificios')+kpi('22','unidades en un solo condominio (Maré)')+kpi('87%','avisos anclados a su edificio');
-  else h=kpi('72','salidas en julio')+kpi('18%','del stock salió en julio — un mes no hace tendencia')+kpi('185 días','vida mediana del 2D que salió')+kpi('salida ≠ venta','retiros y rotaciones incluidos');
+  else if(capaActual==='salidas')h=kpi('72','salidas en julio')+kpi('18%','del stock salió en julio — un mes no hace tendencia')+kpi('185 días','vida mediana del 2D que salió')+kpi('salida ≠ venta','retiros y rotaciones incluidos');
+  else h=kpi('100','avisos en preventa — 26% de la oferta activa')+kpi('22 de 65','declaran una entrega YA VENCIDA — atraso de obra o aviso desactualizado')+kpi('32','avisos se entregan de aquí a dic-2026: la competencia que le llega al mercado este año')+kpi('6 · 5','avisos con entrega 2027 · 2028 (declarada en el aviso)');
   K.innerHTML=h;
 }
 function anillo(){var a=document.getElementById('anillo'); if(!a)return;
@@ -623,7 +643,7 @@ document.querySelectorAll('.capa[data-capa]').forEach(function(b){b.onclick=func
 }});
 
 /* ============ MODO RECORRIDO ============ */
-var tour=null, tourOrden=['precio','velocidad','oferta','salidas'];
+var tour=null, tourOrden=['precio','velocidad','oferta','salidas','entregas'];
 function pararTour(){if(tour){clearInterval(tour);tour=null;el('btn-tour').textContent='▶ Recorrido';el('btn-tour').classList.remove('tour-on');}}
 el('btn-tour').onclick=function(){
   if(tour){pararTour();return}
@@ -694,6 +714,9 @@ function ficha(b){
    '</div>'+
    '<div style="font-size:12px;color:var(--gris);margin-bottom:6px">Tickets: <b style="color:var(--arena)">$'+fm(b[8])+' – $'+fm(b[9])+'</b></div>'+
    '<div style="font-size:12px;color:var(--gris);margin-bottom:10px">Más avisos de: <b style="color:var(--arena)">'+b[14]+'</b></div>'+
+   (function(){var ei=entregaInfo(Math.floor(b[0])); if(!ei)return '';
+     return '<div style="font-size:12px;color:var(--gris);margin-bottom:10px">Preventa: <b style="color:var(--arena)">'+ei.prev+' aviso'+(ei.prev>1?'s':'')+'</b>'+
+      (ei.fechas.length? ' · entrega declarada: <b style="color:'+(ei.bucket==='vencida'?'var(--terra)':'var(--arena)')+'">'+ei.fechas.map(function(f){return f.txt}).join(' / ')+(ei.bucket==='vencida'?' ⚠ vencida':'')+'</b>' : ' · <b style="color:var(--arena)">sin fecha declarada</b>')+'</div>';})()+
    '<div class="chips">'+am.map(function(a){return '<span class="chip'+(a[1]?'':' no')+'">'+a[0]+'</span>'}).join('')+'</div>'+
    libroUnidades(b)+
    '<div class="mini">'+(b[5]<3?'⚠️ Con '+b[5]+' aviso'+(b[5]>1?'s':'')+', estos números son indicativos — lo declaramos en vez de esconderlo. ':'')+
