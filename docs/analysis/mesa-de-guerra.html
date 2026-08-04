@@ -145,6 +145,73 @@
   .story-bar.min .st-t::after{content:' · ▲ tocá para volver';color:var(--gris);font-weight:400;letter-spacing:.06em}
   .st-grip{cursor:grab}
 
+  /* ============ base para los nuevos contenedores (modo documento) ============ */
+  .col-der{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .layout{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start}
+  .layout-canal{display:grid;grid-template-columns:1fr;gap:14px}
+  @media(max-width:980px){.layout{grid-template-columns:1fr}}
+
+  /* ============ MODO CABINA: todo entra en una pantalla (≥1050px) ============ */
+  @media(min-width:1050px){
+    html,body{height:100%;overflow:hidden}
+    body{display:flex;flex-direction:column;padding:0}
+    .top{flex-shrink:0;position:relative}
+    .escena{max-width:none;margin:0;padding:10px 22px 14px}
+    .escena.on{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+    .escena h2{font-size:19px;margin-bottom:2px}
+    .eyebrow{margin-bottom:3px}
+    .lead{font-size:12px;margin-bottom:8px;max-width:1000px;line-height:1.4}
+    .vinculo{display:none}
+    .kpi{padding:9px 13px;min-width:0}
+    .kpi .v{font-size:18px}
+    .kpi .l{font-size:10px}
+
+    /* Mesa y Su Proyecto: mapa dimensionado por ALTURA, columna derecha con scroll propio */
+    #esc-mapa .layout,#esc-sim .layout{flex:1;min-height:0;display:grid;grid-template-columns:auto minmax(320px,400px);grid-template-rows:minmax(0,1fr);gap:14px;align-items:stretch;justify-content:center}
+    .col-der{min-height:0}
+    .mapa-caja{display:flex;flex-direction:column;min-height:0}
+    .mapa-caja>svg{flex:1;min-height:0;height:100%;width:auto;max-width:100%;align-self:center}
+    .mapa-tools,.capas,.capa-nota,.leyenda{flex-shrink:0}
+    .capa-nota{font-size:11.5px;padding:8px 12px;margin-bottom:8px}
+    .col-der .kpis{flex-shrink:0;display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:0}
+    .col-der .panel{flex:1;min-height:0;overflow-y:auto}
+    .uni-lista{max-height:none;overflow:visible}
+    #esc-sim aside{display:flex;flex-direction:column;min-height:0;gap:10px}
+    #esc-sim aside .panel{margin-bottom:0!important}
+    #sim-out{flex:1;min-height:0;overflow-y:auto}
+
+    /* El Canal: treemap | mapa de cartera | radiografía, lado a lado */
+    #esc-canal .kpis{flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+    .layout-canal{flex:1;min-height:0;grid-template-columns:minmax(340px,1fr) auto minmax(290px,330px);grid-template-rows:minmax(0,1fr);gap:12px;align-items:stretch}
+    #caja-treemap{display:flex;flex-direction:column;min-height:0}
+    #caja-treemap svg{width:100%;height:auto;flex-shrink:0}
+    #caja-canal-mapa{display:flex;flex-direction:column;min-height:0}
+    #caja-canal-mapa svg{flex:1;min-height:0;height:100%;width:auto;max-width:100%;align-self:center}
+    #ofi-panel{overflow-y:auto;min-height:0}
+
+    /* Máquina del Tiempo: acotada y con scroll interno si no entra */
+    #esc-tiempo{overflow-y:auto}
+    .tm-caja{max-width:1020px;margin:0 auto;width:100%;padding:18px}
+    .tm-lectura .valor{font-size:32px}
+    .tm-nota{font-size:11.5px;padding:10px 14px}
+    .pull-tm{font-size:16px;margin-top:14px;padding-top:10px}
+  }
+
+  /* ============ MODO LIMPIO al presentar: los subtítulos reemplazan lo editorial ============ */
+  body.presentando .lead,body.presentando .eyebrow,body.presentando .vinculo,
+  body.presentando .capa-nota,body.presentando .tm-nota,body.presentando .pull-tm{display:none}
+  body.presentando h2{font-size:17px;margin-bottom:6px}
+  /* Máquina del Tiempo en modo cine: el guion maneja moneda/tipología/tiempo — los controles se ocultan y los charts se compactan */
+  body.presentando .tm-controles,body.presentando .moneda{display:none}
+  body.presentando #tm-chart{height:min(30vh,320px);width:auto;max-width:100%;margin:0 auto;display:block}
+  body.presentando #tc-chart{height:min(10vh,100px);width:auto;max-width:100%;margin:0 auto;display:block}
+  body.presentando .tm-caja{padding-bottom:8px}
+  body.presentando .tm-lectura .valor{font-size:26px}
+  body.presentando .tm-head{margin-bottom:2px}
+  @media(min-width:1050px){
+    body.presentando .escena.on{padding-bottom:118px} /* deja aire para la barra de subtítulos */
+  }
+
   /* Máquina del tiempo */
   .tm-caja{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:24px}
   .tm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:8px}
@@ -186,8 +253,6 @@
   <h2>Equipetrol como nunca se lo mostraron</h2>
   <p class="lead">Cada punto es un edificio real, georreferenciado y verificado esta madrugada. Cambie de capa para ver el mismo mercado con seis lentes distintos, y toque cualquier edificio para su radiografía. Los números marcados con ⓘ son auditables: tóquelos y vea de dónde sale cada uno, con qué método y con qué límite.</p>
 
-  <div class="kpis" id="kpis-mapa"></div>
-
   <div class="layout">
     <div class="mapa-caja">
       <div class="mapa-tools">
@@ -208,10 +273,13 @@
       <svg id="mapa" viewBox="0 0 760 800"></svg>
       <div class="leyenda" id="leyenda"></div>
     </div>
-    <aside class="panel" id="ficha">
-      <h3>Radiografía de edificio</h3>
-      <p class="vacio">Toque un punto del mapa.<br><br>La radiografía muestra lo que ningún portal puede: cuántas unidades reales tiene en oferta ese edificio, a qué precio pide, hace cuánto, con qué amenidades y quién lo vende.</p>
-    </aside>
+    <div class="col-der">
+      <div class="kpis" id="kpis-mapa"></div>
+      <aside class="panel" id="ficha">
+        <h3>Radiografía de edificio</h3>
+        <p class="vacio">Toque un punto del mapa.<br><br>La radiografía muestra lo que ningún portal puede: cuántas unidades reales tiene en oferta ese edificio, a qué precio pide, hace cuánto, con qué amenidades y quién lo vende.</p>
+      </aside>
+    </div>
   </div>
   <div class="vinculo">📄 Este tablero es el compañero vivo del <a href="mockup-informe-mercado.html">Informe de Mercado Nº 2026-08</a>: la narrativa, los hallazgos y los límites metodológicos viven allá (§03 zonas · §07 competencia) — acá los explora con sus propias manos, actualizados cada noche.</div>
 </section>
@@ -266,16 +334,14 @@
     <div class="kpi ped" data-ped="c21"><div class="v">21</div><div class="l">avisos de UNA captadora (RE/MAX Union) — más que 50 oficinas enteras</div></div>
   </div>
 
-  <div class="layout">
-    <div>
-      <div class="mapa-caja" style="margin-bottom:14px">
-        <svg id="treemap" viewBox="0 0 760 400"></svg>
-        <div class="leyenda"><span><span class="sw" style="background:#5E9C72"></span>repartida (≤2 avisos/agente)</span><span><span class="sw" style="background:#E0CE96"></span>media</span><span><span class="sw" style="background:#D07A4A"></span>concentrada (5+/agente)</span><span><span class="sw" style="background:#3A3934"></span>resto del mercado</span></div>
-      </div>
-      <div class="mapa-caja">
-        <div style="font-size:12px;color:var(--gris);margin-bottom:8px" id="canal-mapa-titulo">Dónde está parada la cartera (toque una oficina arriba)</div>
-        <svg id="mapa-canal" viewBox="0 0 760 800"></svg>
-      </div>
+  <div class="layout-canal">
+    <div class="mapa-caja" id="caja-treemap">
+      <svg id="treemap" viewBox="0 0 760 400"></svg>
+      <div class="leyenda"><span><span class="sw" style="background:#5E9C72"></span>repartida (≤2 avisos/agente)</span><span><span class="sw" style="background:#E0CE96"></span>media</span><span><span class="sw" style="background:#D07A4A"></span>concentrada (5+/agente)</span><span><span class="sw" style="background:#3A3934"></span>resto del mercado</span></div>
+    </div>
+    <div class="mapa-caja" id="caja-canal-mapa">
+      <div style="font-size:12px;color:var(--gris);margin-bottom:8px;flex-shrink:0" id="canal-mapa-titulo">Dónde está parada la cartera (toque una oficina)</div>
+      <svg id="mapa-canal" viewBox="0 0 760 800"></svg>
     </div>
     <aside class="panel" id="ofi-panel">
       <h3>Radiografía de oficina</h3>
@@ -683,7 +749,7 @@ var pts=B.map(function(b){return mxy(b[2],b[3])});
 POLY.forEach(function(p){p[1].forEach(function(c){pts.push(mxy(c[1],c[0]))})});
 var xs=pts.map(function(p){return p[0]}),ys=pts.map(function(p){return p[1]});
 var minX=Math.min.apply(0,xs),maxX=Math.max.apply(0,xs),minY=Math.min.apply(0,ys),maxY=Math.max.apply(0,ys);
-var PAD=90, VW=760, VH=800;
+var PAD=44, VW=760, VH=800; /* margen interno reducido: más mapa por pixel */
 var sc=Math.min((VW-2*PAD)/(maxX-minX),(VH-2*PAD)/(maxY-minY));
 function PX(lat,lon){var m=mxy(lat,lon);return [PAD+(m[0]-minX)*sc, PAD+(m[1]-minY)*sc];}
 function metros(px){return px/sc;} /* px→m */
@@ -1277,17 +1343,24 @@ function presPaso(i){
   el('st-n').textContent=(presIdx+1)+' / '+STORY.length;
   el('st-dots').innerHTML=STORY.map(function(_,j){return '<span class="st-dot'+(j<=presIdx?' on':'')+'"></span>'}).join('');
   window.scrollTo({top:0,behavior:'smooth'});
+  airePres();
 }
-function presSalir(){presIdx=-1; el('story-bar').style.display='none';}
-el('btn-pres').onclick=function(){el('story-bar').style.display='block'; presPaso(0);};
+/* la barra varía de alto según el texto: el aire inferior de la escena se mide en vivo */
+function airePres(){var e=document.querySelector('.escena.on'); if(!e)return;
+  if(presIdx>=0){var b=el('story-bar');
+    e.style.paddingBottom=(b.classList.contains('min')?74:b.offsetHeight+36)+'px';}
+}
+function presSalir(){presIdx=-1; el('story-bar').style.display='none'; document.body.classList.remove('presentando');
+  document.querySelectorAll('.escena').forEach(function(x){x.style.paddingBottom=''});}
+el('btn-pres').onclick=function(){document.body.classList.add('presentando'); el('story-bar').style.display='block'; presPaso(0);};
 el('story-bar').addEventListener('click',function(e){
   if(stArrastre){stArrastre=false;return} /* si fue arrastre, no avanzar */
   var bar=el('story-bar');
   /* minimizada: los botones están ocultos, así que CUALQUIER clic la restaura */
-  if(bar.classList.contains('min')){bar.classList.remove('min');return}
+  if(bar.classList.contains('min')){bar.classList.remove('min');airePres();return}
   if(e.target.id==='st-close'){presSalir();return}
   if(e.target.id==='st-prev'){presPaso(presIdx-1);return}
-  if(e.target.id==='st-min'){bar.classList.add('min');return}
+  if(e.target.id==='st-min'){bar.classList.add('min');airePres();return}
   presPaso(presIdx+1); /* clic en cualquier parte de la barra = avanzar */
 });
 /* la barra se puede ARRASTRAR si tapa algo (agarrar y mover; el clic corto sigue avanzando) */
