@@ -139,9 +139,10 @@
   .st-btn:hover{color:var(--arena)}
   @media(max-width:720px){.st-s{font-size:16px}}
   .story-bar.arrastrada{transform:none;animation:none}
-  .story-bar.min{width:auto;min-width:0;padding:10px 18px}
+  .story-bar.min{width:auto;min-width:0;padding:11px 20px}
   .story-bar.min .st-s,.story-bar.min .st-nav{display:none}
   .story-bar.min .st-t{margin-bottom:0}
+  .story-bar.min .st-t::after{content:' · ▲ tocá para volver';color:var(--gris);font-weight:400;letter-spacing:.06em}
   .st-grip{cursor:grab}
 
   /* Máquina del tiempo */
@@ -1250,17 +1251,22 @@ function setCapa(c){pararTour(); capaActual=c;
   document.querySelectorAll('.capa[data-capa]').forEach(function(x){x.classList.toggle('on',x.dataset.capa===c)});
   dibujarMapa();}
 var STORY=[
-{e:'mapa',c:'precio',a:function(){zoomMapa.reset();sel=null;anillo();},t:'La foto que nadie más tiene',s:'Esto es Equipetrol, esta madrugada. Cada punto es un edificio real — 402 avisos verificados uno por uno contra el portal.'},
-{e:'mapa',c:'velocidad',t:'Mismo mapa, otra pregunta: ¿dónde se mueve?',s:'Verde = oferta joven. Sirari es cara Y rápida a la vez — eso es demanda real. Villa Brígida pide menos… y aun así espera.'},
-{e:'mapa',c:'oferta',a:function(){seleccionar(0);},t:'La competencia tiene nombre y apellido',s:'No se compite contra "la zona": se compite contra Maré y sus 22 unidades. A la derecha, su libro completo — el precio exacto que le van a nombrar a su sala de ventas.'},
-{e:'mapa',c:'salidas',t:'Lo que salió del mercado',s:'En julio desaparecieron 72 avisos. No los llamamos "vendidos" — los llamamos salidas, porque es lo que podemos probar. Esa honestidad es el producto.'},
-{e:'mapa',c:'entregas',t:'Las promesas de entrega, auditadas',s:'Un tercio de las preventas con fecha declara una entrega que YA venció. Cuando arme su plan financiero, estrese los plazos de su competencia — y los propios.'},
-{e:'mapa',c:'alquiler',t:'La otra mitad de la demanda',s:'Dónde ya se vive. Un edificio con renta activa está entregado y habitado — la señal más honesta de que esa cuadra funciona.'},
-{e:'canal',t:'¿Y quién vende todo esto?',s:'59 oficinas y 221 captadores se reparten el inventario — ninguna pasa del 9%. El canal no se hereda: se diseña, y este mapa dice con quién hablar primero.'},
-{e:'sim',a:function(){el('sim-ejemplo').click();},t:'Ahora ponga SU torre en el mapa',s:'El mercado le responde en vivo: sus comparables reales, la posición de su lista de precios, y cuánto aumentaría usted la oferta de la zona.'},
-{e:'tiempo',a:function(){mon='usd';el('btn-usd').classList.add('on');el('btn-bs').classList.remove('on');tmIdx=TMD.f.length;el('tm-slider').value=tmIdx;tmDraw();},t:'Siete meses de historia, en dólares',s:'El m² cayó entre 15% y 22% según la tipología. El 2 dormitorios es el que más sufre — y también el más lento en salir. Dos señales, una conclusión.'},
-{e:'tiempo',a:function(){el('btn-bs').click();},t:'…¿y en bolivianos?',s:'Apenas se movió. La diferencia es la curva lila: el tipo de cambio. ¿En qué moneda mira usted el mercado? Su margen vive en esa pregunta.'},
-{e:'mapa',c:'precio',a:function(){sel=null;anillo();},t:'Todo esto se verifica cada noche',s:'Y cada número con ⓘ le muestra de dónde sale, con qué método y con qué límite. Nadie paga por aparecer mejor acá — por eso le sirve. Simón.'}
+/* ACTO 1 — dónde está el mercado */
+{e:'mapa',c:'precio',a:function(){zoomMapa.reset();sel=null;anillo();},t:'Lo que está mirando',s:'402 avisos de venta y 189 de alquiler, verificados uno por uno contra el portal esta madrugada. No son folletos ni precios de sala de ventas: es lo que el mercado pide hoy, con un solo tipo de cambio para todos.'},
+{e:'mapa',c:'precio',t:'El nivel: qué pide cada zona',s:'De $1.893 el m² en Equipetrol Norte a $1.557 en Villa Brígida. Un 21% de diferencia entre puntas dentro del mismo Equipetrol — "la zona" no es una sola.'},
+{e:'mapa',c:'velocidad',t:'La velocidad: dónde el precio alto es real',s:'Un m² caro solo significa demanda si además rota. Sirari pide de los más altos y tiene la oferta más joven: 71 días. Oeste y Villa Brígida piden menos y esperan más de 100. Precio sin velocidad es expectativa, no mercado.'},
+/* ACTO 2 — hacia dónde va */
+{e:'tiempo',a:function(){tmTip=2;document.querySelectorAll('#tm-tips button').forEach(function(x){x.classList.toggle('on',x.dataset.t==='2')});mon='usd';el('btn-usd').classList.add('on');el('btn-bs').classList.remove('on');tmIdx=TMD.f.length;el('tm-slider').value=tmIdx;tmDraw();},t:'Siete meses de precio, en dólares',s:'El m² cayó entre 15% y 22% desde enero según la tipología. El 2 dormitorios es el más golpeado — y también el que más tarda en salir: 185 días de vida mediana.'},
+{e:'tiempo',a:function(){el('btn-bs').click();},t:'…y en bolivianos',s:'Apenas 13%. La diferencia es la curva lila: el tipo de cambio subió 11% en el período. Si sus costos están en bolivianos y su lista en dólares, esa brecha es su margen.'},
+/* ACTO 3 — qué producto pide el mercado */
+{e:'mapa',c:'oferta',a:function(){seleccionar(0);},t:'Qué se ofrece y a qué ticket',s:'El 63% del inventario son monoambientes y 1 dormitorio. Y el m² más caro es el más chico: el monoambiente pide 16% más por m² que el 3 dormitorios. Este mercado paga por ticket de entrada bajo.'},
+{e:'mapa',c:'oferta',t:'Qué superficie pide cada tipología',s:'El 2 dormitorios típico de Equipetrol Centro tiene 88 m². El 3 dormitorios, 170. Construir por debajo de ese estándar es competir con un producto que el comprador de esa tipología no está buscando.'},
+{e:'mapa',c:'precio',a:function(){seleccionar(0);},t:'Qué se cobra y qué ya no',s:'Del piso 10 hacia arriba el m² pide 15% más. En cambio piscina y gimnasio ya no distinguen precio: el 75% de la oferta los tiene. Dejaron de ser diferencial y pasaron a ser requisito — no tenerlos resta, tenerlos ya no suma.'},
+/* ACTO 4 — cuánta competencia y cómo entro */
+{e:'mapa',c:'salidas',a:function(){sel=null;anillo();},t:'Lo que no se está moviendo',s:'En julio salieron 72 avisos de Equipetrol. Los llamamos salidas, no ventas: verificamos la baja contra el portal, pero el motivo no es observable. Quien le muestre "unidades vendidas" sacadas de portales no se lo puede probar.'},
+{e:'mapa',c:'entregas',t:'La oferta que todavía no le compite',s:'El 26% del inventario está en preventa, y un tercio de los que declaran fecha ya la incumplieron. Esa es la competencia que le entra al mercado en su ventana de lanzamiento — y de paso, el benchmark de cuánto se atrasa la plaza.'},
+{e:'canal',t:'Con quién se vende',s:'59 oficinas y 221 captadores se reparten todo; ninguna pasa del 9%. El canal no se hereda: se elige. Y esto muestra quién tiene inventario en su cuadra, no en la ciudad.'},
+{e:'sim',a:function(){el('sim-ejemplo').click();},t:'Su proyecto acá adentro',s:'Ponga su terreno. Se encienden sus comparables reales, su lista se posiciona contra el rango vivo, y aparece cuánto aumentaría usted la oferta de esa zona. Cada número le dice de dónde sale y qué no puede ver. Nadie paga por aparecer mejor acá — por eso le sirve.'}
 ];
 document.body.insertAdjacentHTML('beforeend','<div class="story-bar" id="story-bar"><div class="st-t" id="st-t"></div><div class="st-s" id="st-s"></div><div class="st-nav"><span id="st-n"></span><div class="st-dots" id="st-dots"></div><button class="st-btn" id="st-prev">← Anterior</button><button class="st-btn" id="st-next">Siguiente →</button><button class="st-btn" id="st-min">▁ Minimizar</button><button class="st-btn" id="st-close">✕ Salir</button></div></div>');
 function presPaso(i){
@@ -1276,10 +1282,12 @@ function presSalir(){presIdx=-1; el('story-bar').style.display='none';}
 el('btn-pres').onclick=function(){el('story-bar').style.display='block'; presPaso(0);};
 el('story-bar').addEventListener('click',function(e){
   if(stArrastre){stArrastre=false;return} /* si fue arrastre, no avanzar */
+  var bar=el('story-bar');
+  /* minimizada: los botones están ocultos, así que CUALQUIER clic la restaura */
+  if(bar.classList.contains('min')){bar.classList.remove('min');return}
   if(e.target.id==='st-close'){presSalir();return}
   if(e.target.id==='st-prev'){presPaso(presIdx-1);return}
-  if(e.target.id==='st-min'){var b=el('story-bar');b.classList.toggle('min');
-    e.target.textContent=b.classList.contains('min')?'▲ Expandir':'▁ Minimizar';return}
+  if(e.target.id==='st-min'){bar.classList.add('min');return}
   presPaso(presIdx+1); /* clic en cualquier parte de la barra = avanzar */
 });
 /* la barra se puede ARRASTRAR si tapa algo (agarrar y mover; el clic corto sigue avanzando) */
