@@ -113,4 +113,22 @@ Hay un matiz regulatorio/ético que ya está en las reglas del sistema: **vender
 
 ---
 
+## 7. Anexo (3-ago): ¿qué tan complejo sería el valuador?
+
+Medido contra la BD real, menos complejo de lo que parece — porque **el 80% ya existe en producción con otros nombres**:
+
+- El **chip fiduciario** del feed ("Bajo/Dentro/Sobre el rango típico · N comparables", cascada con pool ≥6) ya ES un valuador por comparables — solo que devuelve un chip en vez de un rango en USD.
+- El **CMA de Simón Broker** ya arma comparables para el captador.
+- Los insumos duros están resueltos: matching a edificio 87%, `precio_m2` normalizado, dorms 99,7% de cobertura, estado de obra inferido.
+
+**El dato que valida el método:** la dispersión del $/m² *dentro de un mismo edificio* es 11,2% (CV mediano), contra 21,4% dentro de una zona. El edificio predice el precio **el doble de bien** que la zona — y edificio es exactamente lo que el matching resuelve y ningún portal tiene.
+
+**El límite real es cobertura, no código:** solo 24 edificios tienen ≥6 avisos activos (239 props, 31% del feed); con ≥3 se cubre el 59%. Un valuador v1 honesto valúa bien dentro de esos edificios, cae a zona+dorms con rango más ancho en el resto, y dice "sin base suficiente" cuando no hay pool (null no es 0).
+
+**Forma recomendada del v1 (fiduciaria por diseño):** rango, nunca número seco — "entre $X y $Y según N comparables de tu edificio, precios *pedidos* (no de cierre — en Bolivia no hay registro público de transacciones), al día D". Complejidad estimada: semanas, no meses, reciclando la cascada del chip. La versión estadística seria (hedónica, con historia) queda para después del índice.
+
+**Cómo entra sin volverse producto prematuro:** como *feature* — sección "valor estimado" dentro del informe a desarrolladoras y del CMA del broker. Producto standalone ("¿cuánto vale mi depto?" como lead magnet público) recién cuando haya más zonas, porque una valuación floja quema la marca fiduciaria exactamente donde más duele.
+
+---
+
 *Números de este documento: BD en vivo al 3-ago-2026 (shadow: 1.383 props, 1.221 activas; matching venta 829/955, alquiler 346/428; 447 proyectos master, 446 con GPS; 45 condominios; serie prod 12-feb→27-jul, 6.446 filas; serie shadow 586 filas desde 21-jul; reexpresada ene→jul; wa_clicks limpios: 2). Son un snapshot para fechar el análisis, no cifras a mantener.*
