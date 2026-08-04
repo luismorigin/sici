@@ -449,7 +449,7 @@ function dibujarMapa(){
   anillo(); leyenda(); kpisMapa();
   var NOTAS={
    precio:'<b>¿Qué estoy viendo?</b> Verde = m² accesible, terracota = caro. Sirari y Eq. Norte concentran el color cálido: ahí el mercado pide más. Acerque con la rueda, arrastre para moverse.',
-   velocidad:'<b>¿Qué estoy viendo?</b> Verde = ese edificio rota en menos de 60 días. Mire Sirari: cara Y rápida a la vez — esa combinación es demanda real, no expectativa.',
+   velocidad:'<b>¿Qué estoy viendo?</b> Verde = la oferta activa de ese edificio lleva menos de 60 días publicada. Es la edad del stock, no el tiempo de venta — sirve para COMPARAR zonas y edificios entre sí. Mire Sirari: cara y con stock joven a la vez.',
    oferta:'<b>¿Qué estoy viendo?</b> El tamaño del punto es cuántas unidades compiten ahí. Los planetas grandes (Maré, Rhodium, Stone 3) definen el precio de su cuadra.',
    salidas:'<b>¿Qué estoy viendo?</b> Solo se encienden los edificios de donde salió inventario en julio. Salida ≠ venta: incluye retiros y rotación de agencia — lo declaramos siempre.'};
   document.getElementById('capa-nota').innerHTML=NOTAS[capaActual];
@@ -457,7 +457,7 @@ function dibujarMapa(){
 function leyenda(){
   var L=document.getElementById('leyenda'),h='';
   if(capaActual==='precio')h='<span><span class="sw" style="background:#5E9C72"></span>≈$1.300/m²</span><span><span class="sw" style="background:#E0CE96"></span>≈$1.800</span><span><span class="sw" style="background:#D07A4A"></span>≈$2.300+</span><span style="margin-left:auto">tamaño = unidades en oferta</span>';
-  else if(capaActual==='velocidad')h='<span><span class="sw" style="background:#5E9C72"></span>≤60 días</span><span><span class="sw" style="background:#E0CE96"></span>61-100</span><span><span class="sw" style="background:#D07A4A"></span>+100 días</span><span style="margin-left:auto">mediana de días en mercado del edificio</span>';
+  else if(capaActual==='velocidad')h='<span><span class="sw" style="background:#5E9C72"></span>≤60 días</span><span><span class="sw" style="background:#E0CE96"></span>61-100</span><span><span class="sw" style="background:#D07A4A"></span>+100 días</span><span style="margin-left:auto">antigüedad mediana de la oferta activa (no tiempo de venta)</span>';
   else if(capaActual==='oferta')h='<span><span class="sw" style="background:#5E9C72"></span>tamaño del punto = unidades activas (1 a 22)</span>';
   else h='<span><span class="sw" style="background:#D07A4A"></span>edificios con salidas en julio (tamaño = salidas)</span><span><span class="sw" style="background:#3A3934"></span>sin salidas</span><span style="margin-left:auto">salida ≠ venta (retiros incluidos)</span>';
   L.innerHTML=h;
@@ -466,9 +466,9 @@ function kpisMapa(){
   var K=document.getElementById('kpis-mapa'),h='';
   function kpi(v,l){return '<div class="kpi"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>'}
   if(capaActual==='precio')h=kpi('$1.692/m²','mediana general pedida')+kpi('$1.893','Eq. Norte, la zona más cara')+kpi('$1.557','V. Brígida, la más accesible')+kpi('±7%','error metodológico declarado');
-  else if(capaActual==='velocidad')h=kpi('78 días','mediana de permanencia')+kpi('71','Sirari — la más rápida')+kpi('113','V. Brígida — la más lenta')+kpi('69 vs 83','dentro del rango vs sobrepriceado');
+  else if(capaActual==='velocidad')h=kpi('78 días','antigüedad mediana del stock activo')+kpi('71','Sirari — el stock más joven')+kpi('113','V. Brígida — el más viejo')+kpi('69 vs 83','antigüedad: dentro vs sobre el rango');
   else if(capaActual==='oferta')h=kpi('138','edificios con oferta activa')+kpi('29%','del inventario en 10 edificios')+kpi('22','unidades en un solo condominio (Maré)')+kpi('87%','avisos anclados a su edificio');
-  else h=kpi('72','salidas en julio')+kpi('~5-6 meses','renovación del inventario a este ritmo')+kpi('185 días','vida mediana del 2D que salió')+kpi('salida ≠ venta','retiros y rotaciones incluidos');
+  else h=kpi('72','salidas en julio')+kpi('18%','del stock salió en julio — un mes no hace tendencia')+kpi('185 días','vida mediana del 2D que salió')+kpi('salida ≠ venta','retiros y rotaciones incluidos');
   K.innerHTML=h;
 }
 function anillo(){var a=document.getElementById('anillo'); if(!a)return;
@@ -504,7 +504,7 @@ document.getElementById('mapa').addEventListener('mousemove',function(e){
   var t=e.target;
   if(t.tagName==='circle'){var b=B[+t.dataset.i];
     tt.style.display='block'; tt.style.left=(e.clientX+14)+'px'; tt.style.top=(e.clientY+10)+'px';
-    tt.innerHTML='<b>'+b[1]+'</b><br>'+Z[b[4]]+' · '+b[5]+' unid. · $'+fm(b[6])+'/m² · '+b[7]+' días';
+    tt.innerHTML='<b>'+b[1]+'</b><br>'+Z[b[4]]+' · '+b[5]+' unid. · $'+fm(b[6])+'/m² · '+b[7]+' días publicado';
   } else tt.style.display='none';
 });
 document.getElementById('mapa').addEventListener('mouseleave',function(){tt.style.display='none'});
@@ -529,14 +529,15 @@ function ficha(b){
    '<div class="stats">'+
    '<div class="stat"><div class="v">'+b[5]+'</div><div class="l">unidades en oferta</div></div>'+
    '<div class="stat"><div class="v">$'+fm(b[6])+'</div><div class="l">$/m² mediano pedido</div></div>'+
-   '<div class="stat"><div class="v">'+b[7]+' días</div><div class="l">mediana en mercado</div></div>'+
+   '<div class="stat"><div class="v">'+b[7]+' días</div><div class="l">antigüedad mediana de su oferta activa</div></div>'+
    '<div class="stat"><div class="v">'+(sl>0?sl:'0')+'</div><div class="l">salidas en julio</div></div>'+
    '</div>'+
    '<div style="font-size:12px;color:var(--gris);margin-bottom:6px">Tickets: <b style="color:var(--arena)">$'+fm(b[8])+' – $'+fm(b[9])+'</b></div>'+
    '<div style="font-size:12px;color:var(--gris);margin-bottom:10px">Más avisos de: <b style="color:var(--arena)">'+b[14]+'</b></div>'+
    '<div class="chips">'+am.map(function(a){return '<span class="chip'+(a[1]?'':' no')+'">'+a[0]+'</span>'}).join('')+'</div>'+
    '<div class="mini">'+(b[5]<3?'⚠️ Con '+b[5]+' aviso'+(b[5]>1?'s':'')+', estos números son indicativos — lo declaramos en vez de esconderlo. ':'')+
-   'Precios pedidos, no de cierre. Amenidades según lo declarado en los avisos del edificio.</div></div>';
+   (b[5]>=5&&b[7]<=20?'⚠️ '+b[5]+' unidades con antigüedad muy baja y pareja: probable re-publicación en bloque del captador, no velocidad real. ':'')+
+   'La antigüedad es del aviso publicado (una re-publicación reinicia el contador) y mide la edad del stock, no el tiempo de venta. Precios pedidos, no de cierre. Amenidades según lo declarado en los avisos.</div></div>';
 }
 
 /* ============ SIMULADOR ============ */
@@ -608,7 +609,7 @@ function simular(){
    '<div class="stat"><div class="v">'+(medRadio?'$'+fm(medRadio):'—')+'</div><div class="l">$/m² mediano del radio</div></div>'+
    '<div class="stat"><div class="v">'+ZTOT[zc]+'</div><div class="l">activas en toda la zona</div></div></div>'+
    posHtml+
-   (shock!=null?'<div class="shock"><div class="v">+'+shock+'%</div><div class="l">Sus '+tot+' unidades aumentarían la oferta activa de '+Z[zc]+' ('+ZTOT[zc]+' avisos hoy). Su proyecto ES un shock de oferta — planifique el ritmo de lanzamiento con este número enfrente.</div></div>':'')+
+   (shock!=null?'<div class="shock"><div class="v">+'+shock+'%</div><div class="l">Sus '+tot+' unidades aumentarían la oferta activa de '+Z[zc]+' ('+ZTOT[zc]+' avisos hoy). Su proyecto ES un shock de oferta — planifique el ritmo de lanzamiento con este número enfrente. (Orden de magnitud: contamos avisos publicados, no unidades únicas, y la venta directa no publicada queda fuera.)</div></div>':'')+
    (amHtml?'<h3 style="margin-top:16px">Estándar de amenidades del radio</h3>'+amHtml:'')+
    (top.length?'<h3 style="margin-top:16px">Vecinos con más oferta</h3>'+top.map(function(b){return '<div class="pos-fila"><span>'+b[1]+'</span><span style="color:var(--gris);font-size:12px">'+b[5]+' unid. · $'+fm(b[6])+'/m²</span></div>'}).join(''):'')+
    '<div class="mini" style="margin-top:12px">Posición calculada contra el rango p25-p75 <b>pedido</b> de la zona (no predice ventas). Comparables del radio: agregados por edificio. En el producto real esto se recalcula cada noche.</div>';
