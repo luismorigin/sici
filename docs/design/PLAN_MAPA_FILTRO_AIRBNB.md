@@ -1,14 +1,22 @@
 # Plan — Filtro por área visible del mapa ("Buscar en esta zona") en /ventas y /alquileres
 
-**Fecha:** 3-ago-2026 · **Rama:** `worktree-mapa-airbnb-feeds` · **Estado:** plan aprobado, sin implementar
+**Estado:** ✅ **COMPLETADO — en producción desde el 3-ago-2026** (PR #62, squash `f750a2a` en `main`).
 **Origen:** `docs/backlog/FILTROS_FEED_PUBLICO.md` §3 (investigación 17-jul-2026) + exploración de código 3-ago-2026.
+**Commits:** `978ac71` (Fase 0) · `e687ad3` (Fase 1, ventas) · `417eb19` (Fase 2, alquileres) · `c5381a5` (Fase 4, mobile).
+
+Este doc es el **registro canónico** de la feature: decisiones, los dos bugs que costaron encontrar
+y lo que quedó fuera. Para trabajar sobre el filtro, empezar acá.
 
 ## Decisiones tomadas (con Lucho, 3-ago)
 
-1. **Activación: botón "Buscar en esta zona"** — aparece flotante al mover/zoomear el mapa; la lista solo cambia al apretarlo. NO auto-filtrar mientras se mueve.
-2. **El resumen de mercado del panel derecho SIGUE al área** — se recalcula sobre lo visible. Si quedan <5 comparables, el caveat existente ("Pocas publicaciones…") es la respuesta honesta.
-3. **Alcance v1: /ventas + /alquileres Equipetrol, desktop** (modo mixto y modo mapa full). Zona Norte, casas y broker fuera — aunque heredan el fix del mapa gratis por componente compartido.
-4. **Mobile fuera de la v1**, con guard explícito para que no se contamine (hoy ya está aislado por accidente: `feedItems` deriva de `properties`, no de `confirmados`).
+1. **Escritorio — botón "Buscar en esta zona"**: aparece flotante al mover/zoomear el mapa; la lista solo cambia al apretarlo. NO auto-filtrar mientras se mueve.
+2. **Celular — al revés, y a propósito**: las mini-tarjetas del carrusel se actualizan **solas** con lo que se ve, sin botón de confirmar; en el teléfono el resultado tiene que verse al instante. El botón queda como puente al feed ("Ver los N de esta zona"). Decidido sobre maqueta, ver Fase 4.
+3. **El resumen de mercado del panel derecho SIGUE al área** — se recalcula sobre lo visible. Si quedan <5 comparables, el caveat existente ("Pocas publicaciones…") es la respuesta honesta.
+4. **Alcance: /ventas + /alquileres de Equipetrol, escritorio Y celular.** Zona Norte, casas, broker y public-share **no reciben el filtro** — pero sí heredan el fix del mapa (Fase 0) por componente compartido.
+
+> **Nota de proceso:** la v1 arrancó siendo desktop-only. Mobile entró después (Fase 4) al medir el
+> tráfico: **85% de los usuarios son mobile** y la feature no les llegaba. El orden fue medir → maqueta
+> → aprobar → programar.
 
 ## Hallazgos que condicionan el diseño
 
@@ -25,7 +33,8 @@
 > se conserva (caso deuda 24-jun: click en pin con zoom 17 → sigue en 17, antes volvía a 15).
 > El "pane distinto" al abrir el sheet de ventas es el mini-mapa del modal (otra instancia), no un rebuild.
 
-Bug: `buildMap` depende de `[properties, onSelectProperty, makeIcon]` (`VentaMap.tsx:196`) → cualquier cambio de `properties` destruye y reconstruye el mapa Leaflet entero + `fitBounds` (`:171-174`). Con un bounds-filter esto genera loop de feedback (filtro → rebuild → fitBounds → nuevo bounds → filtro…). Documentado en `DEUDA_TECNICA.md:45-49` como "baja/cosmético" — acá pasa a bloqueante.
+Bug: `buildMap` depende de `[properties, onSelectProperty, makeIcon]` (`VentaMap.tsx:196`) → cualquier cambio de `properties` destruye y reconstruye el mapa Leaflet entero + `fitBounds` (`:171-174`). Con un bounds-filter esto genera loop de feedback (filtro → rebuild → fitBounds → nuevo bounds → filtro…). Estaba documentado en `DEUDA_TECNICA.md` como "baja/cosmético" — acá pasó a bloqueante (esa entrada
+hoy figura como ✅ RESUELTO, cerrada por esta misma fase).
 
 - En `VentaMap.tsx` y `AlquilerMapMulti.tsx`: separar el efecto de **construcción** (una vez) del de **actualización de marcadores** (limpiar y repoblar el clusterGroup cuando cambia `properties`).
 - `fitBounds` condicional: solo en la construcción inicial y en cambio de filtro server-side. NUNCA cuando el cambio de `properties` viene del bounds-filter.
@@ -60,7 +69,8 @@ Bug: `buildMap` depende de `[properties, onSelectProperty, makeIcon]` (`VentaMap
 
 - Misma mecánica con `AlquilerMapMulti` + clases `ad-*` en `styles/alquileres.css`, tema claro.
 - Resolver la asimetría: el bounds-filter debe afectar `gridProperties`→`confirmados` (lista) Y `panelMarketSummary` (que deriva de `displayedProperties`) de forma coherente — un solo predicado `enBounds()` compartido aplicado en ambas ramas.
-- El mapa mobile de alquileres usa `properties` crudo (`alquileres.tsx:2558`) — no tocar, ya está aislado.
+- ~~El mapa mobile de alquileres usa `properties` crudo — no tocar, ya está aislado.~~ **Superado por la
+  Fase 4:** ese mapa pasó a recibir `displayedProperties` + `onViewportChange` y ahora lleva el carrusel.
 
 ## Fase 3 — Verificación (Playwright, según `docs/design/VERIFICAR_FEEDS_DESKTOP.md`) — ✅ HECHA (3-ago)
 
@@ -75,7 +85,10 @@ El preview interno no hidrata el layout desktop → Playwright headless. Casos:
 3. Zoom a un edificio (<5 con precio/m²) → caveat "Pocas publicaciones…", sin crash.
 4. Cambiar una pill con área activa → refetch + re-intersección, chip persiste.
 5. Seleccionar pin → el mapa NO se re-encuadra (fix Fase 0).
-6. Mobile (viewport 390px): feed TikTok y overlay de mapa idénticos a hoy.
+6. ~~Mobile (390px): feed TikTok y overlay de mapa idénticos a hoy.~~ ⚠️ **Criterio SUPERADO por la
+   Fase 4** — el overlay de mapa mobile ya NO es idéntico: tiene carrusel, botón "Ver los N de esta
+   zona" y chip en el header. Quien re-corra esta verificación con el criterio viejo va a reportar
+   una regresión que no existe. El criterio vigente es el de la Fase 4.
 7. Broker mode: grid clásico intacto, sin botón.
 
 ## Feeds que HEREDAN el fix del mapa (sin recibir el botón) — ✅ verificados (3-ago)
@@ -123,11 +136,21 @@ leería como "esto es todo lo que hay". El botón sí ofrece el total real del �
 
 Verificado con Playwright a 390×844 (iPhone) en ambos feeds + regresión desktop.
 
-## Fuera de scope v1 (anotado, no perdido)
+### Cómo verificar esto de nuevo (3 gotchas que cuestan medio día descubrir)
+
+1. **Un swipe con `mouse.move` NO arrastra el carrusel.** Es un contenedor con `overflow-x`; en
+   Chromium headless hay que usar **`mouse.wheel(deltaX, 0)`**. Con el swipe uno concluye
+   equivocadamente que la sincronización está rota.
+2. **No alcanza con el viewport de 390px**: hace falta `isMobile: true` + `hasTouch: true` para que
+   el layout mobile se active de verdad.
+3. **El binario de Chromium de la caché puede no coincidir** con la versión del paquete `playwright`
+   → pasar `executablePath` explícito en `chromium.launch()`.
+
+## Fuera de scope (anotado, no perdido)
 
 - `?bbox` en la URL (sería el primer filtro con escritura bidireccional a la URL — hoy no existe ninguna).
-- Zona Norte (`zona-norte/ventas.tsx` está 2.000+ líneas atrás del gemelo) y `/ventas/casas`.
-- Mobile (patrón mapa full + lista deslizable = rediseño propio).
+- **Zona Norte y `/ventas/casas`: NO reciben el botón** (no tienen layout split; `zona-norte/ventas.tsx`
+  está ~2.245 líneas atrás del gemelo). Sí heredaron el fix del mapa — ver la tabla de arriba.
 - "Dibujar área de búsqueda" a mano alzada.
 
 ## Riesgos declarados
@@ -136,6 +159,9 @@ Verificado con Playwright a 390×844 (iPhone) en ambos feeds + regresión deskto
 - **`LIMIT 500` de la RPC** (`DEUDA_TECNICA.md:221`): hoy 280/500, pero al sumar ZN el universo client-side podría cortarse en silencio y el filtro geográfico operaría sesgado. No bloquea v1 Equipetrol; revisar antes de extender a ZN.
 - Al cutover shadow la granularidad GPS empeora (más props resuelven al GPS del edificio) — esperable, no accionable acá.
 
-## Estimación
+## Lo que costó (real, no estimado)
 
-Fase 0 ~medio día · Fase 1 ~1 día · Fase 2 ~medio-1 día (incluye verificación). Total **~2–2,5 días**.
+Todo en una sesión del 3-ago-2026: Fase 0 (fix del mapa) → Fase 1 (ventas) → Fase 2 (alquileres) →
+verificación → **medición de tráfico → maqueta → Fase 4 (mobile)** → merge y verificación en prod.
+La estimación original de julio (~1–1,5 días para desktop) no contemplaba el rebuild del mapa, que
+resultó bloqueante, ni la superficie mobile, que se sumó después de mirar los números.

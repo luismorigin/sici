@@ -1,8 +1,9 @@
 # Refactor Ventas — De Funnel Premium a Feed Simple
 
 > **Inicio:** 18 Mar 2026
-> **Estado:** COMPLETADO — Bloques 1-7 implementados (10 commits, 18-19 Mar 2026). Pendientes: 5d Compare Sheet, clustering mapa.
-> **Última actualización:** 18 Mar 2026
+> **Estado:** COMPLETADO — Bloques 1-7 implementados (10 commits, 18-19 Mar 2026). Pendiente: 5d Compare Sheet.
+> ~~clustering mapa~~ → **implementado** (`leaflet.markercluster` en `VentaMap`/`AlquilerMapMulti`).
+> **Última actualización:** 3 Ago 2026 (cierre de la deuda de clustering; el mapa además dejó de reconstruirse — ver `docs/backlog/DEUDA_TECNICA.md`)
 
 ---
 
@@ -338,14 +339,14 @@ El botón "Ver detalles" de la card (Bloque 3) abre un panel con información co
 **Qué NO incluye (diferencia con mapa viejo de ventas):**
 - Sin filtros MOAT (Oportunidad/Justo/Premium)
 - Sin color-coding por categoría de precio
-- Sin clustering por tipología
+- Sin clustering **por tipología** (sí hay clustering espacial — ver abajo)
 - Pins neutrales — solo precio
 
 **Referencia:**
 - `components/alquiler/AlquilerMapMulti.tsx` — mapa multi-pin para alquileres
 - `components/results-premium/MapaResultados.tsx` — mapa viejo de ventas (Tier 2, no modificar)
 
-**Deuda UX:** Los pins se amontonan cuando hay muchas propiedades en la misma zona (Equipetrol Centro). Soluciones posibles: clustering con Leaflet MarkerCluster (agrupa pins cercanos en un círculo con número), o zoom automático al filtrar zona. Evaluar post-deploy.
+**Deuda UX — ✅ RESUELTA:** los pins se amontonaban con muchas propiedades en la misma zona. Se implementó **clustering con `leaflet.markercluster`** (`maxClusterRadius: 45`, spiderfy al máximo zoom), vigente en `VentaMap` y `AlquilerMapMulti`. Nota 3-ago-2026: el clustering sobrevivió intacto al refactor del ciclo de vida del mapa (Fase 0 del PR #62).
 
 **Estado:** Completado (funcionalidad base)
 

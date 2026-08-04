@@ -1,6 +1,6 @@
 # Deuda Técnica — SICI
 
-> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 7 Jul 2026.
+> Extraído de CLAUDE.md el 27 Feb 2026. Última actualización: 3 Ago 2026.
 
 ## 🔴 TC Binance sin guardrails — salto de +7,6% en un día publicado sin control (22 Jul 2026)
 
@@ -46,7 +46,7 @@ Archivos: `pages/index.tsx`, `pages/sobre-simon.tsx`, `pages/whatsapp.tsx`, `pag
 
 **Qué pasaba:** en `components/venta/VentaMap.tsx`, el `useEffect` que construía el mapa dependía de `buildMap`, y este de `onSelectProperty`. Los feeds (`/ventas`, `/zona-norte/ventas`, `/ventas/casas`) pasan ese handler como arrow inline → nueva referencia en cada render → al clickear un pin el mapa se **reconstruía entero** y volvía a hacer `fitBounds`, reseteando zoom/centro. Afectaba a TODOS los feeds.
 
-**Fix aplicado (rama `worktree-mapa-airbnb-feeds`, Fase 0 del filtro por área del mapa):** en `VentaMap.tsx` y `AlquilerMapMulti.tsx` se separó la construcción (una vez, teardown solo al desmontar) de la actualización de markers (repuebla el cluster). El handler vive en un ref (su identidad ya no importa, los feeds pueden seguir pasando arrows inline) y una firma `id:precio` del dataset evita redibujar/re-encuadrar cuando el array cambia de identidad sin cambiar contenido. `fitBounds` solo cuando el dataset realmente cambió. Motivo de la promoción de prioridad: era **bloqueante** para el filtro "Buscar en esta zona" (el rebuild+fitBounds generaba loop de feedback con el filtro por bounds) — ver `docs/design/PLAN_MAPA_FILTRO_AIRBNB.md`. Verificado con Playwright: pin-click/hover/sheet no reconstruyen la instancia ni tocan el zoom.
+**Fix aplicado (en `main` vía PR #62, Fase 0 del filtro por área del mapa):** en `VentaMap.tsx` y `AlquilerMapMulti.tsx` se separó la construcción (una vez, teardown solo al desmontar) de la actualización de markers (repuebla el cluster). El handler vive en un ref (su identidad ya no importa, los feeds pueden seguir pasando arrows inline) y una firma `id:precio` del dataset evita redibujar/re-encuadrar cuando el array cambia de identidad sin cambiar contenido. `fitBounds` solo cuando el dataset realmente cambió. Motivo de la promoción de prioridad: era **bloqueante** para el filtro "Buscar en esta zona" (el rebuild+fitBounds generaba loop de feedback con el filtro por bounds) — ver `docs/design/PLAN_MAPA_FILTRO_AIRBNB.md`. Verificado con Playwright: pin-click/hover/sheet no reconstruyen la instancia ni tocan el zoom.
 
 ## Módulo TC dinámico — DEPRECADO (19 Jun 2026)
 
@@ -218,7 +218,7 @@ El LLM ya está cableado para usarlo: `Build Prompt v4.0` (flujo_enrichment_llm_
 | # | Ítem | Dónde | Severidad | Cuándo resolver |
 |---|---|---|---|---|
 | 1 | `plan_pagos_cuotas: unknown \| null` en `RawUnidadSimpleRow` y `UnidadVenta` — debería ser `Record<string, unknown>[] \| null` | `types/db-responses.ts`, `lib/supabase.ts` | Baja | Cuando se use en UI |
-| 2 | `LIMIT 500` en `buscar_unidades_simple()` — si el catálogo supera 500 props activas, corta sin aviso. Nota 5-jul-2026 (`8f945b9`): el SSG de `/ventas` ahora baja solo 24, pero el fetch completo del cliente (`/api/ventas`) sigue pidiendo hasta 500 → la deuda sigue viva | `sql/functions/query_layer/buscar_unidades_simple.sql` | Media | Cuando ventas pase ~400 props |
+| 2 | `LIMIT 500` en `buscar_unidades_simple()` — si el catálogo supera 500 props activas, corta sin aviso. Nota 5-jul-2026 (`8f945b9`): el SSG de `/ventas` ahora baja solo 24, pero el fetch completo del cliente (`/api/ventas`) sigue pidiendo hasta 500 → la deuda sigue viva. **Nota 3-ago-2026:** ahora tiene una segunda consecuencia — el filtro por área del mapa (PR #62) opera sobre el universo que está en el navegador, así que si se corta en 500 el filtro geográfico devuelve un resultado **sesgado por el ORDER BY**, sin avisar | `sql/functions/query_layer/buscar_unidades_simple.sql` | Media | Cuando ventas pase ~400 props |
 | 3 | Spotlight en `api/ventas.ts` hace query completa (`limite: 500`) para buscar un solo ID — ineficiente | `pages/api/ventas.ts` | Baja | Bloque 5 (compartir/spotlight) |
 | 4 | `CardPlaceholder` ya tiene foto, precio, specs y badges funcionales — en Bloque 3 iterar sobre esta base, no reescribir desde cero | `pages/ventas.tsx` | Info | Bloque 3 |
 | 5 | `fotos_count` badge se renderiza fuera de la imagen + `object-fit` no adapta bien fotos de distintos portales (collages, watermarks, aspect ratios verticales) | `pages/ventas.tsx` | Media | Bloque 3 |
