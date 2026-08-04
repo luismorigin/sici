@@ -126,6 +126,19 @@
   .pedpop b{font-family:'Figtree'}
   .pedpop .pp-t{font-family:'Figtree';font-weight:800;font-size:13px;margin-bottom:6px;color:var(--salvia)}
 
+  /* modo presentación: subtítulos de storytelling */
+  .story-bar{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);width:min(940px,94vw);background:rgba(18,18,17,.97);border:1px solid #3A3934;border-left:5px solid var(--salvia-viva);border-radius:16px;padding:18px 24px 16px;z-index:115;display:none;box-shadow:0 14px 44px rgba(0,0,0,.65);cursor:pointer;user-select:none;animation:subir .35s ease}
+  @keyframes subir{from{opacity:0;transform:translateX(-50%) translateY(14px)}to{opacity:1;transform:translateX(-50%)}}
+  .st-t{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--salvia-viva);font-weight:700;margin-bottom:6px;font-family:'Figtree'}
+  .st-s{font-family:'Figtree';font-size:21px;font-weight:700;line-height:1.42;color:var(--arena)}
+  .st-nav{display:flex;align-items:center;gap:12px;margin-top:12px;font-size:12px;color:var(--gris)}
+  .st-nav .st-dots{display:flex;gap:5px;flex:1}
+  .st-dot{width:7px;height:7px;border-radius:50%;background:#3A3934;transition:.2s}
+  .st-dot.on{background:var(--salvia-viva)}
+  .st-btn{border:1px solid var(--linea);background:transparent;color:var(--gris);border-radius:999px;padding:4px 13px;cursor:pointer;font-size:12px;font-family:'Figtree';font-weight:700}
+  .st-btn:hover{color:var(--arena)}
+  @media(max-width:720px){.st-s{font-size:16px}}
+
   /* Máquina del tiempo */
   .tm-caja{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:24px}
   .tm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:8px}
@@ -156,6 +169,7 @@
     <button class="tab" data-esc="sim">📍 Su Proyecto</button>
     <button class="tab" data-esc="canal">🕸 El Canal</button>
     <button class="tab" data-esc="tiempo">⏳ Máquina del Tiempo</button>
+    <button class="tab" id="btn-pres" style="border-color:var(--salvia);color:#9CC7A6">🎬 Presentar</button>
   </nav>
 </header>
 
@@ -806,7 +820,7 @@ document.addEventListener('click',function(e){
   pop.style.top=Math.max(8,Math.min(e.clientY+12,window.innerHeight-230))+'px';
 });
 
-/* ============ TABS ============ */
+/* ============ SELECCIÓN Y ANILLO ============ */
 function anillo(){var a=document.getElementById('anillo'); if(!a)return;
   if(sel==null){a.style.display='none';return}
   var b=B[sel],q=PX(b[2],b[3]),e=estiloCapa(b);
@@ -867,6 +881,7 @@ function fichaAlq(ba){
    '<div class="mini">Que un edificio tenga renta activa y cero venta publicada dice dos cosas: está ENTREGADO y habitado, y sus dueños hoy retienen en vez de vender. Alquileres pedidos en Bs (la moneda real de ese mercado), no contratos.</div></div>';
 }
 document.addEventListener('keydown',function(e){
+  if(presIdx>=0)return; /* en modo presentación, ESC lo maneja el presentador */
   if(e.key!=='Escape')return;
   sel=null; anillo();
   el('ficha').innerHTML='<h3>Radiografía de edificio</h3><p class="vacio">Toque un punto del mapa.</p>';
@@ -1218,9 +1233,56 @@ el('treemap').addEventListener('click',function(e){
 });
 dibujarTreemap(); dibujarCanalMapa(null);
 
+/* ============ MODO PRESENTACIÓN: storytelling, no data ============ */
+var presIdx=-1;
+function setEscena(n){
+  document.querySelectorAll('.tab[data-esc]').forEach(function(x){x.classList.toggle('on',x.dataset.esc===n)});
+  document.querySelectorAll('.escena').forEach(function(x){x.classList.remove('on')});
+  el('esc-'+n).classList.add('on');
+}
+function setCapa(c){pararTour(); capaActual=c;
+  document.querySelectorAll('.capa[data-capa]').forEach(function(x){x.classList.toggle('on',x.dataset.capa===c)});
+  dibujarMapa();}
+var STORY=[
+{e:'mapa',c:'precio',a:function(){zoomMapa.reset();sel=null;anillo();},t:'La foto que nadie más tiene',s:'Esto es Equipetrol, esta madrugada. Cada punto es un edificio real — 402 avisos verificados uno por uno contra el portal.'},
+{e:'mapa',c:'velocidad',t:'Mismo mapa, otra pregunta: ¿dónde se mueve?',s:'Verde = oferta joven. Sirari es cara Y rápida a la vez — eso es demanda real. Villa Brígida pide menos… y aun así espera.'},
+{e:'mapa',c:'oferta',a:function(){seleccionar(0);},t:'La competencia tiene nombre y apellido',s:'No se compite contra "la zona": se compite contra Maré y sus 22 unidades. A la derecha, su libro completo — el precio exacto que le van a nombrar a su sala de ventas.'},
+{e:'mapa',c:'salidas',t:'Lo que salió del mercado',s:'En julio desaparecieron 72 avisos. No los llamamos "vendidos" — los llamamos salidas, porque es lo que podemos probar. Esa honestidad es el producto.'},
+{e:'mapa',c:'entregas',t:'Las promesas de entrega, auditadas',s:'Un tercio de las preventas con fecha declara una entrega que YA venció. Cuando arme su plan financiero, estrese los plazos de su competencia — y los propios.'},
+{e:'mapa',c:'alquiler',t:'La otra mitad de la demanda',s:'Dónde ya se vive. Un edificio con renta activa está entregado y habitado — la señal más honesta de que esa cuadra funciona.'},
+{e:'canal',t:'¿Y quién vende todo esto?',s:'59 oficinas y 221 captadores se reparten el inventario — ninguna pasa del 9%. El canal no se hereda: se diseña, y este mapa dice con quién hablar primero.'},
+{e:'sim',a:function(){el('sim-ejemplo').click();},t:'Ahora ponga SU torre en el mapa',s:'El mercado le responde en vivo: sus comparables reales, la posición de su lista de precios, y cuánto aumentaría usted la oferta de la zona.'},
+{e:'tiempo',a:function(){mon='usd';el('btn-usd').classList.add('on');el('btn-bs').classList.remove('on');tmIdx=TMD.f.length;el('tm-slider').value=tmIdx;tmDraw();},t:'Siete meses de historia, en dólares',s:'El m² cayó entre 15% y 22% según la tipología. El 2 dormitorios es el que más sufre — y también el más lento en salir. Dos señales, una conclusión.'},
+{e:'tiempo',a:function(){el('btn-bs').click();},t:'…¿y en bolivianos?',s:'Apenas se movió. La diferencia es la curva lila: el tipo de cambio. ¿En qué moneda mira usted el mercado? Su margen vive en esa pregunta.'},
+{e:'mapa',c:'precio',a:function(){sel=null;anillo();},t:'Todo esto se verifica cada noche',s:'Y cada número con ⓘ le muestra de dónde sale, con qué método y con qué límite. Nadie paga por aparecer mejor acá — por eso le sirve. Simón.'}
+];
+document.body.insertAdjacentHTML('beforeend','<div class="story-bar" id="story-bar"><div class="st-t" id="st-t"></div><div class="st-s" id="st-s"></div><div class="st-nav"><span id="st-n"></span><div class="st-dots" id="st-dots"></div><button class="st-btn" id="st-prev">← Anterior</button><button class="st-btn" id="st-next">Siguiente →</button><button class="st-btn" id="st-close">✕ Salir</button></div></div>');
+function presPaso(i){
+  presIdx=Math.max(0,Math.min(STORY.length-1,i));
+  var p=STORY[presIdx];
+  setEscena(p.e); if(p.c)setCapa(p.c); if(p.a)p.a();
+  el('st-t').textContent=p.t; el('st-s').textContent=p.s;
+  el('st-n').textContent=(presIdx+1)+' / '+STORY.length;
+  el('st-dots').innerHTML=STORY.map(function(_,j){return '<span class="st-dot'+(j<=presIdx?' on':'')+'"></span>'}).join('');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function presSalir(){presIdx=-1; el('story-bar').style.display='none';}
+el('btn-pres').onclick=function(){el('story-bar').style.display='block'; presPaso(0);};
+el('story-bar').addEventListener('click',function(e){
+  if(e.target.id==='st-close'){presSalir();return}
+  if(e.target.id==='st-prev'){presPaso(presIdx-1);return}
+  presPaso(presIdx+1); /* clic en cualquier parte de la barra = avanzar */
+});
+document.addEventListener('keydown',function(e){
+  if(presIdx<0)return;
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();presPaso(presIdx+1);}
+  else if(e.key==='ArrowLeft'){e.preventDefault();presPaso(presIdx-1);}
+  else if(e.key==='Escape'){presSalir();}
+});
+
 /* ============ TABS ============ */
-document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){
-  document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});
+document.querySelectorAll('.tab[data-esc]').forEach(function(t){t.onclick=function(){
+  document.querySelectorAll('.tab[data-esc]').forEach(function(x){x.classList.remove('on')});
   document.querySelectorAll('.escena').forEach(function(x){x.classList.remove('on')});
   t.classList.add('on'); document.getElementById('esc-'+t.dataset.esc).classList.add('on');
 }});
