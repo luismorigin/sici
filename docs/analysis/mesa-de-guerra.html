@@ -138,6 +138,11 @@
   .st-btn{border:1px solid var(--linea);background:transparent;color:var(--gris);border-radius:999px;padding:4px 13px;cursor:pointer;font-size:12px;font-family:'Figtree';font-weight:700}
   .st-btn:hover{color:var(--arena)}
   @media(max-width:720px){.st-s{font-size:16px}}
+  .story-bar.arrastrada{transform:none;animation:none}
+  .story-bar.min{width:auto;min-width:0;padding:10px 18px}
+  .story-bar.min .st-s,.story-bar.min .st-nav{display:none}
+  .story-bar.min .st-t{margin-bottom:0}
+  .st-grip{cursor:grab}
 
   /* Máquina del tiempo */
   .tm-caja{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:24px}
@@ -170,6 +175,7 @@
     <button class="tab" data-esc="canal">🕸 El Canal</button>
     <button class="tab" data-esc="tiempo">⏳ Máquina del Tiempo</button>
     <button class="tab" id="btn-pres" style="border-color:var(--salvia);color:#9CC7A6">🎬 Presentar</button>
+    <button class="tab" id="btn-fs" title="Pantalla completa (o F11)">⛶</button>
   </nav>
 </header>
 
@@ -1256,7 +1262,7 @@ var STORY=[
 {e:'tiempo',a:function(){el('btn-bs').click();},t:'…¿y en bolivianos?',s:'Apenas se movió. La diferencia es la curva lila: el tipo de cambio. ¿En qué moneda mira usted el mercado? Su margen vive en esa pregunta.'},
 {e:'mapa',c:'precio',a:function(){sel=null;anillo();},t:'Todo esto se verifica cada noche',s:'Y cada número con ⓘ le muestra de dónde sale, con qué método y con qué límite. Nadie paga por aparecer mejor acá — por eso le sirve. Simón.'}
 ];
-document.body.insertAdjacentHTML('beforeend','<div class="story-bar" id="story-bar"><div class="st-t" id="st-t"></div><div class="st-s" id="st-s"></div><div class="st-nav"><span id="st-n"></span><div class="st-dots" id="st-dots"></div><button class="st-btn" id="st-prev">← Anterior</button><button class="st-btn" id="st-next">Siguiente →</button><button class="st-btn" id="st-close">✕ Salir</button></div></div>');
+document.body.insertAdjacentHTML('beforeend','<div class="story-bar" id="story-bar"><div class="st-t" id="st-t"></div><div class="st-s" id="st-s"></div><div class="st-nav"><span id="st-n"></span><div class="st-dots" id="st-dots"></div><button class="st-btn" id="st-prev">← Anterior</button><button class="st-btn" id="st-next">Siguiente →</button><button class="st-btn" id="st-min">▁ Minimizar</button><button class="st-btn" id="st-close">✕ Salir</button></div></div>');
 function presPaso(i){
   presIdx=Math.max(0,Math.min(STORY.length-1,i));
   var p=STORY[presIdx];
@@ -1269,10 +1275,38 @@ function presPaso(i){
 function presSalir(){presIdx=-1; el('story-bar').style.display='none';}
 el('btn-pres').onclick=function(){el('story-bar').style.display='block'; presPaso(0);};
 el('story-bar').addEventListener('click',function(e){
+  if(stArrastre){stArrastre=false;return} /* si fue arrastre, no avanzar */
   if(e.target.id==='st-close'){presSalir();return}
   if(e.target.id==='st-prev'){presPaso(presIdx-1);return}
+  if(e.target.id==='st-min'){var b=el('story-bar');b.classList.toggle('min');
+    e.target.textContent=b.classList.contains('min')?'▲ Expandir':'▁ Minimizar';return}
   presPaso(presIdx+1); /* clic en cualquier parte de la barra = avanzar */
 });
+/* la barra se puede ARRASTRAR si tapa algo (agarrar y mover; el clic corto sigue avanzando) */
+var stArrastre=false;
+(function(){
+  var bar=el('story-bar'), d=null;
+  bar.addEventListener('pointerdown',function(e){
+    if(e.target.classList.contains('st-btn'))return;
+    var r=bar.getBoundingClientRect();
+    d={x:e.clientX,y:e.clientY,l:r.left,t:r.top,mov:false};
+  });
+  window.addEventListener('pointermove',function(e){
+    if(!d)return;
+    if(Math.abs(e.clientX-d.x)+Math.abs(e.clientY-d.y)>8)d.mov=true;
+    if(!d.mov)return;
+    bar.classList.add('arrastrada');
+    bar.style.left=Math.max(4,Math.min(window.innerWidth-120,d.l+e.clientX-d.x))+'px';
+    bar.style.top=Math.max(4,Math.min(window.innerHeight-60,d.t+e.clientY-d.y))+'px';
+    bar.style.bottom='auto';
+  });
+  window.addEventListener('pointerup',function(){ if(d&&d.mov)stArrastre=true; d=null; });
+})();
+/* pantalla completa desde la app (equivale a F11) */
+el('btn-fs').onclick=function(){
+  if(document.fullscreenElement){document.exitFullscreen();this.textContent='⛶';}
+  else{document.documentElement.requestFullscreen();this.textContent='⛶ salir';}
+};
 document.addEventListener('keydown',function(e){
   if(presIdx<0)return;
   if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();presPaso(presIdx+1);}
