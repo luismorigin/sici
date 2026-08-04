@@ -113,6 +113,19 @@
   .lib-tabs button{flex:1;border:1px solid var(--linea);background:var(--panel2);color:var(--gris);font-family:'Figtree';font-weight:700;font-size:12px;padding:8px 10px;border-radius:9px;cursor:pointer}
   .lib-tabs button.on{background:var(--arena);color:var(--negro);border-color:var(--arena)}
 
+  /* canal: treemap */
+  .tm-tile{cursor:pointer}
+  .tm-tile rect{stroke:#141414;stroke-width:1.5;transition:opacity .2s}
+  .tm-tile:hover rect{opacity:.82}
+  .tm-tile.sel rect{stroke:#EDE8DC;stroke-width:2.5}
+
+  /* sello fiduciario: pedigrí del dato */
+  [data-ped]{cursor:help}
+  .kpi.ped .v::after,.stat.ped .v::after{content:' ⓘ';font-size:11px;color:#57554E;font-weight:400}
+  .pedpop{position:fixed;background:var(--arena);color:var(--negro);border-radius:12px;padding:14px 17px;font-size:12px;line-height:1.55;max-width:330px;z-index:130;display:none;box-shadow:0 8px 30px rgba(0,0,0,.55)}
+  .pedpop b{font-family:'Figtree'}
+  .pedpop .pp-t{font-family:'Figtree';font-weight:800;font-size:13px;margin-bottom:6px;color:var(--salvia)}
+
   /* Máquina del tiempo */
   .tm-caja{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:24px}
   .tm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:8px}
@@ -141,6 +154,7 @@
   <nav class="tabs">
     <button class="tab on" data-esc="mapa">🗺️ La Mesa</button>
     <button class="tab" data-esc="sim">📍 Su Proyecto</button>
+    <button class="tab" data-esc="canal">🕸 El Canal</button>
     <button class="tab" data-esc="tiempo">⏳ Máquina del Tiempo</button>
   </nav>
 </header>
@@ -149,7 +163,7 @@
 <section class="escena on" id="esc-mapa">
   <div class="eyebrow">402 avisos verificados · 138 edificios con oferta activa · corte 3-ago-2026</div>
   <h2>Equipetrol como nunca se lo mostraron</h2>
-  <p class="lead">Cada punto es un edificio real, georreferenciado y verificado esta madrugada. Cambie de capa para ver el mismo mercado con cuatro lentes distintos — y toque cualquier edificio para su radiografía.</p>
+  <p class="lead">Cada punto es un edificio real, georreferenciado y verificado esta madrugada. Cambie de capa para ver el mismo mercado con seis lentes distintos, y toque cualquier edificio para su radiografía. Los números marcados con ⓘ son auditables: tóquelos y vea de dónde sale cada uno, con qué método y con qué límite.</p>
 
   <div class="kpis" id="kpis-mapa"></div>
 
@@ -218,6 +232,38 @@
   <div class="vinculo">📄 La versión narrada de este comparador es la <a href="mockup-informe-mercado.html">§08 del Informe de Mercado</a>. En el producto real, esta pantalla se recalcula cada noche mientras dure su suscripción: su lista contra el mercado vivo, no contra el estudio de hace 6 meses.</div>
 </section>
 
+<!-- ================= ESCENA CANAL ================= -->
+<section class="escena" id="esc-canal">
+  <div class="eyebrow">402 avisos · 59 oficinas · 221 captadores · corte 3-ago-2026</div>
+  <h2>Quién tiene el inventario en la mano</h2>
+  <p class="lead">Cada rectángulo es una inmobiliaria; el tamaño, su cartera activa. El color cuenta el MODELO: verde = cartera repartida entre muchos agentes, terracota = concentrada en pocas manos. Toque una y vea sus números, su captador estrella y dónde está parada su cartera en el mapa.</p>
+
+  <div class="kpis">
+    <div class="kpi ped" data-ped="c59"><div class="v">59</div><div class="l">oficinas activas — ninguna pasa del 9% del inventario</div></div>
+    <div class="kpi ped" data-ped="c221"><div class="v">221</div><div class="l">captadores con al menos 1 aviso</div></div>
+    <div class="kpi ped" data-ped="c64"><div class="v">64%</div><div class="l">del inventario en las 16 oficinas top</div></div>
+    <div class="kpi ped" data-ped="c21"><div class="v">21</div><div class="l">avisos de UNA captadora (RE/MAX Union) — más que 50 oficinas enteras</div></div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="mapa-caja" style="margin-bottom:14px">
+        <svg id="treemap" viewBox="0 0 760 400"></svg>
+        <div class="leyenda"><span><span class="sw" style="background:#5E9C72"></span>repartida (≤2 avisos/agente)</span><span><span class="sw" style="background:#E0CE96"></span>media</span><span><span class="sw" style="background:#D07A4A"></span>concentrada (5+/agente)</span><span><span class="sw" style="background:#3A3934"></span>resto del mercado</span></div>
+      </div>
+      <div class="mapa-caja">
+        <div style="font-size:12px;color:var(--gris);margin-bottom:8px" id="canal-mapa-titulo">Dónde está parada la cartera (toque una oficina arriba)</div>
+        <svg id="mapa-canal" viewBox="0 0 760 800"></svg>
+      </div>
+    </div>
+    <aside class="panel" id="ofi-panel">
+      <h3>Radiografía de oficina</h3>
+      <p class="vacio">Toque un rectángulo del treemap.<br><br>Para colocar un proyecto hay que elegir canal: acá ve cuánta cartera maneja cada inmobiliaria, entre cuántas manos, cuánto le rotó en julio y en qué edificios está fuerte.</p>
+    </aside>
+  </div>
+  <div class="vinculo">📄 La versión narrada de este mapa es la <a href="mockup-informe-mercado.html">§09 del Informe</a>. Los nombres son los publicados en cada aviso — dato público, leído aviso por aviso. Cartera grande = capacidad de captar, no necesariamente de vender.</div>
+</section>
+
 <!-- ================= ESCENA 3: MÁQUINA DEL TIEMPO ================= -->
 <section class="escena" id="esc-tiempo">
   <div class="eyebrow">Serie reconstruida ene→jul 2026 · 58 cortes · elija tipología y moneda</div>
@@ -228,7 +274,7 @@
     <div class="tm-head">
       <div class="tm-lectura">
         <div class="fecha" id="tm-fecha">—</div>
-        <div class="valor" id="tm-valor">—</div>
+        <div class="valor" id="tm-valor" data-ped="tm">—</div>
         <div class="delta" id="tm-delta">—</div>
         <div style="font-size:13px;color:var(--gris);margin-top:6px">TC paralelo del día: <b id="tm-tc-val" style="color:#B9AEDB">—</b></div>
       </div>
@@ -703,15 +749,64 @@ function leyenda(){
 }
 function kpisMapa(){
   var K=document.getElementById('kpis-mapa'),h='';
-  function kpi(v,l){return '<div class="kpi"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>'}
-  if(capaActual==='precio')h=kpi('$1.692/m²','mediana general pedida')+kpi('$1.893','Eq. Norte, la zona más cara')+kpi('$1.557','V. Brígida, la más accesible')+kpi('±7%','error metodológico declarado');
-  else if(capaActual==='velocidad')h=kpi('78 días','antigüedad mediana del stock activo')+kpi('71','Sirari — el stock más joven')+kpi('113','V. Brígida — el más viejo')+kpi('69 vs 83','antigüedad: dentro vs sobre el rango');
-  else if(capaActual==='oferta')h=kpi('138','edificios con oferta activa')+kpi('29%','del inventario en 10 edificios')+kpi('22','unidades en un solo condominio (Maré)')+kpi('87%','avisos anclados a su edificio');
-  else if(capaActual==='salidas')h=kpi('72','salidas en julio')+kpi('18%','del stock salió en julio — un mes no hace tendencia')+kpi('185 días','vida mediana del 2D que salió')+kpi('salida ≠ venta','retiros y rotaciones incluidos');
-  else if(capaActual==='entregas')h=kpi('100','avisos en preventa — 26% de la oferta activa')+kpi('22 de 65','declaran una entrega YA VENCIDA — atraso de obra o aviso desactualizado')+kpi('32','avisos se entregan de aquí a dic-2026: la competencia que le llega al mercado este año')+kpi('6 · 5','avisos con entrega 2027 · 2028 (declarada en el aviso)');
-  else h=kpi('189','avisos de alquiler activos y verificados')+kpi('77','edificios con renta activa — 26 sin venta hoy')+kpi('Bs 4.485','alquiler mediano del 1 dormitorio (mono Bs 3.500 · 2D Bs 7.500)')+kpi('54%','de la oferta declara amoblado — los yields describen un mercado amoblado');
+  function kpi(v,l,k){return '<div class="kpi'+(k?' ped" data-ped="'+k+'"':'"')+'><div class="v">'+v+'</div><div class="l">'+l+'</div></div>'}
+  if(capaActual==='precio')h=kpi('$1.692/m²','mediana general pedida','p_med')+kpi('$1.893','Eq. Norte, la zona más cara','p_zcara')+kpi('$1.557','V. Brígida, la más accesible','p_zbar')+kpi('±7%','error metodológico declarado','p_err');
+  else if(capaActual==='velocidad')h=kpi('78 días','antigüedad mediana del stock activo','v_78')+kpi('71','Sirari — el stock más joven','v_sir')+kpi('113','V. Brígida — el más viejo','v_sir')+kpi('69 vs 83','antigüedad: dentro vs sobre el rango','v_rango');
+  else if(capaActual==='oferta')h=kpi('138','edificios con oferta activa','of_138')+kpi('29%','del inventario en 10 edificios','of_conc')+kpi('22','unidades en un solo condominio (Maré)','of_mare')+kpi('87%','avisos anclados a su edificio','of_match');
+  else if(capaActual==='salidas')h=kpi('72','salidas en julio','s_72')+kpi('18%','del stock salió en julio — un mes no hace tendencia','s_72')+kpi('185 días','vida mediana del 2D que salió','s_185')+kpi('salida ≠ venta','retiros y rotaciones incluidos','s_neq');
+  else if(capaActual==='entregas')h=kpi('100','avisos en preventa — 26% de la oferta activa','e_100')+kpi('22 de 65','declaran una entrega YA VENCIDA — atraso de obra o aviso desactualizado','e_venc')+kpi('32','avisos se entregan de aquí a dic-2026: la competencia que le llega al mercado este año','e_venc')+kpi('6 · 5','avisos con entrega 2027 · 2028 (declarada en el aviso)','e_venc');
+  else h=kpi('189','avisos de alquiler activos y verificados','a_189')+kpi('77','edificios con renta activa — 26 sin venta hoy','a_189')+kpi('Bs 4.485','alquiler mediano del 1 dormitorio (mono Bs 3.500 · 2D Bs 7.500)','a_bs')+kpi('54%','de la oferta declara amoblado — los yields describen un mercado amoblado','a_amob');
   K.innerHTML=h;
 }
+/* ============ SELLO FIDUCIARIO: pedigrí de cada dato ============ */
+var PED={
+_def:'<b>Qué es:</b> cálculo sobre los avisos activos y verificados del corte del 3-ago-2026.<br><b>Fuente:</b> Century21, Remax y Bien Inmuebles, leídos aviso por aviso cada noche, deduplicados y anclados a edificio.<br><b>Límite:</b> precios pedidos, no de cierre; solo oferta publicada en portales.',
+p_med:'<b>Qué es:</b> mediana del $/m² pedido de los 402 avisos activos de Equipetrol.<br><b>Método:</b> precio normalizado a un solo tipo de cambio ÷ m² declarado; mediana (no promedio) para resistir extremos.<br><b>Límite:</b> el precio incluye lo que el aviso empaqueta (parqueo, muebles); las medianas resisten ese ruido, las comparaciones finas no.',
+p_zcara:'<b>Qué es:</b> mediana del $/m² de Eq. Norte, sostenida por 44 avisos (n declarado).<br><b>Límite:</b> comparar zonas es el uso correcto de este número; leerlo como tasación de una unidad concreta, no.',
+p_zbar:'<b>Qué es:</b> mediana del $/m² de Villa Brígida, 47 avisos.<br><b>Ojo:</b> más barata Y más lenta (113 días de antigüedad mediana) — precio bajo sin rotación no es oportunidad automática.',
+p_err:'<b>Qué es:</b> el error estimado de la serie histórica reconstruida al régimen de TC actual.<br><b>Por qué se declara:</b> sirve la forma y dirección de la curva, no el nivel exacto de un día. Un informe que no declara su error está vendiendo certeza que no tiene.',
+v_78:'<b>Qué es:</b> mediana de la ANTIGÜEDAD de los avisos activos (hoy − fecha de publicación del portal).<br><b>Límite clave:</b> mide la edad del stock, no el tiempo de venta — una re-publicación reinicia el contador. Sirve para COMPARAR zonas y edificios, no para prometer plazos.',
+v_sir:'<b>Qué es:</b> antigüedad mediana de la oferta activa de esa zona.<br><b>Límite:</b> misma censura que el 78 general; la comparación relativa entre zonas es robusta porque el sesgo pega parecido en todas.',
+v_rango:'<b>Qué es:</b> antigüedad mediana de avisos dentro del rango p25-75 de su zona/tipología (69 d, n=169) vs sobre el rango (83 d, n=85).<br><b>Doble lectura declarada:</b> lo fuera de rango no rota — o quedó desactualizado mientras el mercado bajaba. Ambas ordenan lo mismo: revisar el precio.',
+of_138:'<b>Qué es:</b> edificios del catálogo (447 georreferenciados) con al menos 1 aviso activo de venta.<br><b>Método:</b> matching aviso→edificio por nombre+alias+zona, 87% de la oferta anclada; los dudosos pasan por juez.',
+of_conc:'<b>Qué es:</b> 115 de 402 avisos viven en solo 10 edificios.<br><b>Para qué sirve:</b> la competencia real es por cuadra, no por zona — el precio de esos 10 edificios arrastra a sus vecinos.',
+of_mare:'<b>Qué es:</b> el edificio con más oferta simultánea (Condominio Maré, Sirari).<br><b>Señal:</b> 22 unidades a la vez huele a salida de inversores — presiona el precio de todo el que quiera vender ahí.',
+of_match:'<b>Qué es:</b> % de avisos identificados con su edificio real.<br><b>Por qué importa:</b> es la capacidad que habilita el libro de unidades y la competencia por cuadra — y la que ningún agregador tiene.',
+s_72:'<b>Qué es:</b> avisos que desaparecieron del mercado en julio, confirmados contra el portal (no asumidos).<br><b>Límite:</b> salida ≠ venta — incluye retiros y cambios de agencia; el motivo no es observable desde afuera. Un mes no hace tendencia.',
+s_185:'<b>Qué es:</b> mediana de días publicado de los 27 avisos de 2D que salieron en julio.<br><b>Cruce:</b> coincide con la serie — el 2D es también la tipología que más cayó de precio (−22% USD). Dos señales independientes.',
+s_neq:'<b>La regla:</b> verificamos la BAJA cada noche, pero el portal no dice por qué salió. Por eso este tablero dice "salidas" y nunca "ventas" — quien le muestre "unidades vendidas" sacadas de portales no puede probarlo.',
+e_100:'<b>Qué es:</b> avisos con estado preventa (declarado o inferido por vecinos del edificio, 96,7% de acierto en backtest).<br><b>Límite:</b> el pozo real que no se publica en portales queda fuera.',
+e_venc:'<b>Qué es:</b> avisos preventa cuya fecha de entrega DECLARADA ya pasó.<br><b>Doble lectura declarada:</b> atraso de obra o aviso desactualizado — no afirmamos cuál, y ambas son información (benchmark de atrasos + calidad del canal).',
+a_189:'<b>Qué es:</b> avisos de alquiler activos y verificados, anclados a 77 edificios.<br><b>Señal cruzada:</b> un edificio con renta activa está ENTREGADO y habitado (95% de acierto como inferencia de estado de obra).',
+a_bs:'<b>Qué es:</b> mediana del alquiler mensual pedido del 1 dormitorio, en Bs — la moneda real del mercado de renta.<br><b>Límite:</b> pedidos, no contratos.',
+a_amob:'<b>Qué es:</b> 103 de 189 avisos declaran amoblado; casi ninguno declara "sin amoblar".<br><b>Consecuencia honesta:</b> el contraste amoblado/no amoblado NO es publicable — y los yields describen un mercado mayormente amoblado.',
+c59:'<b>Qué es:</b> censo de oficinas con al menos 1 aviso activo (no una muestra).<br><b>Lectura:</b> canal atomizado — no existe un bróker dominante en Equipetrol.',
+c221:'<b>Qué es:</b> captadores únicos identificados por nombre en los avisos (dato público del portal).',
+c64:'<b>Qué es:</b> 256 de 402 avisos en las 16 oficinas más grandes.<br><b>Para qué sirve:</b> el diseño de canal se hace con pocas oficinas — la cola de 43 aporta alcance marginal.',
+c21:'<b>Qué es:</b> la cartera individual de Laurent Lorena Eguez (RE/MAX Union).<br><b>Lectura:</b> en este mercado hay captadoras-persona con más inventario que oficinas enteras — el canal se negocia también con personas.',
+ofi_cart:'<b>Qué es:</b> avisos activos publicados por esta oficina hoy.<br><b>Límite:</b> capacidad de captar, no de vender. Dos avisos pueden ser el mismo depto compartido con otra agencia.',
+ofi_conc:'<b>Qué es:</b> cartera ÷ captadores = el modelo de operación.<br><b>Lectura:</b> 10+ = boutique concentrada en pocas manos; ~1-2 = red repartida. Ninguno es "mejor": son interlocutores distintos para negociar.',
+ofi_sal:'<b>Qué es:</b> avisos de esta oficina que salieron del mercado en julio.<br><b>Límite:</b> salida ≠ venta, y un mes es poco — la serie por suscripción convierte esto en señal.',
+f_uni:'<b>Qué es:</b> avisos activos de venta anclados a este edificio.<br><b>Límite:</b> dos avisos pueden ser la misma unidad publicada por dos agencias — léalo como libro de OFERTAS, no inventario exacto.',
+f_m2:'<b>Qué es:</b> mediana del $/m² pedido de los avisos del edificio.<br><b>Límite:</b> con pocos avisos es indicativa (la ficha lo advierte); el precio incluye lo que cada aviso empaqueta.',
+f_ant:'<b>Qué es:</b> mediana de días desde la publicación de cada aviso vivo.<br><b>Límite:</b> edad del stock, no tiempo de venta; la re-publicación reinicia el contador (la ficha detecta el patrón en bloque).',
+f_sal:'<b>Qué es:</b> avisos de este edificio que salieron en julio, baja confirmada contra el portal.<br><b>Límite:</b> vendido, retirado o rotado de agencia — indistinguibles.',
+shock:'<b>Qué es:</b> sus unidades ÷ avisos activos de la zona.<br><b>Límite doble:</b> orden de magnitud — contamos avisos (no unidades únicas) y la venta directa de desarrollador no publicada queda fuera. No predice ventas: dimensiona su entrada.',
+tm:'<b>Qué es:</b> mediana del m² pedido de la tipología elegida en esa fecha, reconstruida al régimen de TC actual (error ±7%).<br><b>Por qué por tipología:</b> mezclar tipologías haría que la curva se mueva porque cambió la MEZCLA, no el mercado.'
+};
+PED.v_vb=PED.v_sir; PED.s_18=PED.s_72;
+document.body.insertAdjacentHTML('beforeend','<div class="pedpop" id="pedpop"></div>');
+document.addEventListener('click',function(e){
+  var pop=el('pedpop'), t=e.target.closest('[data-ped]');
+  if(!t){pop.style.display='none';return}
+  var p=PED[t.getAttribute('data-ped')]||PED._def;
+  pop.innerHTML='<div class="pp-t">🔍 Pedigrí del dato</div>'+p;
+  pop.style.display='block';
+  pop.style.left=Math.max(8,Math.min(e.clientX+12,window.innerWidth-350))+'px';
+  pop.style.top=Math.max(8,Math.min(e.clientY+12,window.innerHeight-230))+'px';
+});
+
+/* ============ TABS ============ */
 function anillo(){var a=document.getElementById('anillo'); if(!a)return;
   if(sel==null){a.style.display='none';return}
   var b=B[sel],q=PX(b[2],b[3]),e=estiloCapa(b);
@@ -851,10 +946,10 @@ function ficha(b){
    '<h3>Radiografía de edificio</h3><div class="ficha">'+
    '<div class="nombre">'+b[1]+'</div><div class="sub">'+Z[b[4]]+' · dato verificado esta madrugada</div>'+
    '<div class="stats">'+
-   '<div class="stat"><div class="v">'+b[5]+'</div><div class="l">unidades en oferta</div></div>'+
-   '<div class="stat"><div class="v">$'+fm(b[6])+'</div><div class="l">$/m² mediano pedido</div></div>'+
-   '<div class="stat"><div class="v">'+b[7]+' días</div><div class="l">antigüedad mediana de su oferta activa</div></div>'+
-   '<div class="stat"><div class="v">'+(sl>0?sl:'0')+'</div><div class="l">salidas en julio</div></div>'+
+   '<div class="stat ped" data-ped="f_uni"><div class="v">'+b[5]+'</div><div class="l">unidades en oferta</div></div>'+
+   '<div class="stat ped" data-ped="f_m2"><div class="v">$'+fm(b[6])+'</div><div class="l">$/m² mediano pedido</div></div>'+
+   '<div class="stat ped" data-ped="f_ant"><div class="v">'+b[7]+' días</div><div class="l">antigüedad mediana de su oferta activa</div></div>'+
+   '<div class="stat ped" data-ped="f_sal"><div class="v">'+(sl>0?sl:'0')+'</div><div class="l">salidas en julio</div></div>'+
    '</div>'+
    '<div style="font-size:12px;color:var(--gris);margin-bottom:6px">Tickets: <b style="color:var(--arena)">$'+fm(b[8])+' – $'+fm(b[9])+'</b></div>'+
    '<div style="font-size:12px;color:var(--gris);margin-bottom:10px">Más avisos de: <b style="color:var(--arena)">'+b[14]+'</b></div>'+
@@ -939,7 +1034,7 @@ function simular(){
    '<div class="stat"><div class="v">'+(medRadio?'$'+fm(medRadio):'—')+'</div><div class="l">$/m² mediano del radio</div></div>'+
    '<div class="stat"><div class="v">'+ZTOT[zc]+'</div><div class="l">activas en toda la zona</div></div></div>'+
    posHtml+
-   (shock!=null?'<div class="shock"><div class="v">+'+shock+'%</div><div class="l">Sus '+tot+' unidades aumentarían la oferta activa de '+Z[zc]+' ('+ZTOT[zc]+' avisos hoy). Su proyecto ES un shock de oferta — planifique el ritmo de lanzamiento con este número enfrente. (Orden de magnitud: contamos avisos publicados, no unidades únicas, y la venta directa no publicada queda fuera.)</div></div>':'')+
+   (shock!=null?'<div class="shock ped" data-ped="shock"><div class="v">+'+shock+'%</div><div class="l">Sus '+tot+' unidades aumentarían la oferta activa de '+Z[zc]+' ('+ZTOT[zc]+' avisos hoy). Su proyecto ES un shock de oferta — planifique el ritmo de lanzamiento con este número enfrente. (Orden de magnitud: contamos avisos publicados, no unidades únicas, y la venta directa no publicada queda fuera.)</div></div>':'')+
    (amHtml?'<h3 style="margin-top:16px">Estándar de amenidades del radio</h3>'+amHtml+'<div class="mini" style="margin-top:8px">% de edificios del radio que la DECLARAN en sus avisos — la cobertura de lo declarado es parcial, así que el estándar real puede ser aún más alto, nunca más bajo.</div>':'')+
    (top.length?'<h3 style="margin-top:16px">Vecinos con más oferta</h3>'+top.map(function(b){return '<div class="pos-fila"><span>'+b[1]+'</span><span style="color:var(--gris);font-size:12px">'+b[5]+' unid. · $'+fm(b[6])+'/m²</span></div>'}).join(''):'')+
    '<div class="mini" style="margin-top:12px">Posición calculada contra el rango p25-p75 <b>pedido</b> de la zona (no predice ventas). Comparables del radio: agregados por edificio. En el producto real esto se recalcula cada noche.</div>';
@@ -1035,6 +1130,88 @@ el('tm-play').onclick=function(){
     if(tmIdx>=TMD.f.length){clearInterval(playing);playing=null;self.textContent='▶';}
   },95);
 };
+
+/* ============ EL CANAL ============ */
+/* [oficina, cartera, captadores, captador top, salidas jul (null = <3 u observadas)] — BD 3-ago */
+var OF=[
+["Business & Residences",34,15,"Yula Cortez Monasterio",7],
+["RE/MAX Fortaleza",30,12,"Silvia Raquel Espinoza Caballero",5],
+["Forza",25,14,"Andrea Fernandez Balanza",8],
+["Rita Quiroga",23,12,"Fernando Talavera",3],
+["RE/MAX Union",21,2,"Laurent Lorena Eguez Alvarez",3],
+["Home",17,6,"Fernando Lamas Varanda",null],
+["RE/MAX Emporio",17,10,"Diego Novak Gomez",null],
+["Integra",11,3,"Juliana Gomez Cuellar",null],
+["Select",11,8,"Gabriela Fernandez Requena",3],
+["Azzero",11,4,"Ariel Mauricio Hubsch Rozenman",5],
+["Exclusive",11,8,"Paola Veronica Luzio Riveros",null],
+["Norte",9,7,"Andrea Fernandez Osinaga",4],
+["BluRealty",9,5,"Annika Byren Bulacia",null],
+["Alfa",9,6,"Elizabeth Oconnor",3],
+["RE/MAX Black",9,6,"Lourdes Stephannie Bonilla Rojas",null],
+["Signature",9,6,"Adriana Salazar",null],
+["— 43 oficinas más —",146,null,null,null]
+];
+function colOfi(o){ if(o[2]==null)return '#3A3934';
+  var r=o[1]/o[2];
+  return r>=5?'#D07A4A':(r>=2.5?'#E0CE96':'#5E9C72');}
+var ofiSel=null;
+function dibujarTreemap(){
+  var svg=el('treemap'), W=760, H=400;
+  var total=OF.reduce(function(a,b){return a+b[1]},0);
+  var s='', y=0;
+  [[0,4],[4,9],[9,17]].forEach(function(fr){
+    var row=OF.slice(fr[0],fr[1]);
+    var rv=row.reduce(function(a,b){return a+b[1]},0);
+    var h=H*rv/total, x=0;
+    row.forEach(function(o,j){
+      var idx=fr[0]+j, w=W*o[1]/rv;
+      var nombre=o[0].length>19?o[0].slice(0,18)+'…':o[0];
+      s+='<g class="tm-tile'+(ofiSel===idx?' sel':'')+'" data-o="'+idx+'">'+
+        '<rect x="'+(x+1).toFixed(1)+'" y="'+(y+1).toFixed(1)+'" width="'+(w-2).toFixed(1)+'" height="'+(h-2).toFixed(1)+'" rx="6" fill="'+colOfi(o)+'"/>'+
+        (w>72&&h>36?'<text x="'+(x+10).toFixed(1)+'" y="'+(y+20).toFixed(1)+'" font-size="11.5" font-weight="700" font-family="Figtree" fill="#141414" pointer-events="none">'+nombre+'</text>'+
+        '<text x="'+(x+10).toFixed(1)+'" y="'+(y+34).toFixed(1)+'" font-size="10.5" font-family="DM Sans" fill="rgba(20,20,20,0.72)" pointer-events="none">'+o[1]+' avisos'+(o[2]?' · '+o[2]+' ag.':'')+'</text>':'')+
+        '</g>';
+      x+=w;
+    });
+    y+=h;
+  });
+  svg.innerHTML=s;
+}
+function dibujarCanalMapa(oNombre){
+  var svg=el('mapa-canal');
+  var s=dibujarBase(svg), tiene=0;
+  B.forEach(function(b){var q=PX(b[2],b[3]);
+    var mia = oNombre && b[14]===oNombre;
+    if(mia)tiene++;
+    s+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+(mia?radio(b[5]).toFixed(1):3)+'" fill="'+(mia?'#5E9C72':'#2A2A28')+'" opacity="'+(mia?0.95:0.4)+'" stroke="#141414"/>';
+  });
+  svg.innerHTML=s;
+  el('canal-mapa-titulo').textContent = oNombre? ('Edificios donde '+oNombre+' es la inmobiliaria con más avisos ('+tiene+')') : 'Dónde está parada la cartera (toque una oficina arriba)';
+}
+el('treemap').addEventListener('click',function(e){
+  var g=e.target.closest('.tm-tile'); if(!g)return;
+  ofiSel=+g.dataset.o; dibujarTreemap();
+  var o=OF[ofiSel];
+  if(o[2]==null){
+    el('ofi-panel').innerHTML='<h3>Radiografía de oficina</h3><div class="ficha"><div class="nombre">El resto del mercado</div><div class="sub">43 oficinas · 146 avisos</div><div class="mini">La cola larga: ninguna de estas 43 pasa de 8 avisos. Para una desarrolladora significa que fuera del top-16 el alcance por oficina es marginal — el canal se diseña con pocas, no con todas.</div></div>';
+    dibujarCanalMapa(null); return;
+  }
+  var edifs=B.filter(function(b){return b[14]===o[0]}).sort(function(a,b){return b[5]-a[5]}).slice(0,7);
+  el('ofi-panel').innerHTML='<h3>Radiografía de oficina</h3><div class="ficha">'+
+   '<div class="nombre">'+o[0]+'</div><div class="sub">dato de los avisos publicados · 3-ago</div>'+
+   '<div class="stats">'+
+   '<div class="stat ped" data-ped="o_cart"><div class="v">'+o[1]+'</div><div class="l">avisos activos en cartera</div></div>'+
+   '<div class="stat"><div class="v">'+o[2]+'</div><div class="l">captadores con aviso</div></div>'+
+   '<div class="stat ped" data-ped="o_conc"><div class="v">'+(o[1]/o[2]).toFixed(1).replace('.',',')+'</div><div class="l">avisos por captador — el MODELO</div></div>'+
+   '<div class="stat ped" data-ped="o_sal"><div class="v">'+(o[4]!=null?o[4]:'—')+'</div><div class="l">salidas en julio (salida ≠ venta)</div></div>'+
+   '</div>'+
+   '<div style="font-size:12px;color:var(--gris);margin-bottom:12px">Captador/a con más cartera: <b style="color:var(--arena)">'+o[3]+'</b></div>'+
+   (edifs.length?'<h3 style="margin:6px 0 8px">Donde es la nº 1</h3>'+edifs.map(function(b){return '<div class="pos-fila"><span>'+b[1]+'</span><span style="color:var(--gris);font-size:12px">'+b[5]+' unid. · $'+fm(b[6])+'/m²</span></div>'}).join(''):'')+
+   '<div class="mini" style="margin-top:10px">"Nº 1" = donde tiene MÁS avisos que cualquier otra oficina (puede tener avisos en más edificios). Cartera = capacidad de captar, no de vender; las salidas incluyen retiros y un mes no hace tendencia.</div></div>';
+  dibujarCanalMapa(o[0]);
+});
+dibujarTreemap(); dibujarCanalMapa(null);
 
 /* ============ TABS ============ */
 document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){
