@@ -271,6 +271,10 @@ async function prepNuevas(discoveryFile, n) {
         fecha_publicacion: h.fecha_publicacion ?? fechaDia(nv.fecha_alta), fecha_discovery: new Date().toISOString().slice(0, 10),
         score_calidad_dato: null,
         es_multiproyecto: false, duplicado_de: null, baulera: null, solo_tc_paralelo: null,
+        // C21 reescribió el slug de un aviso que ya teníamos: esta fila es la versión
+        // VIGENTE y la vieja pasa a duplicada al aplicar. Viaja en `_apply` para que el
+        // veredicto del lector no lo pise. Ver discovery-deptos.mjs (slug reescrito).
+        ...(nv.reemplaza_a ? { reemplaza_a: nv.reemplaza_a } : {}),
         area, moneda: h.moneda, banos: h.banos, piso: h.piso, estacionamientos: h.estacionamientos,
         agente: { nombre: h.agente_nombre, telefono: h.agente_telefono, oficina_nombre: h.oficina_nombre },
         fotos_urls: h.fotos_urls || [], cantidad_fotos: h.cantidad_fotos || 0,
@@ -505,6 +509,47 @@ async function apply(file) {
     if (error) fallidas.push({ id: f.id, mp: f.es_multiproyecto, motivo: (error.message.split('\n')[0] || '').slice(0, 70) });
   }
   const escritas = filas.length - fallidas.length;
+  // ── SLUG REESCRITO POR C21: marcar la vieja como duplicada de la nueva ───────
+  // La nueva ya está escrita arriba (es la versión vigente: precio/tipología/nombre
+  // actualizados). Acá se cierra el círculo dejando la vieja fuera del feed.
+  // Candado `duplicado_de IS NULL` + se salta si la fila nueva falló: nunca se
+  // deduplica contra algo que no llegó a escribirse.
+  const okIds = new Set(filas.filter((f) => !fallidas.some((x) => x.id === f.id)).map((f) => f.id));
+  const reemplazos = conVer
+    .filter((e) => e._apply?.reemplaza_a?.id && okIds.has(e.id) && e._apply.reemplaza_a.id !== e.id)
+    .map((e) => ({ nueva: e.id, vieja: e._apply.reemplaza_a.id, cod: e._apply.reemplaza_a.codigo_c21 }));
+  let deduplicadas = 0;
+  if (reemplazos.length) {
+    // 🔴 `datos_json` se MERGEA, no se pisa: un update con objeto plano reemplaza la
+    // columna entera y borraría la trazabilidad del match, el TC y todo lo demás.
+    const { data: previas } = await sb.from('propiedades_v2_shadow')
+      .select('id, datos_json, duplicado_de').in('id', reemplazos.map((r) => r.vieja));
+    const prevById = new Map((previas || []).map((p) => [p.id, p]));
+    for (const r of reemplazos) {
+      const prev = prevById.get(r.vieja);
+      if (!prev) { console.log(`⚠️  dedup slug-reescrito: la vieja ${r.vieja} no existe en shadow, se saltea`); continue; }
+      if (prev.duplicado_de != null) continue;   // ya deduplicada por otra vía
+      const dj = prev.datos_json && typeof prev.datos_json === 'object' ? prev.datos_json : {};
+      const traza = dj.trazabilidad && typeof dj.trazabilidad === 'object' ? dj.trazabilidad : {};
+      const { error } = await sb.from('propiedades_v2_shadow')
+        .update({
+          duplicado_de: r.nueva,
+          datos_json: { ...dj, trazabilidad: { ...traza,
+            dedup_metodo: 'codigo_c21_identico_slug_reescrito',
+            dedup_evidencia: `C21 reescribio el slug del aviso ${r.cod}: esta fila quedo con la URL vieja y los datos desactualizados. La version vigente es ${r.nueva}. Detectado automaticamente en el discovery.`,
+            dedup_por: 'cargador_slug_reescrito',
+            dedup_fecha: new Date().toISOString().slice(0, 10),
+          } },
+          fecha_actualizacion: new Date().toISOString(),
+        })
+        .eq('id', r.vieja).is('duplicado_de', null);
+      if (error) console.log(`⚠️  dedup slug-reescrito ${r.vieja}→${r.nueva} NO aplicado: ${(error.message.split('\n')[0] || '').slice(0, 70)}`);
+      else deduplicadas++;
+    }
+  }
+  if (reemplazos.length) {
+    console.log(`🔁 slug reescrito por C21: ${deduplicadas}/${reemplazos.length} viejas marcadas como duplicadas ${reemplazos.map((r) => `${r.vieja}→${r.nueva}`).join(', ')}`);
+  }
   // Descartes (basura estructural) → upsert aparte para NO contarlos como "unidades". Resiliente.
   let descartadas = 0;
   for (const d of descartes) {
