@@ -92,6 +92,15 @@
   .vinculo{margin-top:16px;background:var(--panel);border:1px dashed var(--linea);border-radius:12px;padding:13px 18px;font-size:12.5px;color:var(--gris);line-height:1.55}
   .vinculo a{color:var(--salvia-viva);font-weight:700;text-decoration:none;border-bottom:1px dotted var(--salvia-viva)}
 
+  /* iteración 2: fluidez */
+  #mapa circle.pt{transition:fill .5s ease, r .5s ease, opacity .5s ease}
+  #mapa circle.pt:hover{stroke:#EDE8DC;stroke-width:1.6}
+  .capa-nota{transition:opacity .3s}
+  .capa.tour-on{background:var(--terra);border-color:var(--terra);color:#fff}
+  .escena.on{animation:aparecer .35s ease}
+  @keyframes aparecer{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .shock .v{font-variant-numeric:tabular-nums}
+
   /* Máquina del tiempo */
   .tm-caja{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:24px}
   .tm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:8px}
@@ -144,6 +153,7 @@
         <button class="capa" data-capa="velocidad">⚡ Velocidad</button>
         <button class="capa" data-capa="oferta">🏢 Concentración</button>
         <button class="capa" data-capa="salidas">🚪 Salidas de julio</button>
+        <button class="capa" id="btn-tour" style="margin-left:auto">▶ Recorrido</button>
       </div>
       <div class="capa-nota" id="capa-nota"></div>
       <svg id="mapa" viewBox="0 0 760 800"></svg>
@@ -414,20 +424,29 @@ function dibujarBase(svg){
 }
 
 /* ============ CAPA DE PUNTOS ============ */
-var capaActual='precio', sel=null;
+var capaActual='precio', sel=null, mapaInit=false;
 function radio(n){return 4+Math.sqrt(n)*2.4;}
+function estiloCapa(b){ /* [color, r, opacidad] según la capa activa */
+  if(capaActual==='precio')return [colPrecio(b[6]),radio(b[5]),0.92];
+  if(capaActual==='velocidad')return [colVel(b[7]),radio(b[5]),0.92];
+  if(capaActual==='oferta')return ['#5E9C72',radio(b[5]),0.92];
+  var sl=SAL[b[0]]||0;
+  return sl>0? ['#D07A4A',4+Math.sqrt(sl)*3.4,0.95] : ['#3A3934',3,0.55];
+}
 function dibujarMapa(){
-  var svg=document.getElementById('mapa'); var s=dibujarBase(svg);
-  B.forEach(function(b,i){
-    var q=PX(b[2],b[3]); var col,r=radio(b[5]),op=0.92;
-    if(capaActual==='precio'){col=colPrecio(b[6]);}
-    else if(capaActual==='velocidad'){col=colVel(b[7]);}
-    else if(capaActual==='oferta'){col='#5E9C72';}
-    else {var sl=SAL[b[0]]||0; if(sl>0){col='#D07A4A';r=4+Math.sqrt(sl)*3.4;}else{col='#3A3934';r=3;op=0.55;}}
-    var borde=(sel===i)?' stroke="#EDE8DC" stroke-width="2.4"':' stroke="#141414" stroke-width="1"';
-    s+='<circle data-i="'+i+'" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+r.toFixed(1)+'" fill="'+col+'" opacity="'+op+'"'+borde+' style="cursor:pointer"/>';
+  var svg=document.getElementById('mapa');
+  if(!mapaInit){ /* se construye UNA vez; las capas solo transforman los puntos (transición CSS) */
+    var s=dibujarBase(svg);
+    B.forEach(function(b,i){var q=PX(b[2],b[3]);
+      s+='<circle class="pt" data-i="'+i+'" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="4" fill="#3A3934" stroke="#141414" stroke-width="1" style="cursor:pointer"/>';});
+    s+='<circle id="anillo" fill="none" stroke="#EDE8DC" stroke-width="2.2" style="display:none;pointer-events:none"><animate attributeName="stroke-opacity" values="0.95;0.25;0.95" dur="1.6s" repeatCount="indefinite"/></circle>';
+    svg.innerHTML=s; mapaInit=true;
+  }
+  svg.querySelectorAll('circle.pt').forEach(function(c){
+    var e=estiloCapa(B[+c.dataset.i]);
+    c.setAttribute('fill',e[0]); c.setAttribute('r',e[1].toFixed(1)); c.setAttribute('opacity',e[2]);
   });
-  svg.innerHTML=s; leyenda(); kpisMapa();
+  anillo(); leyenda(); kpisMapa();
   var NOTAS={
    precio:'<b>¿Qué estoy viendo?</b> Verde = m² accesible, terracota = caro. Sirari y Eq. Norte concentran el color cálido: ahí el mercado pide más. Acerque con la rueda, arrastre para moverse.',
    velocidad:'<b>¿Qué estoy viendo?</b> Verde = ese edificio rota en menos de 60 días. Mire Sirari: cara Y rápida a la vez — esa combinación es demanda real, no expectativa.',
@@ -452,10 +471,32 @@ function kpisMapa(){
   else h=kpi('72','salidas en julio')+kpi('~5-6 meses','renovación del inventario a este ritmo')+kpi('185 días','vida mediana del 2D que salió')+kpi('salida ≠ venta','retiros y rotaciones incluidos');
   K.innerHTML=h;
 }
-document.querySelectorAll('.capa').forEach(function(b){b.onclick=function(){
-  document.querySelectorAll('.capa').forEach(function(x){x.classList.remove('on')});
+function anillo(){var a=document.getElementById('anillo'); if(!a)return;
+  if(sel==null){a.style.display='none';return}
+  var b=B[sel],q=PX(b[2],b[3]),e=estiloCapa(b);
+  a.setAttribute('cx',q[0].toFixed(1)); a.setAttribute('cy',q[1].toFixed(1));
+  a.setAttribute('r',(e[1]+5).toFixed(1)); a.style.display='';
+}
+function seleccionar(i){sel=i; anillo(); ficha(B[i]);}
+document.querySelectorAll('.capa[data-capa]').forEach(function(b){b.onclick=function(){
+  pararTour();
+  document.querySelectorAll('.capa[data-capa]').forEach(function(x){x.classList.remove('on')});
   b.classList.add('on'); capaActual=b.dataset.capa; dibujarMapa();
 }});
+
+/* ============ MODO RECORRIDO ============ */
+var tour=null, tourOrden=['precio','velocidad','oferta','salidas'];
+function pararTour(){if(tour){clearInterval(tour);tour=null;el('btn-tour').textContent='▶ Recorrido';el('btn-tour').classList.remove('tour-on');}}
+el('btn-tour').onclick=function(){
+  if(tour){pararTour();return}
+  this.textContent='⏸ Recorriendo…'; this.classList.add('tour-on');
+  var k=tourOrden.indexOf(capaActual);
+  tour=setInterval(function(){
+    k=(k+1)%tourOrden.length; capaActual=tourOrden[k];
+    document.querySelectorAll('.capa[data-capa]').forEach(function(x){x.classList.toggle('on',x.dataset.capa===capaActual)});
+    dibujarMapa();
+  },4200);
+};
 
 /* tooltip + ficha */
 var tt=document.getElementById('tt');
@@ -469,8 +510,14 @@ document.getElementById('mapa').addEventListener('mousemove',function(e){
 document.getElementById('mapa').addEventListener('mouseleave',function(){tt.style.display='none'});
 document.getElementById('mapa').addEventListener('click',function(e){
   if(suppressClick)return;
-  var t=e.target; if(t.tagName!=='circle')return;
-  sel=+t.dataset.i; dibujarMapa(); ficha(B[sel]);
+  var t=e.target; if(!t.classList||!t.classList.contains('pt'))return;
+  seleccionar(+t.dataset.i);
+});
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape')return;
+  sel=null; anillo();
+  el('ficha').innerHTML='<h3>Radiografía de edificio</h3><p class="vacio">Toque un punto del mapa.</p>';
+  if(pin){pin=null;dibujarSim();el('sim-clear').onclick&&el('sim-clear').click();}
 });
 function fm(x){return (x==null)?'—':x.toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 function ficha(b){
@@ -502,6 +549,7 @@ function dibujarSim(){
   });
   if(pin){
     s+='<circle cx="'+pin[0]+'" cy="'+pin[1]+'" r="'+R500.toFixed(1)+'" fill="rgba(208,122,74,0.07)" stroke="#D07A4A" stroke-dasharray="6 5" stroke-width="1.6"/>';
+    s+='<circle cx="'+pin[0]+'" cy="'+pin[1]+'" fill="none" stroke="#D07A4A" stroke-width="2"><animate attributeName="r" values="5;30" dur="1.8s" repeatCount="indefinite"/><animate attributeName="stroke-opacity" values="0.9;0" dur="1.8s" repeatCount="indefinite"/></circle>';
     s+='<path d="M'+pin[0]+' '+(pin[1]-16)+' L'+(pin[0]-9)+' '+pin[1]+' L'+(pin[0]+9)+' '+pin[1]+' Z" fill="#D07A4A"/>';
     s+='<circle cx="'+pin[0]+'" cy="'+pin[1]+'" r="3" fill="#EDE8DC"/>';
   }
@@ -564,6 +612,12 @@ function simular(){
    (amHtml?'<h3 style="margin-top:16px">Estándar de amenidades del radio</h3>'+amHtml:'')+
    (top.length?'<h3 style="margin-top:16px">Vecinos con más oferta</h3>'+top.map(function(b){return '<div class="pos-fila"><span>'+b[1]+'</span><span style="color:var(--gris);font-size:12px">'+b[5]+' unid. · $'+fm(b[6])+'/m²</span></div>'}).join(''):'')+
    '<div class="mini" style="margin-top:12px">Posición calculada contra el rango p25-p75 <b>pedido</b> de la zona (no predice ventas). Comparables del radio: agregados por edificio. En el producto real esto se recalcula cada noche.</div>';
+  /* contador animado del shock */
+  var sv=el('sim-out').querySelector('.shock .v');
+  if(sv&&shock!=null){var t0=performance.now();
+    (function paso(t){var pr=Math.min(1,(t-t0)/700);
+      sv.textContent='+'+Math.round(shock*(pr*(2-pr)))+'%';
+      if(pr<1)requestAnimationFrame(paso);})(t0);}
 }
 function el(id){return document.getElementById(id)}
 
@@ -585,6 +639,12 @@ function tmDraw(){
     return p?'<path d="'+p+'" fill="none" stroke="'+color+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="5 4"':'')+' stroke-linejoin="round" stroke-linecap="round"/>':'';
   }
   var usdActivo=(mon==='usd');
+  /* área bajo la curva activa */
+  var ci=usdActivo?1:2, baseA=usdActivo?U0:B0, colA=usdActivo?'rgba(94,156,114,0.13)':'rgba(200,155,123,0.13)';
+  if(tmIdx>1){var ap='';
+    for(var k2=0;k2<tmIdx;k2++){ap+=(k2?'L':'M')+X(k2).toFixed(1)+' '+Y(SERIE[k2][ci]/baseA*100).toFixed(1)+' ';}
+    ap+='L'+X(tmIdx-1).toFixed(1)+' '+(H-mB)+' L'+X(0).toFixed(1)+' '+(H-mB)+' Z';
+    s+='<path d="'+ap+'" fill="'+colA+'"/>';}
   s+=linea(2,B0,usdActivo?'#4A4438':'#C89B7B',usdActivo?2:3.2,true,tmIdx);
   s+=linea(1,U0,usdActivo?'#5E9C72':'#33463A',usdActivo?3.2:2,false,tmIdx);
   var i=tmIdx-1, r=SERIE[i];
@@ -660,7 +720,7 @@ el('reset-zoom-sim').onclick=function(){zoomSim.reset()};
     var i=B.findIndex(function(b){return b[1].toLowerCase()===q});
     if(i<0)i=B.findIndex(function(b){return b[1].toLowerCase().indexOf(q)>=0});
     if(i<0)return;
-    sel=i; dibujarMapa(); ficha(B[i]);
+    seleccionar(i);
     var q2=PX(B[i][2],B[i][3]); zoomMapa.center(q2[0],q2[1],3);
     this.blur();
   });
@@ -672,8 +732,7 @@ el('sim-clear').onclick=function(){pin=null; dibujarSim();
   el('sim-out').innerHTML='<h3>Posicionamiento</h3><p class="vacio">Toque el mapa para ubicar su terreno — o use el botón <b>"Ver ejemplo en Sirari"</b> arriba del mapa.</p>';};
 
 dibujarMapa(); dibujarSim(); tmDraw();
-/* estado inicial no-vacío: Maré preseleccionado */
-sel=0; dibujarMapa(); ficha(B[0]);
+seleccionar(0); /* estado inicial no vacío: Maré */
 </script>
 </body>
 </html>
