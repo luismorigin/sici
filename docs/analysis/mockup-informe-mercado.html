@@ -3,89 +3,106 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Simón · Informe de Mercado — Equipetrol (mockup)</title>
+<title>Simón · Informe de Mercado — Equipetrol (mockup v2)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --arena:#EDE8DC; --negro:#141414; --salvia:#3A6A48;
-    --salvia-suave:#E3EBE4; --linea:#D8D2C4; --gris:#6B6B66;
+    --salvia-suave:#E3EBE4; --linea:#D8D2C4; --gris:#6B6B66; --terra:#9A5B3C;
   }
   *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#CFC9BB;font-family:'DM Sans',system-ui,sans-serif;color:var(--negro);padding:32px 12px;}
-  .pagina{max-width:840px;margin:0 auto 28px;background:var(--arena);border-radius:6px;padding:56px 64px;box-shadow:0 8px 30px rgba(0,0,0,.18);}
+  body{background:#C9C3B5;font-family:'DM Sans',system-ui,sans-serif;color:var(--negro);padding:32px 12px;}
+  .pagina{max-width:860px;margin:0 auto 26px;background:var(--arena);border-radius:6px;padding:52px 62px;box-shadow:0 8px 30px rgba(0,0,0,.18);position:relative}
+  .pagina.oscura{background:var(--negro);color:var(--arena)}
   h1,h2,h3{font-family:'Figtree',system-ui,sans-serif}
   .eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--salvia);font-weight:700;margin-bottom:10px}
-  .marca{display:flex;align-items:center;gap:10px;margin-bottom:48px}
+  .oscura .eyebrow{color:#9CC7A6}
+  .marca{display:flex;align-items:center;gap:10px;margin-bottom:44px}
   .marca .punto{width:12px;height:12px;border-radius:50%;background:var(--salvia)}
   .marca span{font-family:'Figtree';font-weight:800;font-size:20px;letter-spacing:-0.02em}
   .marca small{color:var(--gris);font-size:12px;margin-left:auto;letter-spacing:.08em;text-transform:uppercase}
+  .oscura .marca small{color:#8A867C}
 
-  /* Portada */
-  .portada h1{font-size:46px;font-weight:800;letter-spacing:-0.03em;line-height:1.05;margin:8px 0 18px}
-  .portada .sub{font-size:17px;color:var(--gris);max-width:520px;line-height:1.5}
-  .sello{display:inline-flex;align-items:center;gap:8px;background:var(--negro);color:var(--arena);border-radius:999px;padding:9px 18px;font-size:12.5px;font-weight:500;margin-top:34px}
-  .sello b{color:#9CC7A6}
-  .portada .meta{margin-top:120px;border-top:1px solid var(--linea);padding-top:18px;display:flex;justify-content:space-between;font-size:13px;color:var(--gris)}
-  .portada .meta b{color:var(--negro)}
+  .portada h1{font-size:48px;font-weight:900;letter-spacing:-0.03em;line-height:1.04;margin:8px 0 20px}
+  .portada .sub{font-size:16.5px;color:#B9B4A6;max-width:560px;line-height:1.55}
+  .portada .sub b{color:var(--arena)}
+  .sello{display:inline-flex;align-items:center;gap:8px;background:var(--salvia);color:#fff;border-radius:999px;padding:10px 20px;font-size:13px;font-weight:500;margin-top:36px}
+  .portada .meta{margin-top:110px;border-top:1px solid #33322E;padding-top:18px;display:flex;justify-content:space-between;font-size:13px;color:#8A867C}
+  .portada .meta b{color:var(--arena)}
 
-  h2{font-size:26px;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px}
-  .lead{color:var(--gris);font-size:14.5px;margin-bottom:28px;max-width:600px;line-height:1.5}
+  h2{font-size:25px;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px}
+  .lead{color:var(--gris);font-size:14.5px;margin-bottom:26px;max-width:620px;line-height:1.55}
 
-  /* KPIs */
-  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:30px}
-  .kpi{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:18px 20px}
-  .kpi .v{font-family:'Figtree';font-size:30px;font-weight:800;letter-spacing:-0.02em}
-  .kpi .v small{font-size:15px;color:var(--gris);font-weight:600}
-  .kpi .l{font-size:12px;color:var(--gris);margin-top:4px;line-height:1.35}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:28px}
+  .kpi{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:17px 19px}
+  .kpi .v{font-family:'Figtree';font-size:28px;font-weight:800;letter-spacing:-0.02em}
+  .kpi .v small{font-size:14px;color:var(--gris);font-weight:600}
+  .kpi .l{font-size:11.5px;color:var(--gris);margin-top:4px;line-height:1.35}
 
-  .hallazgo{display:flex;gap:14px;background:var(--salvia-suave);border-left:4px solid var(--salvia);border-radius:0 10px 10px 0;padding:16px 18px;margin-bottom:12px}
-  .hallazgo .num{font-family:'Figtree';font-weight:800;color:var(--salvia);font-size:18px}
-  .hallazgo p{font-size:14px;line-height:1.5}
+  .hallazgo{display:flex;gap:14px;background:var(--salvia-suave);border-left:4px solid var(--salvia);border-radius:0 10px 10px 0;padding:15px 18px;margin-bottom:11px}
+  .hallazgo .num{font-family:'Figtree';font-weight:800;color:var(--salvia);font-size:17px;flex-shrink:0}
+  .hallazgo p{font-size:13.8px;line-height:1.5}
   .hallazgo b{font-weight:700}
 
-  /* Barras */
-  .bar-row{display:grid;grid-template-columns:150px 1fr 120px;align-items:center;gap:12px;margin-bottom:11px;font-size:13.5px}
-  .bar-track{background:#DDD7C9;border-radius:5px;height:26px;position:relative}
+  .bar-row{display:grid;grid-template-columns:150px 1fr 122px;align-items:center;gap:12px;margin-bottom:11px;font-size:13.5px}
+  .bar-track{background:#DDD7C9;border-radius:5px;height:26px}
   .bar-fill{background:var(--salvia);height:100%;border-radius:5px;display:flex;align-items:center;justify-content:flex-end;padding-right:9px;color:#fff;font-weight:700;font-size:12.5px;font-family:'Figtree'}
   .bar-fill.claro{background:#7FA98B}
+  .bar-fill.terra{background:var(--terra)}
   .bar-meta{color:var(--gris);font-size:12px;text-align:right}
-  .nota-n{font-size:11.5px;color:var(--gris);margin-top:14px;font-style:italic}
+  .nota-n{font-size:11.5px;color:var(--gris);margin-top:13px;font-style:italic;line-height:1.45}
 
-  table{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff;border-radius:10px;overflow:hidden;border:1px solid var(--linea)}
-  th{background:var(--negro);color:var(--arena);text-align:left;padding:11px 14px;font-family:'Figtree';font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
-  td{padding:11px 14px;border-top:1px solid #EFEAE0}
+  table{width:100%;border-collapse:collapse;font-size:13.3px;background:#fff;border-radius:10px;overflow:hidden;border:1px solid var(--linea)}
+  th{background:var(--negro);color:var(--arena);text-align:left;padding:10px 13px;font-family:'Figtree';font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+  td{padding:10px 13px;border-top:1px solid #EFEAE0}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-  tr.destacada td{background:var(--salvia-suave);font-weight:700}
-  .chip{display:inline-block;background:var(--salvia-suave);color:var(--salvia);border-radius:999px;padding:2px 10px;font-size:11.5px;font-weight:700}
-  .chip.alto{background:#F3E3DA;color:#9A5B3C}
+  .chip{display:inline-block;background:var(--salvia-suave);color:var(--salvia);border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700}
+  .chip.alto{background:#F3E3DA;color:var(--terra)}
 
-  .disclaimer{background:#fff;border:1px dashed var(--linea);border-radius:10px;padding:16px 18px;font-size:13px;color:var(--gris);line-height:1.55;margin-top:22px}
+  .disclaimer{background:#fff;border:1px dashed var(--linea);border-radius:10px;padding:15px 18px;font-size:12.8px;color:var(--gris);line-height:1.55;margin-top:20px}
   .disclaimer b{color:var(--negro)}
 
-  .metodo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  .metodo .caja{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:18px 20px}
-  .metodo h3{font-size:15px;margin-bottom:10px}
-  .metodo ul{list-style:none}
-  .metodo li{font-size:13px;line-height:1.5;padding-left:20px;position:relative;margin-bottom:8px}
-  .metodo .si li::before{content:"✓";position:absolute;left:0;color:var(--salvia);font-weight:700}
-  .metodo .no li::before{content:"✕";position:absolute;left:0;color:#9A5B3C;font-weight:700}
+  .rango-strip{display:grid;grid-template-columns:130px 1fr 150px;align-items:center;gap:12px;margin-bottom:13px;font-size:13.5px}
+  .strip-track{position:relative;height:12px;background:#DDD7C9;border-radius:6px}
+  .strip-range{position:absolute;top:0;height:100%;background:#A8C4AF;border-radius:6px}
+  .strip-med{position:absolute;top:-4px;width:4px;height:20px;background:var(--negro);border-radius:2px}
+  .strip-meta{color:var(--gris);font-size:12px;text-align:right}
 
-  .pie{margin-top:36px;border-top:1px solid var(--linea);padding-top:14px;display:flex;justify-content:space-between;font-size:11.5px;color:var(--gris)}
-  .watermark{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:var(--negro);color:var(--arena);font-size:11px;letter-spacing:.15em;padding:5px 16px;border-radius:999px;z-index:9;opacity:.85}
-  @media(max-width:700px){.pagina{padding:32px 22px}.kpis{grid-template-columns:1fr 1fr}.metodo{grid-template-columns:1fr}.portada h1{font-size:32px}.bar-row{grid-template-columns:110px 1fr 90px}}
+  .grafico{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:22px;margin-bottom:8px}
+  .grafico h3{font-size:14px;margin-bottom:2px}
+  .grafico .gsub{font-size:12px;color:var(--gris);margin-bottom:14px}
+  .leyenda{display:flex;gap:18px;font-size:12px;color:var(--gris);margin-top:10px}
+  .leyenda i{display:inline-block;width:18px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+
+  .dos-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .metodo .caja{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:17px 19px}
+  .metodo h3{font-size:14.5px;margin-bottom:10px}
+  .metodo ul{list-style:none}
+  .metodo li{font-size:12.8px;line-height:1.5;padding-left:20px;position:relative;margin-bottom:8px}
+  .metodo .si li::before{content:"✓";position:absolute;left:0;color:var(--salvia);font-weight:700}
+  .metodo .no li::before{content:"✕";position:absolute;left:0;color:var(--terra);font-weight:700}
+  .metodo .lim li::before{content:"·";position:absolute;left:4px;color:var(--gris);font-weight:900}
+
+  .pull{font-family:'Figtree';font-size:21px;font-weight:800;letter-spacing:-0.02em;line-height:1.3;border-top:3px solid var(--salvia);padding-top:14px;margin:26px 0 6px;max-width:600px}
+  .pull span{color:var(--salvia)}
+
+  .pie{margin-top:34px;border-top:1px solid var(--linea);padding-top:12px;display:flex;justify-content:space-between;font-size:11px;color:var(--gris)}
+  .oscura .pie{border-color:#33322E;color:#8A867C}
+  .watermark{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:var(--negro);color:var(--arena);font-size:11px;letter-spacing:.15em;padding:5px 16px;border-radius:999px;z-index:9;opacity:.88}
+  @media(max-width:720px){.pagina{padding:32px 22px}.kpis{grid-template-columns:1fr 1fr}.dos-col{grid-template-columns:1fr}.portada h1{font-size:32px}.bar-row{grid-template-columns:105px 1fr 92px}.rango-strip{grid-template-columns:95px 1fr 105px}}
 </style>
 </head>
 <body>
 <div class="watermark">MOCKUP · DATA REAL AL 3-AGO-2026</div>
 
 <!-- ============ PORTADA ============ -->
-<section class="pagina portada">
-  <div class="marca"><div class="punto"></div><span>Simón</span><small>Inteligencia Inmobiliaria</small></div>
-  <div class="eyebrow">Informe de Mercado · Nº 2026-08</div>
-  <h1>Equipetrol<br>Departamentos en venta y alquiler</h1>
-  <p class="sub">402 avisos activos verificados propiedad por propiedad, cruzados contra un catálogo de 447 edificios georreferenciados. Precios normalizados a un solo tipo de cambio, duplicados eliminados, bajas confirmadas contra el portal.</p>
-  <div class="sello">Dato fiduciario · <b>nadie paga por aparecer mejor en este informe</b></div>
+<section class="pagina oscura portada">
+  <div class="marca"><div class="punto"></div><span style="color:var(--arena)">Simón</span><small>Inteligencia Inmobiliaria</small></div>
+  <div class="eyebrow">Informe de Mercado · Nº 2026-08 · Edición Desarrolladores</div>
+  <h1>Equipetrol.<br>Lo que el mercado<br>dice — y lo que no.</h1>
+  <p class="sub">402 avisos de venta y 189 de alquiler, <b>verificados propiedad por propiedad</b> contra el portal, deduplicados, normalizados a un solo tipo de cambio y anclados a un catálogo de 447 edificios georreferenciados. Incluye lo que ningún agregador puede mostrar: la serie histórica, la velocidad de rotación, qué atributos se cobran de verdad — y qué preguntas este dato <b>no</b> puede responder.</p>
+  <div class="sello">Dato fiduciario — nadie paga por aparecer mejor en este informe</div>
   <div class="meta">
     <div>Preparado para<br><b>Desarrolladora Ejemplo S.R.L.</b></div>
     <div>Corte de datos<br><b>3 de agosto de 2026</b></div>
@@ -93,68 +110,151 @@
   </div>
 </section>
 
-<!-- ============ RESUMEN EJECUTIVO ============ -->
+<!-- ============ 01 RESUMEN ============ -->
 <section class="pagina">
   <div class="eyebrow">01 · Resumen ejecutivo</div>
-  <h2>Lo que el mercado dice hoy</h2>
-  <p class="lead">Cinco números para decidir, y los tres hallazgos que cambiarían un proyecto.</p>
+  <h2>Cuatro hechos que cambian un plan de negocio</h2>
+  <p class="lead">Ningún hallazgo de esta página es una recomendación. Son hechos del mercado, con su n declarado — la decisión de qué construir y a qué precio es un modelo financiero que estos hechos alimentan, no reemplazan.</p>
 
   <div class="kpis">
-    <div class="kpi"><div class="v">402</div><div class="l">avisos activos verificados (deptos venta)</div></div>
-    <div class="kpi"><div class="v">$1.692<small>/m²</small></div><div class="l">mediana general del m² pedido (USD)</div></div>
-    <div class="kpi"><div class="v">78<small> días</small></div><div class="l">mediana de permanencia en mercado</div></div>
-    <div class="kpi"><div class="v">189</div><div class="l">avisos de alquiler activos (la otra mitad de la demanda)</div></div>
-    <div class="kpi"><div class="v">5,5%</div><div class="l">yield bruto anual del 2 dormitorios (mejor tipología)</div></div>
-    <div class="kpi"><div class="v">26%</div><div class="l">de la oferta es preventa publicada</div></div>
+    <div class="kpi"><div class="v">402</div><div class="l">avisos de venta activos y verificados</div></div>
+    <div class="kpi"><div class="v">$1.692<small>/m²</small></div><div class="l">mediana general del m² pedido (USD normalizado)</div></div>
+    <div class="kpi"><div class="v">−15%<small> USD</small></div><div class="l">el m² del 1 dorm. desde enero — pero solo −5,6% en Bs (sección 02)</div></div>
+    <div class="kpi"><div class="v">78<small> días</small></div><div class="l">mediana de permanencia de la oferta activa</div></div>
+    <div class="kpi"><div class="v">72</div><div class="l">avisos salieron del mercado en julio (salida ≠ venta, sección 06)</div></div>
+    <div class="kpi"><div class="v">29%</div><div class="l">del inventario se concentra en solo 10 edificios</div></div>
   </div>
 
-  <div class="hallazgo"><div class="num">1</div><p><b>El m² más caro es el más chico.</b> El monoambiente pide $1.837/m² — un 16% más que el 3 dormitorios ($1.589/m²). El mercado paga premium por ticket bajo, no por tamaño: el producto de inversión manda.</p></div>
-  <div class="hallazgo"><div class="num">2</div><p><b>La preventa publicada casi no descuenta.</b> Mediana preventa $1.700/m² vs $1.750/m² entrega inmediata: apenas −2,9%. El descuento real de pozo se negocia en privado y no aparece en portales — si su plan financiero asume "preventa = 20% menos", este dato lo desafía.</p></div>
-  <div class="hallazgo"><div class="num">3</div><p><b>Sirari rota más rápido y pide más.</b> $1.858/m² con 71 días de permanencia mediana, contra 105-113 días en Eq. Oeste y Villa Brígida. Precio alto Y velocidad alta en la misma zona = demanda real, no ilusión de precio.</p></div>
+  <div class="hallazgo"><div class="num">1</div><p><b>La moneda cambia la historia.</b> En dólares, el m² pedido del 1 dormitorio cayó ~15% desde enero. En bolivianos, solo −5,6%. Si su estructura de costos está en Bs y su precio de lista en USD, este spread ES su margen — y ningún promedio "en dólares" se lo va a mostrar.</p></div>
+  <div class="hallazgo"><div class="num">2</div><p><b>Estar bien priceado vende más rápido que estar barato.</b> Los avisos dentro del rango típico de su zona y tipología rotan en 69 días (mediana). Los sobrepriceados llevan 83… y los que están <i>por debajo</i> del rango también se estancan (81). El descuento no acelera: el mercado desconfía de lo que parece regalado.</p></div>
+  <div class="hallazgo"><div class="num">3</div><p><b>La altura se cobra; el checklist de amenidades, no.</b> Del 10º piso hacia arriba el m² pide +15% vs pisos 1º-4º. En cambio, piscina/gimnasio ya no discriminan el precio pedido: el 75% de la oferta tiene piscina — es requisito de entrada, no diferenciador (el detalle, con su trampa estadística, en sección 05).</p></div>
+  <div class="hallazgo"><div class="num">4</div><p><b>La preventa publicada casi no descuenta.</b> $1.700/m² mediana en preventa vs $1.750 en entrega inmediata: −2,9%. El descuento real de pozo se negocia en privado y no llega a portales — este informe lo declara como límite, no lo inventa.</p></div>
 </section>
 
-<!-- ============ PRECIO POR ZONA ============ -->
+<!-- ============ 02 SERIE ============ -->
 <section class="pagina">
-  <div class="eyebrow">02 · Precio por zona</div>
-  <h2>El m² pedido, zona por zona</h2>
-  <p class="lead">Mediana del precio por m² (USD, normalizado a un solo tipo de cambio) sobre avisos activos. La columna derecha: cuántos avisos sostienen el número y cuántos días lleva en mercado la mitad de esa oferta.</p>
+  <div class="eyebrow">02 · Serie histórica</div>
+  <h2>Siete meses de precio, en las dos monedas</h2>
+  <p class="lead">Mediana del m² pedido del 1 dormitorio (el segmento más profundo: 91-151 avisos según la fecha), reconstruida bajo una sola metodología de tipo de cambio para toda la serie. Índice: enero = 100.</p>
 
-  <div class="bar-row"><div><b>Eq. Norte</b></div><div class="bar-track"><div class="bar-fill" style="width:100%">$1.893</div></div><div class="bar-meta">n=44 · 79 días</div></div>
-  <div class="bar-row"><div><b>Sirari</b></div><div class="bar-track"><div class="bar-fill" style="width:98%">$1.858</div></div><div class="bar-meta">n=102 · 71 días</div></div>
-  <div class="bar-row"><div><b>Eq. Centro</b></div><div class="bar-track"><div class="bar-fill claro" style="width:88%">$1.672</div></div><div class="bar-meta">n=156 · 77 días</div></div>
-  <div class="bar-row"><div><b>Eq. Oeste</b></div><div class="bar-track"><div class="bar-fill claro" style="width:86%">$1.625</div></div><div class="bar-meta">n=48 · 105 días</div></div>
-  <div class="bar-row"><div><b>V. Brígida</b></div><div class="bar-track"><div class="bar-fill claro" style="width:82%">$1.557</div></div><div class="bar-meta">n=47 · 113 días</div></div>
-  <p class="nota-n">Eq. 3er Anillo se omite del ranking: solo 5 avisos activos — lo declaramos en vez de mostrar un número débil.</p>
+  <div class="grafico">
+    <h3>Índice del m² pedido — 1 dormitorio, Equipetrol</h3>
+    <div class="gsub">5-ene → 21-jul-2026 · 59 cortes · base 100 = 5 de enero</div>
+    <svg id="serie" viewBox="0 0 700 260" style="width:100%;height:auto"></svg>
+    <div class="leyenda">
+      <span><i style="background:#3A6A48"></i>USD: $2.002 → $1.700 (−15,1%)</span>
+      <span><i style="background:#C89B7B"></i>Bolivianos: Bs 19.360 → Bs 18.285 (−5,6%)</span>
+    </div>
+  </div>
 
-  <div class="disclaimer"><b>Cómo leerlo:</b> son precios <b>pedidos</b> por los vendedores, no de cierre (Bolivia no tiene registro público de transacciones). El valor está en la comparación entre zonas y en la evolución mes a mes, no en el centavo.</div>
+  <p class="pull">El precio en dólares baja rápido; en bolivianos, apenas. <span>La diferencia es el tipo de cambio haciendo su trabajo</span> — y es la variable que más planes financieros de la plaza están ignorando.</p>
+
+  <div class="disclaimer"><b>Cómo se construyó y qué precisión tiene:</b> serie reconstruida propiedad por propiedad al régimen de tipo de cambio actual, con un error de método estimado de ±7%. Sirve para leer la <b>forma y dirección</b> de la curva, no el nivel exacto de una fecha puntual. Son precios pedidos, no de cierre.</div>
 </section>
 
-<!-- ============ TIPOLOGÍAS ============ -->
+<!-- ============ 03 ZONA ============ -->
 <section class="pagina">
-  <div class="eyebrow">03 · Tipologías</div>
-  <h2>¿Qué producto construir?</h2>
-  <p class="lead">La tabla que define el mix de un proyecto: cuánta oferta compite, a qué superficie típica, a qué precio total y en qué rango de m² (percentil 25 a 75 — el "rango típico" donde vive el 50% central del mercado).</p>
+  <div class="eyebrow">03 · Precio y velocidad por zona</div>
+  <h2>Dónde el precio alto es real y dónde es ilusión</h2>
+  <p class="lead">Un m² alto solo significa demanda si la oferta además rota. Por eso cada barra lleva su velocidad: precio alto + días bajos = demanda real; precio alto + días altos = expectativa de los vendedores.</p>
 
-  <table>
-    <tr><th>Tipología</th><th class="num">Oferta activa</th><th class="num">Superficie típica</th><th class="num">Precio mediano</th><th class="num">Rango típico $/m²</th></tr>
-    <tr><td>Monoambiente</td><td class="num">100</td><td class="num">36 m²</td><td class="num">$69.050</td><td class="num">$1.645 – $1.995</td></tr>
-    <tr><td>1 dormitorio</td><td class="num">155</td><td class="num">51 m²</td><td class="num">$87.750</td><td class="num">$1.538 – $1.940</td></tr>
-    <tr class="destacada"><td>2 dormitorios <span class="chip">mejor yield</span></td><td class="num">116</td><td class="num">87 m²</td><td class="num">$141.525</td><td class="num">$1.508 – $1.905</td></tr>
-    <tr><td>3 dormitorios</td><td class="num">28</td><td class="num">163 m²</td><td class="num">$253.771</td><td class="num">$1.306 – $1.680</td></tr>
+  <div class="bar-row"><div><b>Eq. Norte</b></div><div class="bar-track"><div class="bar-fill" style="width:100%">$1.893</div></div><div class="bar-meta">n=44 · <b>79 días</b></div></div>
+  <div class="bar-row"><div><b>Sirari</b></div><div class="bar-track"><div class="bar-fill" style="width:98%">$1.858</div></div><div class="bar-meta">n=102 · <b>71 días</b></div></div>
+  <div class="bar-row"><div><b>Eq. Centro</b></div><div class="bar-track"><div class="bar-fill claro" style="width:88%">$1.672</div></div><div class="bar-meta">n=156 · <b>77 días</b></div></div>
+  <div class="bar-row"><div><b>Eq. Oeste</b></div><div class="bar-track"><div class="bar-fill claro" style="width:86%">$1.625</div></div><div class="bar-meta">n=48 · <b>105 días</b></div></div>
+  <div class="bar-row"><div><b>V. Brígida</b></div><div class="bar-track"><div class="bar-fill claro" style="width:82%">$1.557</div></div><div class="bar-meta">n=47 · <b>113 días</b></div></div>
+  <p class="nota-n">Eq. 3er Anillo se omite: 5 avisos activos no sostienen una mediana. Lo declaramos en vez de publicar un número débil.</p>
+
+  <p class="pull">Sirari es la única zona que combina <span>m² alto Y rotación rápida</span> (71 días). Eq. Oeste y V. Brígida piden menos y aún así tardan 105-113 días: ahí la oferta espera a un comprador que hoy no está llegando.</p>
+</section>
+
+<!-- ============ 04 COMPOSICIÓN ============ -->
+<section class="pagina">
+  <div class="eyebrow">04 · Composición de la oferta</div>
+  <h2>Contra qué compite cada tipología</h2>
+  <p class="lead">Cuánta oferta activa hay en cada tipología, a qué superficie típica, y en qué rango de m² vive el 50% central del mercado (percentil 25 a 75, con la mediana marcada en negro). La dispersión importa tanto como la mediana: un rango ancho significa que "el precio de mercado" es una negociación, no un número.</p>
+
+  <table style="margin-bottom:24px">
+    <tr><th>Tipología</th><th class="num">Oferta activa</th><th class="num">Superficie típica</th><th class="num">Ticket mediano</th></tr>
+    <tr><td>Monoambiente</td><td class="num">100</td><td class="num">36 m²</td><td class="num">$69.050</td></tr>
+    <tr><td>1 dormitorio</td><td class="num">155</td><td class="num">51 m²</td><td class="num">$87.750</td></tr>
+    <tr><td>2 dormitorios</td><td class="num">116</td><td class="num">87 m²</td><td class="num">$141.525</td></tr>
+    <tr><td>3 dormitorios</td><td class="num">28</td><td class="num">163 m²</td><td class="num">$253.771</td></tr>
   </table>
 
-  <div class="hallazgo" style="margin-top:22px"><div class="num">→</div><p><b>El 1 dormitorio es la tipología más ofertada (155 avisos)</b> — quien entre con más monoambientes y 1D compite contra el 63% de todo el inventario. El 2D combina menos competencia relativa con el mejor retorno de alquiler (sección 05).</p></div>
+  <h3 style="font-size:14px;margin-bottom:14px">Rango típico del m² pedido (p25 — mediana — p75)</h3>
+  <!-- escala: $1.250 → $2.050 -->
+  <div class="rango-strip"><div><b>Monoambiente</b></div><div class="strip-track"><div class="strip-range" style="left:49%;width:44%"></div><div class="strip-med" style="left:73%"></div></div><div class="strip-meta">$1.645 · <b>$1.837</b> · $1.995</div></div>
+  <div class="rango-strip"><div><b>1 dormitorio</b></div><div class="strip-track"><div class="strip-range" style="left:36%;width:50%"></div><div class="strip-med" style="left:56%"></div></div><div class="strip-meta">$1.538 · <b>$1.699</b> · $1.940</div></div>
+  <div class="rango-strip"><div><b>2 dormitorios</b></div><div class="strip-track"><div class="strip-range" style="left:32%;width:50%"></div><div class="strip-med" style="left:50%"></div></div><div class="strip-meta">$1.508 · <b>$1.651</b> · $1.905</div></div>
+  <div class="rango-strip"><div><b>3 dormitorios</b></div><div class="strip-track"><div class="strip-range" style="left:7%;width:47%"></div><div class="strip-med" style="left:42%"></div></div><div class="strip-meta">$1.306 · <b>$1.589</b> · $1.680</div></div>
+
+  <p class="pull">El m² más caro es el más chico: el monoambiente pide <span>$1.837/m², +16% sobre el 3 dormitorios</span>. El mercado de Equipetrol paga por ticket de entrada bajo — un hecho sobre la demanda actual, no una receta sobre qué construir.</p>
+
+  <div class="disclaimer"><b>Por qué esto no es una recomendación de mix:</b> monoambientes y 1D son también el 63% de la oferta activa (255 de 402 avisos) — el segmento con más demanda aparente es también el más disputado, y su rentabilidad depende del proyecto, la microzona y el costo del suelo. Este informe entrega el tablero; el mix es una decisión suya.</div>
 </section>
 
-<!-- ============ COMPETENCIA ============ -->
+<!-- ============ 05 ATRIBUTOS ============ -->
 <section class="pagina">
-  <div class="eyebrow">04 · Competencia directa</div>
+  <div class="eyebrow">05 · Qué atributos se cobran</div>
+  <h2>La altura sí. El checklist, no.</h2>
+  <p class="lead">Asociaciones observadas en el precio pedido — con la advertencia estadística incluida, porque la versión ingenua de este análisis lleva a conclusiones equivocadas.</p>
+
+  <h3 style="font-size:14px;margin-bottom:12px">El piso del departamento (183 avisos lo declaran — 46% de la oferta)</h3>
+  <div class="bar-row"><div><b>1º a 4º</b></div><div class="bar-track"><div class="bar-fill claro" style="width:87%">$1.648</div></div><div class="bar-meta">n=87 · base</div></div>
+  <div class="bar-row"><div><b>5º a 9º</b></div><div class="bar-track"><div class="bar-fill claro" style="width:92%">$1.745</div></div><div class="bar-meta">n=49 · <b>+5,9%</b></div></div>
+  <div class="bar-row"><div><b>10º o más</b></div><div class="bar-track"><div class="bar-fill" style="width:100%">$1.889</div></div><div class="bar-meta">n=47 · <b>+14,6%</b></div></div>
+
+  <h3 style="font-size:14px;margin:24px 0 8px">Amenidades: la trampa de composición, mostrada a propósito</h3>
+  <p style="font-size:13.5px;line-height:1.55;margin-bottom:12px">Comparación ingenua: los deptos <b>con</b> piscina piden $1.668/m² y los <b>sin</b> piscina $1.751 — ¿la piscina resta valor? No: las torres con amenidades concentran unidades grandes (que piden menos por m²) y los edificios boutique sin amenidades concentran monoambientes premium. Controlando por tipología, el efecto desaparece:</p>
+  <table>
+    <tr><th>Misma tipología</th><th class="num">Con piscina/gym</th><th class="num">Sin</th><th class="num">Diferencia</th></tr>
+    <tr><td>1 dormitorio</td><td class="num">$1.700 <span style="color:var(--gris)">(n=124)</span></td><td class="num">$1.688 <span style="color:var(--gris)">(n=31)</span></td><td class="num">≈ 0</td></tr>
+    <tr><td>2 dormitorios</td><td class="num">$1.648 <span style="color:var(--gris)">(n=77)</span></td><td class="num">$1.673 <span style="color:var(--gris)">(n=39)</span></td><td class="num">≈ 0</td></tr>
+    <tr><td>Monoambiente</td><td class="num">$1.780 <span style="color:var(--gris)">(n=77)</span></td><td class="num">$1.975 <span style="color:var(--gris)">(n=23)</span></td><td class="num">−10% *</td></tr>
+  </table>
+  <p class="nota-n">* Los 23 monoambientes "sin amenidades" son en su mayoría edificios boutique de ticket alto — el contraste refleja ese nicho, no un castigo a la piscina.</p>
+
+  <p class="pull">El 75% de la oferta ya tiene piscina. <span>La amenidad estándar es requisito de entrada, no diferenciador de precio.</span> Lo que sí discrimina el precio pedido: la zona, la tipología y la altura.</p>
+
+  <div class="disclaimer"><b>Los límites de esta sección, declarados:</b> (1) son asociaciones en precios <i>pedidos</i>, no causalidad ni precios de cierre — si el mercado paga la amenidad en la negociación final, este dato no lo ve. (2) El 46% de los avisos no declara si el parqueo está incluido; entre los que lo declaran, incluirlo o no <i>no</i> muestra diferencia de m² — la opacidad misma es un dato: el parqueo se usa como ficha de negociación. (3) El corte amoblado en venta no se publica: los avisos sin amoblar casi nunca lo declaran y el contraste sería deshonesto. (4) El valor de un atributo en SU proyecto se valida contra los comparables de su microzona, no con estos agregados.</div>
+</section>
+
+<!-- ============ 06 ROTACIÓN ============ -->
+<section class="pagina">
+  <div class="eyebrow">06 · Rotación y salidas</div>
+  <h2>Lo que entró en órbita — y lo que salió del mercado</h2>
+  <p class="lead">La cara del mercado que ningún portal muestra: qué pasa con el precio y el tiempo. Dos lentes: la velocidad según posición de precio, y los 72 avisos que desaparecieron del mercado en julio.</p>
+
+  <h3 style="font-size:14px;margin-bottom:12px">Días en mercado según posición de precio (dentro de su zona y tipología)</h3>
+  <div class="bar-row"><div><b>Dentro del rango</b></div><div class="bar-track"><div class="bar-fill" style="width:83%">69 días</div></div><div class="bar-meta">n=169</div></div>
+  <div class="bar-row"><div><b>Bajo el rango</b></div><div class="bar-track"><div class="bar-fill terra" style="width:97%">81 días</div></div><div class="bar-meta">n=84</div></div>
+  <div class="bar-row"><div><b>Sobre el rango</b></div><div class="bar-track"><div class="bar-fill terra" style="width:100%">83 días</div></div><div class="bar-meta">n=85</div></div>
+  <p class="nota-n">Rango = percentil 25-75 de la misma zona y tipología (solo grupos con 15+ avisos). El resultado desafía la intuición: lo barato NO rota más rápido — el mercado sospecha del descuento, o el descuento esconde un problema (piso bajo, sin parqueo, estado).</p>
+
+  <h3 style="font-size:14px;margin:24px 0 12px">Salidas del mercado — julio 2026</h3>
+  <table>
+    <tr><th>Tipología</th><th class="num">Avisos que salieron</th><th class="num">Días publicado antes de salir (mediana)</th></tr>
+    <tr><td>Monoambiente</td><td class="num">22</td><td class="num">126</td></tr>
+    <tr><td>1 dormitorio</td><td class="num">19</td><td class="num">125</td></tr>
+    <tr><td>2 dormitorios</td><td class="num">27</td><td class="num">185</td></tr>
+    <tr><td>3 dormitorios</td><td class="num">4</td><td class="num">147</td></tr>
+  </table>
+
+  <p class="pull">72 salidas contra 402 activos: <span>a este ritmo, el inventario se renueva cada ~5-6 meses.</span> Y el 2 dormitorios que sale, sale lento: 185 días de vida mediana antes de desaparecer.</p>
+
+  <div class="disclaimer"><b>Salida ≠ venta.</b> Un aviso puede salir porque se vendió, porque el dueño lo retiró, o porque cambió de inmobiliaria. Verificamos la baja contra el portal cada noche (no la asumimos), pero el motivo no es observable. Por eso este informe habla de "salidas" y nunca de "ventas" — quien le muestre "unidades vendidas" sacadas de portales le está mostrando este mismo dato con un nombre que no puede probar.</div>
+</section>
+
+<!-- ============ 07 COMPETENCIA ============ -->
+<section class="pagina">
+  <div class="eyebrow">07 · Competencia directa</div>
   <h2>Edificio por edificio</h2>
-  <p class="lead">Los 10 edificios con más unidades en venta hoy — contra quién compite su proyecto, a qué m² mediano y en qué rango de tickets. Esto solo es posible porque cada aviso está identificado con su edificio (87% de la oferta matcheada).</p>
+  <p class="lead">Los 10 edificios con más unidades a la venta concentran el 29% de todo el inventario de Equipetrol. Esta tabla existe porque el 87% de los avisos está identificado con su edificio real — la capacidad que distingue a este informe de cualquier agregador.</p>
 
   <table>
     <tr><th>Edificio</th><th>Zona</th><th class="num">Unidades</th><th class="num">$/m² mediano</th><th class="num">Tickets (min–max)</th></tr>
-    <tr><td>Condominio Maré</td><td>Sirari</td><td class="num">22</td><td class="num">$1.952</td><td class="num">$87.750 – $294.000</td></tr>
+    <tr><td>Condominio Maré <span class="chip alto">22 unidades</span></td><td>Sirari</td><td class="num">22</td><td class="num">$1.952</td><td class="num">$87.750 – $294.000</td></tr>
     <tr><td>Rhodium</td><td>Sirari</td><td class="num">16</td><td class="num">$1.890</td><td class="num">$62.650 – $156.900</td></tr>
     <tr><td>Stone 3</td><td>V. Brígida</td><td class="num">13</td><td class="num">$1.928</td><td class="num">$47.100 – $160.000</td></tr>
     <tr><td>Lofty Island</td><td>Eq. Oeste</td><td class="num">13</td><td class="num">$1.648</td><td class="num">$62.843 – $167.240</td></tr>
@@ -162,56 +262,112 @@
     <tr><td>Speranto Verdi</td><td>Sirari</td><td class="num">10</td><td class="num">$1.654</td><td class="num">$52.500 – $88.000</td></tr>
     <tr><td>Uptown Drei</td><td>Eq. Oeste</td><td class="num">8</td><td class="num">$1.732</td><td class="num">$58.500 – $160.000</td></tr>
     <tr><td>Magnum Residencias</td><td>Eq. Centro</td><td class="num">8</td><td class="num">$1.644</td><td class="num">$133.000 – $1.040.000</td></tr>
-    <tr><td>Sky Moon <span class="chip alto">m² más alto</span></td><td>Eq. Norte</td><td class="num">7</td><td class="num">$2.103</td><td class="num">$85.000 – $227.702</td></tr>
+    <tr><td>Sky Moon</td><td>Eq. Norte</td><td class="num">7</td><td class="num">$2.103</td><td class="num">$85.000 – $227.702</td></tr>
     <tr><td>HH Once Equipetrol</td><td>Eq. Centro</td><td class="num">7</td><td class="num">$1.483</td><td class="num">$52.600 – $116.600</td></tr>
   </table>
-  <p class="nota-n">22 unidades a la venta en un mismo condominio (Maré) es también una señal de salida de inversores — la versión completa del informe lo analiza por antigüedad del aviso.</p>
+
+  <p class="pull">22 unidades en venta dentro de un mismo condominio (Maré) no es solo competencia: <span>es una señal de inversores saliendo al mismo tiempo</span> — y presiona el precio de todo el que quiera vender ahí.</p>
+
+  <div class="disclaimer"><b>En la versión completa:</b> este cuadro se entrega para los comparables directos de SU terreno (radio + microzona), con la antigüedad de cada aviso y su historial de cambios de precio — no solo el top 10 general.</div>
 </section>
 
-<!-- ============ ALQUILER Y YIELD ============ -->
+<!-- ============ 08 ALQUILER ============ -->
 <section class="pagina">
-  <div class="eyebrow">05 · Alquiler y retorno</div>
-  <h2>¿Qué renta el producto?</h2>
-  <p class="lead">Alquiler mediano pedido (en bolivianos, la moneda real del mercado de alquiler) y el yield bruto anual que resulta contra el precio de compra mediano de la misma tipología.</p>
+  <div class="eyebrow">08 · Alquiler y retorno</div>
+  <h2>La otra mitad de la demanda</h2>
+  <p class="lead">El comprador-inversor compara contra la renta. Alquiler mediano pedido (en bolivianos, la moneda real de ese mercado) y el yield bruto que resulta contra el precio de compra mediano de la misma tipología.</p>
 
   <table>
     <tr><th>Tipología</th><th class="num">Avisos</th><th class="num">Alquiler mediano</th><th class="num">Equiv. USD</th><th class="num">Yield bruto anual</th></tr>
     <tr><td>Monoambiente</td><td class="num">64</td><td class="num">Bs 3.500</td><td class="num">$301</td><td class="num">5,2%</td></tr>
     <tr><td>1 dormitorio</td><td class="num">73</td><td class="num">Bs 4.485</td><td class="num">$387</td><td class="num">5,3%</td></tr>
-    <tr class="destacada"><td>2 dormitorios</td><td class="num">39</td><td class="num">Bs 7.500</td><td class="num">$644</td><td class="num">5,5%</td></tr>
-    <tr><td>3 dormitorios</td><td class="num">13</td><td class="num">Bs 9.350</td><td class="num">$816</td><td class="num">3,9%</td></tr>
+    <tr><td>2 dormitorios</td><td class="num">39</td><td class="num">Bs 7.500</td><td class="num">$644</td><td class="num">5,5%</td></tr>
+    <tr><td>3 dormitorios</td><td class="num">13</td><td class="num">Bs 9.350</td><td class="num">$816</td><td class="num">3,9% *</td></tr>
   </table>
+  <p class="nota-n">* Con 13 avisos, el dato del 3 dormitorios es indicativo — lo marcamos en vez de esconderlo.</p>
 
-  <div class="disclaimer"><b>Yield bruto = alquiler pedido × 12 ÷ precio de venta pedido de la misma tipología.</b> No descuenta expensas, vacancia ni mantenimiento; con n=13, el dato del 3 dormitorios es indicativo. El informe completo incluye el corte amoblado vs sin amoblar (el amoblado explica buena parte del premium del alquiler chico).</div>
+  <p class="pull">Los yields brutos viven en una banda angosta (5,2-5,5%) en las tipologías con n sólido. <span>La renta no premia a ninguna tipología con claridad</span> — la diferencia real la harán el edificio, el piso y la gestión, no la categoría.</p>
+
+  <div class="disclaimer"><b>Yield bruto = alquiler pedido × 12 ÷ precio de venta pedido de la misma tipología.</b> No descuenta expensas, vacancia, mantenimiento ni impuestos, y compara medianas de pools distintos (no el mismo inmueble). Es una vara para comparar tipologías entre sí, no una promesa de retorno.</div>
 </section>
 
-<!-- ============ METODOLOGÍA ============ -->
+<!-- ============ 09 METODOLOGÍA ============ -->
 <section class="pagina">
-  <div class="eyebrow">06 · Metodología</div>
-  <h2>Por qué este dato es distinto</h2>
-  <p class="lead">Este informe no agrega avisos: los verifica. Cada número de las páginas anteriores pasó por este proceso, todas las noches.</p>
+  <div class="eyebrow">09 · Metodología y límites</div>
+  <h2>Por qué puede confiar en esto — y hasta dónde</h2>
+  <p class="lead">Un informe que no declara sus límites está vendiendo certeza que no tiene. Estos son los nuestros.</p>
 
-  <div class="metodo">
-    <div class="caja si"><h3>Lo que hacemos</h3><ul>
-      <li><b>Verificación nocturna:</b> cada aviso se contrasta contra el portal; las bajas se confirman, no se asumen.</li>
-      <li><b>Un solo tipo de cambio:</b> todos los precios normalizados — comparables entre sí aunque el aviso original mezcle dólares billete, transferencia o bolivianos.</li>
-      <li><b>Deduplicación:</b> el mismo depto publicado por 3 agencias cuenta una sola vez.</li>
-      <li><b>Identificación por edificio:</b> 87% de los avisos anclados a un edificio real georreferenciado — por eso existe la sección 04.</li>
-      <li><b>n declarado siempre:</b> cada mediana dice cuántos avisos la sostienen; cuando el n es débil, lo decimos.</li>
+  <div class="dos-col metodo" style="margin-bottom:14px">
+    <div class="caja si"><h3>Lo que este dato ES</h3><ul>
+      <li><b>Verificado cada noche:</b> cada aviso se contrasta contra el portal; las bajas se confirman, no se asumen.</li>
+      <li><b>Comparable:</b> todos los precios normalizados a un solo tipo de cambio, aunque el aviso original mezcle dólares billete, transferencia o bolivianos.</li>
+      <li><b>Deduplicado:</b> el mismo depto publicado por 3 agencias cuenta una vez.</li>
+      <li><b>Anclado a la realidad física:</b> 87% de los avisos identificados con su edificio, en un catálogo georreferenciado de 447 torres.</li>
+      <li><b>Con el n a la vista:</b> cada mediana dice cuántos avisos la sostienen, y los números débiles se declaran en vez de publicarse.</li>
     </ul></div>
-    <div class="caja no"><h3>Lo que NO hacemos</h3><ul>
-      <li>Nadie paga por aparecer, destacarse u ordenarse mejor en este informe.</li>
-      <li>No mostramos precios de cierre como si existieran: son precios pedidos y está declarado en cada página.</li>
-      <li>No recomendamos comprar ni vender un inmueble específico — entregamos el mercado, la decisión es suya.</li>
-      <li>No rellenamos huecos: donde no hay dato suficiente, va "sin base suficiente", no un invento.</li>
+    <div class="caja no"><h3>Lo que NUNCA hacemos</h3><ul>
+      <li>Cobrar por aparecer, destacar u ordenar mejor a nadie en este informe.</li>
+      <li>Llamar "ventas" a las salidas de mercado, ni "precio de mercado" al precio pedido.</li>
+      <li>Recomendar qué construir, comprar o vender — entregamos el tablero, no jugamos su mano.</li>
+      <li>Rellenar huecos: donde no hay base suficiente, va "sin base suficiente".</li>
     </ul></div>
   </div>
+
+  <div class="metodo"><div class="caja lim"><h3>Lo que este dato NO puede ver (y usted debe saberlo)</h3><ul>
+    <li><b>Precios de cierre:</b> Bolivia no tiene registro público de transacciones. Todo el informe trabaja sobre precios pedidos y lo repite página por página.</li>
+    <li><b>El descuento real de pozo:</b> se negocia en privado entre desarrollador y comprador; los portales solo ven la preventa publicada.</li>
+    <li><b>El motivo de cada salida:</b> vendido, retirado o rotado de agencia — indistinguibles desde afuera.</li>
+    <li><b>Causalidad:</b> toda asociación de la sección 05 es eso, asociación. El valor de un atributo en un proyecto concreto se valida contra sus comparables directos.</li>
+  </ul></div></div>
 
   <div class="pie">
     <div>Simón · Inteligencia Inmobiliaria — simonbo.com</div>
-    <div>Fuentes: Century21, Remax, Bien Inmuebles · Corte 3-ago-2026</div>
+    <div>Fuentes: Century21, Remax, Bien Inmuebles · Corte 3-ago-2026 · Serie histórica desde ene-2026</div>
   </div>
 </section>
 
+<script>
+(function(){
+  // Serie 1D global (fecha, usd_m2, bs_m2) — data real, market_price_reexpresado
+  var d=[["01-05",2002,19360],["01-15",2057,19987],["01-21",2075,20170],["01-27",2092,19874],["01-31",2064,18892],
+  ["02-05",2091,19353],["02-10",2055,19165],["02-17",2052,19007],["02-24",2055,18931],
+  ["03-04",2055,18516],["03-08",2002,18731],["03-11",1996,18868],["03-15",2002,18575],["03-22",2002,18583],
+  ["04-15",1957,18164],["04-18",1911,17845],["04-22",1903,17996],["04-28",1800,17514],
+  ["05-01",1813,18297],["05-06",1821,18040],["05-08",1906,18976],["05-12",1810,17973],["05-21",1800,18010],["05-30",1800,18347],
+  ["06-13",1789,17780],["06-20",1800,17784],["06-24",1780,17728],["06-29",1797,17882],
+  ["07-02",1750,17321],["07-09",1718,17561],["07-12",1703,17948],["07-15",1716,17964],["07-18",1711,18275],["07-21",1700,18285]];
+  var svg=document.getElementById('serie');
+  var W=700,H=260,mL=42,mR=14,mT=14,mB=30;
+  var usd0=d[0][1],bs0=d[0][2];
+  var idx=d.map(function(r){return [r[0],r[1]/usd0*100,r[2]/bs0*100]});
+  var yMin=82,yMax=106;
+  function X(i){return mL+(W-mL-mR)*i/(idx.length-1)}
+  function Y(v){return mT+(H-mT-mB)*(yMax-v)/(yMax-yMin)}
+  var s='';
+  // grid
+  [85,90,95,100,105].forEach(function(g){
+    s+='<line x1="'+mL+'" y1="'+Y(g)+'" x2="'+(W-mR)+'" y2="'+Y(g)+'" stroke="#EFEAE0" stroke-width="1"/>';
+    s+='<text x="'+(mL-8)+'" y="'+(Y(g)+4)+'" font-size="11" fill="#6B6B66" text-anchor="end" font-family="DM Sans">'+g+'</text>';
+  });
+  // month labels
+  var mesesVistos={};
+  idx.forEach(function(r,i){var m=r[0].slice(0,2);if(!mesesVistos[m]){mesesVistos[m]=1;
+    var nom={'01':'Ene','02':'Feb','03':'Mar','04':'Abr','05':'May','06':'Jun','07':'Jul'}[m];
+    s+='<text x="'+X(i)+'" y="'+(H-8)+'" font-size="11" fill="#6B6B66" font-family="DM Sans">'+nom+'</text>';}});
+  function linea(col,ci,color,w,dash){
+    var p=idx.map(function(r,i){return (i?'L':'M')+X(i).toFixed(1)+' '+Y(r[ci]).toFixed(1)}).join(' ');
+    return '<path d="'+p+'" fill="none" stroke="'+color+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="5 4"':'')+' stroke-linejoin="round" stroke-linecap="round"/>';
+  }
+  s+=linea('bs',2,'#C89B7B',2.5,true);
+  s+=linea('usd',1,'#3A6A48',3,false);
+  // end dots + labels
+  var last=idx[idx.length-1];
+  s+='<circle cx="'+X(idx.length-1)+'" cy="'+Y(last[1])+'" r="4" fill="#3A6A48"/>';
+  s+='<circle cx="'+X(idx.length-1)+'" cy="'+Y(last[2])+'" r="4" fill="#C89B7B"/>';
+  s+='<text x="'+(X(idx.length-1)-8)+'" y="'+(Y(last[1])+18)+'" font-size="12" font-weight="700" fill="#3A6A48" text-anchor="end" font-family="Figtree">84,9</text>';
+  s+='<text x="'+(X(idx.length-1)-8)+'" y="'+(Y(last[2])-10)+'" font-size="12" font-weight="700" fill="#C89B7B" text-anchor="end" font-family="Figtree">94,4</text>';
+  svg.innerHTML=s;
+})();
+</script>
 </body>
 </html>
