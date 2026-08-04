@@ -382,6 +382,34 @@ const propiedadesUnicas = Array.from(
 - **Duplicados detectados:** 5-10%
 - **Después de deduplicación:** 100% únicos
 
+### El OTRO duplicado: el slug mutable de C21 (4-ago-2026)
+
+Lo de arriba es el duplicado **dentro de una misma corrida** (solapamiento del grid). Hay un segundo
+patrón que se da **entre corridas separadas en el tiempo**, y que la dedup por `id` de una tanda no ve.
+
+C21 arma sus URLs de ficha así:
+
+```
+/propiedad/<codigo>_<slug>
+           ^^^^^^^^ ^^^^^^
+           estable  MUTABLE
+```
+
+- El **código numérico** es el identificador del AVISO. No cambia.
+- El **slug** es una versión legible del título/nombre del edificio, y **C21 lo reescribe cuando el
+  captador edita el aviso** — baja el precio, corrige la tipología, cambia el nombre del edificio.
+
+**Consecuencia:** un mismo aviso puede aparecer con **varias URLs a lo largo del tiempo**. La URL vieja
+queda muerta (404) mientras el aviso sigue vivo bajo la nueva. Si se deduplica por URL, el mismo depto
+entra dos veces al feed — con dos precios distintos, porque justamente el precio suele ser lo que se
+editó.
+
+**Regla:** deduplicar C21 por el **código numérico**, nunca por la URL completa ni por el slug.
+
+Evidencia (4-ago-2026, PR #64): 8 grupos históricos detectados, **8/8 el mismo aviso**, verificados por
+HTTP (URL vieja muerta, URL nueva 200). El discovery ahora lo detecta por código y el cargador marca la
+vieja `duplicado_de`.
+
 ---
 
 ## 12. Integración con registrar_discovery()

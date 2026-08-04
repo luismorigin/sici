@@ -863,6 +863,8 @@ Revisión de 6 pares de pm con GPS muy cercanos entre sí, para detectar duplica
 | pm con `gps_verificado_visual` | 0 | **70/70 (100%)** |
 | Edificios "nuevos" descubiertos | — | 3 (DOMUS MADERO + Sky Icon re-zonificado + Torre Baruc Norte distinguida de 4 Baruc EQ) |
 
+> ⚠️ **El `70/70 (100%)` es del lote inicial de ZN (may-2026), no del catálogo.** Hoy `proyectos_master` tiene 448 PMs y el campo `gps_verificado_visual` convive con **8 valores distintos** (incluido NULL) porque cada herramienta escribe el suyo — detalle en `docs/proyectos/zona-norte/BITACORA.md` §"Nuevas columnas en `proyectos_master`" (actualizado 4-ago-2026). O sea: no se puede derivar un "% verificado" del catálogo completo a partir de esta fila.
+
 **Sesiones del día y aportes:**
 1. **Sesión 1**: cleanup K1+STONE+CURUPAU+Brickell + 20 pm cargados + 6 pares <100m auditados (+DOMUS MADERO) → 19.7%→28.6%
 2. **Sesión 2 capa 1**: 12 pm nuevos compactos + Sky Icon re-zonificado + verificación visual 12/12 confirmed → 28.6%→38.1%

@@ -37,6 +37,12 @@ node discovery-alquiler.mjs
 Sale a C21 (operacion=renta) + Remax (operacion=alquiler, EXCLUYE anticrético), filtra por `get_zona_by_gps`
 ∈ las 6 microzonas, y diffea contra `propiedades_v2` (SOLO `tipo_operacion='alquiler'`). Resumen: **NUEVAS**,
 **existentes**, **desaparecidas**. Escribe `output/discovery-alquiler-<ts>.json`.
+- 🔁 **4ª señal — SLUG REESCRITO por C21** (PR #64, 4-ago-2026). C21 reescribe el slug de
+  `/propiedad/<codigo>_<slug>` cuando el captador edita el aviso → la URL cambia y entraría como NUEVO,
+  duplicando el depto con dos precios. Se detecta por el código y se imprime
+  `🔁 N con SLUG REESCRITO por C21`. **NO se filtran: se capturan** (el precio nuevo es el vigente).
+  Van con `reemplaza_a` en el JSON. Caso real de alquiler: Vertical Terra, Bs 4.500 → Bs 4.000.
+  ⚠️ Si dice **`cambió de zona (X → Y), revisar`**, mirala: el cruce es contra shadow completo, sin filtro de zona.
 - Circuit breaker (🛑) → **no insistas**, IP bloqueada, esperá unas horas. Cooldown 20 min (`--force` con criterio).
 
 ### 2. Prep — material de lectura de las EXISTENTES (read-only, gratis)
@@ -110,6 +116,12 @@ node cargar-alquiler-shadow.mjs --apply output/material-alq-<ts>.json
 Arma la fila (**ANTI-DOBLE-NORM**: crudo solo en la columna de su moneda, la otra NULL), resuelve match
 name-first (`matcher.mjs`), protege `fecha_publicacion` con LEAST, upsertea. Imprime escritos, rechazados
 (gate), reporte por depto, alias sugeridos, y con-nombre-sin-auto-match (la cola de excepciones).
+
+🔁 **MUTACIÓN ADICIONAL sobre filas PREEXISTENTES (PR #64):** si la fila traía `reemplaza_a` (slug reescrito,
+paso 1), tras escribir la nueva marca **la vieja** con `duplicado_de = <id nuevo>` + trazabilidad
+(`dedup_por='cargador_slug_reescrito'`). Imprime `🔁 slug reescrito por C21: N/M viejas marcadas...`.
+Es el ÚNICO punto donde el apply toca filas fuera del material. Guardas: candado `duplicado_de IS NULL` ·
+se saltea si la nueva falló o si la vieja no existe · `datos_json` se **mergea**. Reversible.
 
 ### 5. Verificador — baja de desaparecidos (gemelo del de venta, `verificador-deptos.mjs`)
 ```

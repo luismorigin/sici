@@ -11,6 +11,9 @@
 ### estado_propiedad
 
 ```sql
+-- Verificado contra producción el 4-ago-2026 (pg_enum). Son 9 valores, no 7:
+-- 'excluido_calidad' (mig 178) y 'excluida_zona' (mig 181) se agregaron después
+-- del export original del 28-feb y faltaban en este doc.
 CREATE TYPE estado_propiedad AS ENUM (
     'nueva',
     'pendiente_enriquecimiento',
@@ -18,9 +21,29 @@ CREATE TYPE estado_propiedad AS ENUM (
     'actualizado',
     'inactivo_pending',
     'inactivo_confirmed',
-    'excluido_operacion'
+    'excluido_operacion',
+    'excluido_calidad',
+    'excluida_zona'
 );
 ```
+
+### Los tres `excluido_*` — qué significan y qué NO significan
+
+| Status | Qué dice | Ejemplo real |
+|---|---|---|
+| `excluido_operacion` | El aviso existe y está publicado, pero **la operación es otra** | Prop 8000642 (4-ago-2026): el aviso describe un ALQUILER amoblado pero está cargado como VENTA |
+| `excluido_calidad` | Existe pero no cumple los mínimos de calidad para el feed | — |
+| `excluida_zona` | Existe pero cae fuera de la zona cubierta | — |
+
+🔴 **Ninguno de los tres implica que el aviso esté caído.** Conviven con `es_activa = true` — el aviso
+sigue vivo en el portal. La baja se marca aparte:
+- En **prod**: `status = 'inactivo_confirmed'`.
+- En **shadow**: `es_activa = false` **sin tocar el status** → por eso las vistas shadow filtran por
+  `es_activa` además del status (mig 314, 3-ago-2026). Filtrar solo por status en shadow **cuenta avisos
+  ya dados de baja**.
+
+Estos tres status sacan la prop del inventario sin borrarla. `auditar-matching-shadow.mjs` los filtra
+para que un caso ya resuelto no vuelva al juez cada noche.
 
 ### tipo_operacion_enum
 
@@ -329,6 +352,8 @@ CREATE INDEX idx_prop_alquiler_filtros ON propiedades_v2 (dormitorios, precio_me
 ---
 
 ## Producción (28 Feb 2026)
+
+> 🔴 **Snapshot histórico congelado el 28-feb-2026 — NO es el estado actual.** Los números de abajo se dejan como registro de esa fecha; para conteos vivos hay que consultar la BD (`v_mercado_venta` / `v_mercado_alquiler` para activos, `propiedades_v2` para el total). Además, **desde el 21-jul-2026 la app pública de Equipetrol lee `propiedades_v2_shadow`, que es OTRA tabla** — contar sobre `propiedades_v2` no te dice lo que ve el usuario. Ver CLAUDE.md §Sistema de precios y `scripts/deptos-equipetrol/CUTOVER_DATA_PLAN.md`.
 
 ```
 Total registros: 1,002

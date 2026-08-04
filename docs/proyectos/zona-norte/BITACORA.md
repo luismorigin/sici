@@ -308,6 +308,16 @@ Auditoría sobre 568 props Equipetrol completadas:
 
 6. **Nuevas columnas en `proyectos_master`:**
    - `gps_verificado_visual TEXT` ('confirmed' / 'sospechoso' / 'dividir' / 'mover')
+     > 🔴 **4-ago-2026: este vocabulario NO es el único que se usa.** Medido en prod hay **8 valores**
+     > conviviendo sobre 448 PMs: *(sin valor)* 245 · `confirmed` 96 · `false` 43 · `si` 39 · `no` 16 ·
+     > `true` 5 · `sospechoso` 3 · `founder_google_maps_15jun` 1. Las skills
+     > (`audit-cola-shadow.command.md`, `audit-cola-matching.command.md`) mandan escribir **`'si'`**, y
+     > las tools HTML de `scripts/verify-pm-gps/` escriben un tercer set (`confirmed`/`sospechoso`/
+     > `no_identificable`). **Nadie está equivocado: no hay definición canónica.** Consecuencia práctica:
+     > cualquier query que intente separar "verificados" de "no verificados" da un resultado arbitrario.
+     > Semántica que sí se sostiene (de `BACKLOG.md` §1.7): **NULL = pendiente de verificación humana**.
+     > Pendiente: unificar el vocabulario y normalizar las ~200 filas. Decidido el 4-ago documentarlo
+     > ahora y limpiar aparte (tocar 448 filas merece su propia sesión).
    - `gps_verificacion_notas TEXT` (notas del usuario, incluyendo GPS corregidos)
    - `gps_verificado_visual_at TIMESTAMPTZ`
    - `gps_verificado_osm BOOLEAN` (auto-verificado via Overpass)
@@ -667,6 +677,16 @@ El pipeline alquiler **ya procesa Zona Norte solo**: Remax alquiler trae todo Sa
 
 - **FIX A (snapshot):** A1 blindar bloque alquiler global a 6 zonas EQ (limpia contaminación EQ); A2 computar alquiler en LOOP 2 por-zona (additive, da serie ZN + EQ-por-zona). **In-place sobre v3** — A1 solo quita contaminación del global, A2 solo llena NULLs; ninguno toca la serie de venta. No hace falta v4 (misma lógica que cerró #8).
 - **FIX B (matching):** B1 guard de distancia (>800m) en auto-approve Tier 1/2 → degradar a HITL (atrapa Portobello sin romper same-building); B2 cleanup del falso 2307 tras verificación visual. ⚠️ B1 toca EQ también → medir distribución de distancias en matches EQ auto-aprobados antes de aplicar (cuidado GPS de agente desplazado, igual que ticket #13).
+  > 📌 **Actualización 4-ago-2026 — B2 se aplicó, B1 NUNCA, y la medición que pedía ya existe.**
+  > La distribución está medida sobre `propiedades_v2_shadow`: **10 props a >2 km · 36 entre 500 m y 2 km ·
+  > 48 entre 150-500 m** (sobre 932 activas). Ver `docs/backlog/CALIDAD_DATOS_BACKLOG.md` §"Props lejos de
+  > su proyecto master", que es donde vive el hallazgo ahora (esta bitácora es cronológica y el ticket
+  > quedó huérfano 2 meses acá adentro).
+  > 🔴 **Y la hipótesis se invirtió:** en las 10 peores el nombre del aviso COINCIDE con el del PM → el
+  > error parece estar en el **GPS del PM**, no en el match. Aplicar B1 tal como está mandaría a revisión
+  > manual matches correctos con el edificio mal ubicado. Limpiar el catálogo primero.
+  > ⚠️ **Y el cleanup de B2 fue sobre `propiedades_v2` (PROD) solamente**: en shadow los 3 avisos de
+  > "Portobello Isuto" siguen a 4,0 km de su PM. Shadow nunca se re-auditó por esto.
 - **Cobertura C21+BI ZN:** opcional; Remax ya trae el grueso.
 
 ### Artefactos producidos

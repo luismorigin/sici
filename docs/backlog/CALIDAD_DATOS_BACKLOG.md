@@ -140,7 +140,97 @@ Las 5 activas (156, 309, 385, 158, 452) tienen valores plausibles — no requier
 - [x] **Skill `/audit-feed-ventas-semanal` v1.1** creada — `scripts/auditoria-feed-ventas/audit-feed-ventas-semanal.command.md`. Capas 2+3+4 sin Firecrawl, ventana configurable, race-condition guard 30 min. Test inicial sobre rango 14d-7d reveló 12 falsos positivos → recalibrada en v1.1.
 - [x] **`/audit-feed-alquileres-semanal` v1.2** creada — `scripts/auditoria-feed-alquileres/audit-feed-alquileres-semanal.command.md`. Equivalente a ventas semanal adaptado: precio_mensual_bob (no precio_usd), sin TC paralelo, filtro ≤150d, 3 fuentes (C21+Remax+BI), vista `v_mercado_alquiler`. 7 checks capa 2 + 4 capa 3 + 3 capa 4; 8 calibraciones tras retest sobre 37 props (FP 85%→25%). Costo $0.
 - [ ] **Validación GPS en matcher** — atrapa caso A1 del audit (LLM confunde proyectos con prefijo común). Hoy el matcher prioriza `nombre_exacto` sobre GPS — si nombre matchea pero GPS está fuera de `radio_metros`, debería downgrade a `pending` (HITL). Backlog post-skill semanal alquileres.
+  🔴 **4-ago-2026 — la medición que este ticket necesitaba YA EXISTE, y la hipótesis está invertida.** Ver
+  §"Props lejos de su proyecto master" abajo: el error NO parece estar del lado de la prop (el nombre del
+  aviso coincide con el del PM) sino en el **GPS del PM**. Un downgrade a HITL por distancia mandaría a
+  revisión manual matches correctos cuyo edificio está mal ubicado en el catálogo. **Limpiar el catálogo
+  primero, después el guard.**
 - [ ] **Aliases para proyectos sin aliases** — auditoría reveló que la mayoría de proyectos Eurodesign + Mirage no tenían aliases. Sería útil un audit one-shot que detecte pm con `alias_conocidos = NULL` y sugiera variantes desde props históricas.
+
+## Props lejos de su proyecto master — MEDIDO, sin resolver (4 Ago 2026)
+
+**Problema:** hay props activas a distancias imposibles de su `proyectos_master` asignado. Medido sobre
+`propiedades_v2_shadow` (932 activas con GPS en ambos lados):
+
+| Distancia prop ↔ su PM | Props | Lectura |
+|---|---:|---|
+| **> 2 km** | **10** | casi seguro error |
+| 500 m – 2 km | 36 | sospechoso |
+| 150 – 500 m | 48 | revisar |
+| < 150 m | 838 | normal |
+
+**Causa raíz — hipótesis invertida respecto del ticket viejo:** en las 10 peores **el nombre del aviso
+coincide con el del PM** (ej. 3 avisos de "Portobello Isuto" a 4,0 km de su PM, y ambos declarando la
+MISMA zona). Si el match fuera equivocado, los nombres no coincidirían. Lo más probable es que **el GPS
+del PM en el catálogo esté mal**, no que el matcher se haya equivocado.
+
+**Cómo se descubrió:** auditando el caso "Aura" del 4-ago. Un aviso de alquiler estuvo **23 días colgado
+de un PM a 1.156 m** sin que nada lo detectara. Al buscar más casos apareció esta distribución.
+
+**Por qué el mecanismo existente NO lo agarra:** no hay ningún chequeo de distancia prop↔PM en el
+pipeline. El matcher es name-first y **nunca fuerza por GPS** (correcto), pero tampoco usa el GPS para
+**desconfiar** de un match por nombre.
+
+**Impacto:** una prop con el PM equivocado aparece en el mapa en el lugar equivocado — y desde el PR #62
+(filtro por área del mapa) eso significa que **entra o sale del resultado por una ubicación falsa**.
+También ensucia el conteo de props por edificio.
+
+🔴 **Ya se había detectado en mayo y quedó huérfano — dos veces:**
+1. `docs/proyectos/zona-norte/BITACORA.md:669` diseñó el **FIX B1**: guard de distancia (>800 m) que
+   degrade el auto-approve a HITL. Condición que puso: *"medir distribución de distancias en matches EQ
+   auto-aprobados antes de aplicar"*. **Esa medición es la tabla de arriba.** B1 nunca se aplicó y nunca
+   se promovió de la bitácora a un backlog.
+2. `BITACORA.md:692-697` documenta el **mismo patrón Portobello a 3-4 km** y su cleanup… **aplicado solo
+   sobre `propiedades_v2` (prod)**. `propiedades_v2_shadow` nunca se re-auditó, y ahí siguen los 3 avisos.
+   La doc no aclaraba que el cleanup fue prod-only → el caso se leía como cerrado.
+
+**Decisión (4-ago-2026):** se documenta, no se automatiza todavía. Antes del guard hay que **auditar el
+GPS de los PM señalados** — si el error está en el catálogo, un guard por distancia mandaría a revisión
+manual matches que están bien. Orden sugerido: (1) revisar los 10 de >2 km contra Google Maps, (2)
+corregir el GPS del PM donde corresponda, (3) recién ahí evaluar B1 con el catálogo limpio.
+
+**Query de detección (re-medible):**
+```sql
+SELECT s.id, s.nombre_edificio, pm.nombre_oficial, pm.id_proyecto_master,
+       ROUND((ST_Distance(
+         ST_SetSRID(ST_MakePoint(s.longitud, s.latitud),4326)::geography,
+         ST_SetSRID(ST_MakePoint(pm.longitud, pm.latitud),4326)::geography)/1000)::numeric,1) AS km
+FROM propiedades_v2_shadow s
+JOIN proyectos_master pm ON pm.id_proyecto_master = s.id_proyecto_master
+WHERE s.status='completado' AND s.duplicado_de IS NULL AND s.es_activa
+  AND ST_Distance(ST_SetSRID(ST_MakePoint(s.longitud, s.latitud),4326)::geography,
+                  ST_SetSRID(ST_MakePoint(pm.longitud, pm.latitud),4326)::geography) > 2000
+ORDER BY km DESC;
+```
+
+---
+
+## Duplicados por slug reescrito de C21 — RESUELTO en pipeline (4 Ago 2026)
+
+**Problema:** C21 arma la URL como `/propiedad/<codigo>_<slug>` y **reescribe el slug cuando el captador
+edita el aviso**. La URL cambia → el aviso entraba como NUEVO y el mismo depto quedaba dos veces en el
+feed, **con dos precios distintos**, contaminando la mediana de su microzona.
+
+**Medido:** 8 grupos en el histórico de shadow; 5 seguían activos y visibles — Lofty Island publicado a
+**$118.770 y $85.000 a la vez**, Torre Ara $85.000/$79.000, Vertical Terra Bs 4.500/4.000, Maré con dos
+tipologías, y Aura con **dos nombres de edificio distintos**.
+
+**Por qué el dedup del audit NO lo agarraba:** la superficie 3 agrupa por `pm+precio+área`, y en estos
+casos **el precio cambió** (es el motivo de la reescritura). Los 2 que el audit levantó el 4-ago fueron
+coincidencia, no diseño.
+
+**Resuelto (PR #64):** el discovery lo caza por el código —único por AVISO, no por URL— y **captura la
+nueva** (el precio nuevo es el vigente; saltearla dejaría el viejo para siempre), y el cargador marca la
+vieja `duplicado_de` en el `--apply`. Evidencia de que es seguro sin juez: 8/8 del histórico eran el
+mismo aviso, verificados por HTTP (URL vieja muerta, nueva 200). Cero falsos positivos.
+
+**Backfill:** los 5 activos se marcaron a mano el 4-ago-2026 (`dedup_por='founder_2026-08-04'`). No queda
+remanente. Detalle: memoria `project_c21_slug_reescrito`.
+
+📉 **Señal de mercado, no solo higiene:** en 3 de los 5 casos el precio había **bajado** (−28%, −7%, −11%).
+Un slug reescrito es un aviso editado — y muchas veces, una baja de precio.
+
+---
 
 ## Hallazgos del resumen mensual Equipetrol (13 May 2026)
 
@@ -159,9 +249,20 @@ Detectados al cruzar `propiedades_v2` con `proyectos_master` para armar lectura 
 
 **Recomendación:** Revisar lógica de detección de duplicados latentes — actualmente parece basarse en URL o algún hash demasiado estricto. Considerar matching por signatura (precio + área + dorms + estado + id_proyecto_master) cuando hay ≥3 props idénticas en mismo proyecto.
 
-### 2. Matching no respeta `proyectos_master.activo = false`
+### 2. Matching no respeta `proyectos_master.activo = false` — RESUELTO (migración 245)
 
-**Síntoma:** El proyecto Mare (id=4) fue marcado como duplicado de Condominio MARE (id=65) en nov 2025 e inactivado (`activo = false`). Pero 6 props nuevas que entraron al pipeline después siguieron matcheando al proyecto inactivo en lugar del activo, generando huérfanas.
+**Cierre:** lo arregló la **migración 245** (`245_fix_matching_filter_pm_inactivo`, ver
+`docs/migrations/MIGRATION_INDEX.md`). `generar_matches_por_nombre()` y `generar_matches_por_url()` no
+filtraban `proyectos_master.activo = true` y auto-aprobaban (score 95/90) sugerencias hacia pms
+inactivos — el mismo patrón se repetía en el Klug (2 props al pm=44, duplicado del 61), no solo en
+Mare. El fix agregó `pm.activo = TRUE` al JOIN de ambas funciones y limpió 18 sugerencias `aprobado`
+históricas (`revisado_por='sistema_filtro_pm_inactivo'`). `generar_matches_fuzzy`/`gps` y
+`buscar_proyecto_fuzzy` ya filtraban activo. La query de auditoría de abajo sigue sirviendo como
+verificación: debe dar 0 filas.
+
+Lo que sigue es el hallazgo original (13 May 2026), conservado como histórico.
+
+**Síntoma (histórico):** El proyecto Mare (id=4) fue marcado como duplicado de Condominio MARE (id=65) en nov 2025 e inactivado (`activo = false`). Pero 6 props nuevas que entraron al pipeline después siguieron matcheando al proyecto inactivo en lugar del activo, generando huérfanas.
 
 **Evidencia:**
 ```sql
@@ -181,10 +282,10 @@ SELECT COUNT(*) FROM propiedades_v2 WHERE id_proyecto_master = 4; -- 6
 - Lecturas de zona se ensucian: las 6 huérfanas estaban geográficamente en coords de id=4 (Eq. Centro) pero el proyecto real Condominio MARE está en Sirari
 - Cualquier consolidación futura de proyectos duplicados va a generar el mismo bug si el matching no se arregla
 
-**Recomendación:**
-- Función de matching debe filtrar `activo = true` antes de seleccionar `id_proyecto_master`
+**Recomendación (histórica — lo aplicó la mig 245):**
+- Función de matching debe filtrar `activo = true` antes de seleccionar `id_proyecto_master` → ✅ hecho
 - Cleanup one-shot: re-vincular las 6 huérfanas de id=4 hacia id=65
-- Auditar otros proyectos con `activo = false` para detectar huérfanas similares
+- Auditar otros proyectos con `activo = false` para detectar huérfanas similares → apareció el Klug
 
 **Query de auditoría sugerida:**
 ```sql

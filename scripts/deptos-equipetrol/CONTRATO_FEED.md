@@ -11,8 +11,19 @@
 ## Reglas de oro
 
 1. **Matching OBLIGATORIO.** `JOIN proyectos_master` es INNER → un depto **sin `id_proyecto_master` NO aparece** en el feed (a diferencia de casas, que tienen vista propia).
-2. **El precio vive en COLUMNAS, no en `datos_json`.** El feed recalcula `precio_m2` y `tc_sospechoso` EN VIVO desde `precio_usd` + `tipo_cambio_detectado` + `area_total_m2`. El `precio_m2` guardado en `datos_json` se IGNORA.
-3. **`datos_json` ≠ `datos_json_enrichment`.** El feed lee la columna consolidada **`datos_json`**. El extractor+lector arman `datos_json` en esta forma (decisión: escribir directo, no depender del merge de n8n).
+2. **VISIBILIDAD — las 3 condiciones que sacan un depto del feed** (agregado 4-ago-2026; faltaba y es el
+   invariante más fácil de romper sin darse cuenta):
+   - **`status`** ∈ `('completado','actualizado')`. Los tres `excluido_*` (`_operacion`, `_calidad`,
+     `_zona`) lo sacan **sin borrarlo** — el aviso puede seguir vivo en el portal.
+   - **`es_activa = true`.** 🔴 En **shadow la baja se marca acá, SIN tocar el status** (en prod se usa
+     `status='inactivo_confirmed'`). Filtrar solo por status en shadow **cuenta avisos ya caídos**: fue
+     el bug que infló las vistas del 21-jul al 3-ago, corregido por la **mig 314**.
+   - **`duplicado_de IS NULL`.** Escritores: las migraciones históricas, el SQL del audit que aplica el
+     humano, y —desde el PR #64— **el cargador en `--apply`** cuando C21 reescribió el slug
+     (`dedup_por='cargador_slug_reescrito'`). O sea: una fila con `duplicado_de` **no implica** que la
+     haya marcado una persona.
+3. **El precio vive en COLUMNAS, no en `datos_json`.** El feed recalcula `precio_m2` y `tc_sospechoso` EN VIVO desde `precio_usd` + `tipo_cambio_detectado` + `area_total_m2`. El `precio_m2` guardado en `datos_json` se IGNORA.
+4. **`datos_json` ≠ `datos_json_enrichment`.** El feed lee la columna consolidada **`datos_json`**. El extractor+lector arman `datos_json` en esta forma (decisión: escribir directo, no depender del merge de n8n).
 
 ## A) COLUMNAS de `propiedades_v2` que lee el feed
 

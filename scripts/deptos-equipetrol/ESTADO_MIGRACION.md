@@ -265,7 +265,7 @@ Clon aislado para la corrida completa sin tocar prod (verificado post-apply):
 |---|---|---|
 | `tc_dinamico_binance` | Binance → `config_global.paralelo` | ✅ `actualizar-tc-binance.mjs` (a flipear) |
 | Snapshot absorción | agrega `v_mercado_venta` → `market_absorption_snapshots` | 🔨 falta script chico |
-| `auditoria_diaria_sici` | health/checks | ✅ cubierto por skills de audit. **2 audits shadow YA construidas:** `/audit-cola-shadow` (`auditar-matching-shadow.mjs`, matching+dedup en 3 superficies, respeta `campos_bloqueados`) + `/audit-deptos-shadow` (`auditar-shadow.mjs`, drift re-lectura del anuncio) |
+| `auditoria_diaria_sici` | health/checks | ✅ cubierto por skills de audit. **2 audits shadow YA construidas:** `/audit-cola-shadow` (`auditar-matching-shadow.mjs`, matching+dedup en 3 superficies, respeta `campos_bloqueados`) + `/audit-deptos-shadow` (`auditar-shadow.mjs`, drift re-lectura del anuncio). ⚠️ Desde el **PR #64 (4-ago-2026)** parte del dedup se movió al pipeline de CAPTURA: la republicación de C21 por **slug reescrito** (mismo código numérico, URL nueva) la detecta el discovery y la marca `duplicado_de` el cargador — ya no llega al audit |
 
 ### FUERA de alcance (después)
 - **Alquiler** (`alquiler/*`, 7 wf, también Firecrawl) — otra operación, tras venta.

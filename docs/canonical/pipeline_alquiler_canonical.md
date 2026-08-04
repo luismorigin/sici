@@ -386,7 +386,7 @@ Sin esto, el verificador no puede calcular `dias_desde_ausencia` y las propiedad
 El matching de alquileres es **independiente** del de ventas. Opera en 3 niveles:
 
 #### Tier 1 -- Exact Lookup (auto-approve, score 98%)
-Busca `nombre_edificio` exacto en `mv_nombre_proyecto_lookup` (vista materializada con variantes de 227 proyectos activos).
+Busca `nombre_edificio` exacto en `mv_nombre_proyecto_lookup` (vista materializada con las variantes de nombre de todos los proyectos activos). El universo crece: no lo hardcodees, consultalo — `SELECT COUNT(*) FROM proyectos_master WHERE activo` (referencia: **441 activos al 4-ago-2026**).
 
 #### Tier 2 -- Normalized Lookup (auto-approve, score 90%)
 Normaliza el nombre (`normalizar_nombre_edificio()`: quita prefijos, acentos, sufijos de zona) y busca en la vista. Si encuentra match, agrega el nombre original como alias al proyecto.
@@ -478,7 +478,12 @@ Funcion SQL que sirve el feed de alquileres en `/alquileres` y `/admin/alquilere
                    +──────────────+
 ```
 
-**Nota:** No existe el status `excluido_operacion` para nuevos alquileres. Ese status solo aplicaba cuando la funcion `registrar_discovery()` de venta encontraba un alquiler.
+**Nota (corregida 4-ago-2026):** el pipeline de alquiler **no genera** `excluido_operacion` por sí solo
+— sigue siendo cierto que `registrar_discovery()` de venta era su único emisor automático. Lo que ya
+**no** es cierto es que el status no pueda aparecer en un alquiler: el 4-ago se aplicó a mano sobre la
+prop **8000642** en `propiedades_v2_shadow` (un aviso de ALQUILER amoblado que el captador cargó como
+VENTA). O sea: **el auditor humano también lo escribe**, y puede tocar cualquier operación.
+Ver `sql/schema/propiedades_v2_schema.md` (§ los tres `excluido_*`).
 
 ---
 
