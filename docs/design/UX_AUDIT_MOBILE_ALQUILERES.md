@@ -77,6 +77,9 @@ LAYOUT 2 COLUMNAS (sidebar 320px + main area)
 │   │   └── TAP en foto o "Ver detalles" → BottomSheet (sidebar derecho 480px)
 │   │
 │   └── MAPA: pins con clustering + card flotante al seleccionar
+│       ⚠️ Estado a la fecha de este audit. Desde el 3-ago-2026 el mapa mobile
+│       lleva un carrusel de mini-tarjetas y filtra el feed por área visible
+│       (ver docs/design/PLAN_MAPA_FILTRO_AIRBNB.md).
 │
 ├── BottomSheet desktop (sidebar derecho, 480px, 100vh)
 │   ├── Header negro + [❤️ Fav] [✕ Cerrar]

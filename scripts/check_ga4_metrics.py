@@ -78,6 +78,9 @@ KEY_EVENTS_ALQUILER = [
     "open_map_mobile", "select_map_pin", "banner_zona_click",
     "page_enter_alquiler", "reset_filters", "lead_gate",
     "chat_open", "chat_message", "chat_search", "chat_click_property", "chat_lead",
+    # Filtro por área visible del mapa (3-ago-2026, PR #62). Sin esto el evento
+    # existe en GA4 pero no aparece en ningún reporte → parece que nadie lo usa.
+    "map_area_filter",
 ]
 
 KEY_EVENTS_VENTA = [
@@ -85,6 +88,7 @@ KEY_EVENTS_VENTA = [
     "view_photos_venta", "toggle_favorite_venta", "share_venta",
     "no_results_venta", "switch_view_venta", "open_map_mobile_venta",
     "lead_gate_venta",
+    "map_area_filter_venta",  # ver nota en KEY_EVENTS_ALQUILER
 ]
 
 # El embudo CANÓNICO (paso 3 del plan de medición, 22-jul-2026).

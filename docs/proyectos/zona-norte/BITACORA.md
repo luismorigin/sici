@@ -1024,7 +1024,7 @@ Feed público de casas ZN sobre `v_mercado_casas` (**SSG + filtrado client-side,
 **Verificación:** `tsc --noEmit` limpio; `/ventas/casas` carga 200 con las 291 casas embebidas, `noindex` presente, 0 errores de runtime.
 
 **Pendiente:** merge a main + deploy + **cron de captura** (routine Claude Code, cablear `extraerCampos()`) + asset `og:image` (`skyline-zona-norte.jpg`).
-**Deuda detectada:** `VentaMap` reconstruye el mapa y resetea el zoom al seleccionar un pin (afecta a todos los feeds) → anotada en `docs/backlog/DEUDA_TECNICA.md`.
+**Deuda detectada:** `VentaMap` reconstruye el mapa y resetea el zoom al seleccionar un pin (afecta a todos los feeds) → anotada en `docs/backlog/DEUDA_TECNICA.md`. — ✅ **Resuelta el 3-ago-2026** (PR #62, Fase 0); los feeds ZN también lo heredaron, verificados.
 
 ---
 

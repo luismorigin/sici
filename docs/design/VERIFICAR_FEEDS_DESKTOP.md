@@ -1,7 +1,8 @@
-# Verificar los feeds desktop (`/ventas`, `/alquileres`)
+# Verificar los feeds (`/ventas`, `/alquileres`) — desktop y mobile
 
-Cómo verificar cambios visuales/de layout del **desktop** de los feeds. El
-resumen: **usar Playwright headless**, no el preview interno.
+Cómo verificar cambios visuales/de layout de los feeds. El resumen: **usar
+Playwright headless**, no el preview interno. La primera parte es desktop; al
+final está la sección **mobile**, que tiene sus propios gotchas.
 
 ## Por qué NO alcanza el preview interno / mirar el dev server
 
@@ -53,6 +54,38 @@ reproducible.
 - Cards de lista densa: `.vlc` (ventas) / `.alc` (alquileres)
 - Side sheet: `.bs-side` (ventas) / `.bs-side-alq` (alquileres)
 - Pills de filtro: `.vfp` / `.afp`
+- Filtro por área del mapa: botón `.vd-map-search-btn` / `.ad-map-search-btn` ·
+  chip `.vd-area-chip` / `.ad-area-chip` · contador `.vd-count-num2` / `.ad-count-num2`
+
+## Verificar MOBILE
+
+Desde el filtro por área del mapa (3-ago-2026) hay superficie mobile que también
+requiere Playwright. Tres gotchas que cuestan medio día descubrir:
+
+1. **No alcanza con achicar el viewport.** Hay que pasar `isMobile: true` +
+   `hasTouch: true`, si no el layout mobile no se activa bien:
+   ```js
+   const p = await b.newPage({
+     viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
+     deviceScaleFactor: 2,
+   })
+   ```
+2. **Un swipe con `mouse.move` NO arrastra un carrusel** (`overflow-x` + scroll-snap):
+   el mouse arrastra el mapa, no el contenedor. Para deslizar el carrusel del mapa
+   usar **`mouse.wheel(deltaX, 0)`** (puede hacer falta más de un tick para vencer el
+   snap). Con el swipe uno concluye equivocadamente que la sincronización está rota.
+3. **El binario de Chromium de la caché puede no coincidir** con la versión del paquete
+   `playwright` (error "Executable doesn't exist"). En vez de bajar browsers, pasar el
+   que ya está: `chromium.launch({ executablePath: '<...>/ms-playwright/chromium_headless_shell-XXXX/chrome-headless-shell-win64/chrome-headless-shell.exe' })`.
+
+**Selectores mobile:** header `.mfh` · feed TikTok `.mt-feed` · barra inferior
+`.mt-bottombar` (botón `.mt-bb-map`) · overlay del mapa `.mt-map-overlay` /
+`.alq-mobile-map-overlay` · carrusel `.mt-rail` / `.alq-rail` (cada tarjeta lleva
+`data-rail-idx`) · botón puente `.mt-map-apply` / `.alq-map-apply` · chip de área
+`.mt-area-chip` / `.alq-area-chip`.
+
+**Cerrar el side sheet** (desktop): NO responde a `Escape`. Usar `.bs-side .bs-close`
+en ventas y `.bs-side-alq .bsa-nav-close` en alquileres.
 
 ## Límite conocido: tiles satelitales
 
