@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simón · Informe de Mercado — Equipetrol (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --arena:#EDE8DC; --negro:#141414; --salvia:#3A6A48;
+    --salvia-suave:#E3EBE4; --linea:#D8D2C4; --gris:#6B6B66;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#CFC9BB;font-family:'DM Sans',system-ui,sans-serif;color:var(--negro);padding:32px 12px;}
+  .pagina{max-width:840px;margin:0 auto 28px;background:var(--arena);border-radius:6px;padding:56px 64px;box-shadow:0 8px 30px rgba(0,0,0,.18);}
+  h1,h2,h3{font-family:'Figtree',system-ui,sans-serif}
+  .eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--salvia);font-weight:700;margin-bottom:10px}
+  .marca{display:flex;align-items:center;gap:10px;margin-bottom:48px}
+  .marca .punto{width:12px;height:12px;border-radius:50%;background:var(--salvia)}
+  .marca span{font-family:'Figtree';font-weight:800;font-size:20px;letter-spacing:-0.02em}
+  .marca small{color:var(--gris);font-size:12px;margin-left:auto;letter-spacing:.08em;text-transform:uppercase}
+
+  /* Portada */
+  .portada h1{font-size:46px;font-weight:800;letter-spacing:-0.03em;line-height:1.05;margin:8px 0 18px}
+  .portada .sub{font-size:17px;color:var(--gris);max-width:520px;line-height:1.5}
+  .sello{display:inline-flex;align-items:center;gap:8px;background:var(--negro);color:var(--arena);border-radius:999px;padding:9px 18px;font-size:12.5px;font-weight:500;margin-top:34px}
+  .sello b{color:#9CC7A6}
+  .portada .meta{margin-top:120px;border-top:1px solid var(--linea);padding-top:18px;display:flex;justify-content:space-between;font-size:13px;color:var(--gris)}
+  .portada .meta b{color:var(--negro)}
+
+  h2{font-size:26px;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px}
+  .lead{color:var(--gris);font-size:14.5px;margin-bottom:28px;max-width:600px;line-height:1.5}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:30px}
+  .kpi{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:18px 20px}
+  .kpi .v{font-family:'Figtree';font-size:30px;font-weight:800;letter-spacing:-0.02em}
+  .kpi .v small{font-size:15px;color:var(--gris);font-weight:600}
+  .kpi .l{font-size:12px;color:var(--gris);margin-top:4px;line-height:1.35}
+
+  .hallazgo{display:flex;gap:14px;background:var(--salvia-suave);border-left:4px solid var(--salvia);border-radius:0 10px 10px 0;padding:16px 18px;margin-bottom:12px}
+  .hallazgo .num{font-family:'Figtree';font-weight:800;color:var(--salvia);font-size:18px}
+  .hallazgo p{font-size:14px;line-height:1.5}
+  .hallazgo b{font-weight:700}
+
+  /* Barras */
+  .bar-row{display:grid;grid-template-columns:150px 1fr 120px;align-items:center;gap:12px;margin-bottom:11px;font-size:13.5px}
+  .bar-track{background:#DDD7C9;border-radius:5px;height:26px;position:relative}
+  .bar-fill{background:var(--salvia);height:100%;border-radius:5px;display:flex;align-items:center;justify-content:flex-end;padding-right:9px;color:#fff;font-weight:700;font-size:12.5px;font-family:'Figtree'}
+  .bar-fill.claro{background:#7FA98B}
+  .bar-meta{color:var(--gris);font-size:12px;text-align:right}
+  .nota-n{font-size:11.5px;color:var(--gris);margin-top:14px;font-style:italic}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff;border-radius:10px;overflow:hidden;border:1px solid var(--linea)}
+  th{background:var(--negro);color:var(--arena);text-align:left;padding:11px 14px;font-family:'Figtree';font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+  td{padding:11px 14px;border-top:1px solid #EFEAE0}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr.destacada td{background:var(--salvia-suave);font-weight:700}
+  .chip{display:inline-block;background:var(--salvia-suave);color:var(--salvia);border-radius:999px;padding:2px 10px;font-size:11.5px;font-weight:700}
+  .chip.alto{background:#F3E3DA;color:#9A5B3C}
+
+  .disclaimer{background:#fff;border:1px dashed var(--linea);border-radius:10px;padding:16px 18px;font-size:13px;color:var(--gris);line-height:1.55;margin-top:22px}
+  .disclaimer b{color:var(--negro)}
+
+  .metodo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .metodo .caja{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:18px 20px}
+  .metodo h3{font-size:15px;margin-bottom:10px}
+  .metodo ul{list-style:none}
+  .metodo li{font-size:13px;line-height:1.5;padding-left:20px;position:relative;margin-bottom:8px}
+  .metodo .si li::before{content:"✓";position:absolute;left:0;color:var(--salvia);font-weight:700}
+  .metodo .no li::before{content:"✕";position:absolute;left:0;color:#9A5B3C;font-weight:700}
+
+  .pie{margin-top:36px;border-top:1px solid var(--linea);padding-top:14px;display:flex;justify-content:space-between;font-size:11.5px;color:var(--gris)}
+  .watermark{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:var(--negro);color:var(--arena);font-size:11px;letter-spacing:.15em;padding:5px 16px;border-radius:999px;z-index:9;opacity:.85}
+  @media(max-width:700px){.pagina{padding:32px 22px}.kpis{grid-template-columns:1fr 1fr}.metodo{grid-template-columns:1fr}.portada h1{font-size:32px}.bar-row{grid-template-columns:110px 1fr 90px}}
+</style>
+</head>
+<body>
+<div class="watermark">MOCKUP · DATA REAL AL 3-AGO-2026</div>
+
+<!-- ============ PORTADA ============ -->
+<section class="pagina portada">
+  <div class="marca"><div class="punto"></div><span>Simón</span><small>Inteligencia Inmobiliaria</small></div>
+  <div class="eyebrow">Informe de Mercado · Nº 2026-08</div>
+  <h1>Equipetrol<br>Departamentos en venta y alquiler</h1>
+  <p class="sub">402 avisos activos verificados propiedad por propiedad, cruzados contra un catálogo de 447 edificios georreferenciados. Precios normalizados a un solo tipo de cambio, duplicados eliminados, bajas confirmadas contra el portal.</p>
+  <div class="sello">Dato fiduciario · <b>nadie paga por aparecer mejor en este informe</b></div>
+  <div class="meta">
+    <div>Preparado para<br><b>Desarrolladora Ejemplo S.R.L.</b></div>
+    <div>Corte de datos<br><b>3 de agosto de 2026</b></div>
+    <div>Cobertura<br><b>6 zonas · Equipetrol, Santa Cruz</b></div>
+  </div>
+</section>
+
+<!-- ============ RESUMEN EJECUTIVO ============ -->
+<section class="pagina">
+  <div class="eyebrow">01 · Resumen ejecutivo</div>
+  <h2>Lo que el mercado dice hoy</h2>
+  <p class="lead">Cinco números para decidir, y los tres hallazgos que cambiarían un proyecto.</p>
+
+  <div class="kpis">
+    <div class="kpi"><div class="v">402</div><div class="l">avisos activos verificados (deptos venta)</div></div>
+    <div class="kpi"><div class="v">$1.692<small>/m²</small></div><div class="l">mediana general del m² pedido (USD)</div></div>
+    <div class="kpi"><div class="v">78<small> días</small></div><div class="l">mediana de permanencia en mercado</div></div>
+    <div class="kpi"><div class="v">189</div><div class="l">avisos de alquiler activos (la otra mitad de la demanda)</div></div>
+    <div class="kpi"><div class="v">5,5%</div><div class="l">yield bruto anual del 2 dormitorios (mejor tipología)</div></div>
+    <div class="kpi"><div class="v">26%</div><div class="l">de la oferta es preventa publicada</div></div>
+  </div>
+
+  <div class="hallazgo"><div class="num">1</div><p><b>El m² más caro es el más chico.</b> El monoambiente pide $1.837/m² — un 16% más que el 3 dormitorios ($1.589/m²). El mercado paga premium por ticket bajo, no por tamaño: el producto de inversión manda.</p></div>
+  <div class="hallazgo"><div class="num">2</div><p><b>La preventa publicada casi no descuenta.</b> Mediana preventa $1.700/m² vs $1.750/m² entrega inmediata: apenas −2,9%. El descuento real de pozo se negocia en privado y no aparece en portales — si su plan financiero asume "preventa = 20% menos", este dato lo desafía.</p></div>
+  <div class="hallazgo"><div class="num">3</div><p><b>Sirari rota más rápido y pide más.</b> $1.858/m² con 71 días de permanencia mediana, contra 105-113 días en Eq. Oeste y Villa Brígida. Precio alto Y velocidad alta en la misma zona = demanda real, no ilusión de precio.</p></div>
+</section>
+
+<!-- ============ PRECIO POR ZONA ============ -->
+<section class="pagina">
+  <div class="eyebrow">02 · Precio por zona</div>
+  <h2>El m² pedido, zona por zona</h2>
+  <p class="lead">Mediana del precio por m² (USD, normalizado a un solo tipo de cambio) sobre avisos activos. La columna derecha: cuántos avisos sostienen el número y cuántos días lleva en mercado la mitad de esa oferta.</p>
+
+  <div class="bar-row"><div><b>Eq. Norte</b></div><div class="bar-track"><div class="bar-fill" style="width:100%">$1.893</div></div><div class="bar-meta">n=44 · 79 días</div></div>
+  <div class="bar-row"><div><b>Sirari</b></div><div class="bar-track"><div class="bar-fill" style="width:98%">$1.858</div></div><div class="bar-meta">n=102 · 71 días</div></div>
+  <div class="bar-row"><div><b>Eq. Centro</b></div><div class="bar-track"><div class="bar-fill claro" style="width:88%">$1.672</div></div><div class="bar-meta">n=156 · 77 días</div></div>
+  <div class="bar-row"><div><b>Eq. Oeste</b></div><div class="bar-track"><div class="bar-fill claro" style="width:86%">$1.625</div></div><div class="bar-meta">n=48 · 105 días</div></div>
+  <div class="bar-row"><div><b>V. Brígida</b></div><div class="bar-track"><div class="bar-fill claro" style="width:82%">$1.557</div></div><div class="bar-meta">n=47 · 113 días</div></div>
+  <p class="nota-n">Eq. 3er Anillo se omite del ranking: solo 5 avisos activos — lo declaramos en vez de mostrar un número débil.</p>
+
+  <div class="disclaimer"><b>Cómo leerlo:</b> son precios <b>pedidos</b> por los vendedores, no de cierre (Bolivia no tiene registro público de transacciones). El valor está en la comparación entre zonas y en la evolución mes a mes, no en el centavo.</div>
+</section>
+
+<!-- ============ TIPOLOGÍAS ============ -->
+<section class="pagina">
+  <div class="eyebrow">03 · Tipologías</div>
+  <h2>¿Qué producto construir?</h2>
+  <p class="lead">La tabla que define el mix de un proyecto: cuánta oferta compite, a qué superficie típica, a qué precio total y en qué rango de m² (percentil 25 a 75 — el "rango típico" donde vive el 50% central del mercado).</p>
+
+  <table>
+    <tr><th>Tipología</th><th class="num">Oferta activa</th><th class="num">Superficie típica</th><th class="num">Precio mediano</th><th class="num">Rango típico $/m²</th></tr>
+    <tr><td>Monoambiente</td><td class="num">100</td><td class="num">36 m²</td><td class="num">$69.050</td><td class="num">$1.645 – $1.995</td></tr>
+    <tr><td>1 dormitorio</td><td class="num">155</td><td class="num">51 m²</td><td class="num">$87.750</td><td class="num">$1.538 – $1.940</td></tr>
+    <tr class="destacada"><td>2 dormitorios <span class="chip">mejor yield</span></td><td class="num">116</td><td class="num">87 m²</td><td class="num">$141.525</td><td class="num">$1.508 – $1.905</td></tr>
+    <tr><td>3 dormitorios</td><td class="num">28</td><td class="num">163 m²</td><td class="num">$253.771</td><td class="num">$1.306 – $1.680</td></tr>
+  </table>
+
+  <div class="hallazgo" style="margin-top:22px"><div class="num">→</div><p><b>El 1 dormitorio es la tipología más ofertada (155 avisos)</b> — quien entre con más monoambientes y 1D compite contra el 63% de todo el inventario. El 2D combina menos competencia relativa con el mejor retorno de alquiler (sección 05).</p></div>
+</section>
+
+<!-- ============ COMPETENCIA ============ -->
+<section class="pagina">
+  <div class="eyebrow">04 · Competencia directa</div>
+  <h2>Edificio por edificio</h2>
+  <p class="lead">Los 10 edificios con más unidades en venta hoy — contra quién compite su proyecto, a qué m² mediano y en qué rango de tickets. Esto solo es posible porque cada aviso está identificado con su edificio (87% de la oferta matcheada).</p>
+
+  <table>
+    <tr><th>Edificio</th><th>Zona</th><th class="num">Unidades</th><th class="num">$/m² mediano</th><th class="num">Tickets (min–max)</th></tr>
+    <tr><td>Condominio Maré</td><td>Sirari</td><td class="num">22</td><td class="num">$1.952</td><td class="num">$87.750 – $294.000</td></tr>
+    <tr><td>Rhodium</td><td>Sirari</td><td class="num">16</td><td class="num">$1.890</td><td class="num">$62.650 – $156.900</td></tr>
+    <tr><td>Stone 3</td><td>V. Brígida</td><td class="num">13</td><td class="num">$1.928</td><td class="num">$47.100 – $160.000</td></tr>
+    <tr><td>Lofty Island</td><td>Eq. Oeste</td><td class="num">13</td><td class="num">$1.648</td><td class="num">$62.843 – $167.240</td></tr>
+    <tr><td>Sky Eclipse</td><td>Eq. Oeste</td><td class="num">11</td><td class="num">$1.750</td><td class="num">$66.000 – $223.391</td></tr>
+    <tr><td>Speranto Verdi</td><td>Sirari</td><td class="num">10</td><td class="num">$1.654</td><td class="num">$52.500 – $88.000</td></tr>
+    <tr><td>Uptown Drei</td><td>Eq. Oeste</td><td class="num">8</td><td class="num">$1.732</td><td class="num">$58.500 – $160.000</td></tr>
+    <tr><td>Magnum Residencias</td><td>Eq. Centro</td><td class="num">8</td><td class="num">$1.644</td><td class="num">$133.000 – $1.040.000</td></tr>
+    <tr><td>Sky Moon <span class="chip alto">m² más alto</span></td><td>Eq. Norte</td><td class="num">7</td><td class="num">$2.103</td><td class="num">$85.000 – $227.702</td></tr>
+    <tr><td>HH Once Equipetrol</td><td>Eq. Centro</td><td class="num">7</td><td class="num">$1.483</td><td class="num">$52.600 – $116.600</td></tr>
+  </table>
+  <p class="nota-n">22 unidades a la venta en un mismo condominio (Maré) es también una señal de salida de inversores — la versión completa del informe lo analiza por antigüedad del aviso.</p>
+</section>
+
+<!-- ============ ALQUILER Y YIELD ============ -->
+<section class="pagina">
+  <div class="eyebrow">05 · Alquiler y retorno</div>
+  <h2>¿Qué renta el producto?</h2>
+  <p class="lead">Alquiler mediano pedido (en bolivianos, la moneda real del mercado de alquiler) y el yield bruto anual que resulta contra el precio de compra mediano de la misma tipología.</p>
+
+  <table>
+    <tr><th>Tipología</th><th class="num">Avisos</th><th class="num">Alquiler mediano</th><th class="num">Equiv. USD</th><th class="num">Yield bruto anual</th></tr>
+    <tr><td>Monoambiente</td><td class="num">64</td><td class="num">Bs 3.500</td><td class="num">$301</td><td class="num">5,2%</td></tr>
+    <tr><td>1 dormitorio</td><td class="num">73</td><td class="num">Bs 4.485</td><td class="num">$387</td><td class="num">5,3%</td></tr>
+    <tr class="destacada"><td>2 dormitorios</td><td class="num">39</td><td class="num">Bs 7.500</td><td class="num">$644</td><td class="num">5,5%</td></tr>
+    <tr><td>3 dormitorios</td><td class="num">13</td><td class="num">Bs 9.350</td><td class="num">$816</td><td class="num">3,9%</td></tr>
+  </table>
+
+  <div class="disclaimer"><b>Yield bruto = alquiler pedido × 12 ÷ precio de venta pedido de la misma tipología.</b> No descuenta expensas, vacancia ni mantenimiento; con n=13, el dato del 3 dormitorios es indicativo. El informe completo incluye el corte amoblado vs sin amoblar (el amoblado explica buena parte del premium del alquiler chico).</div>
+</section>
+
+<!-- ============ METODOLOGÍA ============ -->
+<section class="pagina">
+  <div class="eyebrow">06 · Metodología</div>
+  <h2>Por qué este dato es distinto</h2>
+  <p class="lead">Este informe no agrega avisos: los verifica. Cada número de las páginas anteriores pasó por este proceso, todas las noches.</p>
+
+  <div class="metodo">
+    <div class="caja si"><h3>Lo que hacemos</h3><ul>
+      <li><b>Verificación nocturna:</b> cada aviso se contrasta contra el portal; las bajas se confirman, no se asumen.</li>
+      <li><b>Un solo tipo de cambio:</b> todos los precios normalizados — comparables entre sí aunque el aviso original mezcle dólares billete, transferencia o bolivianos.</li>
+      <li><b>Deduplicación:</b> el mismo depto publicado por 3 agencias cuenta una sola vez.</li>
+      <li><b>Identificación por edificio:</b> 87% de los avisos anclados a un edificio real georreferenciado — por eso existe la sección 04.</li>
+      <li><b>n declarado siempre:</b> cada mediana dice cuántos avisos la sostienen; cuando el n es débil, lo decimos.</li>
+    </ul></div>
+    <div class="caja no"><h3>Lo que NO hacemos</h3><ul>
+      <li>Nadie paga por aparecer, destacarse u ordenarse mejor en este informe.</li>
+      <li>No mostramos precios de cierre como si existieran: son precios pedidos y está declarado en cada página.</li>
+      <li>No recomendamos comprar ni vender un inmueble específico — entregamos el mercado, la decisión es suya.</li>
+      <li>No rellenamos huecos: donde no hay dato suficiente, va "sin base suficiente", no un invento.</li>
+    </ul></div>
+  </div>
+
+  <div class="pie">
+    <div>Simón · Inteligencia Inmobiliaria — simonbo.com</div>
+    <div>Fuentes: Century21, Remax, Bien Inmuebles · Corte 3-ago-2026</div>
+  </div>
+</section>
+
+</body>
+</html>
