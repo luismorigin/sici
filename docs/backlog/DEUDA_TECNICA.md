@@ -42,11 +42,11 @@ workflow REAL en la UI, no el JSON local. Hay un task chip pendiente de esta ses
 
 Archivos: `pages/index.tsx`, `pages/sobre-simon.tsx`, `pages/whatsapp.tsx`, `pages/sitemap.xml.tsx`, `public/robots.txt`. Memoria: `project_superficies_publicas_branch`.
 
-## VentaMap se re-dibuja y resetea el zoom al seleccionar un pin (24 Jun 2026)
+## ✅ RESUELTO (3 Ago 2026) — VentaMap se re-dibuja y resetea el zoom al seleccionar un pin (24 Jun 2026)
 
-**Qué pasa:** en `components/venta/VentaMap.tsx`, el `useEffect` que construye el mapa depende de `buildMap`, y este de `onSelectProperty`. Los feeds (`/ventas`, `/zona-norte/ventas`, `/ventas/casas`) pasan ese handler como arrow inline → nueva referencia en cada render → al clickear un pin (cambia `mapSelectedId` → re-render) el mapa se **reconstruye entero** y vuelve a hacer `fitBounds`, reseteando zoom/centro. Afecta a TODOS los feeds, NO es específico de casas.
+**Qué pasaba:** en `components/venta/VentaMap.tsx`, el `useEffect` que construía el mapa dependía de `buildMap`, y este de `onSelectProperty`. Los feeds (`/ventas`, `/zona-norte/ventas`, `/ventas/casas`) pasan ese handler como arrow inline → nueva referencia en cada render → al clickear un pin el mapa se **reconstruía entero** y volvía a hacer `fitBounds`, reseteando zoom/centro. Afectaba a TODOS los feeds.
 
-**Fix (no aplicado):** envolver el handler en `useCallback` en cada feed, o —mejor— separar en `VentaMap` el efecto de construcción del de actualización de marcadores para que `onSelectProperty` no dispare rebuild. Detectado armando el feed `/ventas/casas`. Prioridad **baja** (cosmético). Ver memoria/contexto del feed de casas ZN.
+**Fix aplicado (rama `worktree-mapa-airbnb-feeds`, Fase 0 del filtro por área del mapa):** en `VentaMap.tsx` y `AlquilerMapMulti.tsx` se separó la construcción (una vez, teardown solo al desmontar) de la actualización de markers (repuebla el cluster). El handler vive en un ref (su identidad ya no importa, los feeds pueden seguir pasando arrows inline) y una firma `id:precio` del dataset evita redibujar/re-encuadrar cuando el array cambia de identidad sin cambiar contenido. `fitBounds` solo cuando el dataset realmente cambió. Motivo de la promoción de prioridad: era **bloqueante** para el filtro "Buscar en esta zona" (el rebuild+fitBounds generaba loop de feedback con el filtro por bounds) — ver `docs/design/PLAN_MAPA_FILTRO_AIRBNB.md`. Verificado con Playwright: pin-click/hover/sheet no reconstruyen la instancia ni tocan el zoom.
 
 ## Módulo TC dinámico — DEPRECADO (19 Jun 2026)
 
