@@ -147,7 +147,32 @@ Las 5 activas (156, 309, 385, 158, 452) tienen valores plausibles — no requier
   primero, después el guard.**
 - [ ] **Aliases para proyectos sin aliases** — auditoría reveló que la mayoría de proyectos Eurodesign + Mirage no tenían aliases. Sería útil un audit one-shot que detecte pm con `alias_conocidos = NULL` y sugiera variantes desde props históricas.
 
-## Props lejos de su proyecto master — MEDIDO, sin resolver (4 Ago 2026)
+## Props lejos de su proyecto master — ✅ ALARMA EN PROD + Portobello corregido (4 Ago 2026)
+
+> **Cierre del mismo día (PR #66, `d59a024`).** Lo de abajo se escribió a la mañana y quedó
+> parcialmente superado — se conserva porque la medición y la trazabilidad del ticket huérfano
+> siguen siendo válidas. Lo que cambió:
+>
+> 1. **La alarma SÍ se implementó**: superficie 5 del audit nocturno (`auditar-matching-shadow.mjs`),
+>    umbral 800 m, con memoria (`confirmado_por` / `distancia_revisada`) y respetando el detector de
+>    pines genéricos. **REPORTA, NO DESCONECTA.**
+> 2. 🔴 **La "hipótesis invertida" de abajo es solo la mitad de la verdad.** Se leyeron 6 casos: en
+>    **3 el GPS malo era el del PM** (todos del mismo edificio) y en **3 el match estaba BIEN y lo que
+>    fallaba era el pin que el captador puso en el portal**. Por eso la superficie 5 no degrada nada:
+>    un guard automático habría roto 3 matches correctos.
+> 3. **Portobello Isuto (pm 269) corregido**: su ficha tenía las coordenadas **copiadas del pm 421
+>    "Portobello 6"** (3 m de diferencia) y `gps_verificado_visual='false'`. Un solo dato mal producía
+>    4 síntomas: 3 avisos a 4 km · 2 avisos ajenos que *parecían* correctos · el pm 421 con 0 avisos ·
+>    y nada lo detectaba porque el nombre matcheaba perfecto. GPS confirmado por el founder en Google
+>    Maps; 2107/2108 reasignadas al pm 421.
+> 4. **Pista automatizada** (la que resolvió el caso a mano): si los hermanos del pm están pegados →
+>    el sospechoso es el aviso; si ninguno está cerca → el sospechoso es la ficha, y corregirla arregla
+>    todos sus avisos de una.
+>
+> Quedan **7 a >2 km** (de 10) y la cola larga sin revisar. La superficie 5 los va a listar cada noche
+> hasta que se los marque como revisados.
+
+
 
 **Problema:** hay props activas a distancias imposibles de su `proyectos_master` asignado. Medido sobre
 `propiedades_v2_shadow` (932 activas con GPS en ambos lados):
@@ -229,6 +254,33 @@ remanente. Detalle: memoria `project_c21_slug_reescrito`.
 
 📉 **Señal de mercado, no solo higiene:** en 3 de los 5 casos el precio había **bajado** (−28%, −7%, −11%).
 Un slug reescrito es un aviso editado — y muchas veces, una baja de precio.
+
+### Remax también reescribe el slug — medido, NO se implementa (4 Ago 2026)
+
+**Existe el mismo comportamiento en Remax.** Sus URLs terminan en `<mlsid>-<n>`, y el mismo aviso puede
+aparecer con dos slugs: `...-santa-cruz-de-la-sierra-1200164198-31` y
+`...-santa-cruz-de-la-sierra-**norte**-1200164198-31`.
+
+**Pero hoy no hay ningún caso que resolver.** Medido el 4-ago sobre `propiedades_v2_shadow`:
+**0 grupos** con MLSID repetido. Los 3 registros de ese MLSID viven en `propiedades_v2` (prod) y 2 de
+los 3 ya están `inactivo_confirmed` — el verificador los fue dando de baja por su cuenta cuando
+desaparecieron del portal.
+
+**Decisión: NO se implementa el gemelo.** Sería código para un problema que hoy no existe (en C21 había
+8 casos y 5 activos y visibles; acá, cero). Además las URLs de Remax son más irregulares, así que
+extraer el identificador tiene más chance de fallar que en C21.
+
+**Cuándo reactivar:** si aparece un grupo con MLSID repetido y ambos activos. La superficie 5 y el dedup
+del audit ya cubren el síntoma indirectamente (dos copias del mismo aviso suelen quedar en el mismo pm).
+
+**Query de detección (re-medible):**
+```sql
+SELECT substring(url from '-(\d{8,}-\d+)$') AS mlsid, COUNT(*) AS props,
+       array_agg(id) AS ids, array_agg(duplicado_de) AS ya_marcados
+FROM propiedades_v2_shadow
+WHERE url LIKE '%remax.bo%' AND substring(url from '-(\d{8,}-\d+)$') IS NOT NULL
+GROUP BY 1 HAVING COUNT(*) > 1;
+```
 
 ---
 
