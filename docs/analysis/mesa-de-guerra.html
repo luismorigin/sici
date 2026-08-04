@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simón · La Mesa de Guerra — Equipetrol (mockup interactivo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --arena:#EDE8DC; --negro:#141414; --panel:#1C1C1A; --panel2:#232320;
+    --salvia:#3A6A48; --salvia-viva:#5E9C72; --linea:#33322E; --gris:#8A867C;
+    --terra:#D07A4A; --sand:#E0CE96;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--negro);color:var(--arena);font-family:'DM Sans',system-ui,sans-serif;min-height:100vh}
+  h1,h2,h3{font-family:'Figtree',system-ui,sans-serif}
+
+  .top{display:flex;align-items:center;gap:12px;padding:18px 28px;border-bottom:1px solid var(--linea);position:sticky;top:0;background:rgba(20,20,20,.94);backdrop-filter:blur(6px);z-index:50;flex-wrap:wrap}
+  .top .punto{width:11px;height:11px;border-radius:50%;background:var(--salvia-viva)}
+  .top .logo{font-family:'Figtree';font-weight:800;font-size:19px;letter-spacing:-.02em}
+  .top .tag{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--gris)}
+  .tabs{display:flex;gap:6px;margin-left:auto}
+  .tab{border:1px solid var(--linea);background:transparent;color:var(--gris);font-family:'Figtree';font-weight:700;font-size:13px;padding:9px 18px;border-radius:999px;cursor:pointer;transition:.18s}
+  .tab:hover{color:var(--arena)}
+  .tab.on{background:var(--salvia);border-color:var(--salvia);color:#fff}
+  .mock{position:fixed;bottom:12px;right:14px;background:var(--arena);color:var(--negro);font-size:10.5px;letter-spacing:.12em;padding:5px 14px;border-radius:999px;z-index:60;opacity:.9;font-weight:700}
+
+  .escena{display:none;max-width:1240px;margin:0 auto;padding:26px 24px 70px}
+  .escena.on{display:block}
+  .eyebrow{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--salvia-viva);font-weight:700;margin-bottom:8px}
+  h2{font-size:27px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+  .lead{color:var(--gris);font-size:14px;max-width:660px;line-height:1.55;margin-bottom:20px}
+
+  .layout{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start}
+  @media(max-width:980px){.layout{grid-template-columns:1fr}}
+
+  .mapa-caja{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:14px;position:relative}
+  .capas{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .capa{border:1px solid var(--linea);background:var(--panel2);color:var(--gris);font-size:12px;font-weight:700;font-family:'Figtree';padding:7px 14px;border-radius:999px;cursor:pointer;transition:.15s}
+  .capa.on{background:var(--arena);color:var(--negro);border-color:var(--arena)}
+  svg{display:block;width:100%;height:auto}
+  .tooltip{position:fixed;pointer-events:none;background:var(--arena);color:var(--negro);border-radius:10px;padding:10px 13px;font-size:12px;line-height:1.45;max-width:240px;z-index:99;display:none;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+  .tooltip b{font-family:'Figtree'}
+  .leyenda{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--gris);align-items:center}
+  .leyenda .sw{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+
+  .panel{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:20px}
+  .panel h3{font-size:15px;margin-bottom:12px}
+  .panel .vacio{color:var(--gris);font-size:13px;line-height:1.6}
+  .ficha .nombre{font-family:'Figtree';font-size:19px;font-weight:800;line-height:1.2}
+  .ficha .sub{color:var(--gris);font-size:12px;margin:3px 0 14px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+  .stat{background:var(--panel2);border-radius:10px;padding:11px 13px}
+  .stat .v{font-family:'Figtree';font-size:19px;font-weight:800}
+  .stat .l{font-size:10.5px;color:var(--gris);margin-top:2px;line-height:1.3}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{font-size:11px;font-weight:700;border-radius:999px;padding:3px 11px;background:#2A3A2E;color:#9CC7A6}
+  .chip.no{background:#2A2A28;color:#6B6B66;text-decoration:line-through}
+  .chip.terra{background:#3A2A20;color:var(--terra)}
+  .mini{font-size:11.5px;color:var(--gris);line-height:1.55;border-top:1px dashed var(--linea);padding-top:10px}
+  .kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .kpi{background:var(--panel);border:1px solid var(--linea);border-radius:12px;padding:12px 18px;min-width:130px}
+  .kpi .v{font-family:'Figtree';font-size:23px;font-weight:800}
+  .kpi .l{font-size:10.5px;color:var(--gris);margin-top:2px;line-height:1.3}
+
+  /* Simulador */
+  .form-fila{display:grid;grid-template-columns:96px 1fr 1fr;gap:8px;align-items:center;margin-bottom:8px;font-size:13px}
+  .form-fila input{width:100%;background:var(--panel2);border:1px solid var(--linea);color:var(--arena);border-radius:8px;padding:8px 10px;font-size:13px;font-family:'DM Sans'}
+  .form-head{display:grid;grid-template-columns:96px 1fr 1fr;gap:8px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gris);margin-bottom:6px}
+  .pos-fila{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);border-radius:10px;padding:10px 13px;margin-bottom:8px;font-size:13px;gap:8px;flex-wrap:wrap}
+  .pos-chip{font-family:'Figtree';font-weight:800;font-size:12px;border-radius:999px;padding:4px 13px}
+  .pos-dentro{background:#2A3A2E;color:#9CC7A6}
+  .pos-sobre{background:#3A2A20;color:var(--terra)}
+  .pos-bajo{background:#32302A;color:var(--sand)}
+  .pos-sin{background:#2A2A28;color:#6B6B66}
+  .shock{background:linear-gradient(135deg,#22301F,#1C1C1A);border:1px solid #2E4A36;border-radius:14px;padding:18px;margin-top:12px}
+  .shock .v{font-family:'Figtree';font-size:34px;font-weight:900;color:var(--salvia-viva)}
+  .shock .l{font-size:12px;color:var(--gris);line-height:1.5;margin-top:4px}
+  .amem-fila{display:flex;align-items:center;gap:10px;font-size:12.5px;margin-bottom:7px}
+  .amem-bar{flex:1;height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}
+  .amem-fill{height:100%;background:var(--salvia-viva);border-radius:4px}
+  .amem-pct{width:82px;text-align:right;color:var(--gris);font-size:11.5px}
+
+  /* Máquina del tiempo */
+  .tm-caja{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:24px}
+  .tm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+  .tm-lectura .fecha{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gris)}
+  .tm-lectura .valor{font-family:'Figtree';font-size:42px;font-weight:900;letter-spacing:-.02em;line-height:1.1}
+  .tm-lectura .delta{font-family:'Figtree';font-size:16px;font-weight:700;margin-top:2px}
+  .delta.neg{color:var(--terra)} .delta.pos{color:var(--salvia-viva)}
+  .moneda{display:flex;border:1px solid var(--linea);border-radius:999px;overflow:hidden}
+  .moneda button{background:transparent;border:none;color:var(--gris);font-family:'Figtree';font-weight:800;font-size:14px;padding:11px 26px;cursor:pointer;transition:.15s}
+  .moneda button.on{background:var(--arena);color:var(--negro)}
+  .tm-controles{display:flex;align-items:center;gap:14px;margin-top:14px}
+  .play{width:44px;height:44px;border-radius:50%;border:1px solid var(--linea);background:var(--panel2);color:var(--arena);font-size:15px;cursor:pointer;flex-shrink:0}
+  input[type=range]{flex:1;accent-color:var(--salvia-viva)}
+  .tm-nota{background:var(--panel2);border-radius:12px;padding:14px 18px;font-size:12.5px;color:var(--gris);line-height:1.6;margin-top:16px}
+  .tm-nota b{color:var(--arena)}
+  .pull-tm{font-family:'Figtree';font-size:20px;font-weight:800;max-width:640px;line-height:1.35;margin:22px 0 0;border-top:3px solid var(--salvia);padding-top:14px}
+  .pull-tm span{color:var(--salvia-viva)}
+</style>
+</head>
+<body>
+<div class="mock">MOCKUP · DATA REAL 3-AGO-2026</div>
+
+<header class="top">
+  <div class="punto"></div><span class="logo">Simón</span>
+  <span class="tag">La Mesa de Guerra · Equipetrol · Edición Desarrolladores</span>
+  <nav class="tabs">
+    <button class="tab on" data-esc="mapa">🗺️ La Mesa</button>
+    <button class="tab" data-esc="sim">📍 Su Proyecto</button>
+    <button class="tab" data-esc="tiempo">⏳ Máquina del Tiempo</button>
+  </nav>
+</header>
+
+<!-- ================= ESCENA 1: MAPA ================= -->
+<section class="escena on" id="esc-mapa">
+  <div class="eyebrow">402 avisos verificados · 138 edificios con oferta activa · corte 3-ago-2026</div>
+  <h2>Equipetrol como nunca se lo mostraron</h2>
+  <p class="lead">Cada punto es un edificio real, georreferenciado y verificado esta madrugada. Cambie de capa para ver el mismo mercado con cuatro lentes distintos — y toque cualquier edificio para su radiografía.</p>
+
+  <div class="kpis" id="kpis-mapa"></div>
+
+  <div class="layout">
+    <div class="mapa-caja">
+      <div class="capas">
+        <button class="capa on" data-capa="precio">💵 Precio $/m²</button>
+        <button class="capa" data-capa="velocidad">⚡ Velocidad</button>
+        <button class="capa" data-capa="oferta">🏢 Concentración</button>
+        <button class="capa" data-capa="salidas">🚪 Salidas de julio</button>
+      </div>
+      <svg id="mapa" viewBox="0 0 760 800"></svg>
+      <div class="leyenda" id="leyenda"></div>
+    </div>
+    <aside class="panel" id="ficha">
+      <h3>Radiografía de edificio</h3>
+      <p class="vacio">Toque un punto del mapa.<br><br>La radiografía muestra lo que ningún portal puede: cuántas unidades reales tiene en oferta ese edificio, a qué precio pide, hace cuánto, con qué amenidades y quién lo vende.</p>
+    </aside>
+  </div>
+</section>
+
+<!-- ================= ESCENA 2: SIMULADOR ================= -->
+<section class="escena" id="esc-sim">
+  <div class="eyebrow">Simulador de posicionamiento · datos vivos de mercado</div>
+  <h2>Ponga su torre en el mapa</h2>
+  <p class="lead">Toque el mapa donde está su terreno. El radio de 500 m se dibuja con sus comparables REALES adentro, su lista de precios se posiciona contra el rango vivo de la zona, y el shock de oferta se calcula solo. El proyecto es suyo; el mercado, el de esta madrugada.</p>
+
+  <div class="layout">
+    <div class="mapa-caja">
+      <svg id="mapa-sim" viewBox="0 0 760 800" style="cursor:crosshair"></svg>
+      <div class="leyenda"><span><span class="sw" style="background:#5E9C72"></span>edificio con oferta (tamaño = unidades)</span><span><span class="sw" style="background:#D07A4A"></span>▲ su terreno + radio 500 m</span></div>
+    </div>
+    <aside>
+      <div class="panel" style="margin-bottom:14px">
+        <h3>Su proyecto</h3>
+        <div class="form-head"><span></span><span>Unidades</span><span>Lista $/m²</span></div>
+        <div class="form-fila"><span>Mono</span><input type="number" id="u0" value="12" min="0"><input type="number" id="p0" value="1950" min="0"></div>
+        <div class="form-fila"><span>1 dorm.</span><input type="number" id="u1" value="24" min="0"><input type="number" id="p1" value="1890" min="0"></div>
+        <div class="form-fila"><span>2 dorm.</span><input type="number" id="u2" value="12" min="0"><input type="number" id="p2" value="2050" min="0"></div>
+      </div>
+      <div class="panel" id="sim-out">
+        <h3>Posicionamiento</h3>
+        <p class="vacio">Toque el mapa para ubicar su terreno.</p>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ================= ESCENA 3: MÁQUINA DEL TIEMPO ================= -->
+<section class="escena" id="esc-tiempo">
+  <div class="eyebrow">Serie reconstruida ene→jul 2026 · 1 dormitorio · 59 cortes</div>
+  <h2>¿En qué moneda mira usted el mercado?</h2>
+  <p class="lead">La misma serie, las dos monedas, dos historias distintas. Mueva el tiempo, apriete play, y cambie la moneda — el número grande es el que su directorio va a discutir.</p>
+
+  <div class="tm-caja">
+    <div class="tm-head">
+      <div class="tm-lectura">
+        <div class="fecha" id="tm-fecha">—</div>
+        <div class="valor" id="tm-valor">—</div>
+        <div class="delta" id="tm-delta">—</div>
+      </div>
+      <div class="moneda">
+        <button id="btn-usd" class="on">USD</button>
+        <button id="btn-bs">Bs</button>
+      </div>
+    </div>
+    <svg id="tm-chart" viewBox="0 0 900 300"></svg>
+    <div class="tm-controles">
+      <button class="play" id="tm-play">▶</button>
+      <input type="range" id="tm-slider" min="1" max="34" value="34">
+    </div>
+    <div class="tm-nota"><b>Cómo leer esta curva:</b> mediana del m² <b>pedido</b> del 1 dormitorio (91-151 avisos según la fecha), reconstruida propiedad por propiedad bajo una sola metodología de tipo de cambio. Error de método ±7%: sirve la <b>forma y dirección</b>, no el nivel exacto de un día. No son precios de cierre.</div>
+    <p class="pull-tm" id="tm-pull">En dólares el m² cayó <span>−15,1%</span> desde enero. Cambie a Bs y mire de nuevo.</p>
+  </div>
+</section>
+
+<div class="tooltip" id="tt"></div>
+
+<script>
+/* ============ DATA REAL (BD 3-ago-2026) ============ */
+var Z={EC:'Equipetrol Centro',EN:'Eq. Norte',SI:'Sirari',VB:'V. Brígida',EO:'Eq. Oeste',A3:'Eq. 3er Anillo'};
+var ZTOT={EC:156,SI:102,EO:48,VB:47,EN:44,A3:5};
+/* [id,nombre,lat,lon,zona,n,m2,dias,tmin,tmax,pis,gym,cow,chu,oficina] */
+var B=[
+[65,"Condominio Maré",-17.76565,-63.20037,"SI",22,1952,105,87750,294000,1,1,1,1,"Forza"],
+[17,"Rhodium",-17.76282,-63.19910,"SI",16,1890,12,62650,156900,1,0,0,1,"Business & Residences"],
+[2,"Lofty Island",-17.77108,-63.19466,"EO",13,1648,181,62843,167240,1,1,1,1,"Rita Quiroga"],
+[76,"Stone 3",-17.75872,-63.19350,"VB",13,1928,93,47100,160000,1,1,1,1,"Integra"],
+[30,"Sky Eclipse",-17.77239,-63.19195,"EO",11,1750,63,66000,223391,1,1,1,1,"Alfa"],
+[524,"Speranto Verdi",-17.76403,-63.20313,"SI",10,1654,71,52500,88000,1,1,1,1,"RE/MAX Union"],
+[499,"Magnum Residencias",-17.76854,-63.19254,"EC",8,1644,40,133000,1040000,1,1,0,1,"Select"],
+[57,"Uptown Drei",-17.77035,-63.19605,"EO",8,1732,96,58500,160000,1,1,1,1,"Signature"],
+[9,"Luxe Suites",-17.76480,-63.19382,"EC",7,1698,71,56711,140000,1,1,1,1,"Empire"],
+[12,"HH Once Equipetrol",-17.76405,-63.19356,"EC",7,1483,184,52600,116600,1,0,1,1,"Home"],
+[15,"Sky Moon",-17.75682,-63.19735,"EN",7,2103,68,85000,227702,1,1,1,1,"Azzero"],
+[248,"Portobello 5",-17.75395,-63.19236,"VB",6,1611,120,59671,98000,1,1,1,1,"Integra"],
+[34,"Condado VI Plaza Italia",-17.76854,-63.19726,"EC",6,1652,78,102647,252542,1,1,0,0,"Black"],
+[84,"Domus Tower",-17.77157,-63.18946,"EC",6,1701,50,55000,147495,1,1,1,1,"RE/MAX Black"],
+[16,"Sky Level",-17.76821,-63.19633,"EC",5,1593,62,132750,150400,0,0,0,0,"RE/MAX Fortaleza"],
+[48,"Sky Tower",-17.77131,-63.19113,"EC",5,2000,57,68000,135000,1,1,0,1,"Azzero"],
+[77,"You Smart Studios",-17.75876,-63.19810,"EN",5,1929,70,51469,223000,1,1,1,1,"Invictus"],
+[49,"HH Chuubi",-17.76812,-63.19463,"EC",5,1620,156,75000,160000,1,0,1,1,"Home"],
+[74,"Element by Elite",-17.76442,-63.20358,"SI",5,1631,88,53650,100000,1,1,0,1,"RE/MAX Black"],
+[47,"Luxe Tower",-17.77126,-63.19291,"EC",4,1536,50,81000,138000,1,1,1,1,"Rita Quiroga"],
+[529,"Vertical Güemes",-17.76989,-63.19106,"EC",4,1530,26,75968,182971,1,1,1,1,"Forza"],
+[326,"Portobello Green",-17.76440,-63.19170,"EC",4,1924,37,50000,98500,1,1,1,1,"Integra"],
+[321,"Stone 5",-17.76474,-63.20310,"SI",4,1865,167,59270,108077,1,1,1,1,"Integra"],
+[151,"Suites Los Laureles",-17.76667,-63.19778,"A3",4,1780,182,68156,72019,1,0,0,0,"RE/MAX Legacy"],
+[91,"Alto Busch",-17.77005,-63.20050,"EO",4,1101,164,57565,112031,1,1,1,1,"RE/MAX Emporio"],
+[61,"Edificio Klug",-17.76490,-63.19466,"EC",4,1760,71,74880,145000,1,1,1,1,"Real Estate Group"],
+[1,"Condominio Las Dalias",-17.76210,-63.19915,"SI",3,2002,304,103448,188575,1,0,1,1,"Norte"],
+[13,"Edificio Spazios",-17.76460,-63.19419,"EC",3,2331,124,105000,380000,1,0,0,1,"Exclusive"],
+[18,"Domus Infinity",-17.76497,-63.19160,"EC",3,1700,50,84370,130000,1,1,1,1,"Forza"],
+[19,"Domus Insignia",-17.76902,-63.19786,"EC",3,1570,28,56475,77000,1,1,1,1,"Alfa"],
+[23,"Green Tower",-17.75995,-63.19858,"EN",3,2500,50,206000,292500,1,1,0,1,"Exclusive"],
+[37,"Aqua Tower",-17.76554,-63.19509,"EC",3,2000,112,118749,133720,1,1,0,1,"Meraki"],
+[38,"Breeze Tower",-17.75503,-63.19132,"VB",3,1642,117,85000,147000,1,1,1,1,"Fortaleza"],
+[45,"Onix Art by Elite",-17.76617,-63.20177,"SI",3,1250,109,75000,88348,1,1,1,1,"Business & Residences"],
+[54,"Uptown NUU",-17.77000,-63.19669,"EC",3,1570,103,58900,240000,1,1,0,1,"BluRealty"],
+[55,"INIZIO",-17.77076,-63.19746,"EO",3,1370,151,40000,128888,1,0,0,1,"Grand Insignia"],
+[57.1,"Uptown Drei (torre 2)",-17.77035,-63.19605,"EC",3,1902,64,66000,145000,1,1,1,1,"Forza"],
+[64,"SÖLO Industrial Apartments",-17.76660,-63.19337,"EC",3,1539,90,68200,70459,1,0,1,1,"Home"],
+[90,"Grigia Residenze",-17.76003,-63.19703,"EN",3,1892,76,55000,70000,1,1,1,1,"Black"],
+[109,"Condominio Sky Luxia",-17.76542,-63.19430,"EC",3,2212,75,69000,85000,1,0,0,1,"Azzero"],
+[112,"Eurodesign Le Blanc",-17.75830,-63.19692,"EN",3,2241,77,92500,130000,1,1,1,1,"Azzero"],
+[135,"SKY Luxury",-17.75769,-63.19842,"EC",3,1534,35,50037,90000,1,1,1,1,"Deluxe"],
+[252,"Edificio Elite Sirari",-17.76428,-63.19979,"SI",3,1447,19,51126,67000,1,0,0,1,"Élite"],
+[280,"Sky Plaza Italia",-17.76959,-63.19669,"EC",3,1624,116,66000,209799,1,1,0,1,"Norte"],
+[283,"Speranto Residenze",-17.76737,-63.19525,"EC",6,1540,92,54000,111332,1,1,1,1,"Platinum"],
+[289,"Edificio Sirari Palm",-17.76390,-63.19929,"SI",3,1725,45,75431,95000,1,0,0,1,"Business & Residences"],
+[349,"Edificio Tanaro",-17.76073,-63.19722,"EN",3,1560,91,120000,141000,0,0,0,0,"Loyalty"],
+[228,"Edificio Vertical 60",-17.75699,-63.19137,"VB",2,1579,219,65000,118000,1,1,0,1,"RE/MAX Legacy"],
+[7,"Sky Elite",-17.76608,-63.19660,"EC",2,2000,74,61866,73000,1,1,1,1,"Empire"],
+[113,"Eurodesign Tower",-17.76648,-63.19713,"EC",2,1635,31,71485,102000,1,1,1,1,"Home"],
+[332,"Trivento IV",-17.76121,-63.19695,"EN",2,1588,14,58975,75883,0,0,0,0,"Signature"],
+[334,"Torre Real",-17.77095,-63.19145,"EC",2,1295,65,64500,190000,1,0,0,0,"Rita Quiroga"],
+[92,"Edificio Fragata",-17.77120,-63.19172,"EC",2,1686,170,200000,218500,1,1,0,1,"Business & Residences"],
+[337,"Eurodesign Suites",-17.76172,-63.20002,"SI",2,1743,70,80000,95000,1,1,0,1,"Business & Residences"],
+[85,"PÖRA by Vertical Homes",-17.76495,-63.20301,"SI",2,1526,126,86000,93000,0,0,0,0,"BluRealty"],
+[253,"Torre Ara",-17.77064,-63.18969,"EC",2,1745,62,79000,85000,1,0,0,1,"Atlas"],
+[254,"Condominio Omnia Prime",-17.76659,-63.20314,"SI",2,1456,115,126300,130000,1,0,0,1,"Forza"],
+[36,"Nano Smart",-17.76427,-63.19260,"EC",2,1937,74,52000,77443,1,0,1,1,"Blu Inversiones"],
+[50,"Condominio Sky Equinox",-17.76586,-63.20497,"SI",2,1837,103,75255,82950,1,0,1,0,"Alfa"],
+[294,"Condominio Azul",-17.75833,-63.19663,"EN",2,950,102,135000,139000,1,1,0,1,"Platinum"],
+[25,"Platinum II",-17.75490,-63.19722,"VB",2,1550,157,163120,170000,1,1,0,1,"BluRealty"],
+[275,"Eurodesign Soho",-17.76940,-63.19689,"EC",2,2369,81,130800,180000,1,1,1,1,"Norte"],
+[41,"Stratto Up",-17.75859,-63.19478,"VB",3,1528,24,65250,375000,1,1,1,1,"RE/MAX Infinity"],
+[162,"Condominio Stanza",-17.76800,-63.19544,"EC",2,1700,70,83046,95000,1,1,1,1,"Futuro"],
+[6,"La Riviera",-17.76049,-63.20195,"SI",2,1870,84,180000,395000,1,0,0,0,"RE/MAX Fortaleza"],
+[282,"Haus Equipetrol",-17.76407,-63.19223,"EC",2,1836,84,60000,120000,1,0,0,1,"Rita Quiroga"],
+[525,"Grigia Deluxe",-17.76377,-63.19870,"SI",2,1822,71,97000,104000,1,0,1,1,"RE/MAX Union"],
+[346,"Stone 6",-17.75469,-63.19256,"VB",2,1479,66,47000,60990,1,1,1,1,"Azzero"],
+[40,"Sky Lux",-17.75586,-63.19747,"VB",2,1459,95,88500,210000,0,0,0,1,"Business & Residences"],
+[226,"One Soul by Smart Studio",-17.76040,-63.19675,"EN",2,1823,34,58000,76300,1,0,1,1,"Forza"],
+[169,"Condominio Du Nord X",-17.75812,-63.19753,"EN",1,2750,76,82500,82500,1,0,0,1,"Exclusive"],
+[219,"Edificio Macororó 9",-17.76378,-63.19160,"EC",1,1500,116,255000,255000,1,0,0,1,"RE/MAX Fortaleza"],
+[221,"Santorini Ventura",-17.75501,-63.19459,"VB",1,1250,278,70000,70000,1,0,0,1,"RE/MAX Plus"],
+[222,"Condominio Sky Magnolia",-17.76360,-63.20304,"EC",1,1975,68,79000,79000,0,0,0,0,"Exclusive"],
+[224,"Legendary by Elite",-17.76120,-63.19911,"SI",1,1798,73,65000,65000,1,0,0,0,"Connection"],
+[21,"Condominio Cruz",-17.75367,-63.19143,"VB",1,1548,34,142212,142212,1,0,0,1,"Grand Insignia"],
+[249,"Luxe Residence",-17.75831,-63.19899,"EC",1,1650,140,133650,133650,1,1,0,1,"RE/MAX Emporio"],
+[250,"Edificio Macororó 5",-17.75669,-63.19758,"EN",1,1590,82,62000,62000,1,0,0,1,"Business & Residences"],
+[523,"Domus Onix",-17.76655,-63.20437,"SI",1,2085,34,68820,68820,0,0,0,0,"Alfa"],
+[255,"T-Veinticinco",-17.76528,-63.19218,"EC",1,1400,133,114744,114744,1,1,0,1,"RE/MAX Patrimonio"],
+[256,"Terrazo",-17.76824,-63.19934,"EC",1,1751,103,87000,87000,0,1,0,0,"RE/MAX Fortaleza"],
+[278,"Madero Residence",-17.76799,-63.19657,"SI",1,1961,106,200000,200000,1,0,0,1,"Premium"],
+[527,"Torre Santa Elena",-17.76731,-63.19660,"EC",1,1608,28,278000,278000,0,0,0,0,"Atlas"],
+[284,"Stone 2",-17.75516,-63.19168,"VB",1,1200,60,79464,79464,1,1,1,1,"Alfa"],
+[285,"Condominio Sky",-17.75696,-63.19812,"EN",1,1045,118,115000,115000,1,1,0,1,"Select"],
+[286,"Condominio Macororó 8",-17.77213,-63.20141,"EO",1,1307,27,150000,150000,1,0,0,1,"Blu Inversiones"],
+[528,"Los Cedros",-17.75555,-63.19256,"VB",1,1557,27,140000,140000,1,1,0,0,"RE/MAX Legacy"],
+[291,"Edificio Bamboo",-17.75562,-63.19601,"VB",2,1336,161,49500,71121,0,0,0,0,"Business & Residences"],
+[292,"Edificio MonteBelluna",-17.75900,-63.19468,"EN",1,1588,91,135000,135000,0,0,0,1,"Azzero"],
+[293,"Condominio Puerto Madero",-17.76532,-63.20288,"SI",1,1664,5,125000,125000,1,1,0,1,"RE/MAX Fortaleza"],
+[301,"Bellini Suites",-17.76716,-63.19620,"EC",1,2271,98,70402,70402,0,0,0,0,"Home"],
+[304,"Omnia Eco Lux",-17.76425,-63.20005,"SI",1,2386,112,179000,179000,1,0,0,1,"Integra"],
+[307,"Yotau All Suites",-17.77145,-63.19144,"EC",1,1311,33,140000,140000,1,1,0,0,"Ámbar"],
+[323,"Sky Onix",-17.75807,-63.19911,"EN",2,1833,91,76000,132000,0,1,0,0,"RE/MAX Emporio"],
+[324,"Edificio Aura Concept",-17.76660,-63.19521,"EC",1,1500,162,108000,108000,1,1,1,1,"RE/MAX Emporio"],
+[325,"+Plus Isuto",-17.75715,-63.19281,"VB",1,1670,151,110000,110000,0,0,0,1,"Signature"],
+[8,"Giardino",-17.76357,-63.19746,"SI",1,2303,159,137284,137284,0,0,0,0,"RE/MAX Fortaleza"],
+[330,"Edificio Omnia Suites",-17.75598,-63.19469,"VB",1,1615,115,71000,71000,1,0,0,1,"Forza"],
+[336,"Eurodesign Nordic",-17.76204,-63.19681,"EN",1,2228,118,125000,125000,1,1,0,1,"Azzero"],
+[339,"Phantom by Elite",-17.76293,-63.19867,"SI",1,2054,42,98600,98600,0,0,0,0,"Design District"],
+[340,"Edificio Le Grand",-17.76298,-63.19985,"SI",1,1752,46,198000,198000,0,0,0,0,"Exclusive"],
+[42,"Atrium",-17.76855,-63.19589,"EC",1,1652,85,156000,156000,1,0,0,1,"Business & Residences"],
+[341,"Torre Suant Isuto",-17.76548,-63.19131,"EC",1,1250,103,145000,145000,1,1,0,1,"RE/MAX Emporio"],
+[342,"Edificio Europeo",-17.75940,-63.19917,"EN",1,1865,146,97000,97000,1,1,0,1,"RE/MAX Fortaleza"],
+[345,"Edificio Conquistador",-17.77119,-63.19439,"EO",1,947,84,160000,160000,0,0,0,0,"Black"],
+[58,"Sky Collection Art Deco",-17.76894,-63.19649,"EC",1,1908,167,145000,145000,1,1,0,0,"Forza"],
+[60,"Edificio Condado II",-17.76885,-63.19524,"EN",1,1484,20,118000,118000,1,0,0,1,"Rita Quiroga"],
+[63,"Nomad by Smart Studio",-17.76768,-63.19573,"EC",1,1913,10,118000,118000,1,0,1,1,"Atlas"],
+[69,"Condominio Casa Blanca",-17.76216,-63.19416,"A3",1,1531,98,250000,250000,1,0,0,0,"Forza"],
+[67,"Malibu Inside",-17.76521,-63.19194,"EC",1,2239,228,150000,150000,1,0,1,1,"Home"],
+[70,"Edificio Siria 2",-17.75560,-63.19337,"VB",1,1316,116,42103,42103,1,0,0,1,"Blu Inversiones"],
+[71,"Edificio Platinum",-17.75525,-63.19744,"EN",1,1563,30,100000,100000,1,1,0,1,"RE/MAX Fortaleza"],
+[27,"Macororó 7",-17.77078,-63.19426,"EO",1,1641,86,130000,130000,1,0,0,1,"Titanium"],
+[80,"Aura Residences",-17.75625,-63.19327,"VB",1,889,6,95079,95079,0,0,1,1,"Business & Residences"],
+[5,"Vertical Terra",-17.75942,-63.19393,"VB",1,1563,130,75000,75000,0,0,0,0,"Territorio"],
+[22,"Golden Tower",-17.76156,-63.19673,"EN",2,1883,85,99500,115000,1,1,1,1,"Business & Residences"],
+[95,"Condominio Avanti",-17.75858,-63.19272,"VB",1,1708,298,125000,125000,1,0,1,1,"RE/MAX Union"],
+[104,"Sky Collection Equipetrol",-17.76625,-63.19567,"EC",1,1648,41,145000,145000,1,1,1,1,"Élite"],
+[351,"Sky Art",-17.76088,-63.19650,"EN",1,1399,101,120296,120296,1,1,0,1,"Business & Residences"],
+[120,"Baruc IV",-17.75909,-63.19238,"VB",1,1555,62,50700,50700,1,0,1,1,"Norte"],
+[126,"Condominio Aguaí",-17.75669,-63.19893,"EN",1,1345,90,320000,320000,1,1,0,1,"RE/MAX Infinity"],
+[129,"NanoTec by Smart Studio",-17.76061,-63.19587,"EN",2,2036,108,85000,88000,1,0,0,0,"RE/MAX Fortaleza"],
+[521,"Piazza Once",-17.76883,-63.19151,"EC",1,1239,47,135000,135000,1,0,0,1,"Business & Residences"],
+[139,"Equipetrol Day Suites",-17.76391,-63.19974,"SI",1,1809,54,275000,275000,0,0,0,0,"Rita Quiroga"],
+[142,"Sky Design",-17.76410,-63.20249,"SI",2,1531,45,107407,209000,1,1,0,1,"Exclusive"],
+[164,"Edificio Itaipú",-17.75539,-63.19582,"VB",1,1395,26,87644,87644,1,1,0,1,"Avanti"],
+[167,"Edificio Itaju",-17.76113,-63.19886,"SI",1,1744,132,575000,575000,1,0,0,1,"Territorio"]
+];
+/* salidas de julio por id de edificio */
+var SAL={42:7,524:5,80:4,113:4,1:3,30:3,76:2,109:2,25:2,48:2,54:2,15:2,71:1,77:1,84:1,95:1,112:1,221:1,283:1,286:1,523:1,6:1,9:1,12:1,18:1,19:1,22:1,55:1,57:1,63:1,64:1};
+/* rangos p25/p50/p75 del $/m2 por zona × dormitorios (solo grupos n>=5) */
+var R={
+ EC:{0:[1693,1906,2064,33],1:[1539,1688,1920,65],2:[1500,1648,1762,41],3:[1552,1644,1680,16]},
+ EN:{0:[1850,1948,2016,7],1:[1749,2040,2165,19],2:[1549,1833,2021,15]},
+ EO:{0:[1450,1671,1850,13],1:[1218,1465,1700,17],2:[1624,1643,1648,14]},
+ SI:{0:[1652,1845,2002,32],1:[1646,1837,1987,36],2:[1673,1865,1940,31]},
+ VB:{0:[1459,1500,1787,11],1:[1456,1559,1658,18],2:[1529,1611,1689,15]}
+};
+/* polígonos de zonas (PostGIS, simplificados) — [zona, [[lon,lat],...]] */
+var POLY=[
+["SI",[[-63.196956,-17.763226],[-63.200830,-17.757115],[-63.202580,-17.761791],[-63.205430,-17.765661],[-63.203173,-17.767973],[-63.196956,-17.763226]]],
+["VB",[[-63.192975,-17.760926],[-63.191753,-17.760325],[-63.190851,-17.754881],[-63.191347,-17.753049],[-63.192424,-17.752420],[-63.198136,-17.754935],[-63.192975,-17.760926]]],
+["EC",[[-63.191214,-17.772778],[-63.188678,-17.771781],[-63.191128,-17.767124],[-63.192073,-17.762510],[-63.198756,-17.766720],[-63.201543,-17.769432],[-63.194637,-17.770297],[-63.191214,-17.772778]]],
+["EO",[[-63.191120,-17.772860],[-63.194522,-17.770388],[-63.201504,-17.769449],[-63.202455,-17.772040],[-63.191768,-17.773465],[-63.191120,-17.772860]]],
+["EN",[[-63.198641,-17.760379],[-63.195373,-17.758388],[-63.198161,-17.754962],[-63.200894,-17.756774],[-63.198641,-17.760379]]],
+["EN",[[-63.198673,-17.760397],[-63.196742,-17.763310],[-63.192972,-17.760959],[-63.195368,-17.758393],[-63.198673,-17.760397]]],
+["A3",[[-63.202862,-17.767992],[-63.201675,-17.769368],[-63.199799,-17.767324],[-63.191766,-17.762294],[-63.191720,-17.760389],[-63.199413,-17.765142],[-63.202862,-17.767992]]]
+];
+/* serie 1D global [MM-DD, usd_m2, bs_m2] */
+var SERIE=[["01-05",2002,19360],["01-15",2057,19987],["01-21",2075,20170],["01-27",2092,19874],["01-31",2064,18892],["02-05",2091,19353],["02-10",2055,19165],["02-17",2052,19007],["02-24",2055,18931],["03-04",2055,18516],["03-08",2002,18731],["03-11",1996,18868],["03-15",2002,18575],["03-22",2002,18583],["04-15",1957,18164],["04-18",1911,17845],["04-22",1903,17996],["04-28",1800,17514],["05-01",1813,18297],["05-06",1821,18040],["05-08",1906,18976],["05-12",1810,17973],["05-21",1800,18010],["05-30",1800,18347],["06-13",1789,17780],["06-20",1800,17784],["06-24",1780,17728],["06-29",1797,17882],["07-02",1750,17321],["07-09",1718,17561],["07-12",1703,17948],["07-15",1716,17964],["07-18",1711,18275],["07-21",1700,18285]];
+var MES={"01":"enero","02":"febrero","03":"marzo","04":"abril","05":"mayo","06":"junio","07":"julio"};
+
+/* ============ PROYECCIÓN (metros equirectangulares) ============ */
+var LAT0=-17.763, COSL=Math.cos(LAT0*Math.PI/180);
+function mxy(lat,lon){return [ (lon+63.198)*111320*COSL, -(lat+17.763)*110570 ];}
+var pts=B.map(function(b){return mxy(b[2],b[3])});
+POLY.forEach(function(p){p[1].forEach(function(c){pts.push(mxy(c[1],c[0]))})});
+var xs=pts.map(function(p){return p[0]}),ys=pts.map(function(p){return p[1]});
+var minX=Math.min.apply(0,xs),maxX=Math.max.apply(0,xs),minY=Math.min.apply(0,ys),maxY=Math.max.apply(0,ys);
+var PAD=90, VW=760, VH=800;
+var sc=Math.min((VW-2*PAD)/(maxX-minX),(VH-2*PAD)/(maxY-minY));
+function PX(lat,lon){var m=mxy(lat,lon);return [PAD+(m[0]-minX)*sc, PAD+(m[1]-minY)*sc];}
+function metros(px){return px/sc;} /* px→m */
+var R500=500*sc; /* 500 m en px */
+
+/* ============ COLORES ============ */
+function colPrecio(m2){ if(m2==null)return '#555';
+  var t=Math.max(0,Math.min(1,(m2-1300)/(2300-1300)));
+  return t<0.5? mix('#5E9C72','#E0CE96',t*2) : mix('#E0CE96','#D07A4A',(t-0.5)*2);}
+function colVel(d){ if(d==null)return '#555'; return d<=60?'#5E9C72':(d<=100?'#E0CE96':'#D07A4A');}
+function mix(a,b,t){function h(c){return [parseInt(c.substr(1,2),16),parseInt(c.substr(3,2),16),parseInt(c.substr(5,2),16)]}
+  var A=h(a),Bc=h(b);return 'rgb('+Math.round(A[0]+(Bc[0]-A[0])*t)+','+Math.round(A[1]+(Bc[1]-A[1])*t)+','+Math.round(A[2]+(Bc[2]-A[2])*t)+')';}
+
+/* ============ MAPA BASE ============ */
+function dibujarBase(svg){
+  var s='';
+  POLY.forEach(function(p){
+    var d=p[1].map(function(c,i){var q=PX(c[1],c[0]);return (i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)}).join(' ')+'Z';
+    s+='<path d="'+d+'" fill="#1E1E1B" stroke="#3A3934" stroke-width="1.2"/>';
+  });
+  var labs={SI:[-17.7617,-63.2022],VB:[-17.7562,-63.1932],EC:[-17.7679,-63.1937],EO:[-17.7719,-63.1975],EN:[-17.7581,-63.1976],A3:[-17.7643,-63.1957]};
+  for(var z in labs){ if(z==='A3')continue; var q=PX(labs[z][0],labs[z][1]);
+    s+='<text x="'+q[0]+'" y="'+q[1]+'" font-size="11" fill="#57554E" text-anchor="middle" font-family="Figtree" font-weight="700" letter-spacing="2">'+Z[z].toUpperCase()+'</text>';}
+  return s;
+}
+
+/* ============ CAPA DE PUNTOS ============ */
+var capaActual='precio', sel=null;
+function radio(n){return 4+Math.sqrt(n)*2.4;}
+function dibujarMapa(){
+  var svg=document.getElementById('mapa'); var s=dibujarBase(svg);
+  B.forEach(function(b,i){
+    var q=PX(b[2],b[3]); var col,r=radio(b[5]),op=0.92;
+    if(capaActual==='precio'){col=colPrecio(b[6]);}
+    else if(capaActual==='velocidad'){col=colVel(b[7]);}
+    else if(capaActual==='oferta'){col='#5E9C72';}
+    else {var sl=SAL[b[0]]||0; if(sl>0){col='#D07A4A';r=4+Math.sqrt(sl)*3.4;}else{col='#3A3934';r=3;op=0.55;}}
+    var borde=(sel===i)?' stroke="#EDE8DC" stroke-width="2.4"':' stroke="#141414" stroke-width="1"';
+    s+='<circle data-i="'+i+'" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+r.toFixed(1)+'" fill="'+col+'" opacity="'+op+'"'+borde+' style="cursor:pointer"/>';
+  });
+  svg.innerHTML=s; leyenda(); kpisMapa();
+}
+function leyenda(){
+  var L=document.getElementById('leyenda'),h='';
+  if(capaActual==='precio')h='<span><span class="sw" style="background:#5E9C72"></span>≈$1.300/m²</span><span><span class="sw" style="background:#E0CE96"></span>≈$1.800</span><span><span class="sw" style="background:#D07A4A"></span>≈$2.300+</span><span style="margin-left:auto">tamaño = unidades en oferta</span>';
+  else if(capaActual==='velocidad')h='<span><span class="sw" style="background:#5E9C72"></span>≤60 días</span><span><span class="sw" style="background:#E0CE96"></span>61-100</span><span><span class="sw" style="background:#D07A4A"></span>+100 días</span><span style="margin-left:auto">mediana de días en mercado del edificio</span>';
+  else if(capaActual==='oferta')h='<span><span class="sw" style="background:#5E9C72"></span>tamaño del punto = unidades activas (1 a 22)</span>';
+  else h='<span><span class="sw" style="background:#D07A4A"></span>edificios con salidas en julio (tamaño = salidas)</span><span><span class="sw" style="background:#3A3934"></span>sin salidas</span><span style="margin-left:auto">salida ≠ venta (retiros incluidos)</span>';
+  L.innerHTML=h;
+}
+function kpisMapa(){
+  var K=document.getElementById('kpis-mapa'),h='';
+  function kpi(v,l){return '<div class="kpi"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>'}
+  if(capaActual==='precio')h=kpi('$1.692/m²','mediana general pedida')+kpi('$1.893','Eq. Norte, la zona más cara')+kpi('$1.557','V. Brígida, la más accesible')+kpi('±7%','error metodológico declarado');
+  else if(capaActual==='velocidad')h=kpi('78 días','mediana de permanencia')+kpi('71','Sirari — la más rápida')+kpi('113','V. Brígida — la más lenta')+kpi('69 vs 83','dentro del rango vs sobrepriceado');
+  else if(capaActual==='oferta')h=kpi('138','edificios con oferta activa')+kpi('29%','del inventario en 10 edificios')+kpi('22','unidades en un solo condominio (Maré)')+kpi('87%','avisos anclados a su edificio');
+  else h=kpi('72','salidas en julio')+kpi('~5-6 meses','renovación del inventario a este ritmo')+kpi('185 días','vida mediana del 2D que salió')+kpi('salida ≠ venta','retiros y rotaciones incluidos');
+  K.innerHTML=h;
+}
+document.querySelectorAll('.capa').forEach(function(b){b.onclick=function(){
+  document.querySelectorAll('.capa').forEach(function(x){x.classList.remove('on')});
+  b.classList.add('on'); capaActual=b.dataset.capa; dibujarMapa();
+}});
+
+/* tooltip + ficha */
+var tt=document.getElementById('tt');
+document.getElementById('mapa').addEventListener('mousemove',function(e){
+  var t=e.target;
+  if(t.tagName==='circle'){var b=B[+t.dataset.i];
+    tt.style.display='block'; tt.style.left=(e.clientX+14)+'px'; tt.style.top=(e.clientY+10)+'px';
+    tt.innerHTML='<b>'+b[1]+'</b><br>'+Z[b[4]]+' · '+b[5]+' unid. · $'+fm(b[6])+'/m² · '+b[7]+' días';
+  } else tt.style.display='none';
+});
+document.getElementById('mapa').addEventListener('mouseleave',function(){tt.style.display='none'});
+document.getElementById('mapa').addEventListener('click',function(e){
+  var t=e.target; if(t.tagName!=='circle')return;
+  sel=+t.dataset.i; dibujarMapa(); ficha(B[sel]);
+});
+function fm(x){return (x==null)?'—':x.toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+function ficha(b){
+  var sl=SAL[b[0]]||0;
+  var am=[['Piscina',b[10]],['Gimnasio',b[11]],['Co-working',b[12]],['Churrasquera',b[13]]];
+  document.getElementById('ficha').innerHTML=
+   '<h3>Radiografía de edificio</h3><div class="ficha">'+
+   '<div class="nombre">'+b[1]+'</div><div class="sub">'+Z[b[4]]+' · dato verificado esta madrugada</div>'+
+   '<div class="stats">'+
+   '<div class="stat"><div class="v">'+b[5]+'</div><div class="l">unidades en oferta</div></div>'+
+   '<div class="stat"><div class="v">$'+fm(b[6])+'</div><div class="l">$/m² mediano pedido</div></div>'+
+   '<div class="stat"><div class="v">'+b[7]+' días</div><div class="l">mediana en mercado</div></div>'+
+   '<div class="stat"><div class="v">'+(sl>0?sl:'0')+'</div><div class="l">salidas en julio</div></div>'+
+   '</div>'+
+   '<div style="font-size:12px;color:var(--gris);margin-bottom:6px">Tickets: <b style="color:var(--arena)">$'+fm(b[8])+' – $'+fm(b[9])+'</b></div>'+
+   '<div style="font-size:12px;color:var(--gris);margin-bottom:10px">Más avisos de: <b style="color:var(--arena)">'+b[14]+'</b></div>'+
+   '<div class="chips">'+am.map(function(a){return '<span class="chip'+(a[1]?'':' no')+'">'+a[0]+'</span>'}).join('')+'</div>'+
+   '<div class="mini">'+(b[5]<3?'⚠️ Con '+b[5]+' aviso'+(b[5]>1?'s':'')+', estos números son indicativos — lo declaramos en vez de esconderlo. ':'')+
+   'Precios pedidos, no de cierre. Amenidades según lo declarado en los avisos del edificio.</div></div>';
+}
+
+/* ============ SIMULADOR ============ */
+var pin=null;
+function dibujarSim(){
+  var svg=document.getElementById('mapa-sim'); var s=dibujarBase(svg);
+  B.forEach(function(b,i){var q=PX(b[2],b[3]);
+    var dentro = pin && dist(q,pin)<=R500;
+    s+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+radio(b[5]).toFixed(1)+'" fill="'+(dentro?'#5E9C72':'#3F4A42')+'" opacity="'+(pin?(dentro?0.95:0.35):0.8)+'" stroke="#141414"/>';
+  });
+  if(pin){
+    s+='<circle cx="'+pin[0]+'" cy="'+pin[1]+'" r="'+R500.toFixed(1)+'" fill="rgba(208,122,74,0.07)" stroke="#D07A4A" stroke-dasharray="6 5" stroke-width="1.6"/>';
+    s+='<path d="M'+pin[0]+' '+(pin[1]-16)+' L'+(pin[0]-9)+' '+pin[1]+' L'+(pin[0]+9)+' '+pin[1]+' Z" fill="#D07A4A"/>';
+    s+='<circle cx="'+pin[0]+'" cy="'+pin[1]+'" r="3" fill="#EDE8DC"/>';
+  }
+  svg.innerHTML=s;
+}
+function dist(a,b){var dx=a[0]-b[0],dy=a[1]-b[1];return Math.sqrt(dx*dx+dy*dy);}
+function svgXY(svg,e){var r=svg.getBoundingClientRect();
+  return [(e.clientX-r.left)*VW/r.width,(e.clientY-r.top)*VH/r.height];}
+function zonaDe(p){ /* point in polygon (px) */
+  for(var k=0;k<POLY.length;k++){var poly=POLY[k][1].map(function(c){return PX(c[1],c[0])});
+    var inside=false;
+    for(var i=0,j=poly.length-1;i<poly.length;j=i++){
+      if(((poly[i][1]>p[1])!=(poly[j][1]>p[1])) && (p[0]<(poly[j][0]-poly[i][0])*(p[1]-poly[i][1])/(poly[j][1]-poly[i][1])+poly[i][0])) inside=!inside;}
+    if(inside)return POLY[k][0];}
+  /* fallback: zona del edificio más cercano */
+  var best=1e9,bz=null;B.forEach(function(b){var q=PX(b[2],b[3]);var d=dist(q,p);if(d<best){best=d;bz=b[4]}});
+  return bz;
+}
+document.getElementById('mapa-sim').addEventListener('click',function(e){
+  pin=svgXY(this,e); dibujarSim(); simular();
+});
+['u0','u1','u2','p0','p1','p2'].forEach(function(id){document.getElementById(id).addEventListener('input',function(){if(pin)simular();})});
+function chipPos(zc,d,precio){
+  var rz=R[zc]&&R[zc][d];
+  if(!rz)return ['pos-sin','sin base en la zona','—'];
+  if(precio>rz[2]){var pct=Math.round((precio/rz[2]-1)*100);return ['pos-sobre','SOBRE el rango +'+pct+'%','p75 $'+fm(rz[2])+' (n='+rz[3]+')'];}
+  if(precio<rz[0]){var pct2=Math.round((1-precio/rz[0])*100);return ['pos-bajo','BAJO el rango −'+pct2+'%','p25 $'+fm(rz[0])+' (n='+rz[3]+')'];}
+  return ['pos-dentro','DENTRO del rango','$'+fm(rz[0])+'–'+fm(rz[2])+' (n='+rz[3]+')'];
+}
+function simular(){
+  var zc=zonaDe(pin);
+  var comps=B.filter(function(b){return dist(PX(b[2],b[3]),pin)<=R500});
+  var unid=comps.reduce(function(a,b){return a+b[5]},0);
+  var m2s=comps.map(function(b){return b[6]}).filter(function(x){return x!=null}).sort(function(a,b){return a-b});
+  var medRadio=m2s.length?m2s[Math.floor(m2s.length/2)]:null;
+  var u=[+el('u0').value||0,+el('u1').value||0,+el('u2').value||0];
+  var p=[+el('p0').value||0,+el('p1').value||0,+el('p2').value||0];
+  var tot=u[0]+u[1]+u[2];
+  var shock=ZTOT[zc]?Math.round(tot/ZTOT[zc]*100):null;
+  var nombres=['Mono','1 dorm.','2 dorm.'];
+  var posHtml=nombres.map(function(nm,i){ if(!u[i])return '';
+    var c=chipPos(zc,i,p[i]);
+    return '<div class="pos-fila"><span><b>'+nm+'</b> · '+u[i]+' unid. a $'+fm(p[i])+'/m²</span><span class="pos-chip '+c[0]+'">'+c[1]+'</span><span style="font-size:11px;color:var(--gris);width:100%">rango vivo '+Z[zc]+': '+c[2]+'</span></div>';
+  }).join('');
+  var am=[['Piscina','pis',10],['Gimnasio','gym',11],['Co-working','cow',12],['Churrasquera','chu',13]];
+  var amHtml=comps.length?am.map(function(a){
+    var pct=Math.round(100*comps.filter(function(b){return b[a[2]]}).length/comps.length);
+    var tag=pct>=60?'requisito':(pct<=30?'diferencial posible':'zona gris');
+    return '<div class="amem-fila"><span style="width:96px">'+a[0]+'</span><div class="amem-bar"><div class="amem-fill" style="width:'+pct+'%"></div></div><span class="amem-pct">'+pct+'% · '+tag+'</span></div>';
+  }).join(''):'';
+  var top=comps.slice().sort(function(a,b){return b[5]-a[5]}).slice(0,4);
+  el('sim-out').innerHTML='<h3>Posicionamiento — '+Z[zc]+'</h3>'+
+   '<div class="stats"><div class="stat"><div class="v">'+comps.length+'</div><div class="l">edificios en 500 m</div></div>'+
+   '<div class="stat"><div class="v">'+unid+'</div><div class="l">unidades compitiendo en el radio</div></div>'+
+   '<div class="stat"><div class="v">'+(medRadio?'$'+fm(medRadio):'—')+'</div><div class="l">$/m² mediano del radio</div></div>'+
+   '<div class="stat"><div class="v">'+ZTOT[zc]+'</div><div class="l">activas en toda la zona</div></div></div>'+
+   posHtml+
+   (shock!=null?'<div class="shock"><div class="v">+'+shock+'%</div><div class="l">Sus '+tot+' unidades aumentarían la oferta activa de '+Z[zc]+' ('+ZTOT[zc]+' avisos hoy). Su proyecto ES un shock de oferta — planifique el ritmo de lanzamiento con este número enfrente.</div></div>':'')+
+   (amHtml?'<h3 style="margin-top:16px">Estándar de amenidades del radio</h3>'+amHtml:'')+
+   (top.length?'<h3 style="margin-top:16px">Vecinos con más oferta</h3>'+top.map(function(b){return '<div class="pos-fila"><span>'+b[1]+'</span><span style="color:var(--gris);font-size:12px">'+b[5]+' unid. · $'+fm(b[6])+'/m²</span></div>'}).join(''):'')+
+   '<div class="mini" style="margin-top:12px">Posición calculada contra el rango p25-p75 <b>pedido</b> de la zona (no predice ventas). Comparables del radio: agregados por edificio. En el producto real esto se recalcula cada noche.</div>';
+}
+function el(id){return document.getElementById(id)}
+
+/* ============ MÁQUINA DEL TIEMPO ============ */
+var mon='usd', tmIdx=SERIE.length, playing=null;
+var U0=SERIE[0][1], B0=SERIE[0][2];
+function tmDraw(){
+  var svg=document.getElementById('tm-chart');
+  var W=900,H=300,mL=46,mR=16,mT=16,mB=32,yMin=82,yMax=106;
+  function X(i){return mL+(W-mL-mR)*i/(SERIE.length-1)}
+  function Y(v){return mT+(H-mT-mB)*(yMax-v)/(yMax-yMin)}
+  var s='';
+  [85,90,95,100,105].forEach(function(g){s+='<line x1="'+mL+'" y1="'+Y(g)+'" x2="'+(W-mR)+'" y2="'+Y(g)+'" stroke="#26251F"/>'+
+    '<text x="'+(mL-8)+'" y="'+(Y(g)+4)+'" font-size="11" fill="#6B6B66" text-anchor="end" font-family="DM Sans">'+g+'</text>';});
+  var vistos={};SERIE.forEach(function(r,i){var m=r[0].slice(0,2);if(!vistos[m]){vistos[m]=1;
+    s+='<text x="'+X(i)+'" y="'+(H-8)+'" font-size="11" fill="#6B6B66" font-family="DM Sans">'+MES[m].slice(0,3)+'</text>';}});
+  function linea(ci,base,color,w,dash,hasta){
+    var p='';for(var i=0;i<hasta;i++){p+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(SERIE[i][ci]/base*100).toFixed(1)+' ';}
+    return p?'<path d="'+p+'" fill="none" stroke="'+color+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="5 4"':'')+' stroke-linejoin="round" stroke-linecap="round"/>':'';
+  }
+  var usdActivo=(mon==='usd');
+  s+=linea(2,B0,usdActivo?'#4A4438':'#C89B7B',usdActivo?2:3.2,true,tmIdx);
+  s+=linea(1,U0,usdActivo?'#5E9C72':'#33463A',usdActivo?3.2:2,false,tmIdx);
+  var i=tmIdx-1, r=SERIE[i];
+  var vAct=usdActivo? r[1]/U0*100 : r[2]/B0*100;
+  s+='<circle cx="'+X(i)+'" cy="'+Y(vAct)+'" r="5" fill="'+(usdActivo?'#5E9C72':'#C89B7B')+'" stroke="#141414" stroke-width="1.5"/>';
+  svg.innerHTML=s;
+  var fecha=r[0].split('-'); el('tm-fecha').textContent=(+fecha[1])+' de '+MES[fecha[0]]+' de 2026';
+  el('tm-valor').textContent = usdActivo? '$'+fm(r[1])+' /m²' : 'Bs '+fm(r[2])+' /m²';
+  var d = usdActivo? (r[1]/U0-1)*100 : (r[2]/B0-1)*100;
+  var de=el('tm-delta'); de.textContent=(d>0?'+':'')+d.toFixed(1).replace('.',',')+'% desde enero';
+  de.className='delta '+(d<0?'neg':'pos');
+  el('tm-pull').innerHTML = usdActivo?
+   'En dólares el m² cayó <span>−15,1%</span> desde enero. Cambie a Bs y mire de nuevo.':
+   'En bolivianos, la caída es de apenas <span>−5,6%</span>. La diferencia entre las dos curvas es el tipo de cambio — y es la variable que su plan financiero no puede ignorar.';
+}
+el('tm-slider').addEventListener('input',function(){tmIdx=+this.value;tmDraw();});
+el('btn-usd').onclick=function(){mon='usd';this.classList.add('on');el('btn-bs').classList.remove('on');tmDraw();};
+el('btn-bs').onclick=function(){mon='bs';this.classList.add('on');el('btn-usd').classList.remove('on');tmDraw();};
+el('tm-play').onclick=function(){
+  if(playing){clearInterval(playing);playing=null;this.textContent='▶';return;}
+  var self=this; self.textContent='⏸'; tmIdx=1;
+  playing=setInterval(function(){
+    tmIdx++; el('tm-slider').value=tmIdx; tmDraw();
+    if(tmIdx>=SERIE.length){clearInterval(playing);playing=null;self.textContent='▶';}
+  },110);
+};
+
+/* ============ TABS ============ */
+document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){
+  document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});
+  document.querySelectorAll('.escena').forEach(function(x){x.classList.remove('on')});
+  t.classList.add('on'); document.getElementById('esc-'+t.dataset.esc).classList.add('on');
+}});
+
+dibujarMapa(); dibujarSim(); tmDraw();
+</script>
+</body>
+</html>
