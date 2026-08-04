@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Simón · Informe de Mercado — Equipetrol (mockup v2)</title>
+<title>Simón · Informe de Mercado — Equipetrol (mockup v3)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -28,11 +28,11 @@
   .portada .sub{font-size:16.5px;color:#B9B4A6;max-width:560px;line-height:1.55}
   .portada .sub b{color:var(--arena)}
   .sello{display:inline-flex;align-items:center;gap:8px;background:var(--salvia);color:#fff;border-radius:999px;padding:10px 20px;font-size:13px;font-weight:500;margin-top:36px}
-  .portada .meta{margin-top:110px;border-top:1px solid #33322E;padding-top:18px;display:flex;justify-content:space-between;font-size:13px;color:#8A867C}
+  .portada .meta{margin-top:100px;border-top:1px solid #33322E;padding-top:18px;display:flex;justify-content:space-between;font-size:13px;color:#8A867C}
   .portada .meta b{color:var(--arena)}
 
   h2{font-size:25px;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px}
-  .lead{color:var(--gris);font-size:14.5px;margin-bottom:26px;max-width:620px;line-height:1.55}
+  .lead{color:var(--gris);font-size:14.5px;margin-bottom:26px;max-width:640px;line-height:1.55}
 
   .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:28px}
   .kpi{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:17px 19px}
@@ -50,6 +50,7 @@
   .bar-fill{background:var(--salvia);height:100%;border-radius:5px;display:flex;align-items:center;justify-content:flex-end;padding-right:9px;color:#fff;font-weight:700;font-size:12.5px;font-family:'Figtree'}
   .bar-fill.claro{background:#7FA98B}
   .bar-fill.terra{background:var(--terra)}
+  .bar-fill.gris{background:#A8A294}
   .bar-meta{color:var(--gris);font-size:12px;text-align:right}
   .nota-n{font-size:11.5px;color:var(--gris);margin-top:13px;font-style:italic;line-height:1.45}
 
@@ -59,6 +60,7 @@
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .chip{display:inline-block;background:var(--salvia-suave);color:var(--salvia);border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700}
   .chip.alto{background:#F3E3DA;color:var(--terra)}
+  .chip.neutro{background:#E7E2D4;color:var(--gris)}
 
   .disclaimer{background:#fff;border:1px dashed var(--linea);border-radius:10px;padding:15px 18px;font-size:12.8px;color:var(--gris);line-height:1.55;margin-top:20px}
   .disclaimer b{color:var(--negro)}
@@ -67,12 +69,13 @@
   .strip-track{position:relative;height:12px;background:#DDD7C9;border-radius:6px}
   .strip-range{position:absolute;top:0;height:100%;background:#A8C4AF;border-radius:6px}
   .strip-med{position:absolute;top:-4px;width:4px;height:20px;background:var(--negro);border-radius:2px}
+  .strip-proy{position:absolute;top:-6px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid var(--terra);transform:translateX(-7px)}
   .strip-meta{color:var(--gris);font-size:12px;text-align:right}
 
   .grafico{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:22px;margin-bottom:8px}
   .grafico h3{font-size:14px;margin-bottom:2px}
   .grafico .gsub{font-size:12px;color:var(--gris);margin-bottom:14px}
-  .leyenda{display:flex;gap:18px;font-size:12px;color:var(--gris);margin-top:10px}
+  .leyenda{display:flex;gap:18px;font-size:12px;color:var(--gris);margin-top:10px;flex-wrap:wrap}
   .leyenda i{display:inline-block;width:18px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
 
   .dos-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -83,9 +86,15 @@
   .metodo .si li::before{content:"✓";position:absolute;left:0;color:var(--salvia);font-weight:700}
   .metodo .no li::before{content:"✕";position:absolute;left:0;color:var(--terra);font-weight:700}
   .metodo .lim li::before{content:"·";position:absolute;left:4px;color:var(--gris);font-weight:900}
+  .metodo .cap li::before{content:"◔";position:absolute;left:0;color:var(--salvia);font-weight:700}
 
-  .pull{font-family:'Figtree';font-size:21px;font-weight:800;letter-spacing:-0.02em;line-height:1.3;border-top:3px solid var(--salvia);padding-top:14px;margin:26px 0 6px;max-width:600px}
+  .pull{font-family:'Figtree';font-size:21px;font-weight:800;letter-spacing:-0.02em;line-height:1.3;border-top:3px solid var(--salvia);padding-top:14px;margin:26px 0 6px;max-width:620px}
   .pull span{color:var(--salvia)}
+
+  .proyecto-card{background:var(--negro);color:var(--arena);border-radius:14px;padding:22px 26px;display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+  .proyecto-card .pc-nombre{font-family:'Figtree';font-size:21px;font-weight:800}
+  .proyecto-card .pc-datos{font-size:12.5px;color:#B9B4A6;margin-top:4px}
+  .proyecto-card .pc-tag{background:var(--salvia);color:#fff;border-radius:999px;padding:6px 16px;font-size:12px;font-weight:700}
 
   .pie{margin-top:34px;border-top:1px solid var(--linea);padding-top:12px;display:flex;justify-content:space-between;font-size:11px;color:var(--gris)}
   .oscura .pie{border-color:#33322E;color:#8A867C}
@@ -101,7 +110,7 @@
   <div class="marca"><div class="punto"></div><span style="color:var(--arena)">Simón</span><small>Inteligencia Inmobiliaria</small></div>
   <div class="eyebrow">Informe de Mercado · Nº 2026-08 · Edición Desarrolladores</div>
   <h1>Equipetrol.<br>Lo que el mercado<br>dice — y lo que no.</h1>
-  <p class="sub">402 avisos de venta y 189 de alquiler, <b>verificados propiedad por propiedad</b> contra el portal, deduplicados, normalizados a un solo tipo de cambio y anclados a un catálogo de 447 edificios georreferenciados. Incluye lo que ningún agregador puede mostrar: la serie histórica, la velocidad de rotación, qué atributos se cobran de verdad — y qué preguntas este dato <b>no</b> puede responder.</p>
+  <p class="sub">402 avisos de venta y 189 de alquiler, <b>verificados propiedad por propiedad</b> contra el portal, deduplicados, normalizados a un solo tipo de cambio y anclados a un catálogo de 447 edificios georreferenciados. Incluye la serie histórica en dos monedas, la velocidad de rotación, qué atributos se cobran de verdad, el posicionamiento de su proyecto contra la oferta viva, el mapa del canal de venta — y las preguntas que este dato <b>no</b> puede responder.</p>
   <div class="sello">Dato fiduciario — nadie paga por aparecer mejor en este informe</div>
   <div class="meta">
     <div>Preparado para<br><b>Desarrolladora Ejemplo S.R.L.</b></div>
@@ -122,12 +131,12 @@
     <div class="kpi"><div class="v">−15%<small> USD</small></div><div class="l">el m² del 1 dorm. desde enero — pero solo −5,6% en Bs (sección 02)</div></div>
     <div class="kpi"><div class="v">78<small> días</small></div><div class="l">mediana de permanencia de la oferta activa</div></div>
     <div class="kpi"><div class="v">72</div><div class="l">avisos salieron del mercado en julio (salida ≠ venta, sección 06)</div></div>
-    <div class="kpi"><div class="v">29%</div><div class="l">del inventario se concentra en solo 10 edificios</div></div>
+    <div class="kpi"><div class="v">59</div><div class="l">oficinas se reparten el inventario — canal atomizado (sección 09)</div></div>
   </div>
 
   <div class="hallazgo"><div class="num">1</div><p><b>La moneda cambia la historia.</b> En dólares, el m² pedido del 1 dormitorio cayó ~15% desde enero. En bolivianos, solo −5,6%. Si su estructura de costos está en Bs y su precio de lista en USD, este spread ES su margen — y ningún promedio "en dólares" se lo va a mostrar.</p></div>
   <div class="hallazgo"><div class="num">2</div><p><b>Estar bien priceado vende más rápido que estar barato.</b> Los avisos dentro del rango típico de su zona y tipología rotan en 69 días (mediana). Los sobrepriceados llevan 83… y los que están <i>por debajo</i> del rango también se estancan (81). El descuento no acelera: el mercado desconfía de lo que parece regalado.</p></div>
-  <div class="hallazgo"><div class="num">3</div><p><b>La altura se cobra; el checklist de amenidades, no.</b> Del 10º piso hacia arriba el m² pide +15% vs pisos 1º-4º. En cambio, piscina/gimnasio ya no discriminan el precio pedido: el 75% de la oferta tiene piscina — es requisito de entrada, no diferenciador (el detalle, con su trampa estadística, en sección 05).</p></div>
+  <div class="hallazgo"><div class="num">3</div><p><b>La altura y el clima se cobran; el checklist de amenidades, no.</b> Del 10º piso hacia arriba el m² pide +15% vs pisos 1º-4º, y el aire acondicionado declarado se asocia a +5,8% en el 1 dormitorio. En cambio, piscina/gimnasio ya no discriminan: el 75% de la oferta tiene piscina — es requisito de entrada (sección 05).</p></div>
   <div class="hallazgo"><div class="num">4</div><p><b>La preventa publicada casi no descuenta.</b> $1.700/m² mediana en preventa vs $1.750 en entrega inmediata: −2,9%. El descuento real de pozo se negocia en privado y no llega a portales — este informe lo declara como límite, no lo inventa.</p></div>
 </section>
 
@@ -183,7 +192,6 @@
   </table>
 
   <h3 style="font-size:14px;margin-bottom:14px">Rango típico del m² pedido (p25 — mediana — p75)</h3>
-  <!-- escala: $1.250 → $2.050 -->
   <div class="rango-strip"><div><b>Monoambiente</b></div><div class="strip-track"><div class="strip-range" style="left:49%;width:44%"></div><div class="strip-med" style="left:73%"></div></div><div class="strip-meta">$1.645 · <b>$1.837</b> · $1.995</div></div>
   <div class="rango-strip"><div><b>1 dormitorio</b></div><div class="strip-track"><div class="strip-range" style="left:36%;width:50%"></div><div class="strip-med" style="left:56%"></div></div><div class="strip-meta">$1.538 · <b>$1.699</b> · $1.940</div></div>
   <div class="rango-strip"><div><b>2 dormitorios</b></div><div class="strip-track"><div class="strip-range" style="left:32%;width:50%"></div><div class="strip-med" style="left:50%"></div></div><div class="strip-meta">$1.508 · <b>$1.651</b> · $1.905</div></div>
@@ -197,7 +205,7 @@
 <!-- ============ 05 ATRIBUTOS ============ -->
 <section class="pagina">
   <div class="eyebrow">05 · Qué atributos se cobran</div>
-  <h2>La altura sí. El checklist, no.</h2>
+  <h2>La altura y el clima sí. El checklist, no.</h2>
   <p class="lead">Asociaciones observadas en el precio pedido — con la advertencia estadística incluida, porque la versión ingenua de este análisis lleva a conclusiones equivocadas.</p>
 
   <h3 style="font-size:14px;margin-bottom:12px">El piso del departamento (183 avisos lo declaran — 46% de la oferta)</h3>
@@ -205,19 +213,19 @@
   <div class="bar-row"><div><b>5º a 9º</b></div><div class="bar-track"><div class="bar-fill claro" style="width:92%">$1.745</div></div><div class="bar-meta">n=49 · <b>+5,9%</b></div></div>
   <div class="bar-row"><div><b>10º o más</b></div><div class="bar-track"><div class="bar-fill" style="width:100%">$1.889</div></div><div class="bar-meta">n=47 · <b>+14,6%</b></div></div>
 
-  <h3 style="font-size:14px;margin:24px 0 8px">Amenidades: la trampa de composición, mostrada a propósito</h3>
-  <p style="font-size:13.5px;line-height:1.55;margin-bottom:12px">Comparación ingenua: los deptos <b>con</b> piscina piden $1.668/m² y los <b>sin</b> piscina $1.751 — ¿la piscina resta valor? No: las torres con amenidades concentran unidades grandes (que piden menos por m²) y los edificios boutique sin amenidades concentran monoambientes premium. Controlando por tipología, el efecto desaparece:</p>
+  <h3 style="font-size:14px;margin:22px 0 8px">Equipamiento que muestra contraste (dentro del 1 dormitorio, n=155)</h3>
   <table>
-    <tr><th>Misma tipología</th><th class="num">Con piscina/gym</th><th class="num">Sin</th><th class="num">Diferencia</th></tr>
-    <tr><td>1 dormitorio</td><td class="num">$1.700 <span style="color:var(--gris)">(n=124)</span></td><td class="num">$1.688 <span style="color:var(--gris)">(n=31)</span></td><td class="num">≈ 0</td></tr>
-    <tr><td>2 dormitorios</td><td class="num">$1.648 <span style="color:var(--gris)">(n=77)</span></td><td class="num">$1.673 <span style="color:var(--gris)">(n=39)</span></td><td class="num">≈ 0</td></tr>
-    <tr><td>Monoambiente</td><td class="num">$1.780 <span style="color:var(--gris)">(n=77)</span></td><td class="num">$1.975 <span style="color:var(--gris)">(n=23)</span></td><td class="num">−10% *</td></tr>
+    <tr><th>Equipamiento declarado</th><th class="num">Con</th><th class="num">Sin</th><th class="num">Asociación</th></tr>
+    <tr><td>Aire acondicionado</td><td class="num">$1.745 <span style="color:var(--gris)">(n=61)</span></td><td class="num">$1.650 <span style="color:var(--gris)">(n=94)</span></td><td class="num"><b>+5,8%</b></td></tr>
+    <tr><td>Balcón</td><td class="num">$1.700 <span style="color:var(--gris)">(n=43)</span></td><td class="num">$1.694 <span style="color:var(--gris)">(n=112)</span></td><td class="num">≈ 0</td></tr>
+    <tr><td>Domótica</td><td class="num">$1.724 <span style="color:var(--gris)">(n=10)</span></td><td class="num">$1.681 <span style="color:var(--gris)">(n=145)</span></td><td class="num">n insuficiente</td></tr>
   </table>
-  <p class="nota-n">* Los 23 monoambientes "sin amenidades" son en su mayoría edificios boutique de ticket alto — el contraste refleja ese nicho, no un castigo a la piscina.</p>
+  <p class="nota-n">En Santa Cruz el aire acondicionado no es un lujo, es habitabilidad — y es el único equipamiento cuyo contraste supera el ruido. Puede ser también proxy de edificio más nuevo: asociación, no causalidad.</p>
 
-  <p class="pull">El 75% de la oferta ya tiene piscina. <span>La amenidad estándar es requisito de entrada, no diferenciador de precio.</span> Lo que sí discrimina el precio pedido: la zona, la tipología y la altura.</p>
+  <h3 style="font-size:14px;margin:22px 0 8px">Amenidades: la trampa de composición, mostrada a propósito</h3>
+  <p style="font-size:13.5px;line-height:1.55;margin-bottom:12px">Comparación ingenua: los deptos <b>con</b> piscina piden $1.668/m² y los <b>sin</b> piscina $1.751 — ¿la piscina resta valor? No: las torres con amenidades concentran unidades grandes (que piden menos por m²) y los edificios boutique sin amenidades concentran monoambientes premium. Controlando por tipología, el efecto desaparece: 1D $1.700 vs $1.688 · 2D $1.648 vs $1.673 — <b>≈ 0 en ambos</b>. El 75% de la oferta ya tiene piscina: es requisito de entrada, no diferenciador de precio.</p>
 
-  <div class="disclaimer"><b>Los límites de esta sección, declarados:</b> (1) son asociaciones en precios <i>pedidos</i>, no causalidad ni precios de cierre — si el mercado paga la amenidad en la negociación final, este dato no lo ve. (2) El 46% de los avisos no declara si el parqueo está incluido; entre los que lo declaran, incluirlo o no <i>no</i> muestra diferencia de m² — la opacidad misma es un dato: el parqueo se usa como ficha de negociación. (3) El corte amoblado en venta no se publica: los avisos sin amoblar casi nunca lo declaran y el contraste sería deshonesto. (4) El valor de un atributo en SU proyecto se valida contra los comparables de su microzona, no con estos agregados.</div>
+  <div class="disclaimer"><b>Los límites, declarados:</b> (1) asociaciones en precios <i>pedidos</i>, no causalidad ni cierres. (2) El 46% de los avisos no declara si el parqueo está incluido; entre los que declaran, incluirlo no muestra diferencia de m² — la opacidad misma es el dato: el parqueo se usa como ficha de negociación. (3) El corte amoblado en venta no se publica: los avisos sin amoblar casi nunca lo declaran y el contraste sería deshonesto. (4) El valor de un atributo en SU proyecto se valida contra los comparables de su microzona (sección 08).</div>
 </section>
 
 <!-- ============ 06 ROTACIÓN ============ -->
@@ -267,13 +275,93 @@
   </table>
 
   <p class="pull">22 unidades en venta dentro de un mismo condominio (Maré) no es solo competencia: <span>es una señal de inversores saliendo al mismo tiempo</span> — y presiona el precio de todo el que quiera vender ahí.</p>
-
-  <div class="disclaimer"><b>En la versión completa:</b> este cuadro se entrega para los comparables directos de SU terreno (radio + microzona), con la antigüedad de cada aviso y su historial de cambios de precio — no solo el top 10 general.</div>
 </section>
 
-<!-- ============ 08 ALQUILER ============ -->
+<!-- ============ 08 COMPARADOR DE PROYECTO ============ -->
 <section class="pagina">
-  <div class="eyebrow">08 · Alquiler y retorno</div>
+  <div class="eyebrow">08 · Su proyecto contra la oferta viva</div>
+  <h2>El comparador: dónde caería su lista de precios HOY</h2>
+  <p class="lead">Esta página se arma con los datos de SU proyecto (los provee usted) contra la oferta activa y verificada de su microzona. Ejemplo con un proyecto hipotético en Sirari — los datos del mercado son reales, el proyecto es de muestra.</p>
+
+  <div class="proyecto-card">
+    <div>
+      <div class="pc-nombre">Torre Ejemplo</div>
+      <div class="pc-datos">Sirari · 48 unidades · entrega est. 2028 · mix: 12 monoambientes / 24 × 1D / 12 × 2D</div>
+    </div>
+    <div class="pc-tag">EN POZO — datos del desarrollador</div>
+  </div>
+
+  <h3 style="font-size:14px;margin-bottom:14px">Posición de su lista de precios contra el rango vivo de Sirari (▼ = su precio)</h3>
+  <!-- escala strips: $1.500 → $2.150 -->
+  <div class="rango-strip"><div><b>Mono · $1.980</b></div><div class="strip-track"><div class="strip-range" style="left:23%;width:54%"></div><div class="strip-med" style="left:53%"></div><div class="strip-proy" style="left:74%"></div></div><div class="strip-meta">rango $1.652–2.002 · <span class="chip">dentro</span></div></div>
+  <div class="rango-strip"><div><b>1D · $1.890</b></div><div class="strip-track"><div class="strip-range" style="left:22%;width:53%"></div><div class="strip-med" style="left:52%"></div><div class="strip-proy" style="left:60%"></div></div><div class="strip-meta">rango $1.646–1.987 · <span class="chip">dentro</span></div></div>
+  <div class="rango-strip"><div><b>2D · $2.050</b></div><div class="strip-track"><div class="strip-range" style="left:27%;width:41%"></div><div class="strip-med" style="left:56%"></div><div class="strip-proy" style="left:85%"></div></div><div class="strip-meta">rango $1.673–1.940 · <span class="chip alto">sobre +6%</span></div></div>
+  <p class="nota-n">Contra 32 monoambientes, 36 × 1D y 31 × 2D activos en Sirari. La posición se recalcula cada noche mientras dure el contrato — su lista contra el mercado vivo, no contra el estudio de hace 6 meses.</p>
+
+  <h3 style="font-size:14px;margin:24px 0 12px">El estándar de amenidades de Sirari: qué es requisito y qué es diferencial</h3>
+  <div class="bar-row"><div><b>Piscina</b></div><div class="bar-track"><div class="bar-fill" style="width:74%">74%</div></div><div class="bar-meta">requisito de entrada</div></div>
+  <div class="bar-row"><div><b>Churrasquera</b></div><div class="bar-track"><div class="bar-fill" style="width:63%">63%</div></div><div class="bar-meta">requisito de entrada</div></div>
+  <div class="bar-row"><div><b>Gimnasio</b></div><div class="bar-track"><div class="bar-fill claro" style="width:39%">39%</div></div><div class="bar-meta">zona gris</div></div>
+  <div class="bar-row"><div><b>Aire acond.</b></div><div class="bar-track"><div class="bar-fill claro" style="width:29%">29%</div></div><div class="bar-meta">se asocia a +5,8% (1D)</div></div>
+  <div class="bar-row"><div><b>Co-working</b></div><div class="bar-track"><div class="bar-fill gris" style="width:27%">27%</div></div><div class="bar-meta">diferencial posible</div></div>
+  <div class="bar-row"><div><b>Salón eventos</b></div><div class="bar-track"><div class="bar-fill gris" style="width:9%">9%</div></div><div class="bar-meta">diferencial posible</div></div>
+  <p class="nota-n">"Requisito" = lo tiene la mayoría de su competencia directa: no tenerlo se nota, tenerlo no se cobra. "Diferencial posible" = escaso en la zona; si el mercado lo paga es hipótesis suya a validar — el dato solo dice que ahí hay espacio para diferenciarse.</p>
+
+  <h3 style="font-size:14px;margin:24px 0 12px">Contra quién entra a competir en Sirari</h3>
+  <table>
+    <tr><th>Edificio</th><th class="num">Unidades en oferta</th><th class="num">$/m² mediano</th></tr>
+    <tr><td>Condominio Maré</td><td class="num">22</td><td class="num">$1.952</td></tr>
+    <tr><td>Rhodium</td><td class="num">16</td><td class="num">$1.890</td></tr>
+    <tr><td>Speranto Verdi</td><td class="num">10</td><td class="num">$1.654</td></tr>
+    <tr><td colspan="2">+ resto de la zona (oferta dispersa)</td><td class="num">102 activas en total</td></tr>
+  </table>
+
+  <p class="pull">Sus 48 unidades entrarían a una zona con 102 activas: <span>usted solo aumentaría la oferta de Sirari un 47%.</span> Ese número — su proyecto como shock de oferta — no existe en ningún otro informe de la plaza.</p>
+
+  <div class="disclaimer"><b>Qué es y qué no es este comparador:</b> muestra dónde cae su precio contra lo que el mercado PIDE hoy, con qué estándar de amenidades compite y contra cuánta oferta. No predice ventas ni valida su tasación: es el tablero de posición, actualizado cada noche, para que sus decisiones de lista y lanzamiento se tomen contra el mercado vivo.</div>
+</section>
+
+<!-- ============ 09 CANAL ============ -->
+<section class="pagina">
+  <div class="eyebrow">09 · El canal de venta</div>
+  <h2>Quién tiene el inventario en la mano</h2>
+  <p class="lead">Para colocar 48 unidades hay que decidir con quién listar. Este es el mapa real del canal en Equipetrol: quién concentra cartera, con cuántos agentes, y de qué carteras salió inventario en julio. Los nombres son los publicados en cada aviso — dato público, leído aviso por aviso.</p>
+
+  <div class="kpis">
+    <div class="kpi"><div class="v">59</div><div class="l">oficinas activas en Equipetrol</div></div>
+    <div class="kpi"><div class="v">221</div><div class="l">captadores con al menos 1 aviso</div></div>
+    <div class="kpi"><div class="v">56%</div><div class="l">del inventario en las 12 oficinas top — ninguna pasa del 9%</div></div>
+  </div>
+
+  <table style="margin-bottom:20px">
+    <tr><th>Oficina</th><th class="num">Cartera activa</th><th class="num">Agentes</th><th class="num">Salidas jul.*</th></tr>
+    <tr><td>Business & Residences</td><td class="num">35</td><td class="num">15</td><td class="num">7</td></tr>
+    <tr><td>RE/MAX Fortaleza</td><td class="num">30</td><td class="num">12</td><td class="num">5</td></tr>
+    <tr><td>Forza</td><td class="num">26</td><td class="num">15</td><td class="num">8</td></tr>
+    <tr><td>Rita Quiroga</td><td class="num">25</td><td class="num">12</td><td class="num">3</td></tr>
+    <tr><td>RE/MAX Union</td><td class="num">22</td><td class="num">2</td><td class="num">3</td></tr>
+    <tr><td>Home</td><td class="num">17</td><td class="num">6</td><td class="num">—</td></tr>
+    <tr><td>RE/MAX Emporio</td><td class="num">17</td><td class="num">10</td><td class="num">—</td></tr>
+  </table>
+
+  <h3 style="font-size:14px;margin-bottom:12px">Captadores con más cartera propia</h3>
+  <table>
+    <tr><th>Captador/a</th><th>Oficina</th><th class="num">Avisos activos</th></tr>
+    <tr><td>Laurent Lorena Eguez Alvarez</td><td>RE/MAX Union</td><td class="num">21</td></tr>
+    <tr><td>Yula Cortez Monasterio</td><td>Business & Residences</td><td class="num">16</td></tr>
+    <tr><td>Silvia Raquel Espinoza Caballero</td><td>RE/MAX Fortaleza</td><td class="num">11</td></tr>
+    <tr><td>Fernando Lamas Varanda</td><td>Home</td><td class="num">10</td></tr>
+    <tr><td>Juliana Gomez Cuellar</td><td>Integra</td><td class="num">9</td></tr>
+  </table>
+
+  <p class="pull">El canal está atomizado: 59 oficinas, ninguna con más del 9% del inventario — <span>en Equipetrol no existe "EL bróker dominante"; existe una captadora individual con más cartera que 50 oficinas enteras.</span></p>
+
+  <div class="disclaimer"><b>Cómo leer este mapa sin engañarse:</b> (1) cartera grande = capacidad de captar, no necesariamente de vender — las "salidas de julio" incluyen retiros y rotaciones, no solo ventas, y un mes es poco: la versión por suscripción acumula la serie y ahí el patrón por oficina se vuelve señal. (2) RE/MAX Union concentra 22 avisos en solo 2 agentes; Forza reparte 26 entre 15 — son modelos de operación distintos, no un ranking de calidad. (3) Este mapa no recomienda con quién trabajar: muestra dónde está el inventario hoy, que es la pregunta previa a cualquier negociación de comisiones.</div>
+</section>
+
+<!-- ============ 10 ALQUILER ============ -->
+<section class="pagina">
+  <div class="eyebrow">10 · Alquiler y retorno</div>
   <h2>La otra mitad de la demanda</h2>
   <p class="lead">El comprador-inversor compara contra la renta. Alquiler mediano pedido (en bolivianos, la moneda real de ese mercado) y el yield bruto que resulta contra el precio de compra mediano de la misma tipología.</p>
 
@@ -288,22 +376,22 @@
 
   <p class="pull">Los yields brutos viven en una banda angosta (5,2-5,5%) en las tipologías con n sólido. <span>La renta no premia a ninguna tipología con claridad</span> — la diferencia real la harán el edificio, el piso y la gestión, no la categoría.</p>
 
-  <div class="disclaimer"><b>Yield bruto = alquiler pedido × 12 ÷ precio de venta pedido de la misma tipología.</b> No descuenta expensas, vacancia, mantenimiento ni impuestos, y compara medianas de pools distintos (no el mismo inmueble). Es una vara para comparar tipologías entre sí, no una promesa de retorno.</div>
+  <div class="disclaimer"><b>Sobre qué oferta está calculado este yield (importa):</b> de los 189 avisos de alquiler, el 54% se declara amoblado, el 43% no lo declara y prácticamente ninguno se declara "sin amoblar". Es decir: <b>estos yields describen un mercado de alquiler mayormente amoblado</b> — el retorno de un producto entregado sin amoblar no es observable hoy en portales, y publicar un "yield amoblado vs sin amoblar" con esta base sería inventar el término de comparación. Lo decimos porque la diferencia es la inversión en mobiliario, y esa está en SU modelo, no en este dato. Yield bruto = alquiler pedido × 12 ÷ precio pedido de la misma tipología; no descuenta expensas, vacancia ni mantenimiento.</div>
 </section>
 
-<!-- ============ 09 METODOLOGÍA ============ -->
+<!-- ============ 11 METODOLOGÍA ============ -->
 <section class="pagina">
-  <div class="eyebrow">09 · Metodología y límites</div>
+  <div class="eyebrow">11 · Metodología y límites</div>
   <h2>Por qué puede confiar en esto — y hasta dónde</h2>
-  <p class="lead">Un informe que no declara sus límites está vendiendo certeza que no tiene. Estos son los nuestros.</p>
+  <p class="lead">Un informe que no declara sus límites está vendiendo certeza que no tiene. Estos son los nuestros — incluido lo que el motor ya está aprendiendo a capturar para las próximas ediciones.</p>
 
   <div class="dos-col metodo" style="margin-bottom:14px">
     <div class="caja si"><h3>Lo que este dato ES</h3><ul>
       <li><b>Verificado cada noche:</b> cada aviso se contrasta contra el portal; las bajas se confirman, no se asumen.</li>
-      <li><b>Comparable:</b> todos los precios normalizados a un solo tipo de cambio, aunque el aviso original mezcle dólares billete, transferencia o bolivianos.</li>
+      <li><b>Comparable:</b> todos los precios normalizados a un solo tipo de cambio, aunque el aviso mezcle dólares billete, transferencia o bolivianos.</li>
       <li><b>Deduplicado:</b> el mismo depto publicado por 3 agencias cuenta una vez.</li>
       <li><b>Anclado a la realidad física:</b> 87% de los avisos identificados con su edificio, en un catálogo georreferenciado de 447 torres.</li>
-      <li><b>Con el n a la vista:</b> cada mediana dice cuántos avisos la sostienen, y los números débiles se declaran en vez de publicarse.</li>
+      <li><b>Con el n a la vista:</b> cada mediana dice cuántos avisos la sostienen; los números débiles se declaran.</li>
     </ul></div>
     <div class="caja no"><h3>Lo que NUNCA hacemos</h3><ul>
       <li>Cobrar por aparecer, destacar u ordenar mejor a nadie en este informe.</li>
@@ -313,12 +401,19 @@
     </ul></div>
   </div>
 
-  <div class="metodo"><div class="caja lim"><h3>Lo que este dato NO puede ver (y usted debe saberlo)</h3><ul>
-    <li><b>Precios de cierre:</b> Bolivia no tiene registro público de transacciones. Todo el informe trabaja sobre precios pedidos y lo repite página por página.</li>
-    <li><b>El descuento real de pozo:</b> se negocia en privado entre desarrollador y comprador; los portales solo ven la preventa publicada.</li>
-    <li><b>El motivo de cada salida:</b> vendido, retirado o rotado de agencia — indistinguibles desde afuera.</li>
-    <li><b>Causalidad:</b> toda asociación de la sección 05 es eso, asociación. El valor de un atributo en un proyecto concreto se valida contra sus comparables directos.</li>
-  </ul></div></div>
+  <div class="dos-col metodo">
+    <div class="caja lim"><h3>Lo que este dato NO puede ver</h3><ul>
+      <li><b>Precios de cierre:</b> Bolivia no tiene registro público de transacciones. Todo el informe trabaja sobre precios pedidos.</li>
+      <li><b>El descuento real de pozo:</b> se negocia en privado; los portales solo ven la preventa publicada.</li>
+      <li><b>El motivo de cada salida:</b> vendido, retirado o rotado de agencia — indistinguibles desde afuera.</li>
+      <li><b>Causalidad:</b> toda asociación de atributos es eso, asociación.</li>
+    </ul></div>
+    <div class="caja cap"><h3>En captura para próximas ediciones</h3><ul>
+      <li><b>Condiciones comerciales:</b> planes de pago del desarrollador, cuotas y descuentos por pago contado — el lector ya ve las descripciones donde aparecen; la persistencia estructurada está en construcción.</li>
+      <li><b>Expensas:</b> hoy solo el 2% de los avisos las publica — la opacidad es del mercado, no del motor; cuando el dato exista, entra.</li>
+      <li><b>Serie de rotación por oficina:</b> con 3+ meses acumulados, el patrón de salidas por canal se vuelve señal publicable.</li>
+    </ul></div>
+  </div>
 
   <div class="pie">
     <div>Simón · Inteligencia Inmobiliaria — simonbo.com</div>
@@ -328,7 +423,6 @@
 
 <script>
 (function(){
-  // Serie 1D global (fecha, usd_m2, bs_m2) — data real, market_price_reexpresado
   var d=[["01-05",2002,19360],["01-15",2057,19987],["01-21",2075,20170],["01-27",2092,19874],["01-31",2064,18892],
   ["02-05",2091,19353],["02-10",2055,19165],["02-17",2052,19007],["02-24",2055,18931],
   ["03-04",2055,18516],["03-08",2002,18731],["03-11",1996,18868],["03-15",2002,18575],["03-22",2002,18583],
@@ -344,23 +438,20 @@
   function X(i){return mL+(W-mL-mR)*i/(idx.length-1)}
   function Y(v){return mT+(H-mT-mB)*(yMax-v)/(yMax-yMin)}
   var s='';
-  // grid
   [85,90,95,100,105].forEach(function(g){
     s+='<line x1="'+mL+'" y1="'+Y(g)+'" x2="'+(W-mR)+'" y2="'+Y(g)+'" stroke="#EFEAE0" stroke-width="1"/>';
     s+='<text x="'+(mL-8)+'" y="'+(Y(g)+4)+'" font-size="11" fill="#6B6B66" text-anchor="end" font-family="DM Sans">'+g+'</text>';
   });
-  // month labels
   var mesesVistos={};
   idx.forEach(function(r,i){var m=r[0].slice(0,2);if(!mesesVistos[m]){mesesVistos[m]=1;
     var nom={'01':'Ene','02':'Feb','03':'Mar','04':'Abr','05':'May','06':'Jun','07':'Jul'}[m];
     s+='<text x="'+X(i)+'" y="'+(H-8)+'" font-size="11" fill="#6B6B66" font-family="DM Sans">'+nom+'</text>';}});
-  function linea(col,ci,color,w,dash){
+  function linea(ci,color,w,dash){
     var p=idx.map(function(r,i){return (i?'L':'M')+X(i).toFixed(1)+' '+Y(r[ci]).toFixed(1)}).join(' ');
     return '<path d="'+p+'" fill="none" stroke="'+color+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="5 4"':'')+' stroke-linejoin="round" stroke-linecap="round"/>';
   }
-  s+=linea('bs',2,'#C89B7B',2.5,true);
-  s+=linea('usd',1,'#3A6A48',3,false);
-  // end dots + labels
+  s+=linea(2,'#C89B7B',2.5,true);
+  s+=linea(1,'#3A6A48',3,false);
   var last=idx[idx.length-1];
   s+='<circle cx="'+X(idx.length-1)+'" cy="'+Y(last[1])+'" r="4" fill="#3A6A48"/>';
   s+='<circle cx="'+X(idx.length-1)+'" cy="'+Y(last[2])+'" r="4" fill="#C89B7B"/>';
