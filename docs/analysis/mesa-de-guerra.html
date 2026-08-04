@@ -82,6 +82,16 @@
   .amem-fill{height:100%;background:var(--salvia-viva);border-radius:4px}
   .amem-pct{width:82px;text-align:right;color:var(--gris);font-size:11.5px}
 
+  .mapa-tools{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+  .mapa-tools input{flex:1;min-width:170px;background:var(--panel2);border:1px solid var(--linea);color:var(--arena);border-radius:999px;padding:9px 16px;font-size:13px;font-family:'DM Sans'}
+  .mapa-tools input::placeholder{color:#6B6B66}
+  .btn-mini{border:1px solid var(--linea);background:var(--panel2);color:var(--gris);font-size:12px;font-weight:700;font-family:'Figtree';padding:8px 15px;border-radius:999px;cursor:pointer;transition:.15s;white-space:nowrap}
+  .btn-mini:hover{color:var(--arena);border-color:var(--gris)}
+  .capa-nota{font-size:12.5px;color:var(--gris);line-height:1.5;background:var(--panel2);border-radius:10px;padding:10px 14px;margin-bottom:10px}
+  .capa-nota b{color:var(--arena)}
+  .vinculo{margin-top:16px;background:var(--panel);border:1px dashed var(--linea);border-radius:12px;padding:13px 18px;font-size:12.5px;color:var(--gris);line-height:1.55}
+  .vinculo a{color:var(--salvia-viva);font-weight:700;text-decoration:none;border-bottom:1px dotted var(--salvia-viva)}
+
   /* Máquina del tiempo */
   .tm-caja{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:24px}
   .tm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:8px}
@@ -124,12 +134,18 @@
 
   <div class="layout">
     <div class="mapa-caja">
+      <div class="mapa-tools">
+        <input id="buscar" list="edificios" placeholder="🔎 Buscar edificio (ej: Maré, Rhodium…)">
+        <datalist id="edificios"></datalist>
+        <button class="btn-mini" id="reset-zoom">⤾ Vista completa</button>
+      </div>
       <div class="capas">
         <button class="capa on" data-capa="precio">💵 Precio $/m²</button>
         <button class="capa" data-capa="velocidad">⚡ Velocidad</button>
         <button class="capa" data-capa="oferta">🏢 Concentración</button>
         <button class="capa" data-capa="salidas">🚪 Salidas de julio</button>
       </div>
+      <div class="capa-nota" id="capa-nota"></div>
       <svg id="mapa" viewBox="0 0 760 800"></svg>
       <div class="leyenda" id="leyenda"></div>
     </div>
@@ -138,6 +154,7 @@
       <p class="vacio">Toque un punto del mapa.<br><br>La radiografía muestra lo que ningún portal puede: cuántas unidades reales tiene en oferta ese edificio, a qué precio pide, hace cuánto, con qué amenidades y quién lo vende.</p>
     </aside>
   </div>
+  <div class="vinculo">📄 Este tablero es el compañero vivo del <a href="mockup-informe-mercado.html">Informe de Mercado Nº 2026-08</a>: la narrativa, los hallazgos y los límites metodológicos viven allá (§03 zonas · §07 competencia) — acá los explora con sus propias manos, actualizados cada noche.</div>
 </section>
 
 <!-- ================= ESCENA 2: SIMULADOR ================= -->
@@ -148,6 +165,11 @@
 
   <div class="layout">
     <div class="mapa-caja">
+      <div class="mapa-tools">
+        <button class="btn-mini" id="sim-ejemplo">📍 Ver ejemplo en Sirari</button>
+        <button class="btn-mini" id="sim-clear">✕ Quitar pin</button>
+        <button class="btn-mini" id="reset-zoom-sim">⤾ Vista completa</button>
+      </div>
       <svg id="mapa-sim" viewBox="0 0 760 800" style="cursor:crosshair"></svg>
       <div class="leyenda"><span><span class="sw" style="background:#5E9C72"></span>edificio con oferta (tamaño = unidades)</span><span><span class="sw" style="background:#D07A4A"></span>▲ su terreno + radio 500 m</span></div>
     </div>
@@ -161,10 +183,11 @@
       </div>
       <div class="panel" id="sim-out">
         <h3>Posicionamiento</h3>
-        <p class="vacio">Toque el mapa para ubicar su terreno.</p>
+        <p class="vacio">Toque el mapa para ubicar su terreno — o use el botón <b>"Ver ejemplo en Sirari"</b> arriba del mapa.</p>
       </div>
     </aside>
   </div>
+  <div class="vinculo">📄 La versión narrada de este comparador es la <a href="mockup-informe-mercado.html">§08 del Informe de Mercado</a>. En el producto real, esta pantalla se recalcula cada noche mientras dure su suscripción: su lista contra el mercado vivo, no contra el estudio de hace 6 meses.</div>
 </section>
 
 <!-- ================= ESCENA 3: MÁQUINA DEL TIEMPO ================= -->
@@ -193,6 +216,7 @@
     <div class="tm-nota"><b>Cómo leer esta curva:</b> mediana del m² <b>pedido</b> del 1 dormitorio (91-151 avisos según la fecha), reconstruida propiedad por propiedad bajo una sola metodología de tipo de cambio. Error de método ±7%: sirve la <b>forma y dirección</b>, no el nivel exacto de un día. No son precios de cierre.</div>
     <p class="pull-tm" id="tm-pull">En dólares el m² cayó <span>−15,1%</span> desde enero. Cambie a Bs y mire de nuevo.</p>
   </div>
+  <div class="vinculo">📄 Esta serie es la <a href="mockup-informe-mercado.html">§02 del Informe de Mercado</a>, con su metodología y error declarado (±7%). El informe cuenta la historia; acá usted la rebobina.</div>
 </section>
 
 <div class="tooltip" id="tt"></div>
@@ -404,6 +428,12 @@ function dibujarMapa(){
     s+='<circle data-i="'+i+'" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+r.toFixed(1)+'" fill="'+col+'" opacity="'+op+'"'+borde+' style="cursor:pointer"/>';
   });
   svg.innerHTML=s; leyenda(); kpisMapa();
+  var NOTAS={
+   precio:'<b>¿Qué estoy viendo?</b> Verde = m² accesible, terracota = caro. Sirari y Eq. Norte concentran el color cálido: ahí el mercado pide más. Acerque con la rueda, arrastre para moverse.',
+   velocidad:'<b>¿Qué estoy viendo?</b> Verde = ese edificio rota en menos de 60 días. Mire Sirari: cara Y rápida a la vez — esa combinación es demanda real, no expectativa.',
+   oferta:'<b>¿Qué estoy viendo?</b> El tamaño del punto es cuántas unidades compiten ahí. Los planetas grandes (Maré, Rhodium, Stone 3) definen el precio de su cuadra.',
+   salidas:'<b>¿Qué estoy viendo?</b> Solo se encienden los edificios de donde salió inventario en julio. Salida ≠ venta: incluye retiros y rotación de agencia — lo declaramos siempre.'};
+  document.getElementById('capa-nota').innerHTML=NOTAS[capaActual];
 }
 function leyenda(){
   var L=document.getElementById('leyenda'),h='';
@@ -438,6 +468,7 @@ document.getElementById('mapa').addEventListener('mousemove',function(e){
 });
 document.getElementById('mapa').addEventListener('mouseleave',function(){tt.style.display='none'});
 document.getElementById('mapa').addEventListener('click',function(e){
+  if(suppressClick)return;
   var t=e.target; if(t.tagName!=='circle')return;
   sel=+t.dataset.i; dibujarMapa(); ficha(B[sel]);
 });
@@ -490,7 +521,8 @@ function zonaDe(p){ /* point in polygon (px) */
   return bz;
 }
 document.getElementById('mapa-sim').addEventListener('click',function(e){
-  pin=svgXY(this,e); dibujarSim(); simular();
+  if(suppressClick)return;
+  pin=svgVB(this,e); dibujarSim(); simular();
 });
 ['u0','u1','u2','p0','p1','p2'].forEach(function(id){document.getElementById(id).addEventListener('input',function(){if(pin)simular();})});
 function chipPos(zc,d,precio){
@@ -587,7 +619,61 @@ document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){
   t.classList.add('on'); document.getElementById('esc-'+t.dataset.esc).classList.add('on');
 }});
 
+/* ============ ZOOM & PAN ============ */
+var suppressClick=false;
+function zoomable(svg){
+  var vb={x:0,y:0,w:VW,h:VH};
+  function apply(){svg.setAttribute('viewBox',vb.x.toFixed(1)+' '+vb.y.toFixed(1)+' '+vb.w.toFixed(1)+' '+vb.h.toFixed(1));}
+  svg.addEventListener('wheel',function(e){e.preventDefault();
+    var r=svg.getBoundingClientRect();
+    var px=vb.x+(e.clientX-r.left)/r.width*vb.w, py=vb.y+(e.clientY-r.top)/r.height*vb.h;
+    var f=e.deltaY<0?0.82:1/0.82;
+    var nw=Math.min(VW*1.15,Math.max(VW/9,vb.w*f)), nh=nw*VH/VW;
+    vb.x=px-(px-vb.x)*nw/vb.w; vb.y=py-(py-vb.y)*nh/vb.h; vb.w=nw; vb.h=nh; apply();
+  },{passive:false});
+  var drag=null;
+  svg.addEventListener('pointerdown',function(e){drag={x:e.clientX,y:e.clientY,vx:vb.x,vy:vb.y,mov:false};});
+  svg.addEventListener('pointermove',function(e){if(!drag)return;
+    var r=svg.getBoundingClientRect();
+    if(Math.abs(e.clientX-drag.x)+Math.abs(e.clientY-drag.y)>7)drag.mov=true;
+    if(!drag.mov)return;
+    vb.x=drag.vx-(e.clientX-drag.x)/r.width*vb.w; vb.y=drag.vy-(e.clientY-drag.y)/r.height*vb.h; apply();});
+  window.addEventListener('pointerup',function(){ if(drag&&drag.mov){suppressClick=true;setTimeout(function(){suppressClick=false},60);} drag=null;});
+  return {reset:function(){vb={x:0,y:0,w:VW,h:VH};apply();},
+          center:function(cx,cy,esc){var nw=VW/esc,nh=VH/esc;vb={x:cx-nw/2,y:cy-nh/2,w:nw,h:nh};apply();},
+          vb:function(){return vb}};
+}
+/* coordenadas de click respetando el viewBox actual (zoom) */
+function svgVB(svg,e){var r=svg.getBoundingClientRect();var v=svg.viewBox.baseVal;
+  return [v.x+(e.clientX-r.left)/r.width*v.width, v.y+(e.clientY-r.top)/r.height*v.height];}
+var zoomMapa=zoomable(document.getElementById('mapa'));
+var zoomSim=zoomable(document.getElementById('mapa-sim'));
+el('reset-zoom').onclick=function(){zoomMapa.reset()};
+el('reset-zoom-sim').onclick=function(){zoomSim.reset()};
+
+/* ============ BUSCADOR DE EDIFICIOS ============ */
+(function(){
+  var dl=el('edificios');
+  dl.innerHTML=B.map(function(b){return '<option value="'+b[1].replace(/"/g,'&quot;')+'">'}).join('');
+  el('buscar').addEventListener('change',function(){
+    var q=this.value.toLowerCase().trim(); if(!q)return;
+    var i=B.findIndex(function(b){return b[1].toLowerCase()===q});
+    if(i<0)i=B.findIndex(function(b){return b[1].toLowerCase().indexOf(q)>=0});
+    if(i<0)return;
+    sel=i; dibujarMapa(); ficha(B[i]);
+    var q2=PX(B[i][2],B[i][3]); zoomMapa.center(q2[0],q2[1],3);
+    this.blur();
+  });
+})();
+
+/* ============ BOTONES DEL SIMULADOR ============ */
+el('sim-ejemplo').onclick=function(){pin=PX(-17.7645,-63.2010); dibujarSim(); simular();};
+el('sim-clear').onclick=function(){pin=null; dibujarSim();
+  el('sim-out').innerHTML='<h3>Posicionamiento</h3><p class="vacio">Toque el mapa para ubicar su terreno — o use el botón <b>"Ver ejemplo en Sirari"</b> arriba del mapa.</p>';};
+
 dibujarMapa(); dibujarSim(); tmDraw();
+/* estado inicial no-vacío: Maré preseleccionado */
+sel=0; dibujarMapa(); ficha(B[0]);
 </script>
 </body>
 </html>
