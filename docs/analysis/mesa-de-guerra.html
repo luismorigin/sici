@@ -952,7 +952,7 @@ function ficha(b){
    '<div class="stat ped" data-ped="f_sal"><div class="v">'+(sl>0?sl:'0')+'</div><div class="l">salidas en julio</div></div>'+
    '</div>'+
    '<div style="font-size:12px;color:var(--gris);margin-bottom:6px">Tickets: <b style="color:var(--arena)">$'+fm(b[8])+' – $'+fm(b[9])+'</b></div>'+
-   '<div style="font-size:12px;color:var(--gris);margin-bottom:10px">Más avisos de: <b style="color:var(--arena)">'+b[14]+'</b></div>'+
+   '<div style="font-size:12px;color:var(--gris);margin-bottom:10px">Más avisos de: <b style="color:var(--arena)">'+ofiLbl(b[14])+'</b></div>'+
    (function(){var al=AL[Math.floor(b[0])]; if(!al)return '';
      return '<div style="font-size:12px;color:var(--gris);margin-bottom:10px">Alquiler activo: <b style="color:var(--arena)">'+al[0]+' aviso'+(al[0]>1?'s':'')+(al[1]?' · Bs '+fm(al[1])+'/mes mediano':'')+'</b> — señal de edificio entregado y habitado</div>';})()+
    (function(){var ei=entregaInfo(Math.floor(b[0])); if(!ei)return '';
@@ -1152,6 +1152,11 @@ var OF=[
 ["Signature",9,6,"Adriana Salazar",null],
 ["— 43 oficinas más —",146,null,null,null]
 ];
+/* el portal de C21 publica solo el nombre de la franquicia; Remax incluye su marca.
+   Para no des-distinguir redes, todo nombre sin prefijo RE/MAX es Century 21 (verificado por fuente). */
+function ofiLbl(n){ if(!n)return n;
+  if(n.indexOf('RE/MAX')===0||n.charAt(0)==='—')return n;
+  return 'C21 '+n;}
 function colOfi(o){ if(o[2]==null)return '#3A3934';
   var r=o[1]/o[2];
   return r>=5?'#D07A4A':(r>=2.5?'#E0CE96':'#5E9C72');}
@@ -1166,7 +1171,7 @@ function dibujarTreemap(){
     var h=H*rv/total, x=0;
     row.forEach(function(o,j){
       var idx=fr[0]+j, w=W*o[1]/rv;
-      var nombre=o[0].length>19?o[0].slice(0,18)+'…':o[0];
+      var nombre=ofiLbl(o[0]); if(nombre.length>21)nombre=nombre.slice(0,20)+'…';
       s+='<g class="tm-tile'+(ofiSel===idx?' sel':'')+'" data-o="'+idx+'">'+
         '<rect x="'+(x+1).toFixed(1)+'" y="'+(y+1).toFixed(1)+'" width="'+(w-2).toFixed(1)+'" height="'+(h-2).toFixed(1)+'" rx="6" fill="'+colOfi(o)+'"/>'+
         (w>72&&h>36?'<text x="'+(x+10).toFixed(1)+'" y="'+(y+20).toFixed(1)+'" font-size="11.5" font-weight="700" font-family="Figtree" fill="#141414" pointer-events="none">'+nombre+'</text>'+
@@ -1187,7 +1192,7 @@ function dibujarCanalMapa(oNombre){
     s+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+(mia?radio(b[5]).toFixed(1):3)+'" fill="'+(mia?'#5E9C72':'#2A2A28')+'" opacity="'+(mia?0.95:0.4)+'" stroke="#141414"/>';
   });
   svg.innerHTML=s;
-  el('canal-mapa-titulo').textContent = oNombre? ('Edificios donde '+oNombre+' es la inmobiliaria con más avisos ('+tiene+')') : 'Dónde está parada la cartera (toque una oficina arriba)';
+  el('canal-mapa-titulo').textContent = oNombre? ('Edificios donde '+ofiLbl(oNombre)+' es la inmobiliaria con más avisos ('+tiene+')') : 'Dónde está parada la cartera (toque una oficina arriba)';
 }
 el('treemap').addEventListener('click',function(e){
   var g=e.target.closest('.tm-tile'); if(!g)return;
@@ -1199,7 +1204,7 @@ el('treemap').addEventListener('click',function(e){
   }
   var edifs=B.filter(function(b){return b[14]===o[0]}).sort(function(a,b){return b[5]-a[5]}).slice(0,7);
   el('ofi-panel').innerHTML='<h3>Radiografía de oficina</h3><div class="ficha">'+
-   '<div class="nombre">'+o[0]+'</div><div class="sub">dato de los avisos publicados · 3-ago</div>'+
+   '<div class="nombre">'+ofiLbl(o[0])+'</div><div class="sub">dato de los avisos publicados · 3-ago</div>'+
    '<div class="stats">'+
    '<div class="stat ped" data-ped="o_cart"><div class="v">'+o[1]+'</div><div class="l">avisos activos en cartera</div></div>'+
    '<div class="stat"><div class="v">'+o[2]+'</div><div class="l">captadores con aviso</div></div>'+
