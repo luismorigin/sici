@@ -2376,7 +2376,9 @@ function editar(){document.getElementById('resultado').classList.add('oculto');
      El pitch necesita el golpe primero y el trámite después. Con ?form=1 arranca
      en el formulario, como lo haría un broker que entra a armar uno nuevo. */
   if(location.search.indexOf('form=1')<0){
-    document.getElementById('f-broker').value='Marcela Áñez · RE/MAX Norte';
+    /* Nombre inequívocamente de ejemplo: este documento se comparte, y firmar la
+       demo con una persona o una inmobiliaria real sería atribuirle algo que no dijo. */
+    document.getElementById('f-broker').value='Broker de ejemplo';
     document.getElementById('f-piso').value='15';
     document.getElementById('f-difs').value='vista despejada al parque, cocina recién renovada';
     calcular();
