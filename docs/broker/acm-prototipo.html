@@ -1924,9 +1924,45 @@ function ajustesMovidos(){
   if(AJ.tipVecinas && MI.a>=TIP_VECINAS_DESDE) m.push({k:'tip', t:'sumó las <b>tipologías vecinas</b> (a partir de '+TIP_VECINAS_DESDE+' m² la diferencia de precio por m² entre tipologías contiguas es chica)'});
   return m;
 }
-/* El mensaje que le llega al cliente por WhatsApp. En el prototipo el enlace es
-   de ejemplo; el texto es exactamente el que se enviaría. */
-function linkAcm(){return 'https://simonbo.com/acm/'+(MI.e.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,14))+'-'+MI.a+'m2';}
+/* ═══ EL ENLACE LLEVA EL ANÁLISIS ADENTRO ═══
+   Todo el estado congelado (unidad, criterios, exclusiones con su motivo, la
+   recomendación firmada) va codificado en el hash de la URL. Sin servidor y sin
+   base de datos: el link YA se puede mandar por WhatsApp y quien lo abre ve
+   exactamente este análisis, no uno recalculado.
+   En producción esto es una fila en la base y un hash corto — pero el contrato
+   es el mismo: lo que se comparte está congelado. */
+function estadoAcm(){
+  return {e:MI.e, d:MI.d, a:MI.a, p:MI.p, pq:MI.pq, es:MI.est, pi:MI.piso, df:MI.difs,
+          b:MI.broker, rp:MI.recoP, rt:MI.recoT, x:excl, aj:AJ};
+}
+function aB64(o){ return btoa(unescape(encodeURIComponent(JSON.stringify(o))))
+  .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function deB64(t){ try{ return JSON.parse(decodeURIComponent(escape(
+  atob(t.replace(/-/g,'+').replace(/_/g,'/'))))); }catch(e){ return null; } }
+function linkAcm(){ return location.href.split('#')[0]+'#'+aB64(estadoAcm()); }
+
+/* Abre un análisis compartido: reconstruye el estado y lo muestra como lo ve el cliente. */
+function abrirCompartido(st){
+  MI.e=st.e; MI.d=st.d; MI.a=st.a; MI.p=st.p; MI.pq=st.pq; MI.est=st.es;
+  AJ = st.aj || AJ;
+  document.getElementById('f-edif').value=st.e;
+  document.getElementById('f-area').value=st.a;
+  document.getElementById('f-precio').value=st.p==null?'':st.p;
+  document.getElementById('f-piso').value=st.pi||'';
+  document.getElementById('f-difs').value=st.df||'';
+  document.getElementById('f-broker').value=st.b||'';
+  [['f-dorms',st.d],['f-pq',st.pq],['f-est',st.es]].forEach(function(par){
+    document.querySelectorAll('#'+par[0]+' button').forEach(function(b){
+      b.classList.toggle('on', b.dataset.v===String(par[1]));});});
+  [['aj-radio',AJ.radio],['aj-tol',AJ.tol],['aj-tip',AJ.tipVecinas?1:0]].forEach(function(par){
+    document.querySelectorAll('#'+par[0]+' button').forEach(function(b){
+      b.classList.toggle('on', +b.dataset.v===+par[1]);});});
+  calcular();                       /* reconstruye la muestra con esos criterios */
+  if(COH && st.x) excl=st.x;        /* y vuelve a quitar lo que el broker excluyó */
+  document.getElementById('f-reco-precio').value=st.rp||'';
+  document.getElementById('f-reco-txt').value=st.rt||'';
+  publicar();
+}
 function msgAcm(){
   var s=COH&&stats();
   return 'Le preparé el análisis de precio de su departamento en '+MI.e+' ('+MI.a+' m²).\n\n'+
@@ -2371,6 +2407,10 @@ function editar(){document.getElementById('resultado').classList.add('oculto');
       AJ[par[1]] = par[1]==='tipVecinas' ? b.dataset.v==='1' : +b.dataset.v;
       reAjustar();};});});
   document.getElementById('sim').addEventListener('input',function(){SIM_TOCADO=true;sim();});
+
+  /* ── Un análisis compartido gana sobre todo lo demás ── */
+  var compartido = location.hash.length>1 ? deB64(location.hash.slice(1)) : null;
+  if(compartido && compartido.e){ abrirCompartido(compartido); return; }
 
   /* ── DEMO: abre en el documento terminado, no en un formulario vacío ──
      El pitch necesita el golpe primero y el trámite después. Con ?form=1 arranca

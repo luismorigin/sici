@@ -30,18 +30,18 @@ s = s.replace(/font-family:'DM Sans',system-ui,sans-serif/g, `font-family:${PILA
      .replace(/font-family:'Figtree'/g, `font-weight:700;font-family:${PILA}`)
      .replace(/font-family:Figtree;/g, `font-family:${PILA};`);
 
-// 3 · Publicado hay URL de verdad: el enlace del mensaje de WhatsApp apunta a esta
-//     misma página, y recién ahí el envío se puede probar de punta a punta.
-s = s.replace(
-  /function linkAcm\(\)\{return 'https:\/\/simonbo\.com\/acm\/'[^\n]*\}/,
-  "function linkAcm(){return location.href.split('#')[0];}"
-).replace("'\\n\\n· En el prototipo el enlace es de ejemplo.'", "''");
+// 3 · El enlace ya lleva el análisis en el hash y se arma desde location.href, así que
+//     publicado funciona solo. Solo se saca la nota que avisaba que era de ejemplo.
+s = s.replace("'\\n\\n· En el prototipo el enlace es de ejemplo.'", "''");
 
 for (const [que, mal] of [
   ['fuentes externas', /fonts\.(googleapis|gstatic)/],
   ['wrapper del documento', /<!DOCTYPE|<html|<\/body>/i],
-  ['enlace de ejemplo', /simonbo\.com\/acm\//],
 ]) if (mal.test(s)) throw new Error(`quedó sin resolver: ${que}`);
+for (const [que, falta] of [
+  ['el enlace con estado', /function linkAcm\(\)\{ return location\.href/],
+  ['la apertura de compartidos', /abrirCompartido/],
+]) if (!falta.test(s)) throw new Error(`falta en el publicable: ${que}`);
 
 writeFileSync(DESTINO, s);
 console.log(JSON.stringify({ origen: antes, publicable: s.length, destino: DESTINO }, null, 1));
