@@ -38,6 +38,11 @@
 | **Utilidad para matching** | ✅ Alta | ❌ Cero | - |
 | **Propiedades con nombre** | 95% | 60% | 40% menos |
 
+⚠️ **El slug de C21 es mejor para LEER el nombre, no para identificar el aviso.** C21 **reescribe el
+slug cuando el captador edita** (`/propiedad/<codigo>_<slug>`) → el mismo aviso puede tener varias URLs
+a lo largo del tiempo. Lo estable es el **código numérico** que va antes del `_`; el ID de Remax no
+sirve para matching pero como identidad es igual de sólido.
+
 **Consecuencia:** Remax depende MUCHO más de:
 - Fuzzy matching posterior
 - Extracción desde descripción (menos confiable)
@@ -244,6 +249,7 @@ if (match) {
 | Característica | Century21 v16.3 | Remax v1.6 | Ganador |
 |----------------|----------------|------------|---------|
 | **URL útil** | ✅ Slug semántico | ❌ ID numérico | C21 |
+| **URL como identidad** | ⚠️ Slug mutable (C21 lo reescribe al editar) — lo estable es el código antes del `_` | ✅ ID estable | Remax |
 | **Prioridades nombre** | 4 niveles | 3 niveles | C21 |
 | **Propiedades con nombre** | 95% | 60% | C21 (+40%) |
 | **Fuente principal datos** | HTML parsing | JSON embebido | Remax |

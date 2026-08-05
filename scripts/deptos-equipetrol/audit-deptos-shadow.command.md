@@ -72,8 +72,14 @@ en el anuncio?). Escribe `output/audit-shadow-<op>-<ts>.json` con el array `mate
   muerta se clasifica sola en `ya de baja` / `ya en cola del verificador` (se cierra sola con la gracia
   de 2d) / **RESIDUAL**. El residual es lo único que hay que mirar: prop **activa**, ficha muerta, y
   **fuera del universo del verificador** (`desaparecidas del discovery OR primera_ausencia_at no nulo`)
-  porque el portal la sigue mostrando en su LISTADO aunque la ficha ya no exista → **no se arregla sola
-  nunca**. Sale gritado con sus URLs, y también en el JSON como `bajas_residual`.
+  porque el portal la sigue mostrando en su LISTADO aunque la ficha ya no exista → **casi ninguna se
+  arregla sola**. Sale gritado con sus URLs, y también en el JSON como `bajas_residual`.
+  ⚠️ **Una clase SÍ se arregla sola desde el PR #64 (4-ago-2026): el slug reescrito de C21.** Cuando el
+  captador edita el aviso, C21 reescribe el slug de `/propiedad/<codigo>_<slug>` y la URL vieja queda
+  muerta con la prop activa — cae exacto en la definición de residual. Ahora el **discovery lo detecta
+  por el código numérico** (el id real del aviso) y el **cargador marca la vieja `duplicado_de`**, así
+  que ese caso se cierra en la captura y no debería llegar acá. Si aparece un residual C21 cuyo código
+  ya existe en shadow con otro slug, es señal de que esa detección falló — no de un residual genuino.
   Medido el 3-ago: de **53** fichas muertas, 36 ya de baja + 15 en cola + **2 residuales**. Mirar la
   lista cruda es mirar 51 de ruido. Si no hay residual imprime `✅ Sin bajas residuales` — explícito,
   para no confundir "revisé y está limpio" con "no revisé".

@@ -17,7 +17,7 @@
 | 1 Discovery | `discovery-alquiler.mjs` | ✅ **pasar `--zona=zona-norte`** |
 | 2b Prep NUEVAS | `cargar-alquiler-shadow.mjs` | ✅ **pasar** |
 | 3 Partir chunks | `partir-lectura.mjs` | ⚙️ la toma del **material** |
-| 3 Inyectar | `inyectar-veredictos.mjs` | ✅ **pasar** |
+| 3 Inyectar | `inyectar-veredictos.mjs` | 🚫 **NO pasar** — no parsea el flag: lo toma como una ruta más y revienta con `ENOENT ...\--zona=zona-norte` (medido 5-ago-2026) |
 | 4 Apply | `cargar-alquiler-shadow.mjs` | ✅ **pasar** |
 | 5 Verificador | `verificador-alquiler.mjs` | ✅ **pasar** |
 | 5b/5c pet_friendly · snapshot | `derivar-pet-friendly.mjs` · `snapshot-shadow.mjs` | ⚪ **globales a propósito** |
@@ -46,6 +46,12 @@ node discovery-alquiler.mjs --zona=zona-norte
 ```
 C21 (renta) + Remax (alquiler) sobre las 14 microzonas de ZN, diffeado contra shadow **filtrado por
 zona**. Circuit breaker → no insistir; avisa solo por Slack con diagnóstico DNS.
+- 🔁 **4ª señal — SLUG REESCRITO por C21** (PR #64, 4-ago-2026): C21 reescribe el slug al editar el aviso
+  → entraría como NUEVO, duplicando el depto. Se detecta por el código: `🔁 N con SLUG REESCRITO por C21`.
+  **NO se filtran, se capturan**; el cargador marca la vieja `duplicado_de` en el paso 4.
+- 🔴 **Excepción al filtro de zona**: el índice de códigos se arma contra shadow **completo, sin filtrar**
+  (el código es único en todo C21). Si sale `⚠️ cambió de zona (X → Y), revisar`, es la excepción
+  funcionando — miralo igual.
 
 ### 2b. Prep NUEVAS (read-only)
 ```
@@ -76,7 +82,7 @@ Si un subagente falla por error de **servicio** (`529 Overloaded`, `500`, timeou
 > **166 props en 13 chunks** sin problema. Es inestabilidad del servicio, no escala.
 
 ```
-node inyectar-veredictos.mjs output/material-alq-nuevas-<ts>-zn.json output/veredictos-alquiler-zn-<fecha>-c*.json --zona=zona-norte
+node inyectar-veredictos.mjs output/material-alq-nuevas-<ts>-zn.json output/veredictos-alquiler-zn-<fecha>-c*.json
 ```
 ⚠️ **Reemplaza, no acumula**: todos los archivos en UNA corrida.
 
@@ -88,6 +94,11 @@ Gate: rechaza venta pura / anticrético / baulera-parqueo. La **basura estructur
 descarte; la **operación mal tipeada** solo se rechaza → si un aviso reaparece noche tras noche,
 **leelo antes de suprimirlo**: puede ser un alquiler real que el gate está tirando (caso Nano Tec,
 30-jul → memoria `feedback_ejemplo_en_spec_pesa_como_regla`).
+
+🔁 **MUTACIÓN ADICIONAL sobre filas PREEXISTENTES (PR #64):** si la fila traía `reemplaza_a` (slug
+reescrito), tras escribir la nueva marca **la vieja** `duplicado_de = <id nuevo>`. Imprime
+`🔁 slug reescrito por C21: N/M viejas marcadas...`. Candado `duplicado_de IS NULL`, `datos_json` se
+mergea, reversible.
 
 🏷️ **Los alias sugeridos quedan en `output/alias-sugeridos-alq-<fecha>-zn.sql`** (desde el 3-ago-2026).
 Antes solo se imprimían en consola y, siendo esta una corrida desatendida, se perdían: así se perdió

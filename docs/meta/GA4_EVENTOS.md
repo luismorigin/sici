@@ -9,7 +9,7 @@
 
 ## Eventos por pagina
 
-### `/alquileres` — 17 eventos
+### `/alquileres` — 27 eventos
 
 #### Conversiones
 
@@ -31,9 +31,10 @@
 | `no_results` | Filtros sin resultados | `zonas`, `dorms`, `precio_max` | Demanda no cubierta |
 | `toggle_favorite` | Agregar/quitar favorito | `property_id`, `action`, `total_favs` | action: `add` / `remove` |
 | `open_compare` | Abrir comparativo | `property_ids`, `count` | Usuarios en fase de decision |
-| `switch_view` | Cambiar grid/mapa | `view_mode` | `grid` o `map` |
+| `switch_view` | Cambiar modo de vista | `view_mode`, `origen` | view_mode: `lista`, `mixto`, `map`, `grid`. origen: `toggle`, `panel`. Doc corregida 3 ago 2026 (declaraba solo 2 valores y omitia `origen`) |
 | `select_map_pin` | Click pin en mapa | `property_id` | Interaccion con mapa |
 | `open_map_mobile` | Abrir mapa en mobile | — | Engagement mobile |
+| `map_area_filter` | Aplicar/limpiar el filtro por area visible del mapa | `accion`, `resultados` | accion: `aplicar` (escritorio), `aplicar_mobile` (carrusel del mapa full), `limpiar`. `resultados` solo en `aplicar_mobile` = cuantas entraban en el area. Agregado 3 ago 2026 (PR #62). **Pregunta que responde:** ¿usan el filtro por ubicacion, y lo usan mas en celular que en escritorio? |
 | `share_alquiler` | Compartir propiedad | `property_id`, `zone`, `price`, `dorms` | Viralidad |
 | `open_shared_alquiler` | Abrir link compartido | `property_id` | Tracking de links compartidos |
 | `reset_filters` | Limpiar filtros aplicados | `results_count` | Abandonar busqueda filtrada. Agregado 3 abr 2026 |
@@ -47,7 +48,7 @@
 | `nudge_filter_tap` | Usuario toca el pill | — | Scrollea a filter card y abre chips |
 | `nudge_filter_dismiss` | Usuario cierra el pill con X | — | Auto-dismiss a los 5s no genera evento |
 
-### `/ventas` — 10 eventos
+### `/ventas` — 11 eventos
 
 #### Conversiones
 
@@ -66,8 +67,9 @@
 | `no_results_venta` | Filtros sin resultados | `zonas`, `dorms` | Demanda no cubierta |
 | `toggle_favorite_venta` | Agregar/quitar favorito | `property_id`, `action` | action: `add` / `remove` |
 | `share_venta` | Compartir propiedad | `property_id`, `property_name`, `zona` | Viralidad |
-| `switch_view_venta` | Cambiar grid/mapa | `view_mode` | `grid` o `map` |
-| `open_map_mobile_venta` | Abrir mapa en mobile | — | Engagement mobile |
+| `switch_view_venta` | Cambiar modo de vista | `view_mode`, `origen` | view_mode: `lista`, `mixto`, `map`, `grid`. origen: `toggle`, `panel`, `broker_banner`. Doc corregida 3 ago 2026 (declaraba solo 2 valores y omitia `origen`) |
+| `open_map_mobile_venta` | Abrir mapa en mobile | `origen` | origen: `card` (desde una card) o `barra` (barra inferior, sin card con GPS) |
+| `map_area_filter_venta` | Aplicar/limpiar el filtro por area visible del mapa | `accion`, `resultados` | accion: `aplicar` (escritorio), `aplicar_mobile` (carrusel del mapa full), `limpiar`. `resultados` solo en `aplicar_mobile` = cuantas entraban en el area. Agregado 3 ago 2026 (PR #62). **Pregunta que responde:** ¿usan el filtro por ubicacion, y lo usan mas en celular que en escritorio? |
 
 ### `/` (landing) — 1 evento
 
@@ -114,6 +116,10 @@ sin tocar los feeds.
 | `toggle_favorite` / `toggle_favorite_venta` | `favorito` |
 | `click_whatsapp` / `_broker` / `_venta` / `_casa` | `contacto_whatsapp` |
 | `lead_gate` / `lead_gate_venta` | `lead_gate` (no se duplica) |
+
+**Los eventos del filtro por area del mapa (`map_area_filter` / `map_area_filter_venta`) NO entran
+al embudo canonico a proposito** — no son un paso del funnel, son diagnostico de UX (¿usan el mapa
+para buscar?). No estan en el mapa `CANONICO` de `lib/analytics.ts`: se emiten tal cual, sin traducir.
 
 **Nota dev:** con `reactStrictMode` los eventos de montaje se ven DOS veces en
 desarrollo (React monta-desmonta-monta). En produccion se emiten una sola vez.
@@ -182,6 +188,8 @@ Fechas donde los eventos cambiaron y los datos antes/despues NO son comparables 
 | 22 jul 2026 | UTM persistidos en sessionStorage (`lib/utm.ts`) | Pre-22 jul: los UTM se leian de la URL al momento del click de WhatsApp → si la persona navegaba (ej. buscador de la home, que arma la URL destino desde cero) el lead se guardaba SIN origen. Era el ~40% de los leads (100 de 253 en 120 dias). Post-fix el origen sobrevive toda la sesion |
 | 22 jul 2026 | `traffic_type: internal` para quien pasa por `/admin` o `/broker` | Pre-22 jul: nuestro propio QA contaminaba los promedios (desktop: 154 sesiones de solo 34 usuarios, ~992s de duracion). ⚠️ **Requiere activar el filtro en GA4 UI** (Admin → Configuracion de datos → Filtros de datos → "Trafico interno" en Activo). Sin activarlo el hit se marca pero no se excluye |
 | 18 abr 2026 | Fix `bounce_no_action` falso positivo | Pre-18 abr: `hasInteracted=true` se marcaba en el view_property automático del scroll-snap inicial → `bounce_no_action` siempre 0 (imposible). Post-fix: solo interacciones explícitas marcan `hasInteracted`, volumen esperado 15-25% de sesiones |
+| 3 ago 2026 | Agregados `map_area_filter` / `map_area_filter_venta` (PR #62) | Sin datos anteriores para estos eventos. El filtro por area del mapa salio a prod ese dia |
+| 3 ago 2026 | `switch_view` / `switch_view_venta`: la doc declaraba 2 valores de `view_mode` cuando el codigo emite 4 (`lista`, `mixto`, `map`, `grid`) y omitia el param `origen` | **No cambio el codigo, cambio la doc.** Los datos historicos siempre tuvieron los 4 valores; quien haya leido solo `grid`/`map` pudo descartar filas validas |
 
 ## Verificacion
 

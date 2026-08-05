@@ -197,6 +197,46 @@ const portalUrls = new Set(portal.map((p) => p.url));
 // `!dbUrls` (en prod) → los ~18 que estaban en prod pero no en shadow quedaban huérfanos, esperando al
 // `--prep`. Al sacar esa exclusión, entran por `--nuevas` y el drenado desde prod se retira. (20-jul)
 const nuevas = portal.filter((p) => !shadowUrls.has(p.url) && !proyUrls.has(p.url));
+
+// ── SLUG REESCRITO POR C21 (4-ago-2026) ──────────────────────────────────────
+// C21 arma la URL como /propiedad/<codigo>_<slug>. El CÓDIGO es el aviso; el slug es
+// decorado y C21 lo REESCRIBE cuando el captador edita el aviso (baja el precio, corrige
+// la tipología, cambia el nombre del edificio). Para nosotros cambia la URL → la prop
+// entra como NUEVA y el mismo departamento queda dos veces en el feed, con dos precios.
+//
+// 🔴 NO se filtran: hay que CAPTURARLAS. El precio nuevo es el vigente — saltearlas
+// dejaría el precio viejo para siempre (caso Lofty Island: teníamos $118.770 cuando ya
+// valía $85.000). Se marcan con `reemplaza_a` y el cargador deduplica al aplicar.
+//
+// Medido antes de implementar: 8 grupos con código repetido en shadow, 8/8 eran el mismo
+// aviso (3 confirmados por el juez del audit, 5 verificados por HTTP el 4-ago: la URL vieja
+// da error y la nueva 200). Cero falsos positivos — el código es el id del aviso en C21.
+const codigoC21 = (url) => (String(url || '').match(/\/propiedad\/(\d+)[_-]/) || [])[1] || null;
+// Se indexa contra shadow COMPLETO (no el filtrado por zona): el código es único en todo
+// C21, así que un aviso que además cambió de zona sigue siendo el mismo aviso. Si eso pasa
+// se avisa abajo, porque es raro y conviene mirarlo.
+const porCodigoC21 = new Map();
+for (const r of shadowTodas) {
+  const c = codigoC21(r.url);
+  if (c && !porCodigoC21.has(c)) porCodigoC21.set(c, r);
+}
+let reescritos = 0;
+for (const nv of nuevas) {
+  if (nv.fuente !== 'century21') continue;
+  const c = codigoC21(nv.url);
+  if (!c) continue;
+  const vieja = porCodigoC21.get(c);
+  if (!vieja || vieja.url === nv.url) continue;
+  nv.reemplaza_a = { id: vieja.id, url: vieja.url, codigo_c21: c, zona_vieja: vieja.zona ?? null };
+  reescritos++;
+}
+if (reescritos) {
+  log(`   🔁 ${reescritos} con SLUG REESCRITO por C21 (mismo código, URL nueva) → se capturan y reemplazan a la vieja:`);
+  for (const nv of nuevas.filter((n) => n.reemplaza_a)) {
+    const cruzaZona = nv.reemplaza_a.zona_vieja && nv.reemplaza_a.zona_vieja !== zonaDe.get(nv.url);
+    log(`      cod ${nv.reemplaza_a.codigo_c21}: id ${nv.reemplaza_a.id} → nueva URL${cruzaZona ? `  ⚠️ cambió de zona (${nv.reemplaza_a.zona_vieja} → ${zonaDe.get(nv.url)}), revisar` : ''}`);
+  }
+}
 // existentes-en-prod: informativo (no afecta la captura; prod ya no clasifica). Útil solo para ver
 // cuánto del portal coincide con el inventario viejo mientras n8n siga vivo.
 const existentes = portal.filter((p) => dbUrls.has(p.url));
@@ -222,12 +262,13 @@ writeFileSync(outPath, JSON.stringify({
     portal_bbox: portalBbox.length, portal_zona: portal.length,
     prod: dbRows.length, prod_activas: dbActivas, shadow: shadowRows.length, shadow_activas: shadowActivas,
     nuevas: nuevas.length, existentes: existentes.length, desaparecidas: desaparecidas.length,
+    slug_reescrito_c21: reescritos,
     por_fuente: {
       c21: portal.filter((p) => p.fuente === 'century21').length,
       remax: portal.filter((p) => p.fuente === 'remax').length,
     },
   },
-  nuevas: nuevas.map((p) => ({ url: p.url, fuente: p.fuente, lat: p.lat, lon: p.lon, zona: zonaDe.get(p.url), precio_usd: p.precio_usd, dorms: p.dorms, fecha_alta: p.fecha_alta ?? null })),
+  nuevas: nuevas.map((p) => ({ url: p.url, fuente: p.fuente, lat: p.lat, lon: p.lon, zona: zonaDe.get(p.url), precio_usd: p.precio_usd, dorms: p.dorms, fecha_alta: p.fecha_alta ?? null, ...(p.reemplaza_a ? { reemplaza_a: p.reemplaza_a } : {}) })),
   existentes_urls: existentes.map((p) => p.url),
   desaparecidas: desaparecidas.map((r) => ({ id: r.id, url: r.url, zona: r.zona })),
 }, null, 2), 'utf8');
@@ -235,6 +276,6 @@ writeFileSync(outPath, JSON.stringify({
 log('='.repeat(64));
 log(`  DRY-RUN listo. NO se escribió nada a la BD.  ·  zona: ${ZONA.nombre}`);
 log(`  Portal: ${portal.length} (${ZONA.zonas.length} microzonas) · shadow venta activas (${ZONA.nombre}): ${shadowActivas}`);
-log(`  Nuevas (ni prod ni shadow): ${nuevas.length} · Desaparecidas del híbrido a verificar: ${desaparecidas.length}`);
+log(`  Nuevas (ni prod ni shadow): ${nuevas.length}${reescritos ? ` (${reescritos} son slug reescrito por C21 → reemplazan a una existente)` : ''} · Desaparecidas del híbrido a verificar: ${desaparecidas.length}`);
 log(`  💾 ${outPath}`);
 log(`  📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy — se descuenta de los GB)' : ' (IP directa, $0)'}\n`);

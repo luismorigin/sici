@@ -74,10 +74,24 @@ Leer la entrada más reciente de:
 
 De cada log de **captura** extraer: escritos a shadow · **rechazados por gate** (y por qué:
 operación mal tipeada / basura estructural / etc.) · **multiproyecto** desviados a
-`proyectos_detectados` · verificador (bajas / revividas / disyuntor) · snapshot shadow (5c) OK.
+`proyectos_detectados` · verificador (bajas / revividas / disyuntor) · snapshot shadow (5c) OK ·
+🔁 **slug reescrito por C21 / deduplicadas** (PR #64, 4-ago-2026).
+
+> 🔁 **Por qué el slug reescrito va en el parte:** C21 reescribe la URL de un aviso cuando el captador
+> lo edita (típicamente **baja el precio**). El discovery lo caza por el código y el cargador marca la
+> versión vieja como duplicada — o sea, **una fila sale del feed sin que nadie lo haya pedido**. Es una
+> mutación silenciosa: si no se reporta, nadie se entera. Buscá en el log de captura
+> `🔁 N con SLUG REESCRITO` (discovery) y `🔁 slug reescrito por C21: N/M viejas marcadas` (apply).
+> ⚠️ Si alguna dice **`cambió de zona (X → Y), revisar`**, subilo al parte: es raro y puede ser un error
+> de zona en el aviso.
+> 📉 **Y es señal de mercado, no solo de higiene**: un slug reescrito = aviso editado, y en 3 de los 5
+> casos medidos el 4-ago **el precio había bajado** (Lofty Island −28%, Torre Ara −7%, Vertical Terra −11%).
 
 Del log del **audit** extraer: superficies 1/2/3 · veredictos (APROBAR / CONFIRMAR / CORREGIR /
 RECHAZAR / DEDUP / PM_NUEVO) · **SQL listo para aplicar** · bloqueos (PM_NUEVO que espera GPS del founder).
+📌 Desde el 4-ago **la superficie 3 va a traer MENOS dedups**, y eso es esperado, no una regresión: la
+republicación por slug reescrito ahora se resuelve en la captura. Lo que queda ahí son apart-hoteles y
+republicaciones con códigos distintos.
 
 ### 3. (Opcional) Confirmar en BD — SOLO para verificar cifras
 Si hace falta cotejar un número, usar las tablas **shadow**: `propiedades_v2_shadow`,

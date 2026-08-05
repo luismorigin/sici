@@ -16,7 +16,7 @@
 | Fase 3: dark launch venta en prod (workflows discovery) | ✅ (26-may) |
 | Fase 4: validar calidad pipeline con data real | ✅ (audit 28-may) |
 | Audit GPS + cleanup historico K1/STONE/CURUPAU/Brickell (63 falsos) | ✅ (28-may) |
-| Cargar pm Zona Norte (#1.5 + capas 2-3 + cleanup nocturno 29-may) | ✅ **73 pm activos con 100% verificación visual** |
+| Cargar pm Zona Norte (#1.5 + capas 2-3 + cleanup nocturno 29-may) | ✅ **73 pm activos, el lote entero verificado visualmente al 29-may-2026** — ⚠️ el "100%" valía para ESE lote y **ya no vale para el catálogo actual**: después se insertaron PMs con `gps_verificado_visual=NULL` (ver `BACKLOG.md:324`) y el catálogo siguió creciendo (id más alto = 565 al 4-ago-2026) |
 | Match rate ZN venta | ✅ **85.8%** (16-jun, desde 19.7%) — aprobar sugerencias `pendiente_zona_norte` + 7 pm nuevos |
 | Match rate ZN alquiler | ✅ **83.3%** (16-jun) — mismo método; sin nombre → matchea por GPS, validación por URL de anuncio |
 | **#8 Microzonas (14 — grilla anillos×avenidas)** | ✅ **aplicado 29-may** (mig 254 + `lib/zonas.ts` + workflows discovery). Snapshot v4 descartado → ver #12 |

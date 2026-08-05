@@ -67,10 +67,20 @@ Los queries de mercado filtran por `status IN ('completado', 'actualizado')`. Lo
 | `inactivo_pending` | URL devuelve 404, pendiente confirmación | Avisos removidos |
 | `inactivo_confirmed` | Aviso terminado confirmado | Props vendidas/retiradas |
 | `excluido_calidad` | Datos basura o no confiables | Descripción ".", precio imposible |
-| `excluido_operacion` | Tipo de operación fuera de scope | Anticrético clasificado como venta |
+| `excluido_operacion` | La operación es OTRA (el aviso existe y sigue publicado) | Anticrético clasificado como venta · **prop 8000642 (4-ago-2026): aviso de ALQUILER amoblado cargado como VENTA** |
 | `excluida_zona` | GPS fuera de polígonos de cobertura | Props en Av. Bush, Av. Beni, etc. |
 | `nueva` | Recién descubierta, sin enrichment | — |
 | `pendiente_enriquecimiento` | Esperando enrichment | — |
+
+🔴 **En SHADOW el status NO alcanza: hay que filtrar también por `es_activa`.** En `propiedades_v2`
+(prod) la baja se marca con `status='inactivo_confirmed'`. En **`propiedades_v2_shadow` la baja se marca
+con `es_activa = false` SIN tocar el status** → una prop dada de baja sigue diciendo `completado`.
+Filtrar solo por status en shadow **cuenta avisos ya caídos**: eso infló las vistas shadow entre el
+21-jul y el 3-ago (8,2% en venta, 15,6% en alquiler), corregido por la **mig 314**.
+
+🔴 **Y los tres `excluido_*` conviven con `es_activa = true`**: significan "no va al feed", NO "el aviso
+se cayó". El caso 8000642 es exactamente eso — el aviso sigue vivo en Remax, solo que es un alquiler
+cargado como venta. Ver `sql/schema/propiedades_v2_schema.md` § los tres `excluido_*`.
 
 ### Props excluidas por zona (migración 181)
 

@@ -276,7 +276,15 @@ async function main() {
   const supConfirmadas = [];   // matches de superficie 2/4 que el juez YA confirmó (tag confirmado_por)
   let sup2 = [], sup2Auto = [];
   const sup4 = [];   // el lector fijo el pm con confianza no-alta (superficie 4, 29-jul-2026)
+  let sup5 = [];     // match con DISTANCIA sospechosa prop↔pm (superficie 5, 4-ago-2026)
   const pmRiesgoIds = new Set();
+
+  // ── SUPERFICIE 5 · umbral de distancia ────────────────────────────────────────
+  // 800 m es el umbral que se diseñó el 30-may-2026 (BITACORA "FIX B1") y que quedó
+  // condicionado a "medir la distribución antes de aplicar". La medición se hizo el
+  // 4-ago: de 932 matches activos con GPS, 841 caen a <150 m. Un umbral de 800 m no
+  // roza nada de lo que hoy funciona — solo levanta la cola larga.
+  const DISTANCIA_SOSPECHOSA_M = 800;
 
   // ── PINES GENÉRICOS DEL PORTAL (se detectan solos, no se hardcodean) ──────────
   // Una coordenada compartida por MÁS DE UN edificio no es una ubicación: es el pin
@@ -343,6 +351,35 @@ async function main() {
         pmRiesgoIds.add(p.id_proyecto_master);
       }
     }
+    // SUPERFICIE 5 — el match está LEJOS del edificio (4-ago-2026)
+    // Cierra el FIX B1 que quedó pendiente desde el 30-may (BITACORA:669). Las superficies
+    // 1/2/4 miran CÓMO se hizo el match (método, confianza, zona); ninguna mira DÓNDE quedó.
+    // Un match por nombre exacto con GPS coherente nunca entraba a ninguna — y ahí vivía el
+    // caso Portobello Isuto: 3 avisos a 4 km de su ficha durante meses, con el nombre perfecto.
+    //
+    // 🔴 REPORTA, NO DESCONECTA — y esto es la lección, no una precaución genérica. El 4-ago se
+    // leyeron 6 casos sospechosos y **solo 3 eran error real** (todos del mismo edificio, cuya
+    // ficha tenía el GPS copiado de otro). En los otros 3 el match era correcto y lo que estaba
+    // mal era el pin que el captador puso en el portal. Degradar por distancia habría roto 3
+    // matches buenos. La distancia sirve para PRIORIZAR la lectura, nunca para decidir.
+    //
+    // El error puede estar en cualquiera de los dos lados, y por eso lo juzga un humano/lector:
+    //   · el AVISO mal colgado (homónimo, fuzzy equivocado) → se corrige el match;
+    //   · la FICHA del catálogo con el GPS mal → se corrige el pm (¡y arrastra a todos sus avisos!);
+    //   · el PIN del captador, genérico o mal clickeado → no se toca nada.
+    else if (p.id_proyecto_master != null && !candado(p, 'id_proyecto_master')
+             && p.latitud != null && p.longitud != null
+             && !pinesGenericos.has(claveGps(p.latitud, p.longitud))) {
+      const yaConf = confirmadoPorAuditor(p);
+      const yaRev = dj.trazabilidad?.distancia_revisada || null;
+      // Memoria: un veredicto sin rastro se repite cada noche (feedback_decision_terreno_va_al_catalogo).
+      // `distancia_revisada` lo escribe el humano al resolver el caso; sin eso, los 43 de la cola
+      // larga volverían todas las noches y la superficie se volvería ruido que nadie mira.
+      if (!yaConf && !yaRev) {
+        sup5.push({ ...base, pm_actual: p.id_proyecto_master, metodo: metodo || 'sin_metodo', pm_nombre: null, pm_zona: null, dist_metros: null });
+        pmRiesgoIds.add(p.id_proyecto_master);
+      }
+    }
   }
 
   // Superficie 1: candidatos fuzzy del catálogo (prod, read-only) para que el juez tenga referencia
@@ -356,7 +393,7 @@ async function main() {
   if (pmRiesgoIds.size) {
     const { data: pms } = await sb.from('proyectos_master').select('id_proyecto_master,nombre_oficial,zona,latitud,longitud').in('id_proyecto_master', [...pmRiesgoIds]);
     const byId = new Map((pms || []).map((r) => [r.id_proyecto_master, r]));
-    for (const s of [...sup2, ...sup4]) {
+    for (const s of [...sup2, ...sup4, ...sup5]) {
       const pm = byId.get(s.pm_actual);
       if (pm) {
         s.pm_nombre = pm.nombre_oficial; s.pm_zona = pm.zona;
@@ -382,6 +419,46 @@ async function main() {
     sup2Auto = sup2.filter((s) => s.pm_nombre && (s.gps_placeholder || (s.dist_metros != null && s.dist_metros < RUIDO_METROS)));
     const autoIds = new Set(sup2Auto.map((s) => s.prop_id));
     sup2 = sup2.filter((s) => !autoIds.has(s.prop_id));
+    // Superficie 5: recién ACÁ se conoce la distancia (necesita el GPS del pm). Se descarta
+    // todo lo que quedó por debajo del umbral — que es la enorme mayoría — y lo que no pudo
+    // medirse (pin genérico o pm sin GPS): sin distancia no hay nada que juzgar.
+    sup5 = sup5.filter((s) => s.dist_metros != null && s.dist_metros > DISTANCIA_SOSPECHOSA_M);
+    // ── La pista que decide QUIÉN está mal (criterio que resolvió Portobello Isuto) ──
+    // Si los HERMANOS del mismo pm están pegados al edificio, el pm está bien y el
+    // sospechoso es ESTE aviso. Si NINGÚN aviso del pm está cerca, el sospechoso es la
+    // FICHA (su GPS) — y corregirla arregla todos sus avisos de una sola vez.
+    // Sin este dato el juez tiene que salir a contar hermanos a mano, que es lo que costó
+    // media hora el 4-ago.
+    // 🔴 Los hermanos se consultan a la BD, NO a `filas`: `filas` viene filtrado por la ZONA
+    // que se está auditando, y los hermanos de un pm pueden estar en otra (el pm de "Torre
+    // Moderna" tiene 7 avisos pegados que el audit de ZN no ve). Contarlos sobre `filas` daba
+    // "0/0 hermanos" siempre y dejaba la pista inservible — cazado al probar, 4-ago-2026.
+    if (sup5.length) {
+      const pmsSup5 = [...new Set(sup5.map((s) => s.pm_actual))];
+      const { data: hermanosDb } = await sb.from('propiedades_v2_shadow')
+        .select('id, id_proyecto_master, latitud, longitud')
+        .in('id_proyecto_master', pmsSup5).eq('es_activa', true).is('duplicado_de', null);
+      const porPm = new Map();
+      for (const h of hermanosDb || []) {
+        if (h.latitud == null || h.longitud == null) continue;
+        if (!porPm.has(h.id_proyecto_master)) porPm.set(h.id_proyecto_master, []);
+        porPm.get(h.id_proyecto_master).push(h);
+      }
+      for (const s of sup5) {
+        const pm = byId.get(s.pm_actual);
+        if (!pm || pm.latitud == null) { s.hermanos_pegados_al_pm = null; s.sospechoso = 'indeterminado (el pm no tiene GPS)'; continue; }
+        const hermanos = (porPm.get(s.pm_actual) || []).filter((h) => h.id !== s.prop_id);
+        s.hermanos_del_pm = hermanos.length;
+        s.hermanos_pegados_al_pm = hermanos.filter((h) => haversine(h.latitud, h.longitud, pm.latitud, pm.longitud) < 150).length;
+        s.sospechoso = s.hermanos_pegados_al_pm > 0
+          ? 'el_aviso (sus hermanos SÍ están pegados al edificio → el pm está bien)'
+          : (s.hermanos_del_pm === 0
+              ? 'indeterminado (es el ÚNICO aviso del edificio — hay que leer el aviso)'
+              : 'la_ficha_del_pm (NINGÚN aviso del edificio está cerca → corregir el pm los arregla a todos)');
+      }
+    }
+    // Ordenadas por distancia: lo más raro primero, que es lo que conviene leer si hay poco tiempo.
+    sup5.sort((a, b) => b.dist_metros - a.dist_metros);
   }
 
   // ── SUPERFICIE 3 — DUPLICADOS (apart-hoteles / republicaciones) ──
@@ -442,7 +519,8 @@ async function main() {
   const file = join(OUT, `audit-matching-shadow-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, ops: OPS, total_filas: filas.length,
-    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, ya_confirmados_por_auditor: supConfirmadas.length },
+    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, ya_confirmados_por_auditor: supConfirmadas.length },
+    superficie_5_umbral_metros: DISTANCIA_SOSPECHOSA_M,
     superficie_1: sup1, superficie_2: sup2,
     // Nombres YA juzgados como no-edificio (odónimo / familia ambigua) → no van al juez.
     // Quedan acá para poder auditar la lista: si una de estas props resultara ser un edificio
@@ -461,6 +539,10 @@ async function main() {
     })),
     superficie_3: sup3,
     superficie_4: sup4,
+    // SUPERFICIE 5 — el match quedó LEJOS del edificio. REPORTA, NO DESCONECTA: medido el
+    // 4-ago, la mitad de los sospechosos tenían el match BIEN y el pin del portal mal.
+    // El juez tiene que decidir cuál de los tres lados falla (aviso / ficha del pm / pin).
+    superficie_5: sup5,
     // Matches de superficie 2/4 que un juez YA confirmó (tag `datos_json.trazabilidad.confirmado_por`).
     // No vuelven al juez. Quedan acá para poder revocar una confirmación que hubiera salido mal.
     ya_confirmados_por_auditor: supConfirmadas.map((s) => ({
@@ -470,6 +552,17 @@ async function main() {
   }, null, 2));
 
   console.log(`────────── RESUMEN AUDIT MATCHING SHADOW ──────────`);
+  if (sup5.length) {
+    console.log(`  📍 Superficie 5 (match LEJOS del edificio, >${DISTANCIA_SOSPECHOSA_M} m): ${sup5.length}`);
+    console.log(`     ⚠️  REPORTA, NO DESCONECTA: la mitad de los sospechosos suelen tener el match BIEN`);
+    console.log(`         y el pin del portal mal (medido 4-ago: 3 de 6). Hay que LEER el aviso.`);
+    for (const s of sup5.slice(0, 12)) {
+      console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio || '—'}" → pm ${s.pm_actual} "${s.pm_nombre || '?'}"  ${(s.dist_metros / 1000).toFixed(1)} km`);
+      console.log(`        sospechoso: ${s.sospechoso}${s.hermanos_del_pm != null ? `  (${s.hermanos_pegados_al_pm}/${s.hermanos_del_pm} hermanos pegados)` : ''}`);
+    }
+    if (sup5.length > 12) console.log(`     … y ${sup5.length - 12} más (todas en el JSON, ordenadas por distancia)`);
+    console.log('');
+  }
   console.log(`  Superficie 1 (sin match + con nombre → PM_NUEVO/fuzzy): ${sup1.length}`);
   for (const s of sup1.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}"  cands:${s.candidatos.length}${s.candidatos[0] ? ` (mejor ${s.candidatos[0].nombre} ${s.candidatos[0].score})` : ''}`);
   // Se DECLARA lo filtrado (regla 3 de NOMBRES_NO_EDIFICIO): un descarte invisible se lee

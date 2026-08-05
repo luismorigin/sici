@@ -20,7 +20,7 @@ vía mockups: v1 side angosto → v2 modal → v3 riel lleno → **v4 final** (`
 | Dos columnas | wrappers `bsm-body` / `bsm-main` / `bsm-aside` — **`display:contents` en mobile** (DOM idéntico, mobile verificado intacto a 375px) |
 | Tarjeta sticky | **SOLO WhatsApp + Compartir** (como "Request a tour" de Zillow — el precio NO se repite). `bsm-aside` lleva `align-self:stretch` o el sticky no tiene recorrido |
 | Mercado / Similares | extraídos a consts `mercadoSection` / `similaresSection` (con ids de ancla), UNA sola vez en la columna principal |
-| Mapa Ubicación | `bsm-flow-map` con `VentaMap` — props `railMapProps`/`railMapNoop` **memoizados** (identidad inestable rebuilda el mapa Leaflet) |
+| Mapa Ubicación | `bsm-flow-map` con `VentaMap` — props `railMapProps`/`railMapNoop` memoizados (buena higiene; **ya NO es lo que evita el rebuild**: desde el fix del 3-ago-2026 `VentaMap` no se reconstruye por identidad de props — ver `DEUDA_TECNICA.md`) |
 | Confianza | línea "X días publicado · captado por [agente · oficina]" (`bsm-trust`) |
 
 Los tabs del sheet desktop se **eliminaron** (`sideTab` ya no existe; `showTab()`
@@ -42,11 +42,13 @@ bajo el velo y **nunca se desmonta** (crash Leaflet `_leaflet_pos`).
 1. ✅ **HECHO** — **Espejo v4 en `/alquileres`** (tema claro, clase `bs-side-alq` en
    `styles/alquileres.css`, tab Costos en lugar de Compra, mapa `AlquilerMapMulti`).
    Ver `FEED_MODAL_CLARO_CHECKPOINT.md` ("ESPEJO COMPLETO ✅").
-2. Review de Lucho + push/PR → **sigue pendiente** (la rama no está pusheada).
+2. ✅ **HECHO** — Review + merge: el código está en `main` y en producción (verificado 3-ago-2026;
+   `.bs-side`/`.bs-side-alq` vivos en ambos feeds). El rediseño desktop entró por el PR #19 (8-jul-2026).
 3. Pendientes viejos de fase 2:
    - URL por propiedad `/ventas/p/[id]` (SEO + OG) — pendiente.
-   - "dibujar área de búsqueda / buscar en esta zona" en el mapa — **movido al backlog**
-     (`docs/backlog/FILTROS_FEED_PUBLICO.md` §3).
+   - ✅ **HECHO (3-ago-2026, PR #62)** — "buscar en esta zona": el encuadre del mapa filtra la lista,
+     en escritorio y celular. Ver `docs/design/PLAN_MAPA_FILTRO_AIRBNB.md`.
+   - "Dibujar área de búsqueda" a mano alzada — **sigue pendiente**, fuera de scope del PR #62.
    - Satélite — **RETIRADO** (necesita token Mapbox; Esri/Google no funcionan desde Bolivia).
      Ver CLAUDE.md "Rediseño DESKTOP feeds".
 

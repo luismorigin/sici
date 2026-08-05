@@ -963,7 +963,7 @@ Ver backlogs detallados en `docs/backlog/`
 | 2.0 | 6 Ene 2026 | Metodología 12 Pasos, 4 formularios, Sistema de Alertas |
 | 2.1 | 6 Ene 2026 | North Star, Unit Economics, Anti-Patterns, MVP Criteria |
 | 2.2 | 6 Ene 2026 | Sección A-BIS (Actores/RES), Paso 5 con Knowledge Graph, Sección I (Infraestructura) |
-| **3.0** | **28 Feb 2026** | **Actualización mayor:** Sección I reescrita con datos producción (1,002 props, 227 proyectos, 3 fuentes, ~130 funciones, 69 amenities, TC dinámico, pipeline dual venta+alquiler). Secciones J/K/M/Q (roadmaps obsoletos) consolidadas en J (Historial + Pendientes). Sección O actualizada con rutas reales del repo. Eliminado banner DESACTUALIZADO. |
+| **3.0** | **28 Feb 2026** | **Actualización mayor:** Sección I reescrita con datos producción (1,002 props, 227 proyectos, 3 fuentes, ~130 funciones, 69 amenities, TC dinámico, pipeline dual venta+alquiler). ⚠️ *Esos números son la foto del 28-feb-2026 y quedan acá como registro histórico del changelog — NO son el estado actual (al 4-ago-2026 hay 441 proyectos master activos). Para conteos vivos, consultar la BD.* Secciones J/K/M/Q (roadmaps obsoletos) consolidadas en J (Historial + Pendientes). Sección O actualizada con rutas reales del repo. Eliminado banner DESACTUALIZADO. |
 
 ---
 

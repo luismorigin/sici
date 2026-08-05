@@ -47,6 +47,16 @@ node discovery-deptos.mjs
 Sale a C21 + Remax (tipo=departamento, red ancha Equipetrol), filtra por `get_zona_by_gps` ∈ las 6
 microzonas, y diffea contra `propiedades_v2`. Mirá el resumen: **NUEVAS**, **existentes**,
 **desaparecidas**. Escribe `output/discovery-deptos-<ts>.json`.
+- 🔁 **4ª señal — SLUG REESCRITO por C21** (PR #64, 4-ago-2026). C21 arma la URL como
+  `/propiedad/<codigo>_<slug>` y **reescribe el slug cuando el captador edita** (baja el precio, corrige la
+  tipología, cambia el nombre del edificio). La URL cambia → el aviso entraría como NUEVO y el mismo depto
+  quedaría dos veces, con dos precios. El discovery lo detecta por el código y lo imprime así:
+  `🔁 N con SLUG REESCRITO por C21 (mismo código, URL nueva)` + una línea por caso.
+  **NO se filtran: se capturan** (el precio nuevo es el vigente; saltearlas dejaría el viejo para siempre).
+  Van marcadas con `reemplaza_a` en el JSON, y el `resumen` suma `slug_reescrito_c21`.
+  ⚠️ Si alguna dice **`cambió de zona (X → Y), revisar`** → mirala: el índice de códigos se cruza contra
+  shadow **COMPLETO, sin filtrar por zona** (el código es único en todo C21), así que un aviso que cambió de
+  zona lo detecta igual. Es raro y vale confirmarlo.
 - Si el circuit breaker (🛑) se dispara → **no insistas**, la IP está bloqueada, esperá unas horas.
 - Cooldown de 20 min entre corridas (`--force` para saltarlo, con criterio).
 
@@ -126,6 +136,15 @@ score≥0.95+zona → AUTO; ambiguo/débil → sin match, lo levanta el audit; n
 Imprime: **X escritos**, rechazados por gate, reporte por depto (precio/TC/dorms/pm), **alias sugeridos**
 y **con-nombre-sin-auto-match** (= la cola de excepciones).
 
+🔁 **MUTACIÓN ADICIONAL sobre filas PREEXISTENTES (PR #64):** si una fila traía `reemplaza_a` (slug
+reescrito, ver paso 1), después de escribir la nueva el cargador marca **la vieja** con
+`duplicado_de = <id nuevo>` + trazabilidad (`dedup_metodo='codigo_c21_identico_slug_reescrito'`,
+`dedup_por='cargador_slug_reescrito'`). Imprime:
+`🔁 slug reescrito por C21: N/M viejas marcadas como duplicadas <vieja>→<nueva>`.
+Es el ÚNICO punto donde el apply toca filas que no vienen en el material. Guardas: candado
+`duplicado_de IS NULL` · se saltea si la fila nueva falló al escribir · se saltea si la vieja no existe ·
+`datos_json` se **mergea**, no se pisa. Reversible (`duplicado_de = NULL`).
+
 ### 5. Verificador — baja de desaparecidos (status-code-only + 2 señales)
 ```
 node verificador-deptos.mjs           # DRY-RUN: reporta candidatos + HTTP
@@ -176,8 +195,11 @@ node notificar-slack.mjs "<resumen>"
 ```
 El mensaje va **corto y accionable**, y DEBE distinguir el caso:
 - **✅ corrida OK** — `✅ Cron deptos-VENTA · <min> min` + `N nuevas → X escritas · Y rechazadas por gate` +
-  `Verificador: A bajas · B revividas` + `📊 MB` + (si hay cola) `🔔 PARA VOS: <n> con nombre sin match ·
-  <n> alias sugeridos · <PM_NUEVO si hay>`; si no hay cola, decir **`Sin cola pendiente`** explícitamente.
+  `Verificador: A bajas · B revividas` + (si hubo) `🔁 N slug reescrito → N deduplicadas` + `📊 MB` +
+  (si hay cola) `🔔 PARA VOS: <n> con nombre sin match · <n> alias sugeridos · <PM_NUEVO si hay>`;
+  si no hay cola, decir **`Sin cola pendiente`** explícitamente.
+  🔁 **El contador de slug reescrito va SIEMPRE que sea > 0**: son filas que se ocultaron del feed sin
+  que nadie lo pidiera. Y si alguna cruzó de zona, va como observación (⚠️), no como número suelto.
 - **⚠️ con observación** — corrió bien pero algo llama la atención (dato sospechoso, patrón raro de un
   captador, etc.): mismo resumen + la observación en una línea.
 - **🛑 abortada** — NO hace falta acá: si el discovery muere por circuit breaker, `discovery-deptos.mjs`

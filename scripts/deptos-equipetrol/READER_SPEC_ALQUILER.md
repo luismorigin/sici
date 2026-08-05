@@ -48,6 +48,10 @@ Ver `TC_NUEVO_DECISION.md` (paquete TC de venta — este spec es su espejo para 
 ## Entrada (lo que el lector LEE)
 Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente, sin regex):
 - `slug` (de la URL) — fuerte en C21; código en Remax.
+  ⚠️ El slug refleja el nombre **de hoy**: C21 lo **reescribe cuando el captador edita el aviso**
+  (baja el precio, corrige la tipología, cambia el nombre del edificio). Sirve como señal de nombre,
+  **no como identidad** — un slug distinto significa "aviso editado", no "aviso nuevo". El identificador
+  del aviso es el **código numérico** que va antes del `_` en `/propiedad/<codigo>_<slug>`.
 - `titulo` / `subtitulo` (discovery).
 - `descripcion` (extractor) — fuerte en Remax (el nombre suele estar en la 1ª línea).
 - Señales estructuradas de ALQUILER: `precio_mensual_bob` y/o `precio_mensual_usd` (el portal ya suele separar
