@@ -17,7 +17,7 @@
 | 1 Discovery | `discovery-alquiler.mjs` | ✅ **pasar `--zona=zona-norte`** |
 | 2b Prep NUEVAS | `cargar-alquiler-shadow.mjs` | ✅ **pasar** |
 | 3 Partir chunks | `partir-lectura.mjs` | ⚙️ la toma del **material** |
-| 3 Inyectar | `inyectar-veredictos.mjs` | ✅ **pasar** |
+| 3 Inyectar | `inyectar-veredictos.mjs` | 🚫 **NO pasar** — no parsea el flag: lo toma como una ruta más y revienta con `ENOENT ...\--zona=zona-norte` (medido 5-ago-2026) |
 | 4 Apply | `cargar-alquiler-shadow.mjs` | ✅ **pasar** |
 | 5 Verificador | `verificador-alquiler.mjs` | ✅ **pasar** |
 | 5b/5c pet_friendly · snapshot | `derivar-pet-friendly.mjs` · `snapshot-shadow.mjs` | ⚪ **globales a propósito** |
@@ -82,7 +82,7 @@ Si un subagente falla por error de **servicio** (`529 Overloaded`, `500`, timeou
 > **166 props en 13 chunks** sin problema. Es inestabilidad del servicio, no escala.
 
 ```
-node inyectar-veredictos.mjs output/material-alq-nuevas-<ts>-zn.json output/veredictos-alquiler-zn-<fecha>-c*.json --zona=zona-norte
+node inyectar-veredictos.mjs output/material-alq-nuevas-<ts>-zn.json output/veredictos-alquiler-zn-<fecha>-c*.json
 ```
 ⚠️ **Reemplaza, no acumula**: todos los archivos en UNA corrida.
 

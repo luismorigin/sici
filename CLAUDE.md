@@ -124,6 +124,7 @@ Referencia completa: `docs/arquitectura/TIPO_CAMBIO_SICI.md` (flujo portal→ext
 | **Learnings Baseline Equipetrol** | `docs/baseline/LEARNINGS_EQUIPETROL_BASELINE.md` |
 | **Fichas técnicas proyectos** | `docs/fichas/` — data de desarrollador no disponible en portales |
 | **Estudios mercado SaaS** | `docs/backlog/ESTUDIOS_MERCADO_SAAS.md` — framework `scripts/estudio-mercado/` |
+| **🏗️ Paquete B2B desarrolladoras (Mesa + Informe)** | `docs/analysis/README_MESA_INFORME.md` — **empezar por ahí**. Tablero interactivo (`mesa-de-guerra.html`) + informe imprimible (`mockup-informe-mercado.html`) + **`mesa-data.js` = FUENTE ÚNICA** (data del corte + META + CONF + CTX + SLOTS + EDITORIAL). 🔴 **Los 3 archivos viajan JUNTOS**; refrescar corte o clonar a otra zona = regenerar SOLO `mesa-data.js`, las vistas no se tocan. Prototipo con data real **congelada al 3-ago-2026** (no se auto-refresca). El pase editorial por edición tiene checklist fiduciario de 8 reglas en el README. Contexto estratégico: `ANALISIS_DATA_ENGINE_MOAT.md` · rigor: `AUDITORIA_ESTADISTICA_MESA_INFORME.md` (🔴 antigüedad del stock ≠ tiempo de venta) · pricing: `docs/backlog/PRODUCTO_INFORME_MERCADO.md` §10 |
 | **Sistema TC y precios** | `docs/arquitectura/TIPO_CAMBIO_SICI.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
