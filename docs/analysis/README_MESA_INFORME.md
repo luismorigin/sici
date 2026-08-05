@@ -47,6 +47,44 @@ La data está congelada al 3-ago. Para actualizar el corte o clonar a **Zona Nor
 
 La productización real (que se refresque solo cada noche desde la BD, con acceso por token) está diseñada pero **gated a que alguien pague el primer informe** — plan comercial en la conversación de la sesión y §10 de `docs/backlog/PRODUCTO_INFORME_MERCADO.md`.
 
+## Arquitectura anti-desactualización (3 capas dentro de `mesa-data.js`)
+
+1. **CONF** — las políticas editoriales, decididas UNA vez (qué es "contraste publicable": Δ≥5% con n≥30 por lado; qué es "base suficiente": n≥5; cuándo USD y Bs "cuentan historias distintas": ≥5 puntos; qué amenidad es "estándar": la declara ≥50% de los edificios). Adaptarse a cambios = ajustar acá, no reescribir textos.
+2. **SLOTS** — párrafos condicionales donde **la data elige la plantilla** (`slotTC`, `slotPeor`, `slotAltura`, `slotEquip`): si el TC se queda quieto o baja, si la tipología más golpeada cambia, si ningún equipamiento pasa la política — el texto correcto aparece solo. **Nada automático puede quedar mintiendo.**
+3. **EDITORIAL** — la voz de cada edición (fecha + 4-5 hallazgos + nota del mes). Es lo ÚNICO interpretativo, está fechado en el propio informe, y **se reescribe en cada refresco** (~20-30 min). Ese pase es el "análisis editorial personalizado" incluido en el precio del producto.
+
+## El pase editorial por edición (checklist fiduciario)
+
+Al regenerar `mesa-data.js`, reescribir `EDITORIAL.hallazgos` (4-5) leyendo primero qué eligieron los slots. Reglas NO negociables:
+
+1. Todo contraste sin test de significancia se llama **"indicativo"**.
+2. **Nunca aseverar ausencias** (amenidades/flags: solo el positivo).
+3. Todo % de variación de precio **declara la moneda** (USD y Bs cuentan distinto).
+4. **Salida ≠ venta**, siempre. Antigüedad del stock ≠ tiempo de venta.
+5. Números del feed completo → META; lo derivable → se calcula (nada tipeado en prosa).
+6. Cada mediana con su **n**; n débil se declara u omite ("s/base").
+7. Un solo mes de flujo **no hace tendencia** — decirlo.
+8. Universo declarado (feed completo vs unidades ancladas) cuando pueda confundir.
+
+## Barrido de equipamiento al refrescar (query)
+
+El corte 3-ago trae un barrido PARCIAL (3 atributos). Al regenerar, llenar `CONTRASTES` con el barrido COMPLETO — patrón (por tipología de referencia, hoy 1D):
+
+```sql
+WITH attrs AS (SELECT DISTINCT jsonb_array_elements_text(datos_json->'amenities'->'equipamiento') a
+               FROM v_mercado_venta_shadow WHERE zona_general='Equipetrol')
+SELECT a.a,
+ ROUND(percentile_cont(0.5) WITHIN GROUP (ORDER BY v.precio_m2) FILTER (WHERE v.datos_json->'amenities'->'equipamiento' ? a.a)) AS con_p50,
+ COUNT(*) FILTER (WHERE v.datos_json->'amenities'->'equipamiento' ? a.a) AS con_n,
+ ROUND(percentile_cont(0.5) WITHIN GROUP (ORDER BY v.precio_m2) FILTER (WHERE NOT v.datos_json->'amenities'->'equipamiento' ? a.a)) AS sin_p50,
+ COUNT(*) FILTER (WHERE NOT v.datos_json->'amenities'->'equipamiento' ? a.a) AS sin_n
+FROM attrs a CROSS JOIN v_mercado_venta_shadow v
+WHERE v.zona_general='Equipetrol' AND v.dormitorios=1 AND v.precio_m2 IS NOT NULL
+GROUP BY a.a ORDER BY con_n DESC;
+```
+
+Se embeben TODAS las filas (no solo las "ganadoras") — el slot aplica la política y decide qué publicar. Con ~30 atributos, alguno pasará por azar: por eso el veredicto nunca sube de "indicativo" (comparaciones múltiples).
+
 ## Modelo comercial (resumen de lo decidido)
 
 - **Puerta:** informe personalizado (el pricing vigente está en `PRODUCTO_INFORME_MERCADO.md` §10: setup USD 1.500 + suscripción 250/mes, sube tras el mes 6).

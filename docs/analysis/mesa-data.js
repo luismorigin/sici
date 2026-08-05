@@ -356,8 +356,14 @@ var META={corte:'3-ago-2026', corteYM:202608,
  entregasConFecha:65, entregasVencidas:22, entRes2026:32, ent2027:6, ent2028:5,
  rangoDentro:69, rangoFuera:83, /* antigüedad mediana dentro vs sobre el rango (análisis DB) */
  topCaptadora:{n:21, ofi:'RE/MAX Union'},
- pisoAlto:'+14,6%', errorSerie:'±7%'};
-var CONF={diasRapido:60, diasLento:100};
+ pisoAlto:'+14,6%', pisoAltoPct:14.6, errorSerie:'±7%'};
+/* CONF: las POLÍTICAS editoriales, decididas UNA vez — adaptarse a cambios = ajustar acá, no reescribir textos */
+var CONF={diasRapido:60, diasLento:100,
+ umbralContrastePct:5,  /* un contraste de atributo es publicable si Δ ≥ 5% ... */
+ nMinContraste:30,      /* ... y n ≥ 30 por lado; si no: 'n insuf.' o '≈ 0' */
+ nMinBase:5,            /* mediana publicable con 5+ unidades; si no: 's/base' */
+ brechaMonedaPts:5,     /* USD y Bs 'cuentan historias distintas' si difieren ≥ 5 puntos */
+ umbralEstandar:0.5};   /* amenidad 'estándar de mercado' si la declara ≥ 50% de los edificios */
 function p50(a){if(!a.length)return null;var s=a.slice().sort(function(x,y){return x-y});return s[Math.floor(s.length/2)]}
 function pq(a,q){if(!a.length)return null;var s=a.slice().sort(function(x,y){return x-y});return s[Math.max(0,Math.min(s.length-1,Math.round(q*(s.length-1))))]}
 /* CTX: TODO lo demás se CALCULA de la data embebida — al refrescar la data, esto se recalcula solo */
@@ -439,6 +445,70 @@ function T(s){return s.replace(/\{(\w+)\}/g,function(m,k){return CTX.t[k]!==unde
  var got={m2Gen:CTX.m2Gen,zCaraM2:CTX.zCara.m2,zBarM2:CTX.zBar.m2,diasGen:CTX.diasGen,topN:CTX.topN,top10pct:CTX.top10pct};
  var difs=[];Object.keys(esp).forEach(function(k){if(Math.abs(got[k]-esp[k])/Math.max(1,esp[k])>0.03)difs.push(k+': tipeado '+esp[k]+' vs calculado '+got[k])});
  console.info('[CTX self-test]',difs.length?difs:'OK — calculado ≈ tipeado',JSON.stringify(got));})();
+
+/* ============ AM_STD calculado: 'estándar de mercado' = prevalencia ≥ CONF.umbralEstandar ============ */
+AM_STD=(function(){
+  var cnt={},tot=CTX.nEdificios;
+  Object.keys(AMS).forEach(function(pm){amsDe(+pm).forEach(function(a){cnt[a.k]=(cnt[a.k]||0)+1})});
+  CTX.amPrev=cnt;
+  return Object.keys(cnt).filter(function(k){return cnt[k]/tot>=CONF.umbralEstandar});
+})();
+
+/* ============ CONTRASTES: barrido de equipamiento (dentro del 1 dormitorio) ============
+   [atributo, $/m² con, n con, $/m² sin, n sin] — corte 3-ago: barrido PARCIAL (3 atributos medidos).
+   Al refrescar, correr el barrido COMPLETO sobre todo el vocabulario (query en README §Refrescar). */
+var CONTRASTES=[
+['Aire acondicionado',1745,61,1650,94],
+['Balcón',1700,43,1694,112],
+['Domótica',1724,10,1681,145]];
+/* control de composición de amenidades: bruto [con,nCon,sin,nSin] + control por tipología */
+var AMCTRL={bruto:[1668,300,1751,102],
+ control:[['1 dormitorio',1700,124,1688,31],['2 dormitorios',1648,77,1673,39],['Monoambiente',1780,77,1975,23]]};
+
+/* ============ EDITORIAL: la voz de ESTA edición — se reescribe en cada refresco (checklist en README) ============ */
+var EDITORIAL={
+ fecha:'3-ago-2026',
+ hallazgos:[
+  '<b>La moneda cambia la historia — y la tipología también.</b> En dólares, el m² pedido cayó entre {SERIE_MIN} y {SERIE_MAX} desde enero según la tipología; el 2 dormitorios es el que más cae incluso en Bs ({S2D_BS}): debilidad propia del segmento, no solo efecto del dólar (§02). Si sus costos están en Bs y su lista en USD, ese spread ES su margen.',
+  '<b>Los avisos fuera del rango son los más viejos del mercado.</b> Dentro del rango típico: {R_IN} días publicados (mediana); sobre el rango, {R_OUT}. Dos lecturas compatibles — no rota, o quedó desactualizado frente a un mercado que bajó — y ambas ordenan lo mismo: revisar el precio. (Antigüedad de la oferta viva, no tiempo de venta.)',
+  '<b>La altura se cobra; el checklist de amenidades, no.</b> Del 10º piso hacia arriba el m² pide {PISO_ALTO}; en cambio la piscina la declara el {PIS_EDIF} de los edificios — requisito de entrada, no diferenciador (§05, con su trampa estadística mostrada).',
+  '<b>La preventa publicada casi no descuenta</b> (−2,9% vs entrega inmediata). El descuento real de pozo se negocia en privado y no llega a portales — lo declaramos como límite, no lo inventamos.'],
+ nota_mes:''};
+
+/* ============ SLOTS: texto condicional — la DATA elige la plantilla, nunca queda mintiendo ============ */
+function slotTC(){
+  var d1=CTX.serie[1], br=Math.abs(d1.du-d1.db);
+  if(CTX.tcDelta<=-1) return 'El TC retrocedió '+tokPct(CTX.tcDelta)+' en el período: esta vez los precios en Bs se mueven más que en USD — el efecto inverso al de otros cortes. <span>La moneda sigue mandando, ahora al revés.</span>';
+  if(br>=CONF.brechaMonedaPts) return 'El precio en dólares y en bolivianos cuentan historias distintas: '+tokPct(d1.du)+' vs '+tokPct(d1.db)+' en el 1 dormitorio. <span>La diferencia es el tipo de cambio ('+tokPct(CTX.tcDelta)+' en el período)</span> — la variable que más planes financieros de la plaza están ignorando.';
+  return 'Este corte, las dos monedas cuentan la misma historia ('+tokPct(d1.du)+' ≈ '+tokPct(d1.db)+'): <span>el tipo de cambio estuvo quieto ('+tokPct(CTX.tcDelta)+')</span>. Cuando se mueva, este párrafo lo va a contar.';
+}
+function slotPeor(){
+  var peor=0;[0,1,2].forEach(function(t){if(CTX.serie[t].du<CTX.serie[peor].du)peor=t});
+  var nom={0:'monoambiente',1:'1 dormitorio',2:'2 dormitorios'}[peor], s=CTX.serie[peor];
+  var enBs=s.db<=-CONF.brechaMonedaPts;
+  return '<b>La tipología más golpeada del corte: el '+nom+' ('+tokPct(s.du)+' en USD).</b> '+
+   (enBs?'Cae fuerte incluso en bolivianos ('+tokPct(s.db)+') — no es solo efecto del dólar: es debilidad propia del segmento.':'En bolivianos apenas se mueve ('+tokPct(s.db)+'): buena parte de la caída es efecto cambiario, no del segmento.')+
+   (peor===2?' Y encaja con una señal independiente: el 2D que sale del mercado es también el más lento en salir ('+META.dias2dSalida+' días de vida mediana, §06).':'');
+}
+function slotAltura(){
+  if(Math.abs(META.pisoAltoPct)>=CONF.umbralContrastePct)
+    return 'La altura sí se cobra este corte: del piso 10 hacia arriba el m² pide '+META.pisoAlto+' vs pisos 1º-4º. Altura y edificio premium vienen juntos — el dato no los separa: asociación indicativa, no tarifa por piso.';
+  return 'Este corte la altura no muestra un premio claro ('+META.pisoAlto+') — lo declaramos en vez de forzar la historia.';
+}
+function slotEquip(){
+  var pasan=[], rows=CONTRASTES.map(function(c){
+    var d=Math.round(100*(c[1]/c[3]-1));
+    var nOk=Math.min(c[2],c[4])>=CONF.nMinContraste, ok=Math.abs(d)>=CONF.umbralContrastePct&&nOk;
+    var ver= ok?'<b>'+(d>0?'+':'')+d+'%</b>':(!nOk?'n insuf.':'≈ 0');
+    if(ok)pasan.push(c[0].toLowerCase()+' ('+(d>0?'+':'')+d+'%)');
+    return '<tr><td>'+c[0]+'</td><td class="num">$'+fm(c[1])+' <span style="color:var(--gris)">(n='+c[2]+')</span></td><td class="num">$'+fm(c[3])+' <span style="color:var(--gris)">(n='+c[4]+')</span></td><td class="num">'+ver+'</td></tr>';
+  }).join('');
+  var pol='Δ≥'+CONF.umbralContrastePct+'% con n≥'+CONF.nMinContraste+' por lado';
+  var head= pasan.length?
+   'Con la política declarada ('+pol+'), este corte sostiene contraste en: <b>'+pasan.join(', ')+'</b> — indicativo (sin test de significancia), posible proxy de edificio más nuevo.':
+   'Con la política declarada ('+pol+'), <b>ningún equipamiento supera el ruido este corte</b> — y eso también es información.';
+  return {head:head, rows:rows};
+}
 /* [oficina, cartera, captadores, captador top, salidas jul (null = <3 u observadas)] — BD 3-ago */
 var OF=[
 ["Business & Residences",34,15,"Yula Cortez Monasterio",7],
