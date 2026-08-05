@@ -75,6 +75,19 @@ Heredadas de `docs/analysis/AUDITORIA_ESTADISTICA_MESA_INFORME.md`, `docs/canoni
 
 **Fuera de alcance por ahora:** el ACM del comprador (documento distinto, input distinto, orden distinto — mismo motor, otro modo), el PDF (el link se comparte mejor, se versiona y se mide), y que el cliente edite supuestos (si puede, el documento deja de ser del broker).
 
+## 📏 Cómo medir el prototipo sin engañarse (5-ago-2026)
+
+Hay dos formas de recorrer el motor y **dan resultados muy distintos**:
+
+| Método | Qué mide | Estado de obra mezclado |
+|---|---|---|
+| **Grilla sintética** — 117 edificios × 3 tipologías × 3 superficies × 2 estados = 2.106 | cobertura del código (sirve para cazar excepciones) | 25% de los que emiten · 11,8% mezcla total |
+| **Pool real** — cada una de las 282 propiedades pide su propio ACM | algo parecido a la demanda | **8% parcial · 0,4% mezcla total (1 caso)** |
+
+🔴 **La grilla sirve para buscar crashes, no para dimensionar problemas.** Pide combinaciones que nadie pediría (monoambiente de 90 m², 2 dorm de 40 m²); esas encuentran pocos comparables y hacen que el motor caiga a mezclar estados mucho más seguido que en la vida real. El "25% mezclado" que llegó a un mensaje de commit es un artefacto de ese método — el número honesto es 0,4%.
+
+**Regla:** para verificar que nada rompe, grilla sintética. Para decir *"esto pasa X% de las veces"*, pool real — y decir cuál de los dos se usó.
+
 ## ▶️ Próximo paso sugerido
 
 Elegir UNA audiencia (mi recomendación: **vendedor**, por el hueco + porque el motor ya responde su pregunta) y cerrar su mapa de decisiones antes de tocar código. Después: extraer el módulo común de cohorts/percentiles (paso 0), y recién ahí la vista.
