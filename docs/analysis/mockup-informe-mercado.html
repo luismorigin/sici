@@ -150,12 +150,9 @@
 
   <div class="grafico">
     <h3>Índice del m² pedido — 1 dormitorio, Equipetrol</h3>
-    <div class="gsub">5-ene → 21-jul-2026 · 59 cortes · base 100 = 5 de enero</div>
+    <div class="gsub" id="gsub-serie"></div>
     <svg id="serie" viewBox="0 0 700 260" style="width:100%;height:auto"></svg>
-    <div class="leyenda">
-      <span><i style="background:#3A6A48"></i>USD: $2.002 → $1.700 (−15,1%)</span>
-      <span><i style="background:#C89B7B"></i>Bolivianos: Bs 19.360 → Bs 18.285 (−5,6%)</span>
-    </div>
+    <div class="leyenda" id="ley-serie"></div>
   </div>
 
   <p class="pull" id="slot-tc"></p>
@@ -173,13 +170,13 @@
 <section class="pagina">
   <div class="eyebrow">03 · Precio y velocidad por zona</div>
   <h2>Dónde el precio alto es real y dónde es ilusión</h2>
-  <p class="lead">Un m² alto solo significa demanda si la oferta además rota. Por eso cada barra lleva su velocidad: precio alto + días bajos = demanda real; precio alto + días altos = expectativa de los vendedores.</p>
+  <p class="lead">Cada barra lleva la ANTIGÜEDAD de su oferta activa. Precio alto con stock joven sugiere demanda; precio alto con stock viejo sugiere expectativa — pero la antigüedad admite doble lectura (no rota, o se re-publicó), así que se usa para COMPARAR zonas entre sí, nunca como promesa de venta.</p>
   <a class="mesa-link" href="mesa-de-guerra.html">🗺️ Ver estas zonas edificio por edificio en la Mesa de Guerra →</a>
 
   <div id="barras-zona"></div>
   <p class="nota-n">Eq. 3er Anillo se omite: <span data-t="A3N">5</span> unidades no sostienen una mediana — lo declaramos en vez de publicar un número débil. Barras calculadas en vivo de las unidades ancladas a edificio (87% del feed).</p>
 
-  <p class="pull">Sirari es la única zona que combina <span>m² alto Y rotación rápida</span> (71 días). Eq. Oeste y V. Brígida piden menos y aún así tardan 105-113 días: ahí la oferta espera a un comprador que hoy no está llegando.</p>
+  <p class="pull" id="slot-zona"></p>
 
   <h3 style="font-size:14px;margin:26px 0 12px">La matriz para fijar lista: $/m² por zona × tipología</h3>
   <table id="tbl-matriz"></table>
@@ -279,43 +276,23 @@
 <section class="pagina">
   <div class="eyebrow">08 · Su proyecto contra la oferta viva</div>
   <h2>El comparador: dónde caería su lista de precios HOY</h2>
-  <p class="lead">Esta página se arma con los datos de SU proyecto (los provee usted) contra la oferta activa y verificada de su microzona. Ejemplo con un proyecto hipotético en Sirari — los datos del mercado son reales, el proyecto es de muestra.</p>
+  <p class="lead">Esta página se calcula con los datos de SU proyecto (el bloque PROYECTO de la data) contra la oferta activa y verificada en el radio de su terreno. Para el informe real: se cargan la ubicación, el mix y la lista del cliente — el resto sale solo.</p>
   <a class="mesa-link" href="mesa-de-guerra.html">🗺️ Probar este comparador en vivo — ponga su torre en el mapa →</a>
 
-  <div class="proyecto-card">
-    <div>
-      <div class="pc-nombre">Torre Ejemplo</div>
-      <div class="pc-datos">Sirari · 48 unidades · entrega est. 2028 · mix: 12 monoambientes / 24 × 1D / 12 × 2D</div>
-    </div>
-    <div class="pc-tag">EN POZO — datos del desarrollador</div>
-  </div>
+  <div class="proyecto-card" id="pc-card"></div>
 
-  <h3 style="font-size:14px;margin-bottom:14px">Posición de su lista de precios contra el rango vivo de Sirari (▼ = su precio)</h3>
-  <!-- escala strips: $1.500 → $2.150 -->
-  <div class="rango-strip"><div><b>Mono · $1.980</b></div><div class="strip-track"><div class="strip-range" style="left:23%;width:54%"></div><div class="strip-med" style="left:53%"></div><div class="strip-proy" style="left:74%"></div></div><div class="strip-meta">rango $1.652–2.002 · <span class="chip">dentro</span></div></div>
-  <div class="rango-strip"><div><b>1D · $1.890</b></div><div class="strip-track"><div class="strip-range" style="left:22%;width:53%"></div><div class="strip-med" style="left:52%"></div><div class="strip-proy" style="left:60%"></div></div><div class="strip-meta">rango $1.646–1.987 · <span class="chip">dentro</span></div></div>
-  <div class="rango-strip"><div><b>2D · $2.050</b></div><div class="strip-track"><div class="strip-range" style="left:27%;width:41%"></div><div class="strip-med" style="left:56%"></div><div class="strip-proy" style="left:85%"></div></div><div class="strip-meta">rango $1.673–1.940 · <span class="chip alto">sobre +6%</span></div></div>
-  <p class="nota-n">Contra 32 monoambientes, 36 × 1D y 31 × 2D activos en Sirari. La posición se recalcula cada noche mientras dure el contrato — su lista contra el mercado vivo, no contra el estudio de hace 6 meses.</p>
+  <h3 style="font-size:14px;margin-bottom:14px" id="pc-pos-titulo"></h3>
+  <div id="pc-pos"></div>
+  <p class="nota-n" id="pc-pos-nota"></p>
 
-  <h3 style="font-size:14px;margin:24px 0 12px">El estándar de amenidades de Sirari: qué es requisito y qué es diferencial</h3>
-  <div class="bar-row"><div><b>Piscina</b></div><div class="bar-track"><div class="bar-fill" style="width:74%">74%</div></div><div class="bar-meta">requisito de entrada</div></div>
-  <div class="bar-row"><div><b>Churrasquera</b></div><div class="bar-track"><div class="bar-fill" style="width:63%">63%</div></div><div class="bar-meta">requisito de entrada</div></div>
-  <div class="bar-row"><div><b>Gimnasio</b></div><div class="bar-track"><div class="bar-fill claro" style="width:39%">39%</div></div><div class="bar-meta">zona gris</div></div>
-  <div class="bar-row"><div><b>Aire acond.</b></div><div class="bar-track"><div class="bar-fill claro" style="width:29%">29%</div></div><div class="bar-meta">se asocia a +5,8% (1D)</div></div>
-  <div class="bar-row"><div><b>Co-working</b></div><div class="bar-track"><div class="bar-fill gris" style="width:27%">27%</div></div><div class="bar-meta">diferencial posible</div></div>
-  <div class="bar-row"><div><b>Salón eventos</b></div><div class="bar-track"><div class="bar-fill gris" style="width:9%">9%</div></div><div class="bar-meta">diferencial posible</div></div>
-  <p class="nota-n">"Requisito" = lo tiene la mayoría de su competencia directa: no tenerlo se nota, tenerlo no se cobra. "Diferencial posible" = escaso en la zona; si el mercado lo paga es hipótesis suya a validar — el dato solo dice que ahí hay espacio para diferenciarse.</p>
+  <h3 style="font-size:14px;margin:24px 0 12px" id="pc-amen-titulo"></h3>
+  <div id="pc-amen"></div>
+  <p class="nota-n">"Requisito" = lo declara la mayoría de los edificios del radio: no tenerlo se nota, tenerlo no se cobra. "Diferencial posible" = escaso en el radio; si el mercado lo paga es hipótesis suya a validar. Prevalencias sobre lo DECLARADO — el estándar real puede ser más alto, nunca más bajo.</p>
 
-  <h3 style="font-size:14px;margin:24px 0 12px">Contra quién entra a competir en Sirari</h3>
-  <table>
-    <tr><th>Edificio</th><th class="num">Unidades en oferta</th><th class="num">$/m² mediano</th></tr>
-    <tr><td>Condominio Maré</td><td class="num">22</td><td class="num">$1.952</td></tr>
-    <tr><td>Rhodium</td><td class="num">16</td><td class="num">$1.890</td></tr>
-    <tr><td>Speranto Verdi</td><td class="num">10</td><td class="num">$1.654</td></tr>
-    <tr><td colspan="2">+ resto de la zona (oferta dispersa)</td><td class="num">102 activas en total</td></tr>
-  </table>
+  <h3 style="font-size:14px;margin:24px 0 12px" id="pc-vec-titulo"></h3>
+  <table id="pc-vecinos"></table>
 
-  <p class="pull">Sus 48 unidades entrarían a una zona con 102 activas: <span>usted solo aumentaría la oferta de Sirari un 47%.</span> Ese número — su proyecto como shock de oferta — no existe en ningún otro informe de la plaza.</p>
+  <p class="pull" id="pc-shock"></p>
 
   <div class="disclaimer"><b>Qué es y qué no es este comparador:</b> muestra dónde cae su precio contra lo que el mercado PIDE hoy, con qué estándar de amenidades compite y contra cuánta oferta. El shock de oferta es un <b>orden de magnitud</b>: contamos avisos publicados (no unidades únicas), y la venta directa del desarrollador que no publica en portales queda fuera. No predice ventas ni valida su tasación: es el tablero de posición, actualizado cada noche, para que sus decisiones de lista y lanzamiento se tomen contra el mercado vivo.</div>
 </section>
@@ -421,11 +398,14 @@
   var W=700,H=260,mL=42,mR=14,mT=14,mB=30;
   var usd0=d[0][1],bs0=d[0][2];
   var idx=d.map(function(r){return [r[0],r[1]/usd0*100,r[2]/bs0*100]});
-  var yMin=82,yMax=106;
+  var tcx=TMD.tc.map(function(t){return t/TMD.tc[0]*100}); /* TC paralelo, indexado igual */
+  var todos=[];idx.forEach(function(r){todos.push(r[1],r[2])});tcx.forEach(function(v){todos.push(v)});
+  var yMin=Math.floor(Math.min.apply(0,todos))-2, yMax=Math.ceil(Math.max.apply(0,todos))+2;
   function X(i){return mL+(W-mL-mR)*i/(idx.length-1)}
   function Y(v){return mT+(H-mT-mB)*(yMax-v)/(yMax-yMin)}
   var s='';
-  [85,90,95,100,105].forEach(function(g){
+  var grilla=[];for(var g0=Math.ceil(yMin/5)*5;g0<=yMax;g0+=5)grilla.push(g0);
+  grilla.forEach(function(g){
     s+='<line x1="'+mL+'" y1="'+Y(g)+'" x2="'+(W-mR)+'" y2="'+Y(g)+'" stroke="#EFEAE0" stroke-width="1"/>';
     s+='<text x="'+(mL-8)+'" y="'+(Y(g)+4)+'" font-size="11" fill="#6B6B66" text-anchor="end" font-family="DM Sans">'+g+'</text>';
   });
@@ -438,8 +418,13 @@
     return '<path d="'+p+'" fill="none" stroke="'+color+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="5 4"':'')+' stroke-linejoin="round" stroke-linecap="round"/>';
   }
   s+=linea(2,'#C89B7B',2.5,true);
+  /* TC paralelo indexado (lila): la brecha entre USD y Bs ES esta curva */
+  var ptc=tcx.map(function(v,i){return (i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)}).join(' ');
+  s+='<path d="'+ptc+'" fill="none" stroke="#9B8EC4" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
   s+=linea(1,'#3A6A48',3,false);
-  var last=idx[idx.length-1];
+  var last=idx[idx.length-1], lastTc=tcx[tcx.length-1];
+  s+='<circle cx="'+X(tcx.length-1)+'" cy="'+Y(lastTc)+'" r="3.5" fill="#9B8EC4"/>';
+  s+='<text x="'+(X(tcx.length-1)-8)+'" y="'+(Y(lastTc)-8)+'" font-size="11" font-weight="700" fill="#9B8EC4" text-anchor="end" font-family="Figtree">'+lastTc.toFixed(1).replace('.',',')+'</text>';
   s+='<circle cx="'+X(idx.length-1)+'" cy="'+Y(last[1])+'" r="4" fill="#3A6A48"/>';
   s+='<circle cx="'+X(idx.length-1)+'" cy="'+Y(last[2])+'" r="4" fill="#C89B7B"/>';
   s+='<text x="'+(X(idx.length-1)-8)+'" y="'+(Y(last[1])+18)+'" font-size="12" font-weight="700" fill="#3A6A48" text-anchor="end" font-family="Figtree">'+last[1].toFixed(1).replace('.',',')+'</text>';
@@ -502,11 +487,61 @@
  var se=slotEquip();
  fill('slot-equip','<p style="font-size:13.5px;line-height:1.55;margin-bottom:12px">'+se.head+'</p>'+
   '<table><tr><th>Equipamiento declarado</th><th class="num">Con</th><th class="num">Sin</th><th class="num">Δ</th></tr>'+se.rows+'</table>'+
-  '<p class="nota-n">Corte 3-ago: barrido parcial (3 atributos medidos). Al refrescar la data, el barrido corre sobre TODO el vocabulario capturado — el que pase la política aparece; si ninguno pasa, se dice.</p>');
+  '<p class="nota-n">Barrido COMPLETO: '+CONTRASTES.length+' atributos (amenidades + equipamiento) con n≥10 dentro del 1 dormitorio — nada elegido a dedo: la política decide qué se publica.</p>');
  fill('am-bruto','Comparación ingenua: los deptos <b>con</b> piscina piden $'+fm(AMCTRL.bruto[0])+'/m² (n='+AMCTRL.bruto[1]+') y los <b>sin</b>, $'+fm(AMCTRL.bruto[2])+' (n='+AMCTRL.bruto[3]+') — ¿la piscina resta valor? No: las torres con amenidades concentran unidades grandes y los boutique sin amenidades concentran monoambientes premium. Controlando por tipología, el efecto desaparece:');
  fill('tbl-amctrl','<tr><th>Misma tipología</th><th class="num">Con piscina/gym</th><th class="num">Sin</th><th class="num">Diferencia</th></tr>'+
   AMCTRL.control.map(function(c){var d=Math.round(100*(c[1]/c[3]-1));
    return '<tr><td>'+c[0]+'</td><td class="num">$'+fm(c[1])+' <span style="color:var(--gris)">(n='+c[2]+')</span></td><td class="num">$'+fm(c[3])+' <span style="color:var(--gris)">(n='+c[4]+')</span></td><td class="num">'+(Math.abs(d)<CONF.umbralContrastePct?'≈ 0':(d>0?'+':'')+d+'% *')+'</td></tr>'}).join(''));
+ /* ===== leyenda + subtítulo del gráfico: calculados de TMD ===== */
+ (function(){var L2=TMD.f.length-1,d1=TMD.d[1];
+  var du=(d1.u[L2]/d1.u[0]-1)*100, db=(d1.b[L2]/d1.b[0]-1)*100, dt=(TMD.tc[L2]/TMD.tc[0]-1)*100;
+  function sw(c){return '<i style="background:'+c+'"></i>'}
+  document.getElementById('ley-serie').innerHTML=
+   '<span>'+sw('#3A6A48')+'USD: '+tokUSD(d1.u[0])+' → '+tokUSD(d1.u[L2])+' ('+tokPct(du)+')</span>'+
+   '<span>'+sw('#C89B7B')+'Bs: '+fm(d1.b[0])+' → '+fm(d1.b[L2])+' ('+tokPct(db)+')</span>'+
+   '<span>'+sw('#9B8EC4')+'TC paralelo: '+TMD.tc[0].toFixed(2).replace('.',',')+' → '+TMD.tc[L2].toFixed(2).replace('.',',')+' ('+tokPct(dt)+')</span>';
+  document.getElementById('gsub-serie').textContent='5-ene → 21-jul-2026 · '+TMD.f.length+' cortes · base 100 = 5 de enero · el TC paralelo (lila) en la misma escala';
+ })();
+ fill('slot-zona',slotZona());
+ /* ===== §08: el comparador se CALCULA del bloque PROYECTO (radio real por GPS) ===== */
+ (function(){
+  function distM(aLat,aLon,bLat,bLon){var kx=111320*Math.cos((aLat+bLat)/2*Math.PI/180);
+   var dx=(aLon-bLon)*kx, dy=(aLat-bLat)*110570; return Math.sqrt(dx*dx+dy*dy);}
+  var P=PROYECTO, zNom=Z[P.zona], nomT={0:'Mono',1:'1D',2:'2D',3:'3D'};
+  var tot=0;Object.keys(P.unidades).forEach(function(k){tot+=P.unidades[k]});
+  var mix=Object.keys(P.unidades).filter(function(k){return P.unidades[k]>0}).map(function(k){return P.unidades[k]+'×'+nomT[k]}).join(' / ');
+  fill('pc-card','<div><div class="pc-nombre">'+P.nombre+'</div><div class="pc-datos">'+zNom+' · '+tot+' unidades · entrega est. '+P.entrega+' · mix: '+mix+'</div></div>'+
+   '<div class="pc-tag">'+(P.ejemplo?'PROYECTO DE MUESTRA — cargue el suyo':'EN POZO — datos del desarrollador')+'</div>');
+  document.getElementById('pc-pos-titulo').textContent='Posición de su lista contra el rango vivo de '+zNom+' (▼ = su precio)';
+  var rz=R[P.zona]||{};
+  var pares=[0,1,2,3].filter(function(d){return P.unidades[d]&&rz[d]}).map(function(d){return {r:rz[d],p:P.lista[d]}});
+  var lo=Math.min.apply(0,pares.map(function(x){return Math.min(x.r[0],x.p)}))-60;
+  var hi=Math.max.apply(0,pares.map(function(x){return Math.max(x.r[2],x.p)}))+60;
+  function pctE(v){return Math.round(100*(v-lo)/(hi-lo))}
+  fill('pc-pos',[0,1,2,3].filter(function(d){return P.unidades[d]}).map(function(d){
+    var r2=rz[d];
+    if(!r2)return '<div class="rango-strip"><div><b>'+nomT[d]+' · $'+fm(P.lista[d])+'</b></div><div class="strip-track"></div><div class="strip-meta"><span class="chip" style="background:#E7E2D4;color:var(--gris)">s/base en la zona</span></div></div>';
+    var chip= P.lista[d]>r2[2]? '<span class="chip alto">sobre +'+Math.round((P.lista[d]/r2[2]-1)*100)+'%</span>' : (P.lista[d]<r2[0]? '<span class="chip alto">bajo −'+Math.round((1-P.lista[d]/r2[0])*100)+'%</span>' : '<span class="chip">dentro</span>');
+    return '<div class="rango-strip"><div><b>'+nomT[d]+' · $'+fm(P.lista[d])+'</b></div><div class="strip-track"><div class="strip-range" style="left:'+pctE(r2[0])+'%;width:'+(pctE(r2[2])-pctE(r2[0]))+'%"></div><div class="strip-med" style="left:'+pctE(r2[1])+'%"></div><div class="strip-proy" style="left:'+pctE(P.lista[d])+'%"></div></div><div class="strip-meta">rango $'+fm(r2[0])+'–'+fm(r2[2])+' · '+chip+'</div></div>';
+  }).join(''));
+  document.getElementById('pc-pos-nota').textContent='Contra '+[0,1,2,3].filter(function(d){return rz[d]}).map(function(d){return rz[d][3]+'×'+nomT[d]}).join(' · ')+' activos en '+zNom+' (rangos p25–p75 con su n). En el producto por suscripción, esta posición se recalcula cada noche.';
+  var comps=B.filter(function(b){return distM(P.lat,P.lon,b[2],b[3])<=P.radioM});
+  var unidR=comps.reduce(function(a,b){return a+b[5]},0);
+  document.getElementById('pc-amen-titulo').textContent='El estándar de amenidades en '+P.radioM+' m del terreno ('+comps.length+' edificios, '+unidR+' unidades)';
+  fill('pc-amen',[['Piscina',10],['Gimnasio',11],['Co-working',12],['Churrasquera',13]].map(function(a){
+    var p2=comps.length?Math.round(100*comps.filter(function(b){return b[a[1]]}).length/comps.length):0;
+    var tag=p2>=60?'requisito de entrada':(p2<=30?'diferencial posible':'zona gris');
+    var cls=p2>=60?'':(p2<=30?' gris':' claro');
+    return '<div class="bar-row"><div><b>'+a[0]+'</b></div><div class="bar-track"><div class="bar-fill'+cls+'" style="width:'+Math.max(p2,8)+'%">'+p2+'%</div></div><div class="bar-meta">'+tag+'</div></div>';
+  }).join(''));
+  document.getElementById('pc-vec-titulo').textContent='Contra quién entra a competir en el radio';
+  var top3=comps.slice().sort(function(a,b){return b[5]-a[5]}).slice(0,3);
+  fill('pc-vecinos','<tr><th>Edificio</th><th class="num">Unidades en oferta</th><th class="num">$/m² mediano</th></tr>'+
+   top3.map(function(b){return '<tr><td>'+b[1]+'</td><td class="num">'+b[5]+'</td><td class="num">$'+fm(b[6])+'</td></tr>'}).join('')+
+   '<tr><td colspan="2">+ resto del radio ('+Math.max(0,comps.length-3)+' edificios)</td><td class="num">'+unidR+' unid. en total</td></tr>');
+  var zTot=CTX.zonaTot[P.zona]||0, shockPct=zTot?Math.round(100*tot/zTot):null;
+  fill('pc-shock','Sus '+tot+' unidades entrarían a una zona con '+zTot+' ancladas: <span>usted solo aumentaría la oferta de '+zNom+' un '+(shockPct!=null?'+'+shockPct+'%':'—')+'.</span> Ese número — su proyecto como shock de oferta (orden de magnitud) — no existe en ningún otro informe de la plaza.');
+ })();
  /* tokens sueltos en el texto */
  document.querySelectorAll('[data-t]').forEach(function(e){var v=CTX.t[e.getAttribute('data-t')];if(v!==undefined)e.textContent=v;});
 })();

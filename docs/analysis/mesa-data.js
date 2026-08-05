@@ -454,13 +454,30 @@ AM_STD=(function(){
   return Object.keys(cnt).filter(function(k){return cnt[k]/tot>=CONF.umbralEstandar});
 })();
 
-/* ============ CONTRASTES: barrido de equipamiento (dentro del 1 dormitorio) ============
-   [atributo, $/m² con, n con, $/m² sin, n sin] — corte 3-ago: barrido PARCIAL (3 atributos medidos).
-   Al refrescar, correr el barrido COMPLETO sobre todo el vocabulario (query en README §Refrescar). */
+/* ============ CONTRASTES: barrido COMPLETO de atributos (amenidades + equipamiento, dentro del 1 dormitorio) ============
+   [atributo, $/m² con, n con, $/m² sin, n sin] — TODO el vocabulario con n≥10 (query en README §Refrescar).
+   Se embeben TODAS las filas; la POLÍTICA (CONF) decide qué se publica — sin curaduría a dedo. */
 var CONTRASTES=[
-['Aire acondicionado',1745,61,1650,94],
-['Balcón',1700,43,1694,112],
-['Domótica',1724,10,1681,145]];
+['Piscina',1700,120,1702,33],
+['Churrasquera',1700,107,1701,46],
+['Cocina equipada',1700,106,1711,47],
+['Gimnasio',1748,76,1650,77],
+['Co-working',1700,59,1700,94],
+['Aire acondicionado',1795,57,1655,96],
+['Salón de Eventos',1640,43,1735,110],
+['Balcón',1701,42,1699,111],
+['Sauna/Jacuzzi',1873,40,1651,113],
+['Termotanque/Calefón',1800,39,1676,114],
+['Chapa digital',1700,37,1700,116],
+['Roperos/Closets',1691,34,1700,119],
+['Box de baño',1754,32,1699,121],
+['Vestidor',1837,26,1688,127],
+['Heladera',1722,20,1700,133],
+['Terraza propia',1848,17,1699,136],
+['Microondas',1723,14,1700,139],
+['Estacionamiento para Visitas',1835,13,1700,140],
+['Domótica',1724,10,1681,143],
+['Video portero',1570,10,1702,143]];
 /* control de composición de amenidades: bruto [con,nCon,sin,nSin] + control por tipología */
 var AMCTRL={bruto:[1668,300,1751,102],
  control:[['1 dormitorio',1700,124,1688,31],['2 dormitorios',1648,77,1673,39],['Monoambiente',1780,77,1975,23]]};
@@ -505,10 +522,30 @@ function slotEquip(){
   }).join('');
   var pol='Δ≥'+CONF.umbralContrastePct+'% con n≥'+CONF.nMinContraste+' por lado';
   var head= pasan.length?
-   'Con la política declarada ('+pol+'), este corte sostiene contraste en: <b>'+pasan.join(', ')+'</b> — indicativo (sin test de significancia), posible proxy de edificio más nuevo.':
-   'Con la política declarada ('+pol+'), <b>ningún equipamiento supera el ruido este corte</b> — y eso también es información.';
+   'Con la política declarada ('+pol+'), este corte sostiene contraste en: <b>'+pasan.join(', ')+'</b> — indicativo (sin test de significancia; con '+CONTRASTES.length+' atributos barridos, alguno puede pasar por azar). Los positivos pueden ser proxy de edificio más nuevo; los negativos suelen ser composición (el atributo vive en torres de otro perfil), no castigo del atributo.':
+   'Con la política declarada ('+pol+'), <b>ningún atributo supera el ruido este corte</b> — y eso también es información.';
   return {head:head, rows:rows};
 }
+function slotZona(){ /* liderazgo por zona SIN afirmar 'rotación' ni inventar demanda */
+  var joven=CTX.zRap, viejo=CTX.zLen;
+  var combinada=[CTX.zonas[0],CTX.zonas[1]].filter(function(z){return z===joven})[0];
+  var cola=' La oferta más vieja se acumula en '+viejo.nombre+' ('+viejo.dias+' días de antigüedad mediana): pedir menos no le está garantizando salida.';
+  var cierre=' (Antigüedad del stock, no tiempo de venta — y admite doble lectura: se renueva, o se re-publica.)';
+  if(combinada) return combinada.nombre+' combina <span>m² alto y el stock más joven</span> ('+combinada.dias+' días de antigüedad mediana): su oferta se renueva más que la del resto.'+cola+cierre;
+  return 'El m² más alto ('+CTX.zonas[0].nombre+') no coincide con el stock más joven ('+joven.nombre+', '+joven.dias+' días) — precio y renovación van por caminos distintos este corte.'+cola+cierre;
+}
+
+/* ============ PROYECTO: la sección 08 se calcula de acá — editar con los datos del cliente real ============ */
+var PROYECTO={
+ ejemplo:true,               /* true = se etiqueta 'PROYECTO DE MUESTRA' */
+ nombre:'Torre Ejemplo',
+ lat:-17.7645, lon:-63.2010, /* el terreno (pin) */
+ zona:'SI',                  /* código de zona: EC/EN/SI/VB/EO */
+ entrega:'2028',
+ radioM:500,
+ unidades:{0:12,1:24,2:12},  /* mix propuesto por tipología */
+ lista:{0:1950,1:1890,2:2050}/* lista de precios $/m² por tipología */
+};
 /* [oficina, cartera, captadores, captador top, salidas jul (null = <3 u observadas)] — BD 3-ago */
 var OF=[
 ["Business & Residences",34,15,"Yula Cortez Monasterio",7],
