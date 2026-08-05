@@ -101,14 +101,11 @@
   .sim-out .l b{color:var(--arena)}
   input[type=range]{width:100%;accent-color:var(--salvia);margin:6px 0}
   .sim-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--gris)}
-  .met{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:14px 16px;margin-bottom:10px}
-  .met h3{font-size:13px;margin-bottom:9px}
-  .met ul{list-style:none}
-  .met li{font-size:12.5px;line-height:1.55;padding-left:17px;position:relative;margin-bottom:7px;color:var(--gris)}
-  .met li b{color:var(--negro)}
-  .met.ok li::before{content:"✓";position:absolute;left:0;color:var(--salvia);font-weight:700}
-  .met.aj li::before{content:"⚙";position:absolute;left:0;color:var(--gris)}
-  .met.no li::before{content:"⚠";position:absolute;left:0;color:var(--terra)}
+  details.col li{font-size:12.5px;line-height:1.55;padding-left:17px;position:relative;margin-bottom:7px;color:var(--gris)}
+  details.col li b{color:var(--negro)}
+  details.col li::before{content:"⚙";position:absolute;left:0;color:var(--gris)}
+  details.col.ok li::before{content:"✓";color:var(--salvia);font-weight:700}
+  details.col.no li::before{content:"⚠";color:var(--terra)}
   .pie{padding:22px 20px 34px;text-align:center;background:var(--negro);color:#8A867C;font-size:11.5px;line-height:1.65}
   .pie b{color:var(--arena);font-family:'Figtree'}
   .mock{position:fixed;bottom:8px;right:10px;background:var(--negro);color:var(--arena);
@@ -126,6 +123,58 @@
   .difs .dl{font-size:13px;line-height:1.5}
   .difs .dn{font-size:10.5px;color:var(--gris);margin-top:6px;line-height:1.45}
   .sello-gen{font-size:10.5px;color:var(--gris);line-height:1.55;margin-top:10px;padding-top:9px;border-top:1px solid var(--linea)}
+  /* ── modo: el broker EDITA, el cliente LEE. Nunca la misma pantalla ── */
+  .modo-bar{position:sticky;top:41px;z-index:19;background:#2C2A26;color:#E8E3D5;padding:8px 14px 8px 18px;
+    display:flex;align-items:center;gap:9px;font-size:11px;font-family:'Figtree';font-weight:700}
+  .modo-bar .mb-t{flex:1;line-height:1.35;min-width:0}
+  .modo-bar .mb-t span{display:block;font-weight:400;color:#9B968B;font-size:10px;margin-top:1px}
+  .modo-bar button{background:var(--salvia-viva);color:#0F1A12;border:none;border-radius:8px;flex-shrink:0;
+    padding:7px 11px;font-family:'Figtree';font-weight:800;font-size:11px;cursor:pointer}
+  .modo-bar button.sec{background:transparent;color:#C9C4B7;border:1px solid #4A473F}
+  .solo-broker{display:none}
+  body.broker .solo-broker{display:block}
+  body.broker .solo-lectura{display:none}
+  /* ── colapsables: se cierra lo que solo lee el que duda ── */
+  details.col{background:#fff;border:1px solid var(--linea);border-radius:12px;margin-bottom:10px}
+  details.col>summary{list-style:none;cursor:pointer;padding:13px 15px;font-family:'Figtree';font-weight:700;
+    font-size:13px;display:flex;align-items:center;gap:8px}
+  details.col>summary::-webkit-details-marker{display:none}
+  details.col>summary::after{content:"▾";margin-left:auto;color:var(--gris);font-size:11px;flex-shrink:0}
+  details.col[open]>summary::after{content:"▴"}
+  details.col>summary .cnt{font-weight:400;color:var(--gris);font-size:11px}
+  details.col .cont{padding:0 15px 14px}
+  details.col .cont>ul{list-style:none}
+  details.col.ok>summary{color:var(--salvia)}
+  details.col.no>summary{color:var(--terra)}
+  /* ── recomendación del broker: su criterio, no la medición ── */
+  .reco{background:var(--negro);color:var(--arena);border-radius:14px;padding:16px 17px;margin-top:18px}
+  .reco .rt{font-family:'Figtree';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#9CC7A6;margin-bottom:7px}
+  .reco .rp{font-family:'Figtree';font-size:27px;font-weight:900;letter-spacing:-.02em}
+  .reco .rx{font-size:13.5px;line-height:1.6;margin-top:8px;color:#DCD7C9}
+  .reco .rf{font-size:10.5px;color:#8A867C;margin-top:12px;padding-top:9px;border-top:1px solid #333029;line-height:1.5}
+  .panel{background:#F5F1E6;border:1px dashed var(--sand);border-radius:12px;padding:14px 15px;margin-top:18px}
+  .panel .pt{font-family:'Figtree';font-weight:800;font-size:12.5px;margin-bottom:3px}
+  .panel .pd{font-size:11.5px;color:var(--gris);line-height:1.5;margin-bottom:10px}
+  .panel textarea,.panel input{width:100%;padding:10px 12px;border:1px solid var(--linea);border-radius:10px;
+    background:#fff;font-size:14px;font-family:'DM Sans';color:var(--negro)}
+  .panel textarea{resize:vertical;min-height:72px;margin-top:8px}
+  .excl-dec{background:#F5F1E6;border-left:3px solid var(--sand);border-radius:0 10px 10px 0;
+    padding:11px 13px;margin-top:10px;font-size:12px;line-height:1.55}
+  /* ── navegación y cierre ── */
+  .atajos{display:flex;gap:7px;margin-top:20px}
+  .atajos a{flex:1;text-align:center;background:#fff;border:1px solid var(--linea);border-radius:10px;
+    padding:9px 5px;font-size:11px;font-family:'Figtree';font-weight:700;color:var(--negro);text-decoration:none;line-height:1.3}
+  .cierre{padding:26px 20px 30px;background:var(--suave)}
+  .cierre .btn{margin-top:9px}
+  .cierre .btn.wa{background:var(--negro)}
+  .lapiz{background:none;border:none;color:var(--salvia);font-family:'Figtree';font-weight:700;
+    font-size:12px;cursor:pointer;padding:0;border-bottom:1px dotted var(--salvia);margin:8px 0 18px}
+  .caduca{background:#F3E3DA;border-radius:10px;padding:10px 13px;font-size:11.5px;line-height:1.5;color:#7A3E22;margin-top:14px}
+  /* ── segunda lectura: alquiler ── */
+  .renta{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:13px 15px;margin-top:14px}
+  .renta .rt{font-family:'Figtree';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--salvia);margin-bottom:6px}
+  .renta .rv{font-family:'Figtree';font-weight:800;font-size:17px;line-height:1.35}
+  .renta .rn{font-size:11px;color:var(--gris);line-height:1.5;margin-top:7px}
 </style>
 </head>
 <body>
@@ -135,6 +184,11 @@
 <div class="top">
   <div class="punto"></div><span class="marca" id="marca-top">Simón</span>
   <span class="pos pos-na" id="chip-top">complete los datos</span>
+</div>
+<div class="modo-bar oculto" id="modo-bar">
+  <div class="mb-t" id="mb-txt"></div>
+  <button class="sec" id="mb-b2" onclick="volverEditar()">Volver a editar</button>
+  <button id="mb-b1" onclick="publicar()">Generar para el cliente</button>
 </div>
 
 <!-- ══════ 0 · FORMULARIO ══════ -->
@@ -196,23 +250,14 @@
 
 <div id="resultado" class="oculto">
 
-<!-- ══════ 1 · LA RESPUESTA ══════ -->
-<section>
-  <div class="eyebrow">Posición de precio</div>
+<!-- ══════ LA RESPUESTA ══════ -->
+<section id="s-resp">
+  <div class="eyebrow"><span class="num"></span>Posición de precio</div>
   <h2 id="r-titulo"></h2>
   <p class="lead" id="r-subtitulo"></p>
-  <button class="btn sec" onclick="editar()">✎ Cambiar los datos</button>
-
-  <div class="sello" style="margin-top:18px">
-    <div class="t">Base de la comparación</div>
-    <div class="l" id="sello-txt"></div>
-    <div class="sello-gen" id="sello-gen"></div>
-  </div>
+  <button class="lapiz solo-broker" onclick="editar()">✎ cambiar los datos</button>
 
   <div id="bloque-rango">
-    <div class="sub" style="margin-bottom:2px">Cómo cambia el rango según qué tan lejos se busque:</div>
-    <div class="rad" id="rad-sens"></div>
-    <div class="sub" id="rad-nota" style="font-size:11.5px;margin-bottom:16px"></div>
     <div class="sub">Lo que hoy se pide por unidades como la suya:</div>
     <div class="big" id="rango-txt"></div>
     <div class="sub" id="rango-nivel"></div>
@@ -224,30 +269,55 @@
     </div>
     <p class="frase" id="frase-1"></p>
 
-    <h3 style="font-size:14px;margin:24px 0 4px">¿A qué precio quedaría dónde?</h3>
+    <details class="col" style="margin-top:18px">
+      <summary><span id="sello-tit"></span></summary>
+      <div class="cont">
+        <div class="l" style="font-size:12.5px;line-height:1.65" id="sello-txt"></div>
+        <div class="sello-gen" id="sello-gen"></div>
+      </div>
+    </details>
+
+    <h3 style="font-size:14px;margin:22px 0 4px">¿A qué precio quedaría dónde?</h3>
     <p class="sub" style="margin-bottom:10px">El rango no decide por usted. Esto traduce el rango a la posición que elija:</p>
     <div id="objetivos"></div>
     <p class="sub" style="font-size:11.5px;margin-top:8px">No es una recomendación de precio: es la equivalencia entre precio y posición dentro de su cohorte, hoy.</p>
 
     <div id="difs-bloque"></div>
+
+    <!-- La recomendación del broker: SU criterio, separado de la medición -->
+    <div id="reco-bloque"></div>
+    <div class="panel solo-broker" id="panel-reco">
+      <div class="pt">Su recomendación</div>
+      <div class="pd">Esto es lo que el cliente va a leer con su nombre. Simón mide; <b>usted recomienda</b> — y así aparece rotulado.</div>
+      <input type="number" id="f-reco-precio" step="500" placeholder="Precio al que saldría (USD)">
+      <textarea id="f-reco-txt" placeholder="Por qué: qué sabe usted de esta unidad, del edificio o del comprador que el dato no muestra."></textarea>
+    </div>
+
+    <div class="atajos solo-lectura">
+      <a href="#s-evid">Ver los<br>comparables</a>
+      <a href="#s-torre">Ver mi<br>edificio</a>
+      <a href="#s-sim">Probar<br>precios</a>
+    </div>
   </div>
   <div id="sin-base" class="aviso oculto"></div>
   <p class="sub" style="margin-top:14px"><b>Esto no es una tasación.</b> Es la posición de su precio dentro de la oferta publicada comparable, hoy.</p>
 </section>
 
-<!-- ══════ 2 · EVIDENCIA ══════ -->
-<section>
-  <div class="eyebrow">02 · La evidencia</div>
+<!-- ══════ EVIDENCIA ══════ -->
+<section id="s-evid">
+  <div class="eyebrow"><span class="num"></span>La evidencia</div>
   <h2>Contra quiénes se compara</h2>
-  <p class="lead">Los avisos reales que hoy compiten con el suyo. Si alguno no es comparable, quítelo — el informe recalcula y muestra ambos números.</p>
+  <p class="lead solo-broker">Los avisos reales que hoy compiten con el suyo. Si alguno no es comparable, quítelo — le vamos a pedir el motivo, y el cliente va a ver cuáles sacó y por qué.</p>
+  <p class="lead solo-lectura">Los avisos reales que hoy compiten con el suyo. Cada uno se puede abrir en el portal donde está publicado.</p>
+  <div id="excl-dec"></div>
   <div id="comps" style="margin-top:16px"></div>
   <div class="recalc" id="recalc"></div>
   <div id="fuera-muestra"></div>
 </section>
 
-<!-- ══════ 3 · EL TIEMPO ══════ -->
-<section style="background:var(--negro);color:var(--arena);border-bottom:none">
-  <div class="eyebrow" style="color:#9CC7A6">03 · Lo que cambió sin que usted lo tocara</div>
+<!-- ══════ EL TIEMPO ══════ -->
+<section id="s-macro" style="background:var(--negro);color:var(--arena);border-bottom:none">
+  <div class="eyebrow" style="color:#9CC7A6"><span class="num"></span>Lo que cambió sin que usted lo tocara</div>
   <h2>El mercado se movió</h2>
   <p class="lead" style="color:#B9B4A6">Desde enero de 2026, el m² pedido de su tipología en Equipetrol:</p>
   <div style="display:flex;gap:10px;margin:18px 0 8px">
@@ -263,42 +333,57 @@
   <p class="sub" style="color:#8A867C;margin-top:14px">Serie reconstruida bajo una sola metodología de tipo de cambio, error ±7%. Sirve la dirección, no el nivel exacto de un día.</p>
 </section>
 
-<!-- ══════ 4 · ANTIGÜEDAD ══════ -->
+<!-- ══════ ANTIGÜEDAD ══════ -->
 <section id="s-antig">
-  <div class="eyebrow">04 · El tiempo publicado</div>
+  <div class="eyebrow"><span class="num"></span>El tiempo publicado</div>
   <h2>Hace cuánto está en el mercado</h2>
   <div id="antig-barras" style="margin:18px 0 4px"></div>
   <p class="frase" id="frase-dias"></p>
   <p class="sub" style="margin-top:14px"><b>Cómo leerlo:</b> es la antigüedad del aviso publicado, <b>no</b> el tiempo que tarda en venderse. Admite dos lecturas — no rota, o se re-publicó y el contador volvió a cero. Los comparables marcados <span class="tag tag-rep">cargado en bloque</span> comparten día exacto de publicación con otros de su edificio: ahí el contador mide el lote, no la unidad.</p>
 </section>
 
-<!-- ══════ 5 · SU EDIFICIO ══════ -->
+<!-- ══════ SU EDIFICIO ══════ -->
 <section id="s-torre">
-  <div class="eyebrow">05 · Dentro de su edificio</div>
+  <div class="eyebrow"><span class="num"></span>Dentro de su edificio</div>
   <h2 id="torre-titulo"></h2>
   <div id="torre" style="margin-top:14px"></div>
   <p class="frase" id="frase-torre"></p>
   <p class="sub" style="margin-top:14px">⚠️ Si todas las unidades las publica el mismo desarrollador o la misma agencia, son <b>una lista de precios repetida</b>, no observaciones independientes. Aun así, es contra ellas que su comprador compara.</p>
 </section>
 
-<!-- ══════ 6 · SIMULADOR ══════ -->
-<section style="background:var(--suave);border-bottom-color:#C7D4C9">
-  <div class="eyebrow">06 · Simulador</div>
+<!-- ══════ SIMULADOR ══════ -->
+<section id="s-sim" style="background:var(--suave);border-bottom-color:#C7D4C9">
+  <div class="eyebrow"><span class="num"></span>Simulador</div>
   <h2>Mueva el precio</h2>
-  <p class="lead">Vea dónde queda su unidad y cuánto tiempo llevan publicados los comparables de ese tramo.</p>
+  <p class="lead">Vea dónde queda su unidad y cuánto tiempo llevan publicados los comparables de ese tramo. Lo que elija acá se refleja arriba, en el rango y en la etiqueta del encabezado.</p>
   <div class="sim-out"><div class="v" id="sim-precio"></div><div class="l" id="sim-detalle"></div></div>
   <input type="range" id="sim" min="0" max="100" value="50">
   <div class="sim-lbl"><span id="sim-min"></span><span id="sim-max"></span></div>
+  <div id="renta-bloque"></div>
   <p class="sub" style="margin-top:14px"><b>Qué NO dice esto:</b> no promete que a un precio dado se venda en X días. Muestra la antigüedad de los avisos comparables de ese tramo — un indicio, no una predicción.</p>
 </section>
 
-<!-- ══════ 7 · MÉTODO ══════ -->
-<section>
-  <div class="eyebrow">07 · Método</div>
+<!-- ══════ MÉTODO ══════ -->
+<section id="s-metodo">
+  <div class="eyebrow"><span class="num"></span>Método</div>
   <h2>Cómo se comparó</h2>
-  <div class="met ok" style="margin-top:16px"><h3>Controlado por construcción</h3><ul id="met-ok"></ul></div>
-  <div class="met aj"><h3>Ajustable con evidencia</h3><ul id="met-aj"></ul></div>
-  <div class="met no"><h3>No ajustable — declarado</h3><ul>
+  <p class="lead" style="margin-bottom:16px">Todo lo que hay debajo se puede abrir. Nada está escondido — está plegado para que el informe se lea, y disponible para que se audite.</p>
+
+  <details class="col ok"><summary>Controlado por construcción <span class="cnt" id="cnt-ok"></span></summary>
+    <div class="cont"><ul id="met-ok"></ul></div></details>
+
+  <details class="col"><summary>Sensibilidad al radio <span class="cnt" id="cnt-rad"></span></summary>
+    <div class="cont">
+      <div class="sub" style="font-size:12px">El resultado depende de dónde se corte la búsqueda. Estos son los tres radios probados — se usa el más cercano que alcanza la muestra mínima, y se muestran los tres para que nadie elija el que le conviene.</div>
+      <div class="rad" id="rad-sens"></div>
+      <div class="sub" id="rad-nota" style="font-size:11.5px"></div>
+    </div></details>
+
+  <details class="col"><summary>Ajustable con evidencia <span class="cnt" id="cnt-aj"></span></summary>
+    <div class="cont"><ul id="met-aj"></ul></div></details>
+
+  <details class="col no"><summary>No ajustable — declarado <span class="cnt" id="cnt-no"></span></summary>
+    <div class="cont"><ul id="met-no">
     <li><b>Lo que no está publicado.</b> Este análisis ve <b>la oferta que se publica en portales</b>. No ve la venta directa del desarrollador en su sala de ventas, ni la unidad que se pasa entre brokers sin anunciar, ni la que se vende por el cartel del balcón. En preventa eso puede ser una parte grande del mercado — y suele venderse <b>por debajo</b> del precio de lista publicado. El rango de acá es el rango de <b>lo visible</b>, y esa es su definición completa: nadie puede decirle cuánto pide lo que nunca se anunció.</li>
     <li><b>Amoblado</b> — 0 de 394 avisos de venta lo declaran. No sabemos si algún precio incluye muebles.</li>
     <li><b>Amenidades</b> — se muestran por comparable como contexto, pero su señal de precio se contradice entre tipologías: no se usan para ajustar.</li>
@@ -308,9 +393,20 @@
     <li><b>La fecha de entrega es la que declara el aviso</b>, no un compromiso verificado con el desarrollador. Cuando esa fecha <span style="color:var(--terra)">ya pasó</span> lo decimos: significa que el aviso no se actualizó, no necesariamente que la obra esté atrasada.</li>
     <li><b>Las fotos</b> — son de <b>un aviso</b> de ese edificio, no necesariamente de la unidad comparada. Sirven para reconocer el edificio, no para juzgar el interior. El 63% de los avisos tiene foto publicada; el resto aparece sin imagen.</li>
     <li><b>Los enlaces van al aviso original</b> en el portal donde está publicado (C21 o Remax). No le pedimos que nos crea: cada comparable se puede verificar en su fuente. Si el aviso fue dado de baja después de nuestro corte, el enlace puede no abrir — esa es la diferencia entre un dato verificado anoche y uno de hoy.</li>
-  </ul></div>
-  <p class="sub"><b>Fuente:</b> avisos de venta de Equipetrol verificados uno por uno contra el portal la madrugada del 3-ago-2026, deduplicados, con un solo tipo de cambio y anclados a su edificio. <b>Cobertura: Equipetrol.</b> Fuera de esa zona este informe no se emite.</p>
+    <li><b>El retorno de alquiler es bruto y sobre avisos</b>, no sobre contratos firmados. Se calcula con rentas <b>pedidas</b> de unidades comparables, antes de expensas, vacancia, impuestos y comisión. Además, en alquiler el amoblado <b>sí</b> se declara y empuja la renta hacia arriba: por eso mostramos cuántos de los comparables son amoblados. Del resto no afirmamos que no lo sean — el aviso simplemente no lo dice.</li>
+  </ul></div></details>
+
+  <p class="sub" style="margin-top:14px"><b>Fuente:</b> avisos de venta de Equipetrol verificados uno por uno contra el portal la madrugada del 3-ago-2026, deduplicados, con un solo tipo de cambio y anclados a su edificio. <b>Cobertura: Equipetrol.</b> Fuera de esa zona este informe no se emite.</p>
 </section>
+
+<!-- ══════ CIERRE ══════ -->
+<div class="cierre" id="s-cierre">
+  <h2 style="font-size:18px">¿Y ahora?</h2>
+  <p class="sub" id="cierre-txt" style="margin-top:6px"></p>
+  <button class="btn" onclick="compartir()">Compartir este análisis</button>
+  <button class="btn wa" onclick="hablar()" id="btn-hablar">Hablar por WhatsApp</button>
+  <div class="caduca" id="caduca"></div>
+</div>
 
 <div class="pie">
   Preparado por <b id="pie-broker">[Nombre del broker]</b><br>
@@ -1137,6 +1233,170 @@ function entregaDe(p){var t=ENTREGAS[Math.round(p.p)+'-'+Math.round(p.a)]; if(!t
 var REPUB=(function(){var m={};POOL.forEach(function(p){var k=p.e+'|'+p.dias;m[k]=(m[k]||0)+1;});
   return function(p){return m[p.e+'|'+p.dias]>=3;};})();
 
+/* ═══════ POOL DE ALQUILER — v_mercado_alquiler_shadow, Equipetrol, mismo corte ═══════
+   edificio|lat|lon|dorms|m²|USD/mes|Bs/mes|amoblado(a/n/?)|parqueo(i/s)|días
+   🔴 amoblado: 97 declaran "sí", 1 declara "no", 78 NO lo declaran. Del "?" NO se
+   afirma que no sea amoblado — el aviso simplemente no lo dice. */
+var ALQ_RAW=`Saota Park|-17.77012|-63.19966|0|27|241|2800|?|s|12
+Saota Park|-17.77000|-63.19951|0|27|301|3500|a|s|76
+One Life Sirari|-17.76697|-63.19290|0|31|258|3000|a|s|44
+Avanti|-17.75860|-63.19276|0|31|258|3000|a|s|98
+(sin edificio)|-17.76593|-63.19435|0|31|275|3200|?|s|15
+Murure|-17.76805|-63.19456|0|31|301|3500|a|s|49
+Santorini Suites|-17.76313|-63.19877|0|31|292|3400|?|s|75
+Domus Infinity|-17.76524|-63.19323|0|32|344|4000|a|s|16
+Nano Smart|-17.76417|-63.19192|0|32|314|3650|a|s|55
+Siria 2|-17.75581|-63.19389|0|32|301|3500|a|s|9
+Nano by Smart Studio|-17.76412|-63.19193|0|32|288|3350|a|s|36
+Malibu Inside|-17.76516|-63.19196|0|32|258|3000|a|s|25
+Torre Baruc 2|-17.76576|-63.19599|0|33|284|3300|a|s|14
+Baruc 2|-17.76567|-63.19596|0|33|284|3300|a|i|58
+Haus Equipe|-17.76452|-63.19303|0|33|292|3400|a|s|19
+Santorini Suites|-17.76277|-63.19836|0|33|241|2800|a|s|49
+Nano Samart|-17.76448|-63.19254|0|33|284|3300|a|s|114
+Baruc 1|-17.76719|-63.19497|0|34|241|2800|a|i|26
+Soul by Smart Studio|-17.76349|-63.19896|0|34|241|2800|a|s|2
+Onix Art|-17.76307|-63.19390|0|35|301|3500|a|s|20
+One Soul|-17.76044|-63.19669|0|35|301|3500|a|s|63
+You|-17.76697|-63.19290|0|35|279|3250|a|s|15
+Garden Equipetrol|-17.75618|-63.19417|0|36|301|3500|a|s|55
+Smart Soul|-17.76335|-63.19899|0|36|309|3600|a|i|30
+Sky Luxia|-17.76580|-63.19424|0|36|395|4600|?|i|4
+Sky Elite|-17.76606|-63.19658|0|36|335|3900|a|s|81
+Portobello Green|-17.76444|-63.19168|0|37|301|3500|a|s|14
+(sin edificio)|-17.77002|-63.19836|0|37|301|3500|?|s|22
+Sirari Palm|-17.76391|-63.19928|0|38|258|3000|a|s|9
+Sky Magnolia|-17.76360|-63.20313|0|38|249|2900|?|s|77
+Baruc 3|-17.77258|-63.19456|0|38|258|3000|a|s|34
+Sky Collection Magnolia|-17.76356|-63.20302|0|38|361|4200|a|s|63
+Luxe Suite|-17.76479|-63.19366|0|38|288|3350|?|s|12
+Domus Deluxe|-17.76449|-63.19335|0|38|314|3650|a|s|19
+Malibu Inside|-17.76521|-63.19194|0|39|223|2600|?|s|21
+Uptown Drei|-17.77014|-63.19662|0|39|301|3500|?|s|29
+Sky Collection Magnolia|-17.76356|-63.20303|0|40|344|4000|a|s|28
+Element by Elite|-17.76442|-63.20358|0|40|284|3300|a|s|41
+Sky Eclipse|-17.77237|-63.19194|0|40|369|4300|a|s|44
+Sky Eclipse|-17.77251|-63.19216|0|40|387|4500|a|s|90
+(sin edificio)|-17.76669|-63.19311|0|41|292|3400|a|s|14
+Stratto Equipetrol|-17.75893|-63.19520|0|41|318|3700|a|s|41
+Solo Industrial Apartments|-17.76660|-63.19337|0|41|258|3000|?|s|30
+(sin edificio)|-17.76697|-63.19290|0|41|258|3000|?|s|12
+Sky Eclipse|-17.77261|-63.19175|0|42|430|5000|?|s|92
+Sky Eclipse|-17.77237|-63.19194|0|42|387|4500|?|s|28
+Sky Moon|-17.75682|-63.19735|0|42|387|4500|a|s|83
+Sky Moon|-17.75682|-63.19735|0|42|412|4800|a|s|82
+Sky Moon|-17.75687|-63.19748|0|42|412|4800|a|s|106
+Sky Moon|-17.75689|-63.19739|0|42|412|4800|a|i|142
+Sky Moon|-17.75682|-63.19735|0|42|369|4300|a|s|85
+Sky Moon|-17.75682|-63.19735|0|42|395|4600|a|s|106
+Stratto Up|-17.75854|-63.19470|0|42|318|3700|?|s|23
+Maré|-17.76566|-63.20030|0|43|447|5200|?|s|7
+Maré|-17.76565|-63.20037|0|44|473|5500|a|s|42
+Mare|-17.76563|-63.20038|0|44|421|4900|a|s|76
+Golden Tower|-17.76156|-63.19673|0|45|404|4700|a|s|41
+(sin edificio)|-17.75555|-63.19315|0|46|241|2800|?|s|19
+(sin edificio)|-17.75858|-63.19478|0|54|335|3900|?|s|23
+Sky Plaza|-17.76163|-63.19978|0|55|275|3200|a|s|104
+(sin edificio)|-17.76660|-63.19337|0|60|301|3500|?|s|16
+Infinity by Elite|-17.76676|-63.20279|0|60|361|4200|a|i|42
+Du Nord 10|-17.75864|-63.19848|1|30|301|3500|a|s|77
+One Soul by Smart Studio|-17.76040|-63.19675|1|34|301|3500|?|i|106
+Aura Concept|-17.76656|-63.19509|1|37|301|3500|a|i|57
+(sin edificio)|-17.76377|-63.19157|1|37|284|3300|a|s|61
+Domus Tower Deluxe|-17.77143|-63.18956|1|37|361|4200|?|s|65
+Haus Equipetrol|-17.76425|-63.19221|1|37|284|3300|?|s|29
+(sin edificio)|-17.76377|-63.19157|1|37|258|3000|?|s|41
+Vertical Terra|-17.75947|-63.19402|1|38|344|4000|?|s|20
+(sin edificio)|-17.76737|-63.19525|1|39|275|3200|?|s|33
+Stone 2|-17.75516|-63.19168|1|40|258|3000|?|s|29
+NanoTec by Smart Studio|-17.76063|-63.19587|1|42|361|4200|a|s|41
+Sky Luxury|-17.75768|-63.19847|1|42|430|5000|a|s|19
+Spazios Edén|-17.76459|-63.19418|1|42|327|3800|a|s|37
+Sky Luxury|-17.75708|-63.19817|1|42|352|4100|a|s|54
+Maré|-17.76577|-63.19988|1|42|473|5500|a|i|35
+Domus Tower|-17.77153|-63.18951|1|43|301|3500|?|s|30
+Phantom by Elite|-17.76278|-63.19824|1|43|344|4000|a|s|119
+Macororo 9|-17.76385|-63.19170|1|43|361|4200|a|i|28
+Sky Collection Tulip|-17.76788|-63.19505|1|44|344|4000|?|s|15
+(sin edificio)|-17.76064|-63.19688|1|44|327|3800|?|s|26
+Nano Tec|-17.76697|-63.19290|1|44|387|4500|a|s|57
+Gold|-17.76377|-63.19246|1|44|301|3500|?|s|51
+NanoTec by Smart Studio|-17.76063|-63.19587|1|44|430|5000|?|s|83
+Maré|-17.76548|-63.20058|1|45|559|6500|?|i|48
+(sin edificio)|-17.76793|-63.19925|1|45|284|3300|?|s|20
+Atrium|-17.76854|-63.19589|1|45|275|3200|?|s|84
+Atrium|-17.76875|-63.19589|1|46|387|4500|a|i|111
+Elite Sirari|-17.76429|-63.19979|1|46|344|4000|a|s|105
+Nomad Smart Studio|-17.76771|-63.19575|1|46|335|3900|a|s|28
+Klug|-17.76497|-63.19478|1|47|361|4200|a|i|40
+Garden Equipetrol|-17.75599|-63.19419|1|47|387|4500|?|s|30
+Vertical Terra|-17.75945|-63.19397|1|48|430|5000|a|s|55
+Stratto Up|-17.75850|-63.19465|1|48|361|4200|?|s|20
+Garden Equipetrol|-17.75759|-63.19350|1|48|387|4500|a|s|55
+Uptown NUU|-17.77000|-63.19669|1|50|361|4200|?|i|32
+(sin edificio)|-17.76697|-63.19290|1|50|344|4000|?|s|49
+Maré|-17.76557|-63.20025|1|50|430|5000|?|s|27
+(sin edificio)|-17.76207|-63.19716|1|50|258|3000|?|s|7
+Condominio Mare|-17.76508|-63.20079|1|52|601|7000|a|i|36
+Breeze Tower|-17.75495|-63.19132|1|52|361|4200|?|i|15
+Golden Tower|-17.76138|-63.19683|1|53|447|5200|a|i|29
+Golden Tower|-17.76125|-63.19680|1|53|430|5000|?|s|72
+Eurodesign Nordic|-17.76212|-63.19689|1|54|387|4500|a|s|34
+Torre Sirari|-17.76751|-63.20277|1|54|387|4500|a|s|82
+Sky Luxia|-17.76574|-63.19420|1|55|516|6000|?|s|16
+(sin edificio)|-17.76147|-63.19692|1|55|412|4800|a|s|27
+Eurodesign Suites|-17.75830|-63.19692|1|56|344|4000|a|s|11
+Stanza|-17.76798|-63.19521|1|56|275|3200|a|s|55
+Le Blanc|-17.75667|-63.19814|1|56|498|5800|?|i|7
+(sin edificio)|-17.76150|-63.19713|1|58|430|5000|?|s|72
+Breeze Tower|-17.75505|-63.19131|1|59|384|4470|?|i|84
+Luxe Residence|-17.75829|-63.19901|1|60|473|5500|a|s|118
+Domus Infinity|-17.76508|-63.19155|1|61|344|4000|?|s|58
+Sky Eclipse|-17.77237|-63.19194|1|65|507|5900|a|s|42
+Golden Tower|-17.76148|-63.19688|1|67|430|5000|?|s|77
+Sky Eclipse|-17.77237|-63.19194|1|68|455|5300|?|s|120
+Stratto Up|-17.75914|-63.19478|1|74|473|5500|a|i|16
+Sky Moon|-17.75683|-63.19746|1|74|601|7000|?|i|28
+Puerto Madero|-17.76547|-63.20292|1|75|387|4500|n|s|2
+Mai Suites|-17.76360|-63.20340|1|80|584|6800|a|s|46
+Green Tower|-17.76000|-63.19879|1|83|988|11500|a|s|69
+(sin edificio)|-17.76478|-63.20285|2|60|464|5400|?|s|1
+Smart Soul|-17.76334|-63.19891|2|60|387|4500|?|i|23
+NanoTec by Smart Studio|-17.76137|-63.19582|2|65|498|5800|a|i|21
+Vertical 60|-17.75691|-63.19134|2|73|730|8500|a|i|58
+Sky Luxia|-17.76542|-63.19430|2|73|627|7300|?|s|42
+Impera Tower|-17.76466|-63.20209|2|75|559|6500|?|i|63
+(sin edificio)|-17.76066|-63.19328|2|75|430|5000|a|i|90
+(sin edificio)|-17.77047|-63.19441|2|79|473|5500|a|i|22
+Metta|-17.76128|-63.19887|2|80|559|6500|a|i|139
+(sin edificio)|-17.77016|-63.19722|2|80|447|5200|?|i|35
+(sin edificio)|-17.76827|-63.19153|2|80|473|5500|?|i|69
+Sky Tulip|-17.76484|-63.20322|2|80|498|5800|a|i|56
+MAIA|-17.76198|-63.19926|2|80|387|4500|?|i|23
+Maré|-17.76568|-63.20030|2|84|859|10000|a|i|21
+Sky Moon|-17.75692|-63.19751|2|84|730|8500|?|i|19
+Spazios|-17.76461|-63.19419|2|86|601|7000|?|i|13
+Sky Art|-17.76088|-63.19650|2|86|644|7500|a|i|103
+(sin edificio)|-17.76854|-63.19722|2|87|670|7800|?|i|64
+Mare|-17.76443|-63.19866|2|94|773|9000|?|i|6
+Sky Eclipse|-17.77215|-63.19203|2|95|644|7500|?|s|51
+La Riviera|-17.76033|-63.20171|2|100|653|7600|a|i|53
+La Riviera|-17.76031|-63.20078|2|100|1375|16000|?|i|42
+Madero Residence|-17.76799|-63.19657|2|102|687|8000|a|i|93
+Sky Lumiere|-17.76080|-63.19584|2|103|688|8004|?|i|77
+Sky Lumiere|-17.76080|-63.19584|2|103|658|7656|?|i|47
+Sky Moon|-17.75682|-63.19735|2|105|902|10500|?|s|48
+Sky Eclipse|-17.77215|-63.19203|2|105|816|9500|a|s|51
+Sky Eclipse|-17.77237|-63.19194|2|106|842|9800|a|i|43
+Platinium|-17.75490|-63.19722|2|107|507|5900|?|s|139
+(sin edificio)|-17.77142|-63.19768|2|130|447|5200|?|i|43
+Madero Residence|-17.76805|-63.19651|2|130|876|10200|a|s|103
+Madero Residence|-17.76697|-63.19290|2|138|842|9800|?|i|14
+La Riviera Beauty Plaza|-17.76049|-63.20195|2|145|988|11500|a|i|61
+Condominio Iguazú|-17.77232|-63.19227|2|200|584|6800|a|i|1`;
+var POOL_ALQ=ALQ_RAW.trim().split('\n').map(function(l){var f=l.split('|');
+  return {e:f[0].trim(),lat:+f[1],lon:+f[2],d:+f[3],a:+f[4],pm:+f[5],bob:+f[6],amo:f[7],pq:f[8],dias:+f[9]};});
+
 /* política declarada — un solo lugar */
 var CONF={radios:[300,500,800], nMin:5, frescuraDias:180, areaTol:0.20, outlierIQR:1.5,
           pqAjuste:{1:8.6}, serie:{0:[-18.4,-9.3],1:[-15.1,-5.6],2:[-22.2,-13.4]}};
@@ -1148,7 +1408,65 @@ var EDIFS=(function(){var m={};POOL.forEach(function(p){ if(!m[p.e])m[p.e]={n:0,
   return Object.keys(m).sort().map(function(k){return {e:k,lat:m[k].lat/m[k].n,lon:m[k].lon/m[k].n,n:m[k].n}});})();
 
 var MI={e:'Lofty Island',d:1,a:51,p:91584,pq:'n',est:'P'}, COH=null, excl={};
+/* excl[i] guarda el MOTIVO (string), no un booleano: una exclusión sin motivo
+   es maquillaje, y el cliente tiene que poder leer por qué se sacó cada una. */
+var MODO='broker'; /* broker = edita · lectura = lo que ve el cliente */
+var PMIN=0,PMAX=1; /* escala de la barra del rango, para que el simulador pueda mover la aguja */
+var SIM_TOCADO=false;
 function fm(n){return '$'+Math.round(n).toLocaleString('es-BO').replace(/,/g,'.')}
+function px(v){return Math.max(0,Math.min(100,100*(v-PMIN)/(PMAX-PMIN)))}
+function posDe(m2,s){return m2===null||m2===undefined?['na','sin precio']
+  :(m2>s.p75?['sobre','SOBRE el rango']:(m2<s.p25?['bajo','BAJO el rango']:['dentro','DENTRO del rango']));}
+
+/* ═══ ORDEN DE SECCIONES — sigue al diagnóstico, no a un índice fijo ═══
+   Cada sección responde la objeción que abre la anterior:
+   rango → "¿de dónde lo sacaste?" → "el mío es distinto" → "¿por qué no se vende?" → "¿qué hago?" */
+var ORDEN_BASE =['s-resp','s-evid','s-torre','s-antig','s-macro','s-sim','s-metodo'];
+var ORDEN_SOBRE=['s-resp','s-evid','s-macro','s-torre','s-antig','s-sim','s-metodo'];
+var ORDEN_ACTUAL=null;
+function ordenar(sobre){
+  var k=sobre?'sobre':'base'; if(ORDEN_ACTUAL===k)return; /* mover nodos enfocados hace blur: solo si cambió */
+  ORDEN_ACTUAL=k;
+  var cont=document.getElementById('resultado'), ancla=document.getElementById('s-cierre');
+  (sobre?ORDEN_SOBRE:ORDEN_BASE).forEach(function(id,i){
+    var sec=document.getElementById(id); cont.insertBefore(sec,ancla);
+    var n=sec.querySelector('.num'); if(n)n.textContent='0'+(i+1)+' · ';});
+}
+
+/* ═══ MODO — el broker EDITA en privado, el cliente LEE un documento congelado ═══ */
+function barraModo(){
+  var t=document.getElementById('mb-txt');
+  document.getElementById('mb-b1').style.display=MODO==='broker'?'':'none';
+  document.getElementById('mb-b2').style.display=MODO==='broker'?'none':'';
+  t.innerHTML=MODO==='broker'
+    ? 'Modo edición<span>El cliente no ve esta barra, ni el ✕, ni el panel de recomendación.</span>'
+    : 'Vista del cliente<span>Así llega el análisis por WhatsApp. Congelado al '+META_ACM.corte+'.</span>';
+}
+function publicar(){
+  MI.recoP=+document.getElementById('f-reco-precio').value||null;
+  MI.recoT=document.getElementById('f-reco-txt').value.trim();
+  if(!MI.recoP && !MI.recoT && !confirm('Todavía no escribió su recomendación.\n\nSin ella el cliente recibe la medición de Simón sin su criterio — que es justamente lo que usted aporta.\n\n¿Generar igual?'))return;
+  MODO='lectura'; document.body.classList.remove('broker'); barraModo(); render();
+  window.scrollTo(0,0);
+}
+function volverEditar(){MODO='broker'; document.body.classList.add('broker'); barraModo(); render(); window.scrollTo(0,0);}
+/* la recomendación se re-pinta sola mientras el broker escribe — sin tocar el resto del DOM */
+function renderReco(){
+  document.getElementById('reco-bloque').innerHTML = (MI.recoP||MI.recoT)
+    ? '<div class="reco"><div class="rt">Recomendación de '+MI.broker+'</div>'+
+      (MI.recoP?'<div class="rp">'+fm(MI.recoP)+'</div>':'')+
+      (MI.recoT?'<div class="rx">'+MI.recoT.replace(/[<>]/g,'')+'</div>':'')+
+      '<div class="rf">Este bloque es el <b style="color:var(--arena)">criterio profesional de '+MI.broker+'</b>, no una medición de Simón. Simón informa el rango de la oferta publicada; la recomendación de precio la firma quien conoce la unidad y al comprador.</div></div>'
+    : '';
+}
+function compartir(){
+  var t='Análisis de precio de '+MI.e+' · '+MI.a+' m² — preparado por '+MI.broker+' con datos verificados por Simón.';
+  if(navigator.share){navigator.share({title:'Posición de precio · '+MI.e,text:t}).catch(function(){});}
+  else alert('En la versión final esto abre el menú de compartir con el enlace del análisis.\n\n'+t);
+}
+function hablar(){
+  alert('En la versión final esto abre WhatsApp con '+MI.broker+'.\n\nEl broker ve que usted abrió el análisis; no le pedimos ningún dato para eso.');
+}
 /* la foto es de UN aviso de ese edificio — se declara así, no se presenta como la unidad comparada */
 function foto(e){var u=FOTOS[e];
   return u? '<img class="foto" src="'+u+'" alt="" loading="lazy" title="Foto de un aviso de '+e+'" onerror="this.outerHTML=\'<div class=&quot;nofoto&quot;>foto no disponible</div>\'">'
@@ -1186,6 +1504,20 @@ function armarCohort(){
   }
   return null;
 }
+/* cohorte de ALQUILER — misma cascada de radios, misma tipología y superficie.
+   Se usa solo para la segunda lectura del simulador; nunca toca el rango de venta. */
+function rentaCohort(){
+  var ed=EDIFS.filter(function(x){return x.e===MI.e})[0]; if(!ed)return null;
+  for(var i=0;i<CONF.radios.length;i++){ var r=CONF.radios[i];
+    var c=POOL_ALQ.filter(function(p){return p.d===MI.d
+      && p.a>=MI.a*(1-CONF.areaTol) && p.a<=MI.a*(1+CONF.areaTol)
+      && distM(ed.lat,ed.lon,p.lat,p.lon)<=r;});
+    if(c.length>=CONF.nMin){ var m=c.map(function(p){return p.pm});
+      return {n:c.length, radio:r, p25:pctl(m,.25), p50:pctl(m,.5), p75:pctl(m,.75),
+              amo:c.filter(function(p){return p.amo==='a'}).length,
+              sd:c.filter(function(p){return p.amo==='?'}).length}; } }
+  return null;
+}
 /* sensibilidad: el MISMO cálculo a los tres radios — nadie puede elegir el que le conviene en secreto */
 function sensibilidad(){
   var ed=EDIFS.filter(function(x){return x.e===MI.e})[0];
@@ -1218,9 +1550,11 @@ function calcular(){
   MI.broker=document.getElementById('f-broker').value.trim()||'[Nombre del broker]';
   document.getElementById('marca-top').textContent=MI.broker==='[Nombre del broker]'?'Simón':MI.broker;
   document.getElementById('pie-broker').textContent=MI.broker;
-  excl={}; COH=armarCohort();
+  excl={}; SIM_TOCADO=false; COH=armarCohort();
+  MODO='broker'; document.body.classList.add('broker'); barraModo();
   document.getElementById('s-form').classList.add('oculto');
   document.getElementById('resultado').classList.remove('oculto');
+  document.getElementById('modo-bar').classList.remove('oculto');
   document.getElementById('r-titulo').textContent=MI.e+' · '+(MI.d===0?'Monoambiente':MI.d+' dormitorio'+(MI.d>1?'s':''));
   document.getElementById('r-subtitulo').textContent=MI.a+' m²'+(MI.piso?' · piso '+MI.piso:'')+' · '+(MI.est==='P'?'en preventa':(MI.est==='E'?'entregado':'estado sin declarar'))+' · '+
     (MI.pq==='i'?'con parqueo':(MI.pq==='n'?'sin parqueo':'parqueo sin declarar'));
@@ -1232,12 +1566,16 @@ function calcular(){
     var sb=document.getElementById('sin-base'); sb.classList.remove('oculto');
     sb.innerHTML='<b>Sin base suficiente.</b> No encontramos al menos '+CONF.nMin+' comparables frescos (≤'+CONF.frescuraDias+' días) de esta tipología y superficie ni siquiera ampliando a '+CONF.radios[CONF.radios.length-1]+' m. <b>Este informe no se emite</b> — preferimos no darle un número que no podemos sostener.';
     document.getElementById('sello-txt').textContent='—';
-    ['s-antig','s-torre'].forEach(function(id){document.getElementById(id).classList.add('oculto')});
+    document.getElementById('sello-tit').textContent='Base de la comparación';
+    ['s-antig','s-torre','s-macro','s-sim'].forEach(function(id){document.getElementById(id).classList.add('oculto')});
     document.getElementById('chip-top').textContent='sin base'; document.getElementById('chip-top').className='pos pos-na';
-    document.getElementById('comps').innerHTML=''; return; }
+    document.getElementById('comps').innerHTML='';
+    document.getElementById('cierre-txt').textContent='Sin base suficiente no se emite un número. Lo que sí se puede hacer es ampliar la búsqueda a otra tipología o superficie, o volver cuando haya más avisos comparables publicados.';
+    document.getElementById('caduca').innerHTML='';
+    ordenar(false); return; }
   document.getElementById('bloque-rango').classList.remove('oculto');
   document.getElementById('sin-base').classList.add('oculto');
-  ['s-antig','s-torre'].forEach(function(id){document.getElementById(id).classList.remove('oculto')});
+  ['s-antig','s-torre','s-macro','s-sim'].forEach(function(id){document.getElementById(id).classList.remove('oculto')});
   var s=stats();
   var sl=document.getElementById('sim');
   sl.min=Math.round(s.p25*MI.a*0.75/500)*500; sl.max=Math.round(s.p75*MI.a*1.25/500)*500;
@@ -1249,11 +1587,17 @@ function calcular(){
 function render(){
   var s=stats(); if(!s)return;
   var lo=s.p25*MI.a, hi=s.p75*MI.a, med=s.p50*MI.a, miM2=MI.p?MI.p/MI.a:null;
-  var pos = miM2===null?['na','sin precio']:(miM2>s.p75?['sobre','SOBRE el rango']:(miM2<s.p25?['bajo','BAJO el rango']:['dentro','DENTRO del rango']));
+  var pos = posDe(miM2,s);
   var chip=document.getElementById('chip-top'); chip.textContent=pos[1]; chip.className='pos pos-'+pos[0];
+
+  /* el orden sigue al diagnóstico: si su precio quedó SOBRE el rango, "el mercado se
+     movió" sube al tercer lugar — ahí es donde desarma la objeción "yo lo compré a X".
+     Si quedó dentro o abajo no hay nada que desarmar y baja. */
+  ordenar(pos[0]==='sobre');
 
   var conPq=activos().filter(function(p){return p.pq==='i'}).length;
   var sdPq=activos().filter(function(p){return p.pq==='s'}).length;
+  document.getElementById('sello-tit').innerHTML='<b>'+s.n+' comparables</b> a '+COH.radio+' m <span class="cnt">· cómo se armó la base</span>';
   document.getElementById('sello-txt').innerHTML=
     '<b>'+s.n+' comparables</b> a menos de <b>'+COH.radio+' m</b> · '+(MI.d===0?'monoambientes':MI.d+' dorm.')+
     ' · entre '+Math.round(MI.a*0.8)+' y '+Math.round(MI.a*1.2)+' m²'+
@@ -1278,8 +1622,7 @@ function render(){
               : '⚠ El rango <b>cambia según el radio</b>: el entorno inmediato y el más amplio no piden lo mismo. Se usa el más cercano que alcanza '+CONF.nMin+' comparables (marcado), y se muestran los tres para que nadie elija el que le conviene.');
   document.getElementById('rango-txt').innerHTML=fm(lo)+' <small>a</small> '+fm(hi);
   document.getElementById('rango-nivel').textContent='Rango pedido (percentil 25 a 75) para '+MI.a+' m² · mediana '+fm(med);
-  var pmin=Math.min(lo,MI.p||lo)*.94, pmax=Math.max(hi,MI.p||hi)*1.06;
-  function px(v){return Math.max(0,Math.min(100,100*(v-pmin)/(pmax-pmin)))}
+  PMIN=Math.min(lo,MI.p||lo)*.94; PMAX=Math.max(hi,MI.p||hi)*1.06;
   document.getElementById('r-fill').style.left=px(lo)+'%';
   document.getElementById('r-fill').style.width=(px(hi)-px(lo))+'%';
   document.getElementById('r-med').style.left=px(med)+'%';
@@ -1308,7 +1651,12 @@ function render(){
     ? '<div class="difs"><div class="dt">Lo que este análisis no puede ver</div>'+
       '<div class="dl">'+[MI.piso?'Piso '+MI.piso:'',MI.difs].filter(Boolean).join(' · ')+'</div>'+
       '<div class="dn">Aportado por '+MI.broker+', no medido por Simón. <b>No modifica el rango</b>: los avisos comparables tampoco declaran estos atributos (solo el 46% declara el piso y ninguno la vista), así que ajustar por ellos sería inventar precisión.</div></div>'
-    : '';
+    : (MODO==='broker'
+      ? '<div class="difs" style="background:#F5F1E6;border:1px dashed var(--linea)"><div class="dt" style="color:var(--gris)">Lo que este análisis no puede ver</div>'+
+        '<div class="dn" style="margin-top:0">¿Esta unidad tiene algo que el aviso no muestra —vista, piso alto, una remodelación reciente? <b onclick="editar()" style="color:var(--salvia);cursor:pointer;border-bottom:1px dotted">Agréguelo acá</b>: se muestra declarado como aporte suyo, sin tocar el número.</div></div>'
+      : '');
+
+  renderReco();
 
   /* comparables */
   var filas=COH.frescos.map(function(p,i){
@@ -1326,9 +1674,10 @@ function render(){
         : '<br><span class="ver" style="color:var(--gris);border-bottom-style:none">aviso sin enlace disponible</span>';})()+
       '</div></div>'+
       '<div class="c2"><div class="m2">'+fm(p.m2)+'/m²</div><div class="pre">'+fm(p.p)+'</div></div>'+
-      '<button class="x" onclick="tog('+i+')">'+(excl[i]?'↺':'✕')+'</button></div>';
+      (MODO==='broker'?'<button class="x" onclick="tog('+i+')">'+(excl[i]?'↺':'✕')+'</button>':'')+'</div>';
   }).join('');
-  var yo='<div class="comp yo"><div class="c1"><div class="nom">'+MI.e+' — SU UNIDAD</div>'+
+  var yo='<div class="comp yo"><div class="c1"><div class="nom">'+MI.e+' — SU UNIDAD'+
+    (MI.p?'<span class="tag pos-'+pos[0]+'">'+pos[1].toLowerCase()+'</span>':'')+'</div>'+
     '<div class="det">'+MI.a+' m²'+(MI.p?' · '+fm(MI.p):'')+'</div></div>'+
     (MI.p?'<div class="c2"><div class="m2">'+fm(miM2)+'/m²</div></div>':'')+'</div>';
   var cont=document.getElementById('comps'); cont.innerHTML=filas;
@@ -1336,7 +1685,8 @@ function render(){
     var nodes=cont.querySelectorAll('.comp');
     if(nodes[idx])nodes[idx].insertAdjacentHTML('beforebegin',yo); else cont.insertAdjacentHTML('beforeend',yo);}
 
-  var nEx=Object.keys(excl).filter(function(k){return excl[k]}).length;
+  var exIdx=Object.keys(excl).filter(function(k){return excl[k]});
+  var nEx=exIdx.length;
   var rc=document.getElementById('recalc');
   if(nEx){var m0=COH.frescos.map(function(p){return p.m2});
     rc.className='recalc on';
@@ -1344,6 +1694,14 @@ function render(){
       '<br><span style="color:var(--gris)">Con los '+COH.frescos.length+' originales: '+fm(pctl(m0,.25)*MI.a)+' – '+fm(pctl(m0,.75)*MI.a)+
       ' · se excluyeron '+nEx+' sin borrarlos del registro.</span>';
   } else rc.className='recalc';
+
+  /* exclusiones declaradas: si el broker sacó comparables, el cliente ve CUÁLES y POR QUÉ.
+     Sin esto el ✕ sería una herramienta para maquillar el rango. */
+  document.getElementById('excl-dec').innerHTML = nEx
+    ? '<div class="excl-dec"><b>'+MI.broker+' excluyó '+nEx+' comparable'+(nEx>1?'s':'')+'</b> por no considerarlo'+(nEx>1?'s':'')+' equivalente'+(nEx>1?'s':'')+':<ul style="margin:6px 0 0 15px">'+
+      exIdx.map(function(k){return '<li>'+COH.frescos[k].e+' · '+COH.frescos[k].a+' m² — «'+String(excl[k]).replace(/[<>]/g,'')+'»</li>'}).join('')+
+      '</ul><span style="color:var(--gris);font-size:11px;display:block;margin-top:6px">Quedan tachados, no borrados, y el rango con los '+COH.frescos.length+' originales se muestra abajo. Usted puede comparar los dos.</span></div>'
+    : '';
 
   document.getElementById('fuera-muestra').innerHTML = COH.viejos.length?
     '<div style="margin-top:14px"><div class="sub" style="margin-bottom:8px"><b>Fuera de la muestra por antigüedad</b> (más de '+CONF.frescuraDias+' días publicados — se muestran pero no entran al rango):</div>'+
@@ -1401,24 +1759,68 @@ function render(){
       (MI.pq==='n'?'Su unidad <b>no incluye parqueo</b>: a igualdad de condiciones su precio efectivo es más alto que el que muestra la barra.'
        :(MI.pq==='i'?'Su unidad <b>lo incluye</b>, igual que '+conPq+' de los comparables.':'Su unidad no lo declara: no se puede ajustar.'))+'</li>'
     : '<li>En esta tipología <b>ningún atributo supera la política de contraste</b> (Δ≥5% con n≥30 por lado): no se aplica ningún ajuste.</li>';
+  /* los contadores del resumen plegado: se ve CUÁNTO hay antes de decidir si abrirlo */
+  document.getElementById('cnt-ok').textContent=document.querySelectorAll('#met-ok li').length+' controles';
+  document.getElementById('cnt-aj').textContent=document.querySelectorAll('#met-aj li').length+(aj?' ajuste':' — ninguno');
+  document.getElementById('cnt-rad').textContent=oks.length+' de 3 radios con base';
+  document.getElementById('cnt-no').textContent=document.querySelectorAll('#met-no li').length+' límites';
+
+  /* cierre */
+  document.getElementById('cierre-txt').innerHTML= MODO==='broker'
+    ? 'Cuando termine, <b>Generar para el cliente</b> congela este análisis y le deja un enlace para mandarle. Después de eso los números no se mueven solos.'
+    : 'Compártalo con quien tome la decisión con usted, o vuelva a hablar con <b>'+MI.broker+'</b> sobre lo que acaba de leer.';
+  document.getElementById('caduca').innerHTML='Este análisis está <b>congelado al '+META_ACM.corte+'</b> y no se actualiza solo — un documento que cambia de número sin avisar no sirve para decidir. Pasados unos dos meses conviene pedirle a '+MI.broker+' una versión nueva.';
 
   sim();
 }
-function tog(i){excl[i]=!excl[i];render();}
+/* excluir exige MOTIVO: sin él, el ✕ es una herramienta para maquillar el rango */
+function tog(i){
+  if(excl[i]){excl[i]=null;render();return;}
+  var m=prompt('¿Por qué este comparable no es equivalente?\n\n'+COH.frescos[i].e+' · '+COH.frescos[i].a+' m² · '+fm(COH.frescos[i].p)+
+    '\n\nEl cliente va a leer este motivo.');
+  if(!m||!m.trim())return; /* sin motivo no se excluye */
+  excl[i]=m.trim(); render();
+}
 function sim(){
   if(!COH)return; var s=stats(); if(!s)return;
   var v=+document.getElementById('sim').value, m2=v/MI.a;
   var cerca=activos().filter(function(p){return Math.abs(p.m2-m2)/m2<=0.12});
   var dm=cerca.length>=3?Math.round(pctl(cerca.map(function(p){return p.dias}),.5)):null;
   var men=activos().filter(function(p){return p.m2<m2}).length;
-  var pos=m2>s.p75?'sobre el rango':(m2<s.p25?'bajo el rango':'dentro del rango');
+  var pl=posDe(m2,s);
   document.getElementById('sim-precio').textContent=fm(v);
-  document.getElementById('sim-detalle').innerHTML='<b>'+fm(m2)+'/m²</b> — queda <b>'+pos+'</b><br>'+
+  document.getElementById('sim-detalle').innerHTML='<b>'+fm(m2)+'/m²</b> — queda <b>'+pl[1].toLowerCase()+'</b><br>'+
     men+' de '+s.n+' comparables piden menos<br>'+
     (dm!==null?'Los de ese tramo llevan <b>'+dm+' días</b> publicados (mediana de '+cerca.length+')'
               :'<span style="opacity:.7">Menos de 3 comparables en ese tramo: sin base para estimar antigüedad</span>');
+
+  /* el precio en juego contagia al documento: la etiqueta de arriba y la aguja del rango.
+     Sin precio declarado y sin haber tocado la barra, NO se afirma ninguna posición. */
+  var probando = SIM_TOCADO && (!MI.p || Math.abs(v-MI.p)>1);
+  if(MI.p || SIM_TOCADO){
+    var chip=document.getElementById('chip-top');
+    chip.textContent=pl[1]+(probando?' · probando':''); chip.className='pos pos-'+pl[0];
+    var yo=document.getElementById('r-yo');
+    yo.style.display='block'; yo.style.left=px(v)+'%';
+    document.getElementById('r-flecha').style.visibility='visible';
+    document.getElementById('r-flecha').textContent=probando?'▲ probando':'▲ su precio';
+  }
+
+  /* segunda lectura: si en vez de vender, alquilara */
+  var R=rentaCohort(), rb=document.getElementById('renta-bloque');
+  if(!R){rb.innerHTML=''; return;}
+  var yLo=R.p25*12/v*100, yHi=R.p75*12/v*100;
+  rb.innerHTML='<div class="renta"><div class="rt">Segunda lectura — si en vez de vender, alquilara</div>'+
+    '<div class="rv">A '+fm(v)+', el retorno <b>bruto</b> anual estaría entre '+
+      yLo.toFixed(1).replace('.',',')+'% y '+yHi.toFixed(1).replace('.',',')+'%</div>'+
+    '<div class="rn"><b>Bruto</b>: antes de expensas, vacancia, impuestos y comisión — el neto es bastante menor. '+
+      'Sobre <b>'+R.n+' alquileres publicados</b> a menos de '+R.radio+' m, misma tipología y superficie · renta mediana <b>'+fm(R.p50)+'/mes</b>.'+
+      (R.amo?'<br><b>'+R.amo+' de los '+R.n+' se ofrecen amoblados</b> — eso empuja la renta hacia arriba y no se puede descontar.':'')+
+      (R.sd?' De otros '+R.sd+' el aviso no lo declara: no afirmamos que no lo sean.':'')+
+      '<br>Son rentas <b>pedidas</b>, no contratos firmados.</div></div>';
 }
 function editar(){document.getElementById('resultado').classList.add('oculto');
+  document.getElementById('modo-bar').classList.add('oculto');
   document.getElementById('s-form').classList.remove('oculto');window.scrollTo(0,0);}
 
 /* init */
@@ -1431,7 +1833,12 @@ function editar(){document.getElementById('resultado').classList.add('oculto');
       document.querySelectorAll('#'+par[0]+' button').forEach(function(x){x.classList.remove('on')});
       b.classList.add('on'); MI[par[1]]=par[1]==='d'?+b.dataset.v:b.dataset.v;};});});
   document.getElementById('f-go').onclick=calcular;
-  document.getElementById('sim').addEventListener('input',sim);
+  document.getElementById('sim').addEventListener('input',function(){SIM_TOCADO=true;sim();});
+  ['f-reco-precio','f-reco-txt'].forEach(function(id){
+    document.getElementById(id).addEventListener('input',function(){
+      MI.recoP=+document.getElementById('f-reco-precio').value||null;
+      MI.recoT=document.getElementById('f-reco-txt').value.trim();
+      renderReco();});});
 })();
 </script>
 </body>

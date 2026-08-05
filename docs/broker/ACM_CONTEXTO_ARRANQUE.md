@@ -52,6 +52,29 @@ Heredadas de `docs/analysis/AUDITORIA_ESTADISTICA_MESA_INFORME.md`, `docs/canoni
 - Al **broker** se le venden herramientas — **nunca posición en el feed** ni el chip (vale porque no se compra).
 - Al **comprador/vendedor**: datos, **nunca consejo de inversión personalizado**.
 
+## 🔄 El flujo del producto (decidido 5-ago-2026) — prototipado en `acm-prototipo.html`
+
+**La observación de fondo:** el ACM son **dos productos en una pantalla**. El broker EDITA en privado; el cliente LEE un documento congelado. Mismo patrón que las shortlists (`/admin` arma → `/b/[hash]` lee), y conviene copiarlo tal cual, incluido el registro de vistas.
+
+| Estado | Quién | Qué pasa |
+|---|---|---|
+| **1 · Borrador** | broker | Pre-llenado desde el feed si la propiedad ya está publicada. El formulario en blanco es para lo **no publicado** — que es el caso de oro: la captación, cuando el dueño todavía está decidiendo con quién firma. |
+| **2 · Recomendación** | broker | Escribe **a qué precio saldría y por qué**. Sin esto el broker es un cartero que reenvía un reporte de Simón; con esto **el broker es el autor y Simón la evidencia**. |
+| **3 · Publicado** | sistema | Congela comparables, corte de data, exclusiones y recomendación → link `/acm/[hash]`. |
+| **4 · Compartido** | cliente | Link limpio con la marca del broker. Dos acciones: compartir y hablar. El broker ve que lo abrió. |
+| **5 · Vencido** | sistema | A ~60 días se marca solo y avisa al broker. Le fabrica un **motivo legítimo de re-contacto** — un ACM v2 es una excusa para llamar; "¿cómo venís pensando?" no lo es. |
+
+🔴 **Congelar no es un detalle técnico.** Si el link recalcula cada noche, el cliente abre a los diez días y el número cambió sin que nadie se lo dijera — el broker queda desautorizado por su propia herramienta. Un ACM es **un documento fechado**, no un tablero. Y es lo fiduciariamente correcto.
+
+**Tres decisiones que sostienen el flujo:**
+1. **La recomendación va tipográficamente separada de la medición**, rotulada *"criterio profesional de [broker], no una medición de Simón"*. Protege a Simón de recomendar precio (no puede) **y** al broker, cuyo criterio queda destacado en vez de diluido.
+2. **Excluir un comparable exige MOTIVO, y el cliente lo lee.** Sin eso el ✕ es una herramienta para maquillar el rango y Simón queda de cómplice. El rango con los originales queda al lado del recalculado.
+3. **El cliente ve el simulador, pero DESPUÉS de la recomendación.** Si juega antes, la recomendación del broker se lee como una opinión más entre las que él mismo generó moviendo la barra.
+
+**Implicancia comercial:** si el momento de valor es la reunión de captación, **cobrar por ACM es contraproducente** — hace que lo use menos justo cuando querés que lo use siempre. Suscripción por broker, ACM ilimitados. Además **cada ACM compartido es distribución**: el cliente lo reenvía a su pareja o su socio, y cada reenvío es una superficie con la marca de Simón llegando a gente que nunca buscó nada.
+
+**Fuera de alcance por ahora:** el ACM del comprador (documento distinto, input distinto, orden distinto — mismo motor, otro modo), el PDF (el link se comparte mejor, se versiona y se mide), y que el cliente edite supuestos (si puede, el documento deja de ser del broker).
+
 ## ▶️ Próximo paso sugerido
 
 Elegir UNA audiencia (mi recomendación: **vendedor**, por el hueco + porque el motor ya responde su pregunta) y cerrar su mapa de decisiones antes de tocar código. Después: extraer el módulo común de cohorts/percentiles (paso 0), y recién ahí la vista.
