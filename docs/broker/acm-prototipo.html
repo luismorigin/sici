@@ -269,25 +269,28 @@
   <div id="aviso-estado"></div>
   <div id="ajustes-dec"></div>
 
-  <!-- Los criterios de búsqueda son criterio profesional del broker. Puede moverlos,
-       y cuando lo hace el documento lo declara — igual que las exclusiones. -->
-  <div class="panel solo-broker" id="panel-aj" style="border-color:var(--linea)">
-    <div class="pt">Criterios de búsqueda</div>
-    <div class="pd">Por defecto se busca desde 300 m y se amplía sola hasta juntar <b id="aj-nmin">5</b> comparables. Si conoce la zona y sabe que otro corte compara mejor, muévalo: <b>el cliente va a ver qué eligió</b>.</div>
-    <label class="aj-l">Radio de búsqueda</label>
-    <div class="seg seg-sm" id="aj-radio">
-      <button data-v="0" class="on">Automático</button><button data-v="300">300 m</button><button data-v="500">500 m</button><button data-v="800">800 m</button><button data-v="1200">1.200 m</button>
+  <!-- Criterio profesional del broker. Cerrado por defecto: existe para el que lo va a
+       usar, sin cobrarle el precio de la confusión al que no. En su idioma, no en el
+       de un analista. Todo lo que mueva se declara en el documento del cliente. -->
+  <details class="col solo-broker" id="panel-aj" style="margin-top:16px">
+    <summary>Ajustar la búsqueda <span class="cnt" id="aj-resumen"></span></summary>
+    <div class="cont">
+      <div class="pd" style="font-size:11.5px;color:var(--gris);line-height:1.5;margin-bottom:4px">Por defecto buscamos primero cerca y vamos ampliando hasta juntar <b>5</b> comparables. Si usted conoce la zona y sabe que otro corte compara mejor, cámbielo — <b>el cliente va a ver qué eligió</b>.</div>
+      <label class="aj-l">¿Hasta dónde buscamos?</label>
+      <div class="seg seg-sm" id="aj-radio">
+        <button data-v="0" class="on">Automático</button><button data-v="300">300 m</button><button data-v="500">500 m</button><button data-v="800">800 m</button><button data-v="1200">1.200 m</button>
+      </div>
+      <label class="aj-l">¿Cuánto puede variar el tamaño?</label>
+      <div class="seg seg-sm" id="aj-tol">
+        <button data-v="0.20" class="on">Parecido (±20%)</button><button data-v="0.30">Más amplio (±30%)</button>
+      </div>
+      <label class="aj-l">¿Sumamos departamentos parecidos?</label>
+      <div class="seg seg-sm" id="aj-tip">
+        <button data-v="0" class="on">Solo su tipo</button><button data-v="1">Sumar los de al lado</button>
+      </div>
+      <div class="aj-n" id="aj-nota"></div>
     </div>
-    <label class="aj-l">Tolerancia de superficie</label>
-    <div class="seg seg-sm" id="aj-tol">
-      <button data-v="0.20" class="on">±20%</button><button data-v="0.30">±30%</button>
-    </div>
-    <label class="aj-l">Tipología</label>
-    <div class="seg seg-sm" id="aj-tip">
-      <button data-v="0" class="on">Solo la misma</button><button data-v="1">Sumar vecinas</button>
-    </div>
-    <div class="aj-n" id="aj-nota"></div>
-  </div>
+  </details>
 
   <div id="bloque-rango">
     <div class="sub">Lo que hoy se pide por unidades como la suya:</div>
@@ -312,7 +315,6 @@
     <h3 style="font-size:14px;margin:22px 0 4px">¿A qué precio quedaría dónde?</h3>
     <p class="sub" style="margin-bottom:10px">El rango no decide por usted. Esto traduce el rango a la posición que elija:</p>
     <div id="objetivos"></div>
-    <p class="sub" style="font-size:11.5px;margin-top:8px">No es una recomendación de precio: es qué lugar ocupa cada precio entre los avisos que hoy compiten con el suyo.</p>
 
     <div id="difs-bloque"></div>
 
@@ -332,7 +334,16 @@
     </div>
   </div>
   <div id="sin-base" class="aviso oculto"></div>
-  <p class="sub" style="margin-top:14px"><b>Esto no es una tasación.</b> Es la posición de su precio dentro de la oferta publicada comparable, hoy.</p>
+  <!-- Las TRES que van siempre a la vista. El resto vive en «Cómo se comparó»: siguen
+       estando, dejan de gritar. Un documento que se aclara trece veces se lee como
+       «no confíes en esto», y el rigor termina jugando en contra. -->
+  <p class="sub" style="margin-top:16px;padding-top:13px;border-top:1px solid var(--linea)">
+    <b>Tres cosas antes de decidir con esto.</b>
+    No es una tasación: es la posición de su precio dentro de la oferta publicada comparable, hoy.
+    Son precios <b>pedidos</b>, no de cierre — Bolivia no tiene registro público de transacciones.
+    Y solo ve lo que se publica: no la venta directa del desarrollador ni lo que se pasa entre brokers sin anunciar.
+    <span style="display:block;margin-top:5px;font-size:11.5px">Los demás límites, uno por uno, en <b>Cómo se comparó</b>.</span>
+  </p>
 </section>
 
 <!-- ══════ EVIDENCIA ══════ -->
@@ -358,7 +369,7 @@
   <h2>Hace cuánto está en el mercado</h2>
   <div id="antig-barras" style="margin:18px 0 4px"></div>
   <p class="frase" id="frase-dias"></p>
-  <p class="sub" style="margin-top:14px"><b>Cómo leerlo:</b> es la antigüedad del aviso publicado, <b>no</b> el tiempo que tarda en venderse. Admite dos lecturas — no rota, o se re-publicó y el contador volvió a cero. Los comparables marcados <span class="tag tag-rep">cargado en bloque</span> comparten día exacto de publicación con otros de su edificio: ahí el contador mide el lote, no la unidad.</p>
+  <p class="sub" style="margin-top:14px">Es la antigüedad del <b>aviso</b>, no el tiempo que tarda en venderse.</p>
 </section>
 
 <!-- ══════ SU EDIFICIO ══════ -->
@@ -367,7 +378,7 @@
   <h2 id="torre-titulo"></h2>
   <div id="torre" style="margin-top:14px"></div>
   <p class="frase" id="frase-torre"></p>
-  <p class="sub" style="margin-top:14px">⚠️ Si todas las unidades las publica el mismo desarrollador o la misma agencia, son <b>una lista de precios repetida</b>, no observaciones independientes. Aun así, es contra ellas que su comprador compara.</p>
+  <p class="sub" style="margin-top:14px">Si las publica todas el mismo desarrollador, son <b>una lista de precios</b>, no opiniones independientes. Aun así, es contra ellas que compara su comprador.</p>
 </section>
 
 <!-- ══════ SIMULADOR ══════ -->
@@ -379,7 +390,7 @@
   <input type="range" id="sim" min="0" max="100" value="50">
   <div class="sim-lbl"><span id="sim-min"></span><span id="sim-max"></span></div>
   <div id="renta-bloque"></div>
-  <p class="sub" style="margin-top:14px"><b>Qué NO dice esto:</b> no promete que a un precio dado se venda en X días. Muestra la antigüedad de los avisos comparables de ese tramo — un indicio, no una predicción.</p>
+  <p class="sub" style="margin-top:14px">Los días son los que llevan publicados los comparables de ese tramo — un indicio, no una promesa de plazo.</p>
 </section>
 
 <!-- ══════ MÉTODO ══════ -->
@@ -406,8 +417,11 @@
     <li><b>Lo que no está publicado.</b> Este análisis ve <b>la oferta que se publica en portales</b>. No ve la venta directa del desarrollador en su sala de ventas, ni la unidad que se pasa entre brokers sin anunciar, ni la que se vende por el cartel del balcón. En preventa eso puede ser una parte grande del mercado — y suele venderse <b>por debajo</b> del precio de lista publicado. El rango de acá es el rango de <b>lo visible</b>, y esa es su definición completa: nadie puede decirle cuánto pide lo que nunca se anunció.</li>
     <li><b>Amoblado</b> — 0 de 394 avisos de venta lo declaran. No sabemos si algún precio incluye muebles.</li>
     <li><b>Amenidades</b> — se muestran por comparable como contexto, pero su señal de precio se contradice entre tipologías: no se usan para ajustar.</li>
-    <li><b>Piso y vista</b> — solo el 46% de los avisos declara el piso.</li>
+    <li><b>Piso y vista</b> — solo el 46% de los avisos declara el piso, y ninguno la vista. Por eso los diferenciales que aporta el broker se muestran <b>declarados como aporte suyo</b> y no ajustan el número: sin comparables que declaren lo mismo, ajustar sería inventar precisión.</li>
+    <li><b>Quién dice qué</b> — Simón informa el rango de la oferta publicada. La <b>recomendación de precio</b> la firma el broker, que conoce la unidad y al comprador. Son dos cosas distintas y aparecen separadas a propósito.</li>
     <li><b>Precios de cierre</b> — Bolivia no tiene registro público de transacciones. Todo acá son precios <b>pedidos</b>.</li>
+    <li><b>La antigüedad admite dos lecturas</b> — que el aviso no rote, o que se haya re-publicado y el contador vuelto a cero. Nunca es "el tiempo que tarda en venderse": eso no se observa.</li>
+    <li><b>Un edificio no son varias opiniones</b> — cuando todas las unidades las publica el mismo desarrollador o la misma agencia, son una lista de precios repetida, no observaciones independientes.</li>
     <li><b>Los días publicados no siempre son independientes.</b> Marcamos <span class="tag tag-rep">cargado en bloque</span> cuando 3 o más unidades del mismo edificio muestran <b>exactamente</b> la misma antigüedad. Puede ser un lanzamiento (subieron todas juntas el primer día) o una re-publicación (se bajaron y volvieron a subir, y el contador arrancó de cero). En los dos casos significa lo mismo para leer el cuadro: <b>esos avisos cuentan el tiempo del lote, no el de cada unidad</b> — no son N observaciones distintas del mismo fenómeno. En esta muestra el patrón aparece en <b>20% de los avisos</b>.</li>
     <li><b>La fecha de entrega es la que declara el aviso</b>, no un compromiso verificado con el desarrollador. Cuando esa fecha <span style="color:var(--terra)">ya pasó</span> lo decimos: significa que el aviso no se actualizó, no necesariamente que la obra esté atrasada.</li>
     <li><b>Las fotos</b> — son de <b>un aviso</b> de ese edificio, no necesariamente de la unidad comparada. Sirven para reconocer el edificio, no para juzgar el interior. El 63% de los avisos tiene foto publicada; el resto aparece sin imagen.</li>
@@ -1867,7 +1881,7 @@ function renderReco(){
     ? '<div class="reco"><div class="rt">Recomendación de '+MI.broker+'</div>'+
       (MI.recoP?'<div class="rp">'+fm(MI.recoP)+'</div>':'')+ubic+
       (MI.recoT?'<div class="rx">'+MI.recoT.replace(/[<>]/g,'')+'</div>':'')+
-      '<div class="rf">Este bloque es el <b style="color:var(--arena)">criterio profesional de '+MI.broker+'</b>, no una medición de Simón. Simón informa el rango de la oferta publicada; la recomendación de precio la firma quien conoce la unidad y al comprador.</div></div>'
+      '<div class="rf"><b style="color:var(--arena)">Criterio profesional de '+MI.broker+'</b> — no una medición de Simón.</div></div>'
     : '';
 }
 /* Todo rastro del análisis anterior. Si queda DOM viejo, al publicar el documento del
@@ -1910,13 +1924,25 @@ function ajustesMovidos(){
   if(AJ.tipVecinas && MI.a>=TIP_VECINAS_DESDE) m.push({k:'tip', t:'sumó las <b>tipologías vecinas</b> (a partir de '+TIP_VECINAS_DESDE+' m² la diferencia de precio por m² entre tipologías contiguas es chica)'});
   return m;
 }
+/* El mensaje que le llega al cliente por WhatsApp. En el prototipo el enlace es
+   de ejemplo; el texto es exactamente el que se enviaría. */
+function linkAcm(){return 'https://simonbo.com/acm/'+(MI.e.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,14))+'-'+MI.a+'m2';}
+function msgAcm(){
+  var s=COH&&stats();
+  return 'Le preparé el análisis de precio de su departamento en '+MI.e+' ('+MI.a+' m²).\n\n'+
+    (s? 'Hoy se piden entre '+fm(s.p25*MI.a)+' y '+fm(s.p75*MI.a)+' por unidades comparables a menos de '+COH.radio+' m — son '+s.n+' avisos reales, con foto y enlace.\n\n':'')+
+    (MI.recoP? 'Mi recomendación: salir en '+fm(MI.recoP)+'.\n\n':'')+
+    linkAcm()+'\n\n— '+MI.broker;
+}
 function compartir(){
-  var t='Análisis de precio de '+MI.e+' · '+MI.a+' m² — preparado por '+MI.broker+' con datos verificados por Simón.';
-  if(navigator.share){navigator.share({title:'Posición de precio · '+MI.e,text:t}).catch(function(){});}
-  else alert('En la versión final esto abre el menú de compartir con el enlace del análisis.\n\n'+t);
+  var t=msgAcm();
+  if(navigator.share){navigator.share({title:'Posición de precio · '+MI.e,text:t}).catch(function(){});return;}
+  if(navigator.clipboard) navigator.clipboard.writeText(t).catch(function(){});
+  alert('Esto es lo que recibe su cliente (copiado al portapapeles):\n\n'+t+
+    '\n\n· En el prototipo el enlace es de ejemplo.');
 }
 function hablar(){
-  alert('En la versión final esto abre WhatsApp con '+MI.broker+'.\n\nEl broker ve que usted abrió el análisis; no le pedimos ningún dato para eso.');
+  window.open('https://wa.me/?text='+encodeURIComponent(msgAcm()),'_blank','noopener');
 }
 /* la foto es de UN aviso de ese edificio — se declara así, no se presenta como la unidad comparada */
 function foto(e){var u=FOTOS[e];
@@ -2110,6 +2136,9 @@ function render(){
     : '';
   document.getElementById('aj-nota').innerHTML='Con estos criterios: <b>'+s.n+' comparables</b> a '+COH.radio+' m'+
     (mov.length?' · <b style="color:var(--sand)">'+mov.length+' criterio'+(mov.length>1?'s':'')+' fuera del default</b>, declarado'+(mov.length>1?'s':'')+' en el informe':' · todo en el default');
+  document.getElementById('aj-resumen').innerHTML= mov.length
+    ? '<b style="color:var(--sand)">'+s.n+' comparables · '+mov.length+' criterio'+(mov.length>1?'s':'')+' cambiado'+(mov.length>1?'s':'')+'</b>'
+    : s.n+' comparables a '+COH.radio+' m';
   var bTip=document.querySelector('#aj-tip button[data-v="1"]');
   bTip.disabled = MI.a<TIP_VECINAS_DESDE;
   bTip.title = bTip.disabled? 'Bajo '+TIP_VECINAS_DESDE+' m² la tipología sí cambia el precio por m² (medido: 11,6% entre monoambiente y 1 dorm): sumarlas mezclaría productos distintos.' : '';
@@ -2156,7 +2185,7 @@ function render(){
   document.getElementById('difs-bloque').innerHTML = (MI.difs||MI.piso)
     ? '<div class="difs"><div class="dt">Lo que este análisis no puede ver</div>'+
       '<div class="dl">'+[MI.piso?'Piso '+MI.piso:'',MI.difs].filter(Boolean).join(' · ')+'</div>'+
-      '<div class="dn">Aportado por '+MI.broker+', no medido por Simón. <b>No modifica el rango</b>: los avisos comparables tampoco declaran estos atributos (solo el 46% declara el piso y ninguno la vista), así que ajustar por ellos sería inventar precisión.</div></div>'
+      '<div class="dn">Aportado por '+MI.broker+', no medido por Simón. <b>No cambia el rango.</b></div></div>'
     : (MODO==='broker'
       ? '<div class="difs" style="background:#F5F1E6;border:1px dashed var(--linea)"><div class="dt" style="color:var(--gris)">Lo que este análisis no puede ver</div>'+
         '<div class="dn" style="margin-top:0">¿Esta unidad tiene algo que el aviso no muestra —vista, piso alto, una remodelación reciente? <b onclick="editar()" style="color:var(--salvia);cursor:pointer;border-bottom:1px dotted">Agréguelo acá</b>: se muestra declarado como aporte suyo, sin tocar el número.</div></div>'
@@ -2315,11 +2344,9 @@ function sim(){
   rb.innerHTML='<div class="renta"><div class="rt">Segunda lectura — si en vez de vender, alquilara</div>'+
     '<div class="rv">A '+fm(v)+', el retorno <b>bruto</b> anual estaría entre '+
       yLo.toFixed(1).replace('.',',')+'% y '+yHi.toFixed(1).replace('.',',')+'%</div>'+
-    '<div class="rn"><b>Bruto</b>: antes de expensas, vacancia, impuestos y comisión — el neto es bastante menor. '+
-      'Sobre <b>'+R.n+' alquileres publicados</b> a menos de '+R.radio+' m, misma tipología y superficie · renta mediana <b>'+fm(R.p50)+'/mes</b>.'+
-      (R.amo?'<br><b>'+R.amo+' de los '+R.n+' se ofrecen amoblados</b> — eso empuja la renta hacia arriba y no se puede descontar.':'')+
-      (R.sd?' De otros '+R.sd+' el aviso no lo declara: no afirmamos que no lo sean.':'')+
-      '<br>Son rentas <b>pedidas</b>, no contratos firmados.</div></div>';
+    '<div class="rn"><b>Bruto</b>: antes de expensas, vacancia, impuestos y comisión. '+
+      'Sobre <b>'+R.n+' alquileres pedidos</b> a menos de '+R.radio+' m · mediana <b>'+fm(R.p50)+'/mes</b>'+
+      (R.amo?' · <b>'+R.amo+' amoblados</b>, que empujan la renta hacia arriba':'')+'.</div></div>';
 }
 function editar(){document.getElementById('resultado').classList.add('oculto');
   document.getElementById('modo-bar').classList.add('oculto');
@@ -2344,6 +2371,19 @@ function editar(){document.getElementById('resultado').classList.add('oculto');
       AJ[par[1]] = par[1]==='tipVecinas' ? b.dataset.v==='1' : +b.dataset.v;
       reAjustar();};});});
   document.getElementById('sim').addEventListener('input',function(){SIM_TOCADO=true;sim();});
+
+  /* ── DEMO: abre en el documento terminado, no en un formulario vacío ──
+     El pitch necesita el golpe primero y el trámite después. Con ?form=1 arranca
+     en el formulario, como lo haría un broker que entra a armar uno nuevo. */
+  if(location.search.indexOf('form=1')<0){
+    document.getElementById('f-broker').value='Marcela Áñez · RE/MAX Norte';
+    document.getElementById('f-piso').value='15';
+    document.getElementById('f-difs').value='vista despejada al parque, cocina recién renovada';
+    calcular();
+    document.getElementById('f-reco-precio').value='98000';
+    document.getElementById('f-reco-txt').value='Saldría en 98.000 y sostendría el precio 45 días. La vista al parque no la tiene ninguno de los comparables, y el edificio ya está entregado: quien compra se muda este mes, no en 2027.';
+    publicar();
+  }
   ['f-reco-precio','f-reco-txt'].forEach(function(id){
     document.getElementById(id).addEventListener('input',function(){
       MI.recoP=+document.getElementById('f-reco-precio').value||null;
