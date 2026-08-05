@@ -157,7 +157,7 @@
     <div class="campo">
       <label>Estado de obra</label>
       <div class="seg" id="f-est">
-        <button data-v="P" class="on">En pozo</button><button data-v="E">Entregado</button><button data-v="?">No sé</button>
+        <button data-v="P" class="on">Preventa</button><button data-v="E">Entregado</button><button data-v="?">No sé</button>
       </div>
     </div>
     <button class="btn" id="f-go">Ver la posición de mi precio</button>
@@ -1101,7 +1101,7 @@ function calcular(){
   document.getElementById('s-form').classList.add('oculto');
   document.getElementById('resultado').classList.remove('oculto');
   document.getElementById('r-titulo').textContent=MI.e+' · '+(MI.d===0?'Monoambiente':MI.d+' dormitorio'+(MI.d>1?'s':''));
-  document.getElementById('r-subtitulo').textContent=MI.a+' m² · '+(MI.est==='P'?'en pozo':(MI.est==='E'?'entregado':'estado sin declarar'))+' · '+
+  document.getElementById('r-subtitulo').textContent=MI.a+' m² · '+(MI.est==='P'?'en preventa':(MI.est==='E'?'entregado':'estado sin declarar'))+' · '+
     (MI.pq==='i'?'con parqueo':(MI.pq==='n'?'sin parqueo':'parqueo sin declarar'));
 
   if(!COH){ document.getElementById('bloque-rango').classList.add('oculto');
@@ -1135,7 +1135,7 @@ function render(){
     ' · entre '+Math.round(MI.a*0.8)+' y '+Math.round(MI.a*1.2)+' m²'+
     (COH.mismoEstado?' · <b>mismo estado de obra</b>'
       :(MI.est==='?'?' · <span style="color:var(--gris)">estado de obra sin declarar: se comparó contra todos</span>'
-                    :' · <span style="color:var(--terra)">estado de obra mezclado: no había '+CONF.nMin+' comparables '+(MI.est==='P'?'en pozo':'entregados')+'</span>'))+
+                    :' · <span style="color:var(--terra)">estado de obra mezclado: no había '+CONF.nMin+' comparables '+(MI.est==='P'?'en preventa':'entregados')+'</span>'))+
     '<br><span style="color:var(--gris)">Antigüedad ≤'+CONF.frescuraDias+' días · '+conPq+' declaran parqueo, '+sdPq+' no declaran'+
     (COH.viejos.length?' · '+COH.viejos.length+' avisos quedaron fuera por antigüedad':'')+'</span>';
 
@@ -1173,7 +1173,7 @@ function render(){
     var amT=[p.am.pis?'piscina':'',p.am.gym?'gym':'',p.am.cow?'co-work':'',p.am.sau?'sauna':''].filter(Boolean).join(' · ')||'sin amenidades declaradas';
     return '<div class="comp'+(excl[i]?' excluido':'')+'">'+foto(p.e)+'<div class="c1">'+
       '<div class="nom">'+p.e+(p.outlier?'<span class="tag tag-out">precio atípico</span>':'')+'</div>'+
-      '<div class="det">'+p.a+' m² · '+p.dias+' días · a '+p.dist+' m · '+(p.est==='P'?'pozo':(p.est==='E'?'entregado':'estado s/d'))+
+      '<div class="det">'+p.a+' m² · '+p.dias+' días · a '+p.dist+' m · '+(p.est==='P'?'preventa':(p.est==='E'?'entregado':'estado s/d'))+
       '<br>'+pqT+' · '+amT+
       (function(){var u=avisoDe(p); return u
         ? '<br><a class="ver" href="'+u+'" target="_blank" rel="noopener">ver el aviso en '+(u.indexOf('c21')>=0?'C21':'Remax')+' ↗</a>'
@@ -1227,8 +1227,12 @@ function render(){
   else{
     document.getElementById('torre').innerHTML=torre.map(function(t){
       var tip=t.d===0?'Mono':t.d+' dorm.';
+      var ut=avisoDe(t);
       return '<div class="comp">'+foto(t.e)+'<div class="c1"><div class="nom">'+tip+' · '+t.a+' m²</div>'+
-        '<div class="det">'+t.dias+' días · '+(t.pq==='i'?'parqueo incl.':(t.pq==='n'?'sin parqueo':'parqueo s/d'))+'</div></div>'+
+        '<div class="det">'+t.dias+' días · '+(t.pq==='i'?'parqueo incl.':(t.pq==='n'?'sin parqueo':'parqueo s/d'))+
+        (ut?'<br><a class="ver" href="'+ut+'" target="_blank" rel="noopener">ver el aviso en '+(ut.indexOf('c21')>=0?'C21':'Remax')+' ↗</a>'
+           :'<br><span class="ver" style="color:var(--gris);border-bottom-style:none">aviso sin enlace disponible</span>')+
+        '</div></div>'+
         '<div class="c2"><div class="m2">'+fm(t.m2)+'/m²</div><div class="pre">'+fm(t.p)+'</div></div></div>'}).join('');
     var mismaTip=torre.filter(function(t){return t.d===MI.d});
     var barato=mismaTip.length?mismaTip[mismaTip.length-1]:null;
@@ -1243,7 +1247,7 @@ function render(){
     '<li><b>Tipología</b> — solo '+(MI.d===0?'monoambientes':MI.d+' dormitorio'+(MI.d>1?'s':''))+'</li>'+
     '<li><b>Superficie</b> — entre '+Math.round(MI.a*0.8)+' y '+Math.round(MI.a*1.2)+' m² (±20% de la suya)</li>'+
     '<li><b>Distancia</b> — todos a menos de '+COH.radio+' m (se probó desde '+CONF.radios[0]+' m y se amplió hasta encontrar '+CONF.nMin+' comparables)</li>'+
-    (COH.mismoEstado?'<li><b>Estado de obra</b> — todos '+(MI.est==='P'?'en pozo':'entregados')+', igual que el suyo</li>':'')+
+    (COH.mismoEstado?'<li><b>Estado de obra</b> — todos '+(MI.est==='P'?'en preventa':'entregados')+', igual que el suyo</li>':'')+
     '<li><b>Antigüedad</b> — solo avisos de hasta '+CONF.frescuraDias+' días publicados</li>';
   var aj=CONF.pqAjuste[MI.d];
   document.getElementById('met-aj').innerHTML= aj
