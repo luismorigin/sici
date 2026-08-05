@@ -164,6 +164,11 @@
   .panel textarea{resize:vertical;min-height:72px;margin-top:8px}
   .excl-dec{background:#F5F1E6;border-left:3px solid var(--sand);border-radius:0 10px 10px 0;
     padding:11px 13px;margin-top:10px;font-size:12px;line-height:1.55}
+  .seg-sm button{padding:7px 3px;font-size:11px}
+  .aj-l{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'Figtree';
+    font-weight:700;color:var(--gris);margin:11px 0 5px}
+  .aj-n{font-size:11px;line-height:1.5;color:var(--gris);margin-top:10px;padding-top:9px;border-top:1px solid var(--linea)}
+  .seg button:disabled{opacity:.4;cursor:not-allowed}
   /* ── navegación y cierre ── */
   .atajos{display:flex;gap:7px;margin-top:20px}
   .atajos a{flex:1;text-align:center;background:#fff;border:1px solid var(--linea);border-radius:10px;
@@ -262,6 +267,27 @@
   <button class="lapiz solo-broker" onclick="editar()">✎ cambiar los datos</button>
 
   <div id="aviso-estado"></div>
+  <div id="ajustes-dec"></div>
+
+  <!-- Los criterios de búsqueda son criterio profesional del broker. Puede moverlos,
+       y cuando lo hace el documento lo declara — igual que las exclusiones. -->
+  <div class="panel solo-broker" id="panel-aj" style="border-color:var(--linea)">
+    <div class="pt">Criterios de búsqueda</div>
+    <div class="pd">Por defecto se busca desde 300 m y se amplía sola hasta juntar <b id="aj-nmin">5</b> comparables. Si conoce la zona y sabe que otro corte compara mejor, muévalo: <b>el cliente va a ver qué eligió</b>.</div>
+    <label class="aj-l">Radio de búsqueda</label>
+    <div class="seg seg-sm" id="aj-radio">
+      <button data-v="0" class="on">Automático</button><button data-v="300">300 m</button><button data-v="500">500 m</button><button data-v="800">800 m</button><button data-v="1200">1.200 m</button>
+    </div>
+    <label class="aj-l">Tolerancia de superficie</label>
+    <div class="seg seg-sm" id="aj-tol">
+      <button data-v="0.20" class="on">±20%</button><button data-v="0.30">±30%</button>
+    </div>
+    <label class="aj-l">Tipología</label>
+    <div class="seg seg-sm" id="aj-tip">
+      <button data-v="0" class="on">Solo la misma</button><button data-v="1">Sumar vecinas</button>
+    </div>
+    <div class="aj-n" id="aj-nota"></div>
+  </div>
 
   <div id="bloque-rango">
     <div class="sub">Lo que hoy se pide por unidades como la suya:</div>
@@ -321,23 +347,10 @@
   <div id="fuera-muestra"></div>
 </section>
 
-<!-- ══════ EL TIEMPO ══════ -->
-<section id="s-macro" style="background:var(--negro);color:var(--arena);border-bottom:none">
-  <div class="eyebrow" style="color:#9CC7A6"><span class="num"></span>Lo que cambió sin que usted lo tocara</div>
-  <h2>El mercado se movió</h2>
-  <p class="lead" style="color:#B9B4A6">Desde enero de 2026, el m² pedido de su tipología en Equipetrol:</p>
-  <div style="display:flex;gap:10px;margin:18px 0 8px">
-    <div style="flex:1;background:#1F1F1D;border-radius:12px;padding:14px">
-      <div style="font-family:Figtree;font-size:25px;font-weight:900;color:#D98B63" id="serie-usd"></div>
-      <div style="font-size:11.5px;color:#8A867C;margin-top:3px">en dólares</div></div>
-    <div style="flex:1;background:#1F1F1D;border-radius:12px;padding:14px">
-      <div style="font-family:Figtree;font-size:25px;font-weight:900;color:#9CC7A6" id="serie-bs"></div>
-      <div style="font-size:11.5px;color:#8A867C;margin-top:3px">en bolivianos</div></div>
-  </div>
-  <p class="sub" style="color:#8A867C">La diferencia es el tipo de cambio: subió 11,3% en el mismo período.</p>
-  <p class="frase" style="border-color:var(--salvia-viva);color:var(--arena);margin-top:20px" id="frase-serie"></p>
-  <p class="sub" style="color:#8A867C;margin-top:14px">Serie reconstruida bajo una sola metodología de tipo de cambio, error ±7%. Sirve la dirección, no el nivel exacto de un día.</p>
-</section>
+<!-- La sección "El mercado se movió" (serie histórica de precio) se retiró el 5-ago-2026:
+     sus números estaban congelados a mano y, sobre todo, no cambiaba ninguna decisión.
+     Lo único que la habría hecho útil —proyectar el costo de esperar— es una predicción,
+     y en este panorama cambiario no se sostiene. Decisión del founder. -->
 
 <!-- ══════ ANTIGÜEDAD ══════ -->
 <section id="s-antig">
@@ -1779,7 +1792,7 @@ var POOL_ALQ=ALQ_RAW.trim().split('\n').map(function(l){var f=l.split('|');
 
 /* política declarada — un solo lugar */
 var CONF={radios:[300,500,800], nMin:5, frescuraDias:180, areaTol:0.20, outlierIQR:1.5,
-          pqAjuste:{1:8.6}, serie:{0:[-18.4,-9.3],1:[-15.1,-5.6],2:[-22.2,-13.4]}};
+          pqAjuste:{1:8.6}};
 var META_ACM={corte:'3 de agosto de 2026', cobertura:'Equipetrol'};
 
 /* edificios únicos con su GPS (centroide) */
@@ -1791,6 +1804,9 @@ var MI={e:'Lofty Island',d:1,a:51,p:91584,pq:'n',est:'P'}, COH=null, excl={};
 /* excl[i] guarda el MOTIVO (string), no un booleano: una exclusión sin motivo
    es maquillaje, y el cliente tiene que poder leer por qué se sacó cada una. */
 var MODO='broker'; /* broker = edita · lectura = lo que ve el cliente */
+/* criterios de búsqueda: los defaults son la política declarada; el broker los puede
+   mover, y todo lo que mueva queda escrito en el documento del cliente. */
+var AJ={radio:0, tol:0.20, tipVecinas:false};
 var PMIN=0,PMAX=1; /* escala de la barra del rango, para que el simulador pueda mover la aguja */
 var SIM_TOCADO=false;
 function fm(n){return '$'+Math.round(n).toLocaleString('es-BO').replace(/,/g,'.')}
@@ -1801,14 +1817,13 @@ function posDe(m2,s){return m2===null||m2===undefined?['na','sin precio']
 /* ═══ ORDEN DE SECCIONES — sigue al diagnóstico, no a un índice fijo ═══
    Cada sección responde la objeción que abre la anterior:
    rango → "¿de dónde lo sacaste?" → "el mío es distinto" → "¿por qué no se vende?" → "¿qué hago?" */
-var ORDEN_BASE =['s-resp','s-evid','s-torre','s-antig','s-macro','s-sim','s-metodo'];
-var ORDEN_SOBRE=['s-resp','s-evid','s-macro','s-torre','s-antig','s-sim','s-metodo'];
-var ORDEN_ACTUAL=null;
-function ordenar(sobre){
-  var k=sobre?'sobre':'base'; if(ORDEN_ACTUAL===k)return; /* mover nodos enfocados hace blur: solo si cambió */
-  ORDEN_ACTUAL=k;
+var ORDEN=['s-resp','s-evid','s-torre','s-antig','s-sim','s-metodo'];
+var ORDEN_HECHO=false;
+function ordenar(){
+  if(ORDEN_HECHO)return; /* mover nodos enfocados hace blur: una sola vez */
+  ORDEN_HECHO=true;
   var cont=document.getElementById('resultado'), ancla=document.getElementById('s-cierre');
-  (sobre?ORDEN_SOBRE:ORDEN_BASE).forEach(function(id,i){
+  ORDEN.forEach(function(id,i){
     var sec=document.getElementById(id); cont.insertBefore(sec,ancla);
     var n=sec.querySelector('.num'); if(n)n.textContent='0'+(i+1)+' · ';});
 }
@@ -1855,6 +1870,46 @@ function renderReco(){
       '<div class="rf">Este bloque es el <b style="color:var(--arena)">criterio profesional de '+MI.broker+'</b>, no una medición de Simón. Simón informa el rango de la oferta publicada; la recomendación de precio la firma quien conoce la unidad y al comprador.</div></div>'
     : '';
 }
+/* Todo rastro del análisis anterior. Si queda DOM viejo, al publicar el documento del
+   cliente arrastra comparables y enlaces que ya no corresponden. */
+function limpiarAnalisis(){
+  ['comps','torre','fuera-muestra','excl-dec','recalc','aviso-estado','ajustes-dec',
+   'objetivos','difs-bloque','reco-bloque','renta-bloque']
+    .forEach(function(id){document.getElementById(id).innerHTML='';});
+  document.getElementById('recalc').className='recalc';
+}
+/* re-arma la muestra con los criterios que movió el broker y re-pinta todo */
+function reAjustar(){
+  if(!document.getElementById('resultado').classList.contains('oculto')){
+    excl={}; COH=armarCohort();
+    if(!COH){ limpiarAnalisis();
+      document.getElementById('bloque-rango').classList.add('oculto');
+      ['s-antig','s-torre','s-sim'].forEach(function(id){document.getElementById(id).classList.add('oculto')});
+      var sb=document.getElementById('sin-base'); sb.classList.remove('oculto');
+      sb.innerHTML='<b>Con estos criterios no se junta la muestra mínima</b> ('+CONF.nMin+' comparables frescos). Amplíe el radio o la tolerancia de superficie, o vuelva a <b>Automático</b>.';
+      document.getElementById('chip-top').textContent='sin base';
+      document.getElementById('chip-top').className='pos pos-na';
+      document.getElementById('aj-nota').innerHTML='<b style="color:var(--terra)">Sin base con estos criterios.</b> Amplíe el radio o la tolerancia, o vuelva a Automático.';
+      return; }
+    document.getElementById('bloque-rango').classList.remove('oculto');
+    document.getElementById('sin-base').classList.add('oculto');
+    ['s-antig','s-torre','s-sim'].forEach(function(id){document.getElementById(id).classList.remove('oculto')});
+    var sl=document.getElementById('sim'), s=stats();
+    sl.min=Math.round(s.p25*MI.a*0.75/500)*500; sl.max=Math.round(s.p75*MI.a*1.25/500)*500;
+    sl.value=MI.p||Math.round(s.p50*MI.a); SIM_TOCADO=false;
+    document.getElementById('sim-min').textContent=fm(sl.min);
+    document.getElementById('sim-max').textContent=fm(sl.max);
+    render();
+  }
+}
+/* qué se apartó del default — se declara en el documento y se resume en el panel */
+function ajustesMovidos(){
+  var m=[];
+  if(AJ.radio) m.push({k:'radio', t:'buscó a <b>'+AJ.radio+' m</b> en vez de dejar que el radio se ampliara solo desde '+CONF.radios[0]+' m'});
+  if(AJ.tol!==CONF.areaTol) m.push({k:'tol', t:'aceptó superficies de <b>±'+Math.round(AJ.tol*100)+'%</b> en vez de ±'+Math.round(CONF.areaTol*100)+'%'});
+  if(AJ.tipVecinas && MI.a>=TIP_VECINAS_DESDE) m.push({k:'tip', t:'sumó las <b>tipologías vecinas</b> (a partir de '+TIP_VECINAS_DESDE+' m² la diferencia de precio por m² entre tipologías contiguas es chica)'});
+  return m;
+}
 function compartir(){
   var t='Análisis de precio de '+MI.e+' · '+MI.a+' m² — preparado por '+MI.broker+' con datos verificados por Simón.';
   if(navigator.share){navigator.share({title:'Posición de precio · '+MI.e,text:t}).catch(function(){});}
@@ -1873,18 +1928,30 @@ function distM(aLat,aLon,bLat,bLon){var kx=111320*Math.cos((aLat+bLat)/2*Math.PI
   var dx=(aLon-bLon)*kx,dy=(aLat-bLat)*110570;return Math.sqrt(dx*dx+dy*dy);}
 
 /* ═══ MOTOR: cascada de radios + frescura + estado + outliers ═══ */
+/* ¿qué tipologías entran? Medido en el pool: a igual superficie, un monoambiente pide
+   11,6% más por m² que un 1 dorm en el tramo 30-45 m² — abajo el rótulo SÍ discrimina.
+   De 60 m² para arriba la diferencia entre 1 y 2 dorm cae a 2,3%, dentro del ruido.
+   Por eso "sumar vecinas" solo se habilita arriba del umbral, y nunca por defecto. */
+var TIP_VECINAS_DESDE=60;
+function tipsPermitidas(){
+  if(!AJ.tipVecinas || MI.a<TIP_VECINAS_DESDE) return [MI.d];
+  return [MI.d-1,MI.d,MI.d+1].filter(function(d){return d>=0&&d<=2});
+}
 function armarCohort(){
   var ed=EDIFS.filter(function(x){return x.e===MI.e})[0];
   if(!ed)return null; /* edificio desconocido → sin base, nunca una excepción */
+  var tips=tipsPermitidas(), tol=AJ.tol;
   var base=POOL.filter(function(p){
-    return p.d===MI.d && p.a>=MI.a*(1-CONF.areaTol) && p.a<=MI.a*(1+CONF.areaTol)
+    return tips.indexOf(p.d)>=0 && p.a>=MI.a*(1-tol) && p.a<=MI.a*(1+tol)
       && !(p.e===MI.e && Math.abs(p.a-MI.a)<1 && Math.abs(p.p-MI.p)<1); })
    .map(function(p){var o=Object.create(p);o.dist=Math.round(distM(ed.lat,ed.lon,p.lat,p.lon));return o;});
 
   var mismoEstado=MI.est!=='?';
+  /* radio fijado por el broker → un solo paso; si no, la cascada de siempre */
+  var radios=AJ.radio?[AJ.radio]:CONF.radios;
   var pasos=[];
-  CONF.radios.forEach(function(r){ if(mismoEstado)pasos.push({r:r,est:true}); });
-  CONF.radios.forEach(function(r){ pasos.push({r:r,est:false}); });
+  radios.forEach(function(r){ if(mismoEstado)pasos.push({r:r,est:true}); });
+  radios.forEach(function(r){ pasos.push({r:r,est:false}); });
 
   for(var i=0;i<pasos.length;i++){
     var s=pasos[i];
@@ -1914,8 +1981,9 @@ function deltaEstado(d){
 function rentaCohort(){
   var ed=EDIFS.filter(function(x){return x.e===MI.e})[0]; if(!ed)return null;
   for(var i=0;i<CONF.radios.length;i++){ var r=CONF.radios[i];
-    var c=POOL_ALQ.filter(function(p){return p.d===MI.d
-      && p.a>=MI.a*(1-CONF.areaTol) && p.a<=MI.a*(1+CONF.areaTol)
+    var tips=tipsPermitidas();
+    var c=POOL_ALQ.filter(function(p){return tips.indexOf(p.d)>=0
+      && p.a>=MI.a*(1-AJ.tol) && p.a<=MI.a*(1+AJ.tol)
       && distM(ed.lat,ed.lon,p.lat,p.lon)<=r;});
     if(c.length>=CONF.nMin){ var m=c.map(function(p){return p.pm});
       return {n:c.length, radio:r, p25:pctl(m,.25), p50:pctl(m,.5), p75:pctl(m,.75),
@@ -1926,9 +1994,10 @@ function rentaCohort(){
 /* sensibilidad: el MISMO cálculo a los tres radios — nadie puede elegir el que le conviene en secreto */
 function sensibilidad(){
   var ed=EDIFS.filter(function(x){return x.e===MI.e})[0];
+  var tips=tipsPermitidas();
   return CONF.radios.map(function(r){
     var c=POOL.filter(function(p){
-      return p.d===MI.d && p.a>=MI.a*(1-CONF.areaTol) && p.a<=MI.a*(1+CONF.areaTol)
+      return tips.indexOf(p.d)>=0 && p.a>=MI.a*(1-AJ.tol) && p.a<=MI.a*(1+AJ.tol)
         && p.dias<=CONF.frescuraDias && (MI.est==='?'||!COH||!COH.mismoEstado||p.est===MI.est)
         && distM(ed.lat,ed.lon,p.lat,p.lon)<=r
         && !(p.e===MI.e && Math.abs(p.a-MI.a)<1 && Math.abs(p.p-MI.p)<1);});
@@ -1972,19 +2041,17 @@ function calcular(){
     sb.innerHTML='<b>Sin base suficiente.</b> No encontramos al menos '+CONF.nMin+' comparables frescos (≤'+CONF.frescuraDias+' días) de esta tipología y superficie ni siquiera ampliando a '+CONF.radios[CONF.radios.length-1]+' m. <b>Este informe no se emite</b> — preferimos no darle un número que no podemos sostener.';
     document.getElementById('sello-txt').textContent='—';
     document.getElementById('sello-tit').textContent='Base de la comparación';
-    ['s-antig','s-torre','s-macro','s-sim'].forEach(function(id){document.getElementById(id).classList.add('oculto')});
+    ['s-antig','s-torre','s-sim'].forEach(function(id){document.getElementById(id).classList.add('oculto')});
     document.getElementById('chip-top').textContent='sin base'; document.getElementById('chip-top').className='pos pos-na';
     /* limpiar TODO lo del análisis anterior: si queda DOM viejo, al publicar sin base
        el documento del cliente arrastra comparables y enlaces que ya no corresponden */
-    ['comps','torre','fuera-muestra','excl-dec','recalc','aviso-estado','objetivos','difs-bloque','reco-bloque','renta-bloque']
-      .forEach(function(id){document.getElementById(id).innerHTML='';});
-    document.getElementById('recalc').className='recalc';
+    limpiarAnalisis();
     document.getElementById('cierre-txt').textContent='Sin base suficiente no se emite un número. Lo que sí se puede hacer es ampliar la búsqueda a otra tipología o superficie, o volver cuando haya más avisos comparables publicados.';
     document.getElementById('caduca').innerHTML='';
-    ordenar(false); return; }
+    ordenar(); return; }
   document.getElementById('bloque-rango').classList.remove('oculto');
   document.getElementById('sin-base').classList.add('oculto');
-  ['s-antig','s-torre','s-macro','s-sim'].forEach(function(id){document.getElementById(id).classList.remove('oculto')});
+  ['s-antig','s-torre','s-sim'].forEach(function(id){document.getElementById(id).classList.remove('oculto')});
   var s=stats();
   var sl=document.getElementById('sim');
   sl.min=Math.round(s.p25*MI.a*0.75/500)*500; sl.max=Math.round(s.p75*MI.a*1.25/500)*500;
@@ -1998,11 +2065,7 @@ function render(){
   var lo=s.p25*MI.a, hi=s.p75*MI.a, med=s.p50*MI.a, miM2=MI.p?MI.p/MI.a:null;
   var pos = posDe(miM2,s);
   var chip=document.getElementById('chip-top'); chip.textContent=pos[1]; chip.className='pos pos-'+pos[0];
-
-  /* el orden sigue al diagnóstico: si su precio quedó SOBRE el rango, "el mercado se
-     movió" sube al tercer lugar — ahí es donde desarma la objeción "yo lo compré a X".
-     Si quedó dentro o abajo no hay nada que desarmar y baja. */
-  ordenar(pos[0]==='sobre');
+  ordenar();
 
   var conPq=activos().filter(function(p){return p.pq==='i'}).length;
   var sdPq=activos().filter(function(p){return p.pq==='s'}).length;
@@ -2037,6 +2100,19 @@ function render(){
     '<br><span style="color:var(--gris)">Antigüedad ≤'+CONF.frescuraDias+' días · '+conPq+' declaran parqueo, '+sdPq+' no declaran'+
     (COH.viejos.length?' · '+COH.viejos.length+(COH.viejos.length===1?' aviso quedó':' avisos quedaron')+' fuera por antigüedad':'')+
     '<br><span style="color:var(--terra)">No incluye venta directa de desarrollador ni unidades no publicadas.</span></span>';
+
+  /* criterios movidos por el broker: se declaran en el documento del cliente */
+  var mov=ajustesMovidos();
+  document.getElementById('ajustes-dec').innerHTML = mov.length
+    ? '<div class="excl-dec"><b>'+MI.broker+' ajustó los criterios de búsqueda.</b> Por defecto se compara con la misma tipología, ±'+Math.round(CONF.areaTol*100)+'% de superficie y el radio más chico que junte '+CONF.nMin+' comparables. Para este análisis '+
+      (function(l){return l.length<2?l[0]:l.slice(0,-1).join('; ')+'; y '+l[l.length-1];})(mov.map(function(x){return x.t}))+
+      '.<span style="color:var(--gris);font-size:11px;display:block;margin-top:6px">Ampliar la búsqueda suma comparables y suele ensanchar el rango. Los tres radios de referencia siguen en «Cómo se comparó».</span></div>'
+    : '';
+  document.getElementById('aj-nota').innerHTML='Con estos criterios: <b>'+s.n+' comparables</b> a '+COH.radio+' m'+
+    (mov.length?' · <b style="color:var(--sand)">'+mov.length+' criterio'+(mov.length>1?'s':'')+' fuera del default</b>, declarado'+(mov.length>1?'s':'')+' en el informe':' · todo en el default');
+  var bTip=document.querySelector('#aj-tip button[data-v="1"]');
+  bTip.disabled = MI.a<TIP_VECINAS_DESDE;
+  bTip.title = bTip.disabled? 'Bajo '+TIP_VECINAS_DESDE+' m² la tipología sí cambia el precio por m² (medido: 11,6% entre monoambiente y 1 dorm): sumarlas mezclaría productos distintos.' : '';
 
   /* sensibilidad al radio */
   var sens=sensibilidad();
@@ -2136,12 +2212,6 @@ function render(){
     COH.viejos.map(function(p){return '<div class="comp fuera"><div class="c1"><div class="nom">'+p.e+'<span class="tag tag-old">'+p.dias+' días</span></div>'+
       '<div class="det">'+p.a+' m² · a '+p.dist+' m</div></div><div class="c2"><div class="m2">'+fm(p.m2)+'/m²</div><div class="pre">'+fm(p.p)+'</div></div></div>'}).join('')+'</div>' : '';
 
-  /* serie */
-  var se=CONF.serie[MI.d]||CONF.serie[1];
-  document.getElementById('serie-usd').textContent=se[0].toFixed(1).replace('.',',')+'%';
-  document.getElementById('serie-bs').textContent=se[1].toFixed(1).replace('.',',')+'%';
-  document.getElementById('frase-serie').innerHTML='Si usted no cambió su precio, <span>el mercado lo movió por usted</span>: su departamento se puso '+(se[0]<0?'más caro':'más barato')+' en términos relativos.';
-
   /* antigüedad */
   var maxD=Math.max(MI.p?0:0, s.dias, COH.viejos.length?0:0, 1);
   var miDias=null; /* sin aviso publicado no hay antigüedad propia */
@@ -2173,10 +2243,16 @@ function render(){
   }
 
   /* método */
+  var tipsUsadas=tipsPermitidas();
+  var nomTip=function(d){return d===0?'monoambientes':d+' dorm.'};
   document.getElementById('met-ok').innerHTML=
-    '<li><b>Tipología</b> — solo '+(MI.d===0?'monoambientes':MI.d+' dormitorio'+(MI.d>1?'s':''))+'</li>'+
-    '<li><b>Superficie</b> — entre '+Math.round(MI.a*0.8)+' y '+Math.round(MI.a*1.2)+' m² (±20% de la suya)</li>'+
-    '<li><b>Distancia</b> — todos a menos de '+COH.radio+' m (se probó desde '+CONF.radios[0]+' m y se amplió hasta encontrar '+CONF.nMin+' comparables)</li>'+
+    '<li><b>Tipología</b> — '+(tipsUsadas.length===1
+        ? 'solo '+(MI.d===0?'monoambientes':MI.d+' dormitorio'+(MI.d>1?'s':''))
+        : tipsUsadas.map(nomTip).join(', ')+' <b>(tipologías vecinas sumadas por '+MI.broker+')</b> — a partir de '+TIP_VECINAS_DESDE+' m² la diferencia de precio por m² entre tipologías contiguas cae dentro del ruido')+'</li>'+
+    '<li><b>Superficie</b> — entre '+Math.round(MI.a*(1-AJ.tol))+' y '+Math.round(MI.a*(1+AJ.tol))+' m² (±'+Math.round(AJ.tol*100)+'% de la suya'+(AJ.tol!==CONF.areaTol?', ampliado por '+MI.broker:'')+')</li>'+
+    '<li><b>Distancia</b> — todos a menos de '+COH.radio+' m '+(AJ.radio
+        ? '(<b>radio fijado por '+MI.broker+'</b>)'
+        : '(se probó desde '+CONF.radios[0]+' m y se amplió hasta encontrar '+CONF.nMin+' comparables)')+'</li>'+
     (COH.mismoEstado?'<li><b>Estado de obra</b> — todos '+(MI.est==='P'?'en preventa':'entregados')+', igual que el suyo</li>':'')+
     '<li><b>Antigüedad</b> — solo avisos de hasta '+CONF.frescuraDias+' días publicados</li>';
   var aj=CONF.pqAjuste[MI.d];
@@ -2259,6 +2335,14 @@ function editar(){document.getElementById('resultado').classList.add('oculto');
       document.querySelectorAll('#'+par[0]+' button').forEach(function(x){x.classList.remove('on')});
       b.classList.add('on'); MI[par[1]]=par[1]==='d'?+b.dataset.v:b.dataset.v;};});});
   document.getElementById('f-go').onclick=calcular;
+  /* criterios de búsqueda: cada cambio re-arma la muestra y re-pinta */
+  [['aj-radio','radio'],['aj-tol','tol'],['aj-tip','tipVecinas']].forEach(function(par){
+    document.querySelectorAll('#'+par[0]+' button').forEach(function(b){b.onclick=function(){
+      if(b.disabled)return;
+      document.querySelectorAll('#'+par[0]+' button').forEach(function(x){x.classList.remove('on')});
+      b.classList.add('on');
+      AJ[par[1]] = par[1]==='tipVecinas' ? b.dataset.v==='1' : +b.dataset.v;
+      reAjustar();};});});
   document.getElementById('sim').addEventListener('input',function(){SIM_TOCADO=true;sim();});
   ['f-reco-precio','f-reco-txt'].forEach(function(id){
     document.getElementById(id).addEventListener('input',function(){
