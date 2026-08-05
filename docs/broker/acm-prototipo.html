@@ -190,7 +190,7 @@
 </style>
 </head>
 <body>
-<div class="mock">PROTOTIPO · POOL REAL SHADOW 3-AGO-2026</div>
+<div class="mock" id="mock">PROTOTIPO</div>
 <div class="doc">
 
 <div class="top">
@@ -1667,6 +1667,9 @@ var MODO='broker'; /* broker = edita · lectura = lo que ve el cliente */
 var AJ={radio:0, tol:0.20, tipVecinas:false};
 var PMIN=0,PMAX=1; /* escala de la barra del rango, para que el simulador pueda mover la aguja */
 var SIM_TOCADO=false;
+/* cohorte guardado en el enlace: si está, calcular() lo usa tal cual en vez
+   de rearmarlo contra el pool de hoy */
+var CONGELADO=null;
 function fm(n){return '$'+Math.round(n).toLocaleString('es-BO').replace(/,/g,'.')}
 function px(v){return Math.max(0,Math.min(100,100*(v-PMIN)/(PMAX-PMIN)))}
 function posDe(m2,s){return m2===null||m2===undefined?['na','sin precio']
@@ -1739,7 +1742,7 @@ function limpiarAnalisis(){
 /* re-arma la muestra con los criterios que movió el broker y re-pinta todo */
 function reAjustar(){
   if(!document.getElementById('resultado').classList.contains('oculto')){
-    excl={}; COH=armarCohort();
+    excl={}; COH=armarCohort(); /* mover un criterio es pedir otra muestra: acá no se respeta el congelado */
     if(!COH){ limpiarAnalisis();
       document.getElementById('bloque-rango').classList.add('oculto');
       ['s-antig','s-torre','s-sim'].forEach(function(id){document.getElementById(id).classList.add('oculto')});
@@ -1775,9 +1778,28 @@ function ajustesMovidos(){
    exactamente este análisis, no uno recalculado.
    En producción esto es una fila en la base y un hash corto — pero el contrato
    es el mismo: lo que se comparte está congelado. */
+/* 🔴 El enlace guarda los COMPARABLES, no solo lo que cargó el broker.
+   Con el pool vivo, guardar únicamente los datos de entrada haría que el mismo link
+   diera otro número cada noche: el cliente abre a los diez días y el rango cambió sin
+   que nadie se lo dijera. Un ACM es un documento fechado. Los comparables congelados
+   son lo que sostiene el rango; el resto del documento (su edificio, el mercado de
+   alquiler) se recalcula y no toca el número. */
 function estadoAcm(){
-  return {e:MI.e, d:MI.d, a:MI.a, p:MI.p, pq:MI.pq, es:MI.est, pi:MI.piso, df:MI.difs,
-          b:MI.broker, rp:MI.recoP, rt:MI.recoT, x:excl, aj:AJ};
+  var base={e:MI.e, d:MI.d, a:MI.a, p:MI.p, pq:MI.pq, es:MI.est, pi:MI.piso, df:MI.difs,
+            b:MI.broker, rp:MI.recoP, rt:MI.recoT, x:excl, aj:AJ, ct:META_ACM.corte};
+  if(!COH)return base;
+  var min=function(p){return [p.id,p.e,p.lat,p.lon,p.d,p.a,p.p,p.m2,p.dias,p.pq,p.est,
+                              p.am.pis,p.am.gym,p.am.cow,p.am.sau,p.outlier?1:0,p.dist];};
+  base.c={r:COH.radio, me:COH.mismoEstado?1:0,
+          f:COH.frescos.map(min), v:COH.viejos.map(min)};
+  return base;
+}
+/* reconstruye el cohorte guardado sin volver a mirar el pool */
+function cohortDesde(c){
+  var vol=function(a){return {id:a[0],e:a[1],lat:a[2],lon:a[3],d:a[4],a:a[5],p:a[6],m2:a[7],
+    dias:a[8],pq:a[9],est:a[10],am:{pis:a[11],gym:a[12],cow:a[13],sau:a[14]},outlier:!!a[15],
+    dist:a[16]};};
+  return {radio:c.r, mismoEstado:!!c.me, frescos:c.f.map(vol), viejos:(c.v||[]).map(vol), congelado:true};
 }
 function aB64(o){ return btoa(unescape(encodeURIComponent(JSON.stringify(o))))
   .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
@@ -1801,7 +1823,10 @@ function abrirCompartido(st){
   [['aj-radio',AJ.radio],['aj-tol',AJ.tol],['aj-tip',AJ.tipVecinas?1:0]].forEach(function(par){
     document.querySelectorAll('#'+par[0]+' button').forEach(function(b){
       b.classList.toggle('on', +b.dataset.v===+par[1]);});});
-  calcular();                       /* reconstruye la muestra con esos criterios */
+  if(st.ct) META_ACM.corte=st.ct;   /* la fecha del documento es la de cuando se emitió */
+  CONGELADO = st.c ? cohortDesde(st.c) : null;
+  calcular();                       /* usa el cohorte congelado si viene; si no, recalcula */
+  CONGELADO = null;
   if(COH && st.x) excl=st.x;        /* y vuelve a quitar lo que el broker excluyó */
   document.getElementById('f-reco-precio').value=st.rp||'';
   document.getElementById('f-reco-txt').value=st.rt||'';
@@ -1931,7 +1956,7 @@ function calcular(){
   MI.broker=document.getElementById('f-broker').value.trim()||'[Nombre del broker]';
   document.getElementById('marca-top').textContent=MI.broker==='[Nombre del broker]'?'Simón':MI.broker;
   document.getElementById('pie-broker').textContent=MI.broker;
-  excl={}; SIM_TOCADO=false; COH=armarCohort();
+  excl={}; SIM_TOCADO=false; COH=CONGELADO||armarCohort();
   MODO='broker'; document.body.classList.add('broker'); barraModo();
   document.getElementById('s-form').classList.add('oculto');
   document.getElementById('resultado').classList.remove('oculto');
@@ -1941,7 +1966,9 @@ function calcular(){
     (MI.pq==='i'?'con parqueo':(MI.pq==='n'?'sin parqueo':'parqueo sin declarar'));
 
   document.getElementById('sello-gen').innerHTML='Generado el '+META_ACM.corte+' por <b>'+MI.broker+'</b> para '+MI.e+' · '+MI.a+' m² · '+
-    (MI.d===0?'monoambiente':MI.d+' dorm.')+'<br>Datos verificados por Simón. Este documento <b>informa sobre oferta publicada; no tasa ni garantiza un precio de venta</b>.';
+    (MI.d===0?'monoambiente':MI.d+' dorm.')+'<br>Datos verificados por Simón. Este documento <b>informa sobre oferta publicada; no tasa ni garantiza un precio de venta</b>.'+
+    (POOL_ORIGEN==='vivo' ? ''
+      : '<br><span style="color:var(--terra)">Comparables de una copia guardada, no de la última lectura: no se pudo consultar el mercado al abrir este análisis.</span>');
 
   if(!COH){ document.getElementById('bloque-rango').classList.add('oculto');
     var sb=document.getElementById('sin-base'); sb.classList.remove('oculto');
@@ -2234,10 +2261,57 @@ function editar(){document.getElementById('resultado').classList.add('oculto');
   document.getElementById('modo-bar').classList.add('oculto');
   document.getElementById('s-form').classList.remove('oculto');window.scrollTo(0,0);}
 
+/* ═══ POOL VIVO ═══
+   Los comparables de acá abajo están congelados al corte. Si hay un servidor que
+   sirva /api/acm-pool, se usan los de anoche: mostrarle a un cliente real precios
+   de hace un mes es peor que no mostrarle nada.
+   Si el servidor no está (archivo suelto, sin red, error), se sigue con el pool
+   embebido y el sello lo dice — nunca se calla de dónde salió el número. */
+var POOL_URL='/api/acm-pool';
+var POOL_ORIGEN='embebido';
+function aplicarPoolVivo(j){
+  POOL=j.comparables.map(function(c){
+    return {id:String(c.id),e:String(c.e).trim(),lat:c.lat,lon:c.lon,d:c.d,a:c.a,p:c.p,
+            m2:c.m2,dias:c.dias,pq:c.pq,est:c.est,am:c.am};});
+  URLS_CRUDO={}; ENTREGAS={}; FOTOS_AV={};
+  j.comparables.forEach(function(c){ var id=String(c.id);
+    if(c.u)   URLS_CRUDO[id]=c.u;
+    if(c.ent) ENTREGAS[id]=c.ent;
+    if(c.foto)FOTOS_AV[id]=c.foto;});
+  /* lo derivado del pool se rehace: si no, EDIFS y el detector de carga en bloque
+     seguirían describiendo la muestra vieja */
+  EDIFS=(function(){var m={};POOL.forEach(function(p){ if(!m[p.e])m[p.e]={n:0,lat:0,lon:0};
+    m[p.e].n++;m[p.e].lat+=p.lat;m[p.e].lon+=p.lon;});
+    return Object.keys(m).sort().map(function(k){return {e:k,lat:m[k].lat/m[k].n,lon:m[k].lon/m[k].n,n:m[k].n}});})();
+  REPUB=(function(){var m={};POOL.forEach(function(p){var k=p.e+'|'+p.dias;m[k]=(m[k]||0)+1;});
+    return function(p){return m[p.e+'|'+p.dias]>=3;};})();
+  var f=new Date(j.corte);
+  META_ACM.corte=f.toLocaleDateString('es-BO',{day:'numeric',month:'long',year:'numeric'});
+  POOL_ORIGEN='vivo';
+}
+function cargarPool(listo){
+  if(typeof fetch!=='function') return listo();
+  /* 12 s: el endpoint tarda ~2 s en caliente, pero en frío la primera consulta del día
+     se va a 8-10 s. Cortar antes hace que el broker vea la copia guardada sin motivo. */
+  var cerrado=false, corta=setTimeout(function(){cerrado=true;listo();},12000);
+  fetch(POOL_URL,{cache:'no-store'})
+    .then(function(r){return r.ok?r.json():Promise.reject(new Error(r.status));})
+    .then(function(j){
+      if(cerrado)return;
+      clearTimeout(corta);
+      /* un pool corto es un pool roto: mejor el congelado que un rango sobre 12 avisos */
+      if(!j||!j.comparables||j.comparables.length<100) throw new Error('pool corto');
+      aplicarPoolVivo(j); listo();
+    })
+    .catch(function(){ if(cerrado)return; clearTimeout(corta); listo(); });
+}
+
 /* init */
 (function(){
   var sel=document.getElementById('f-edif');
+  function arrancar(){
   sel.innerHTML=EDIFS.map(function(x){return '<option>'+x.e+'</option>'}).join('');
+  if(!EDIFS.some(function(x){return x.e===MI.e})) MI.e=EDIFS[0].e;
   sel.value=MI.e; /* explícito: el navegador restaura el estado del select al recargar y pisa el default */
   [['f-dorms','d'],['f-pq','pq'],['f-est','est']].forEach(function(par){
     document.querySelectorAll('#'+par[0]+' button').forEach(function(b){b.onclick=function(){
@@ -2277,6 +2351,15 @@ function editar(){document.getElementById('resultado').classList.add('oculto');
       MI.recoP=+document.getElementById('f-reco-precio').value||null;
       MI.recoT=document.getElementById('f-reco-txt').value.trim();
       renderReco();});});
+  }
+  /* el pool primero: arrancar con el congelado y refrescar después haría que el
+     número cambie delante del cliente */
+  cargarPool(function(){
+    /* el badge dice de cuándo son los datos, no una fecha escrita a mano que envejece */
+    document.getElementById('mock').textContent=
+      'PROTOTIPO · '+(POOL_ORIGEN==='vivo'?'datos al '+META_ACM.corte:'copia guardada');
+    arrancar();
+  });
 })();
 </script>
 </body>

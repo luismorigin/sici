@@ -75,6 +75,36 @@ Heredadas de `docs/analysis/AUDITORIA_ESTADISTICA_MESA_INFORME.md`, `docs/canoni
 
 **Fuera de alcance por ahora:** el ACM del comprador (documento distinto, input distinto, orden distinto — mismo motor, otro modo), el PDF (el link se comparte mejor, se versiona y se mide), y que el cliente edite supuestos (si puede, el documento deja de ser del broker).
 
+## ▶️ Cómo se corre hoy (5-ago-2026)
+
+El prototipo dejó de ser un archivo con datos congelados: **lee el mercado de anoche**.
+
+```bash
+# 1 · el servidor (una vez)
+cd simon-mvp && npm run dev -- -p 3300
+
+# 2 · generar la copia que se sirve  →  simon-mvp/public/acm-b7k2.html
+node docs/broker/preparar-para-web.mjs
+
+# 3 · abrirlo
+#     http://localhost:3300/acm-b7k2.html
+#     (en prod: simonbo.com/acm-b7k2.html, con el deploy normal de Vercel)
+
+# 4 · el semáforo, antes de cada cambio
+node simon-mvp/scripts/eval-acm.mjs
+```
+
+| Pieza | Qué hace |
+|---|---|
+| `simon-mvp/src/pages/api/acm-pool.ts` | Sirve los comparables de Equipetrol (1-2 dorm) desde `v_mercado_venta_shadow`, con foto, aviso original y fecha de entrega. **Alcance declarado**: los 3+ dorm quedan afuera porque con 29 avisos en 21 edificios el informe casi nunca alcanzaría la muestra mínima. |
+| `docs/broker/acm-prototipo.html` | El documento. Pide el pool al abrir; si el servidor no está, sigue con su copia guardada **y lo dice en el sello**. |
+| `docs/broker/preparar-para-web.mjs` | Genera la copia servida: sin las fotos embebidas (1.231 KB → 139 KB) y con `noindex`. |
+| `simon-mvp/scripts/eval-acm.mjs` | El eval. 17 checks en 3 niveles. |
+
+🔴 **El enlace compartido lleva los comparables adentro, no solo los datos que cargó el
+broker.** Con pool vivo, guardar solo las entradas haría que el mismo link diera otro
+número cada noche. Verificado alterando el pool +25%: el rango no se movió.
+
 ## 📏 Cómo medir el prototipo sin engañarse (5-ago-2026)
 
 Hay dos formas de recorrer el motor y **dan resultados muy distintos**:
