@@ -794,6 +794,32 @@ var POOL=RAW.trim().split('\n').map(function(l){var f=l.split('|');
  return {e:f[0].trim(),lat:+f[1],lon:+f[2],d:+f[3],a:+f[4],p:+f[5],m2:+f[6],dias:+f[7],pq:f[8],est:f[9],
    am:{pis:+f[10],gym:+f[11],cow:+f[12],sau:+f[13]}};});
 
+
+/* ═══════ DESEMPATE — clave edificio|precio|area ═══════
+   Los mapas de arriba se indexan por precio-area, y esa clave es ambigua: hay 8 pares
+   de avisos de edificios distintos que coinciden en precio y superficie. Con la clave
+   simple, el enlace de "Sky Tower · 55 m² · $110.000" abría "Maré · 55 m² · $110.000".
+   Este mapa se consulta primero y solo contiene esos casos. */
+var DESEMPATE_RAW=`Sky Plaza Italia|66000|42|465|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001318-39
+Sky Eclipse|66000|42|2582|c111891_monoambiente-en-venta
+Condominio Maré|110000|55|1570|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034041-811
+Sky Tower|110000|55|2798|c112355_sky-tower-departamento-de-lujo-en-venta
+Element by Elite|100000|68|2434|c111241_departamento-en-venta-en-edificio-element-by-elite
+Uptown Drei|100000|68|2636|c112138_departamento-a-estrenar-de-2-dormitorios-en-uptown-drei-piso-12-equipetrol
+Sky Level|141000|90|2626|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034039-458
+Edificio Tanaro|141000|90|3779|c116405_departamento-a-estrenar-en-venta
+Portobello Green|75000|36|2820|c113204_monoambiente-amoblado-y-equipado-en-venta-portobello-green-equipetrol
+Condominio Sky Luxia|75000|36|3776|c116402_monoambiente-en-venta-en-equpetrol-sky-luxia
+One Soul by Smart St|58000|35|3719|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120099006-255
+Speranto Verdi|58000|35|8000076|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-204
+Stone 3|55000|38|8000157|c116008_monoambiente-semiamoblado-en-venta-en-edificio-stone-3
+Edificio Elite Sirar|55000|38|8000179|c116794_monoambiente-venta
+Uptown NUU|135000|80|8000199|c116836_departamento-en-venta-en-uptown-equipetrol
+Luxe Suites|135000|80|8000254|c116885_a-estrenar-departamento-de-dormitorios-en-venta-zona-equipetrol`;
+var DESEMPATE={};DESEMPATE_RAW.trim().split(String.fromCharCode(10)).forEach(function(l){
+  var f=l.split('|');
+  DESEMPATE[f[0].trim()+'|'+f[1]+'|'+f[2]]={id:f[3],u:f[4]};});
+function desempate(p){return DESEMPATE[String(p.e).trim()+'|'+Math.round(p.p)+'|'+Math.round(p.a)]||null;}
 /* ═══════ FOTO DEL AVISO — clave precio-area ═══════
    Es la foto de ESE aviso (advisor_property_snapshot, que se rehace cada noche),
    no una generica del edificio. Van embebidas a 112 px porque se muestran a 56 y
@@ -1386,9 +1412,11 @@ var URLS_RAW=`139000-66|rventa-departamento-santa-cruz-de-la-sierra-equipetrolno
 57565-53|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001323-58
 99750-67|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120045022-124
 84000-101|c114607_departamento-2-dormitorios-en-sky-eclipse-parqueo`;
-var URLS={};URLS_RAW.trim().split('\n').forEach(function(l){var f=l.split('|');
-  URLS[f[0]]=(f[1].charAt(0)==='c'?'https://c21.com.bo/propiedad/':'https://remax.bo/propiedad/')+f[1].slice(1);});
-function avisoDe(p){return URLS[Math.round(p.p)+'-'+Math.round(p.a)]||null;}
+var URLS_CRUDO={};URLS_RAW.trim().split(String.fromCharCode(10)).forEach(function(l){var i=l.indexOf('|');URLS_CRUDO[l.slice(0,i)]=l.slice(i+1);});
+function avisoDe(p){
+  var d=desempate(p), u=d? d.u : URLS_CRUDO[Math.round(p.p)+'-'+Math.round(p.a)];
+  if(!u)return null;
+  return (u.charAt(0)==='c'?'https://c21.com.bo/propiedad/':'https://remax.bo/propiedad/')+u.slice(1);}
 
 /* id de la propiedad en el feed de Simón → simonbo.com/ventas?id=N abre su ficha.
    El enlace PRINCIPAL va acá (ficha completa, fotos, contexto de mercado, y el broker
@@ -1748,7 +1776,7 @@ var IDS={};IDS_RAW.trim().split('\n').forEach(function(l){var f=l.split('|');if(
    es peor que no tenerlo. Ahí el portal queda como único enlace. */
 var DIAS_FEED=300;
 function fichaDe(p){ if(p.dias>DIAS_FEED)return null;
-  var id=IDS[Math.round(p.p)+'-'+Math.round(p.a)];
+  var d=desempate(p), id=d? d.id : IDS[Math.round(p.p)+'-'+Math.round(p.a)];
   return id? 'https://simonbo.com/ventas?id='+id : null;}
 /* El enlace al portal es una herramienta de VERIFICACIÓN del broker; en el documento
    del cliente NUNCA aparece — mandarlo al portal es entregarle el contacto a otro.
