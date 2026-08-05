@@ -3,18 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Simón · Posición de precio — Lofty Island 1D</title>
+<title>Simón · Posición de precio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{--arena:#EDE8DC;--negro:#141414;--salvia:#3A6A48;--salvia-viva:#5E9C72;--suave:#E3EBE4;
-        --linea:#D8D2C4;--gris:#6B6B66;--terra:#C0623A;--sand:#E0CE96}
+        --linea:#D8D2C4;--gris:#6B6B66;--terra:#C0623A;--sand:#B08900}
   *{margin:0;padding:0;box-sizing:border-box}
   body{background:#C9C3B5;font-family:'DM Sans',system-ui,sans-serif;color:var(--negro);-webkit-text-size-adjust:100%}
   .doc{max-width:460px;margin:0 auto;background:var(--arena);min-height:100vh;box-shadow:0 0 40px rgba(0,0,0,.2)}
   h1,h2,h3,.big{font-family:'Figtree',system-ui,sans-serif}
-
-  /* header sticky con la posición siempre a la vista */
   .top{position:sticky;top:0;z-index:20;background:rgba(237,232,220,.97);backdrop-filter:blur(8px);
        border-bottom:1px solid var(--linea);padding:10px 18px;display:flex;align-items:center;gap:9px}
   .top .punto{width:9px;height:9px;border-radius:50%;background:var(--salvia);flex-shrink:0}
@@ -23,168 +21,210 @@
   .pos-dentro{background:var(--suave);color:var(--salvia)}
   .pos-sobre{background:#F3E3DA;color:var(--terra)}
   .pos-bajo{background:#F2EDD9;color:#8A7118}
-
-  section{padding:30px 20px;border-bottom:1px solid var(--linea)}
+  .pos-na{background:#E7E2D4;color:var(--gris)}
+  section{padding:28px 20px;border-bottom:1px solid var(--linea)}
   .eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--salvia);font-weight:700;margin-bottom:9px;font-family:'Figtree'}
   h2{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.25;margin-bottom:8px}
   p.lead{font-size:14px;color:var(--gris);line-height:1.55}
-  .big{font-size:38px;font-weight:900;letter-spacing:-.03em;line-height:1.05;margin:14px 0 4px}
+  .big{font-size:36px;font-weight:900;letter-spacing:-.03em;line-height:1.05;margin:14px 0 4px}
   .big small{font-size:16px;font-weight:700;color:var(--gris)}
-  .sub{font-size:13px;color:var(--gris);line-height:1.5}
-  .frase{font-family:'Figtree';font-size:17px;font-weight:700;line-height:1.4;margin-top:16px;
-         border-left:4px solid var(--salvia);padding-left:13px}
+  .sub{font-size:13px;color:var(--gris);line-height:1.55}
+  .frase{font-family:'Figtree';font-size:17px;font-weight:700;line-height:1.4;margin-top:16px;border-left:4px solid var(--salvia);padding-left:13px}
   .frase span{color:var(--salvia)}
-
-  /* sello de calidad de la evidencia */
+  /* formulario */
+  .campo{margin-bottom:13px}
+  .campo label{display:block;font-size:11.5px;font-weight:700;font-family:'Figtree';margin-bottom:5px}
+  .campo input,.campo select{width:100%;padding:11px 12px;border:1px solid var(--linea);border-radius:10px;
+    background:#fff;font-size:15px;font-family:'DM Sans';color:var(--negro)}
+  .campo .hint{font-size:11px;color:var(--gris);margin-top:4px}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;padding:10px 4px;border:1px solid var(--linea);background:#fff;border-radius:10px;
+    font-size:12.5px;font-family:'Figtree';font-weight:700;color:var(--gris);cursor:pointer}
+  .seg button.on{background:var(--negro);color:var(--arena);border-color:var(--negro)}
+  .btn{width:100%;padding:15px;background:var(--salvia);color:#fff;border:none;border-radius:12px;
+    font-family:'Figtree';font-weight:800;font-size:15px;cursor:pointer;margin-top:6px}
+  .btn.sec{background:transparent;color:var(--gris);border:1px solid var(--linea);padding:9px;font-size:12.5px;margin-top:10px}
+  /* sello */
   .sello{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:13px 15px;margin-bottom:18px}
   .sello .t{font-family:'Figtree';font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gris);margin-bottom:6px}
   .sello .l{font-size:12.5px;line-height:1.65}
   .sello b{font-weight:700}
-
-  /* barra de rango */
+  /* rango */
   .rango{margin:20px 0 6px}
   .rango-track{position:relative;height:13px;background:#DDD7C9;border-radius:7px}
   .rango-fill{position:absolute;top:0;height:100%;background:#A8C4AF;border-radius:7px}
   .rango-med{position:absolute;top:-5px;width:3px;height:23px;background:var(--gris);border-radius:2px}
-  .rango-yo{position:absolute;top:-9px;width:0;height:0;border-left:8px solid transparent;
-            border-right:8px solid transparent;border-top:12px solid var(--negro);transform:translateX(-8px)}
+  .rango-yo{position:absolute;top:-9px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:12px solid var(--negro);transform:translateX(-8px)}
   .rango-lbl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--gris);margin-top:9px}
-
   /* comparables */
-  .comp{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:10px 12px;margin-bottom:7px;
-        display:flex;align-items:center;gap:10px;transition:.15s}
-  .comp.excluido{opacity:.4;background:#EFEAE0}
+  .comp{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:10px 12px;margin-bottom:7px;display:flex;align-items:center;gap:9px}
+  .comp.excluido{opacity:.42;background:#EFEAE0}
+  .comp.fuera{background:#F5F1E6;border-style:dashed}
   .comp .c1{flex:1;min-width:0}
   .comp .nom{font-family:'Figtree';font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .comp .det{font-size:11px;color:var(--gris);margin-top:2px}
+  .comp .det{font-size:10.5px;color:var(--gris);margin-top:2px;line-height:1.45}
   .comp .c2{text-align:right;flex-shrink:0}
   .comp .m2{font-family:'Figtree';font-weight:800;font-size:14px}
   .comp .pre{font-size:11px;color:var(--gris)}
-  .comp .x{border:none;background:none;color:var(--gris);font-size:16px;cursor:pointer;padding:0 2px;line-height:1}
+  .comp .x{border:none;background:none;color:var(--gris);font-size:15px;cursor:pointer;padding:0 2px;line-height:1}
   .comp.yo{background:var(--negro);color:var(--arena);border-color:var(--negro)}
   .comp.yo .det,.comp.yo .pre{color:#B9B4A6}
+  .tag{display:inline-block;font-size:9px;font-weight:800;font-family:'Figtree';padding:1px 6px;border-radius:999px;margin-left:4px;vertical-align:1px}
+  .tag-out{background:#F3E3DA;color:var(--terra)}
+  .tag-old{background:#EFE7D2;color:var(--sand)}
   .recalc{background:var(--suave);border-radius:10px;padding:11px 13px;font-size:12.5px;line-height:1.55;margin-top:10px;display:none}
   .recalc.on{display:block}
-
-  /* comparación de barras (días) */
   .bar-row{display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:center;margin-bottom:9px;font-size:12.5px}
   .bar-track{background:#DDD7C9;border-radius:6px;height:28px}
-  .bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;
-            padding-right:9px;color:#fff;font-weight:800;font-size:12px;font-family:'Figtree'}
-
-  /* simulador */
+  .bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:9px;color:#fff;font-weight:800;font-size:12px;font-family:'Figtree'}
   .sim-out{background:var(--negro);color:var(--arena);border-radius:14px;padding:18px;margin:16px 0 12px;text-align:center}
-  .sim-out .v{font-family:'Figtree';font-size:32px;font-weight:900;letter-spacing:-.02em}
+  .sim-out .v{font-family:'Figtree';font-size:31px;font-weight:900;letter-spacing:-.02em}
   .sim-out .l{font-size:12.5px;color:#B9B4A6;line-height:1.5;margin-top:6px}
   .sim-out .l b{color:var(--arena)}
   input[type=range]{width:100%;accent-color:var(--salvia);margin:6px 0}
   .sim-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--gris)}
-
-  /* método */
   .met{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:14px 16px;margin-bottom:10px}
-  .met h3{font-size:13px;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+  .met h3{font-size:13px;margin-bottom:9px}
   .met ul{list-style:none}
   .met li{font-size:12.5px;line-height:1.55;padding-left:17px;position:relative;margin-bottom:7px;color:var(--gris)}
   .met li b{color:var(--negro)}
   .met.ok li::before{content:"✓";position:absolute;left:0;color:var(--salvia);font-weight:700}
   .met.aj li::before{content:"⚙";position:absolute;left:0;color:var(--gris)}
   .met.no li::before{content:"⚠";position:absolute;left:0;color:var(--terra)}
-
   .pie{padding:22px 20px 34px;text-align:center;background:var(--negro);color:#8A867C;font-size:11.5px;line-height:1.65}
   .pie b{color:var(--arena);font-family:'Figtree'}
   .mock{position:fixed;top:8px;left:50%;transform:translateX(-50%);background:var(--negro);color:var(--arena);
         font-size:9.5px;letter-spacing:.14em;padding:4px 12px;border-radius:999px;z-index:50;opacity:.9}
+  .oculto{display:none}
+  .aviso{background:#F3E3DA;border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#7A3E22;margin-top:14px}
 </style>
 </head>
 <body>
-<div class="mock">PROTOTIPO · DATA REAL SHADOW 3-AGO-2026</div>
+<div class="mock">PROTOTIPO · POOL REAL SHADOW 3-AGO-2026</div>
 <div class="doc">
 
 <div class="top">
   <div class="punto"></div><span class="marca">Simón</span>
-  <span class="pos" id="chip-top"></span>
+  <span class="pos pos-na" id="chip-top">complete los datos</span>
 </div>
+
+<!-- ══════ 0 · FORMULARIO ══════ -->
+<section id="s-form">
+  <div class="eyebrow">Su propiedad</div>
+  <h2>¿Qué quiere comparar?</h2>
+  <p class="lead">No hace falta que esté publicada. Con estos datos armamos el conjunto de comparables reales.</p>
+
+  <div style="margin-top:18px">
+    <div class="campo">
+      <label>Edificio</label>
+      <select id="f-edif"></select>
+      <div class="hint">Si no está en la lista, elija el más cercano — define la ubicación del análisis.</div>
+    </div>
+    <div class="campo">
+      <label>Dormitorios</label>
+      <div class="seg" id="f-dorms">
+        <button data-v="0">Monoambiente</button><button data-v="1" class="on">1 dorm.</button><button data-v="2">2 dorm.</button>
+      </div>
+    </div>
+    <div class="campo">
+      <label>Superficie (m²)</label>
+      <input type="number" id="f-area" value="51" min="18" max="400">
+    </div>
+    <div class="campo">
+      <label>Precio que pide (USD) — opcional</label>
+      <input type="number" id="f-precio" value="91584" min="0" step="500" placeholder="Todavía no lo definí">
+      <div class="hint">Si lo deja vacío, el informe muestra el rango sin posicionarlo.</div>
+    </div>
+    <div class="campo">
+      <label>Parqueo</label>
+      <div class="seg" id="f-pq">
+        <button data-v="i">Incluido</button><button data-v="n" class="on">No incluye</button><button data-v="s">No sé</button>
+      </div>
+    </div>
+    <div class="campo">
+      <label>Estado de obra</label>
+      <div class="seg" id="f-est">
+        <button data-v="P" class="on">En pozo</button><button data-v="E">Entregado</button><button data-v="?">No sé</button>
+      </div>
+    </div>
+    <button class="btn" id="f-go">Ver la posición de mi precio</button>
+  </div>
+</section>
+
+<div id="resultado" class="oculto">
 
 <!-- ══════ 1 · LA RESPUESTA ══════ -->
 <section>
   <div class="eyebrow">Posición de precio</div>
-  <h2>Lofty Island · 1 dormitorio</h2>
-  <p class="lead">51 m² · Equipetrol Oeste · publicado hace 408 días</p>
+  <h2 id="r-titulo"></h2>
+  <p class="lead" id="r-subtitulo"></p>
+  <button class="btn sec" onclick="editar()">✎ Cambiar los datos</button>
 
   <div class="sello" style="margin-top:18px">
     <div class="t">Base de la comparación</div>
     <div class="l" id="sello-txt"></div>
   </div>
 
-  <div class="sub">Lo que hoy se pide por unidades como la suya:</div>
-  <div class="big" id="rango-txt"></div>
-  <div class="sub" id="rango-nivel"></div>
-
-  <div class="rango">
-    <div class="rango-track">
-      <div class="rango-fill" id="r-fill"></div>
-      <div class="rango-med" id="r-med"></div>
-      <div class="rango-yo" id="r-yo"></div>
+  <div id="bloque-rango">
+    <div class="sub">Lo que hoy se pide por unidades como la suya:</div>
+    <div class="big" id="rango-txt"></div>
+    <div class="sub" id="rango-nivel"></div>
+    <div class="rango">
+      <div class="rango-track">
+        <div class="rango-fill" id="r-fill"></div><div class="rango-med" id="r-med"></div><div class="rango-yo" id="r-yo"></div>
+      </div>
+      <div class="rango-lbl"><span id="r-lo"></span><span id="r-flecha">▲ su precio</span><span id="r-hi"></span></div>
     </div>
-    <div class="rango-lbl"><span id="r-lo"></span><span>▲ su precio</span><span id="r-hi"></span></div>
+    <p class="frase" id="frase-1"></p>
   </div>
-
-  <p class="frase" id="frase-1"></p>
+  <div id="sin-base" class="aviso oculto"></div>
   <p class="sub" style="margin-top:14px"><b>Esto no es una tasación.</b> Es la posición de su precio dentro de la oferta publicada comparable, hoy.</p>
 </section>
 
-<!-- ══════ 2 · CONTRA QUIÉNES ══════ -->
+<!-- ══════ 2 · EVIDENCIA ══════ -->
 <section>
   <div class="eyebrow">02 · La evidencia</div>
   <h2>Contra quiénes se compara</h2>
-  <p class="lead">Los avisos reales que hoy compiten con el suyo. Si alguno no es comparable, quítelo — el documento recalcula y muestra ambos números.</p>
+  <p class="lead">Los avisos reales que hoy compiten con el suyo. Si alguno no es comparable, quítelo — el informe recalcula y muestra ambos números.</p>
   <div id="comps" style="margin-top:16px"></div>
   <div class="recalc" id="recalc"></div>
+  <div id="fuera-muestra"></div>
 </section>
 
 <!-- ══════ 3 · EL TIEMPO ══════ -->
 <section style="background:var(--negro);color:var(--arena);border-bottom:none">
   <div class="eyebrow" style="color:#9CC7A6">03 · Lo que cambió sin que usted lo tocara</div>
   <h2>El mercado se movió</h2>
-  <p class="lead" style="color:#B9B4A6">Desde enero de 2026, el m² pedido del 1 dormitorio en Equipetrol:</p>
-
+  <p class="lead" style="color:#B9B4A6">Desde enero de 2026, el m² pedido de su tipología en Equipetrol:</p>
   <div style="display:flex;gap:10px;margin:18px 0 8px">
     <div style="flex:1;background:#1F1F1D;border-radius:12px;padding:14px">
-      <div style="font-family:Figtree;font-size:26px;font-weight:900;color:#D98B63">−15,1%</div>
-      <div style="font-size:11.5px;color:#8A867C;margin-top:3px">en dólares</div>
-    </div>
+      <div style="font-family:Figtree;font-size:25px;font-weight:900;color:#D98B63" id="serie-usd"></div>
+      <div style="font-size:11.5px;color:#8A867C;margin-top:3px">en dólares</div></div>
     <div style="flex:1;background:#1F1F1D;border-radius:12px;padding:14px">
-      <div style="font-family:Figtree;font-size:26px;font-weight:900;color:#9CC7A6">−5,6%</div>
-      <div style="font-size:11.5px;color:#8A867C;margin-top:3px">en bolivianos</div>
-    </div>
+      <div style="font-family:Figtree;font-size:25px;font-weight:900;color:#9CC7A6" id="serie-bs"></div>
+      <div style="font-size:11.5px;color:#8A867C;margin-top:3px">en bolivianos</div></div>
   </div>
   <p class="sub" style="color:#8A867C">La diferencia es el tipo de cambio: subió 11,3% en el mismo período.</p>
-
-  <p class="frase" style="border-color:var(--salvia-viva);color:var(--arena);margin-top:20px">
-    Usted no subió su precio. <span>El mercado bajó.</span> Su departamento se puso más caro solo.</p>
-  <p class="sub" style="color:#8A867C;margin-top:14px">Serie reconstruida bajo una sola metodología de tipo de cambio, error de método ±7%. Sirve la dirección, no el nivel exacto de un día.</p>
+  <p class="frase" style="border-color:var(--salvia-viva);color:var(--arena);margin-top:20px" id="frase-serie"></p>
+  <p class="sub" style="color:#8A867C;margin-top:14px">Serie reconstruida bajo una sola metodología de tipo de cambio, error ±7%. Sirve la dirección, no el nivel exacto de un día.</p>
 </section>
 
-<!-- ══════ 4 · LA ANTIGÜEDAD ══════ -->
-<section>
+<!-- ══════ 4 · ANTIGÜEDAD ══════ -->
+<section id="s-antig">
   <div class="eyebrow">04 · El tiempo publicado</div>
   <h2>Hace cuánto está en el mercado</h2>
-  <div style="margin:18px 0 4px">
-    <div class="bar-row"><div><b>Su aviso</b></div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--terra)">408 días</div></div></div>
-    <div class="bar-row"><div>Sus comparables</div><div class="bar-track"><div class="bar-fill" style="width:21%;background:var(--salvia-viva)">84</div></div></div>
-  </div>
+  <div id="antig-barras" style="margin:18px 0 4px"></div>
   <p class="frase" id="frase-dias"></p>
-  <p class="sub" style="margin-top:14px"><b>Cómo leerlo:</b> es la antigüedad del aviso publicado, <b>no</b> el tiempo que tarda en venderse. Admite dos lecturas — no rota, o se re-publicó y el contador volvió a cero. Ninguna de las dos es buena noticia a los 408 días.</p>
+  <p class="sub" style="margin-top:14px"><b>Cómo leerlo:</b> es la antigüedad del aviso publicado, <b>no</b> el tiempo que tarda en venderse. Admite dos lecturas — no rota, o se re-publicó y el contador volvió a cero.</p>
 </section>
 
-<!-- ══════ 5 · SU PROPIO EDIFICIO ══════ -->
-<section>
+<!-- ══════ 5 · SU EDIFICIO ══════ -->
+<section id="s-torre">
   <div class="eyebrow">05 · Dentro de su edificio</div>
-  <h2>Sus vecinos directos</h2>
-  <p class="lead">En Lofty Island hay 11 unidades publicadas hoy. Ordenadas por precio del m²:</p>
-  <div id="torre" style="margin-top:16px"></div>
+  <h2 id="torre-titulo"></h2>
+  <div id="torre" style="margin-top:14px"></div>
   <p class="frase" id="frase-torre"></p>
-  <p class="sub" style="margin-top:14px">⚠️ Si todas las unidades del edificio las publica el mismo desarrollador o la misma agencia, son <b>una lista de precios repetida</b>, no observaciones independientes. Aun así, es contra ellas que su comprador va a comparar.</p>
+  <p class="sub" style="margin-top:14px">⚠️ Si todas las unidades las publica el mismo desarrollador o la misma agencia, son <b>una lista de precios repetida</b>, no observaciones independientes. Aun así, es contra ellas que su comprador compara.</p>
 </section>
 
 <!-- ══════ 6 · SIMULADOR ══════ -->
@@ -192,184 +232,602 @@
   <div class="eyebrow">06 · Simulador</div>
   <h2>Mueva el precio</h2>
   <p class="lead">Vea dónde queda su unidad y cuánto tiempo llevan publicados los comparables de ese tramo.</p>
-  <div class="sim-out">
-    <div class="v" id="sim-precio"></div>
-    <div class="l" id="sim-detalle"></div>
-  </div>
-  <input type="range" id="sim" min="65000" max="120000" step="500" value="91584">
-  <div class="sim-lbl"><span>$65.000</span><span>$120.000</span></div>
-  <p class="sub" style="margin-top:14px"><b>Qué NO dice esto:</b> no promete que a un precio dado se venda en X días. Muestra la antigüedad de los avisos comparables en ese tramo — que es un indicio, no una predicción.</p>
+  <div class="sim-out"><div class="v" id="sim-precio"></div><div class="l" id="sim-detalle"></div></div>
+  <input type="range" id="sim" min="0" max="100" value="50">
+  <div class="sim-lbl"><span id="sim-min"></span><span id="sim-max"></span></div>
+  <p class="sub" style="margin-top:14px"><b>Qué NO dice esto:</b> no promete que a un precio dado se venda en X días. Muestra la antigüedad de los avisos comparables de ese tramo — un indicio, no una predicción.</p>
 </section>
 
-<!-- ══════ 7 · CÓMO SE COMPARÓ ══════ -->
+<!-- ══════ 7 · MÉTODO ══════ -->
 <section>
   <div class="eyebrow">07 · Método</div>
   <h2>Cómo se comparó</h2>
-
-  <div class="met ok" style="margin-top:16px">
-    <h3>Controlado por construcción</h3>
-    <ul>
-      <li><b>Tipología</b> — solo 1 dormitorio</li>
-      <li><b>Superficie</b> — entre 41 y 61 m² (±20% del suyo)</li>
-      <li><b>Distancia</b> — todos a menos de 500 m de su edificio</li>
-    </ul>
-  </div>
-
-  <div class="met aj">
-    <h3>Ajustable con evidencia</h3>
-    <ul>
-      <li><b>Parqueo</b> — en 1 dormitorio, incluirlo se asocia a <b>+8,6%</b> por m² (medido sobre 72 unidades: 39 con parqueo vs 33 sin). Su aviso <b>no incluye parqueo</b>: comparado a igualdad de condiciones, su precio efectivo es más alto que el que muestra la barra.</li>
-    </ul>
-  </div>
-
-  <div class="met no">
-    <h3>No ajustable — declarado</h3>
-    <ul>
-      <li><b>Amoblado</b> — 0 de 394 avisos de venta lo declaran. No sabemos si algún precio incluye muebles.</li>
-      <li><b>Amenidades</b> — la señal se contradice entre tipologías (ruido de composición): no se ajusta.</li>
-      <li><b>Piso y vista</b> — solo 46% de los avisos declara el piso.</li>
-      <li><b>Precios de cierre</b> — Bolivia no tiene registro público de transacciones. Todo acá son precios <b>pedidos</b>.</li>
-    </ul>
-  </div>
-
-  <p class="sub"><b>Fuente:</b> 396 avisos de venta de Equipetrol verificados uno por uno contra el portal la madrugada del 3-ago-2026, deduplicados, con un solo tipo de cambio y anclados a su edificio. Cobertura: Equipetrol. Fuera de esa zona, este documento no se emite.</p>
+  <div class="met ok" style="margin-top:16px"><h3>Controlado por construcción</h3><ul id="met-ok"></ul></div>
+  <div class="met aj"><h3>Ajustable con evidencia</h3><ul id="met-aj"></ul></div>
+  <div class="met no"><h3>No ajustable — declarado</h3><ul>
+    <li><b>Amoblado</b> — 0 de 394 avisos de venta lo declaran. No sabemos si algún precio incluye muebles.</li>
+    <li><b>Amenidades</b> — se muestran por comparable como contexto, pero su señal de precio se contradice entre tipologías: no se usan para ajustar.</li>
+    <li><b>Piso y vista</b> — solo el 46% de los avisos declara el piso.</li>
+    <li><b>Precios de cierre</b> — Bolivia no tiene registro público de transacciones. Todo acá son precios <b>pedidos</b>.</li>
+  </ul></div>
+  <p class="sub"><b>Fuente:</b> avisos de venta de Equipetrol verificados uno por uno contra el portal la madrugada del 3-ago-2026, deduplicados, con un solo tipo de cambio y anclados a su edificio. <b>Cobertura: Equipetrol.</b> Fuera de esa zona este informe no se emite.</p>
 </section>
 
 <div class="pie">
   Preparado por <b>[Nombre del broker]</b><br>
-  Datos verificados por <b>Simón · Inteligencia Inmobiliaria</b><br>
+  Datos verificados por <b>Simón · Inteligencia Inmobiliaria</b>
   <span style="display:block;margin-top:9px;opacity:.75">Nadie paga por aparecer mejor en este documento.<br>El mismo informe se le entrega a quien compra y a quien vende.</span>
 </div>
+</div><!-- /resultado -->
 </div>
 
 <script>
-/* ══════ DATA REAL — shadow, corte 3-ago-2026 ══════ */
-var YO={edificio:'Lofty Island',area:51,precio:91584,m2:1800,dias:408,pq:'no',zona:'Equipetrol Oeste'};
-/* comparables: [edificio, m², precio, $/m², días, parqueo, distancia_m] */
-var COMPS=[
-['SKY Luxury',42,50037,1191,36,'sd',492],['Torre Real',48,64500,1335,81,'incl',347],
-['SÖLO Industrial',47,70000,1486,275,'sd',485],['Vertical Güemes',50,75968,1510,19,'sd',390],
-['HH Chuubi',49,75000,1520,330,'no',337],['SKY Luxury',42,64444,1534,41,'no',492],
-['Vertical Güemes',50,77981,1550,27,'sd',403],['Vertical Güemes',50,78484,1560,27,'sd',403],
-['HH Chuubi',48,78000,1620,157,'incl',341],['HH Chuubi',55,90600,1636,157,'incl',341],
-['Condominio Stanza',58,95000,1650,14,'sd',344],['Domus Infinity',52,87890,1700,51,'sd',492],
-['HH Chuubi',54,92600,1718,157,'incl',341],['Condominio Stanza',47,83046,1750,128,'sd',352],
-['TERRAZO',50,87000,1751,104,'sd',492],['Uptown Drei',53,95000,1792,119,'sd',218],
-['Uptown Drei',53,100000,1902,10,'incl',492],['Sky Tower',55,110000,2000,58,'incl',379],
-['NanoTec',44,88000,2000,84,'incl',492],['Spazios Edén',42,92931,2213,121,'sd',492],
-['Golden Tower',51,115000,2255,128,'sd',492],['Sky Tower',55,135000,2455,83,'incl',372],
-['Eurodesign Soho',50,130800,2611,135,'incl',492]];
-/* su torre: [dorms, m², precio, $/m², días, parqueo, esYo] */
-var TORRE=[[0,36,69099,1940,182,'incl',false],[1,51,91584,1800,408,'no',true],
-[null,70,122000,1749,408,'no',false],[1,70,118600,1700,408,'no',false],
-[2,101,167240,1648,182,'no',false],[2,101,167239,1648,182,'incl',false],
-[2,101,167000,1646,408,'no',false],[0,43,62843,1450,14,'sd',false],
-[1,70,97706,1400,14,'sd',false],[1,70,85000,1218,182,'no',false],[1,68,83000,1217,182,'incl',false]];
-var CONF={nMinBase:5, pqAjustePct:8.6};
+/* ═══════ POOL REAL — shadow Equipetrol, corte 3-ago-2026 ═══════
+   edificio|lat|lon|dorms|m²|precio|$/m²|días|parqueo(i/n/s)|estado(P/E/-)|piscina|gym|cowork|sauna */
+var RAW=`SÖLO Industrial Apar|-17.76684|-63.19350|1|47|70000|1486|275|s|E|1|0|1|0
+Condominio Sky Luxia|-17.77082|-63.19270|0|31|69000|2212|239|s|E|1|0|0|1
+Sky Eclipse|-17.77220|-63.19193|0|67|99750|1500|239|s|E|1|1|0|1
+Condominio Avanti|-17.75892|-63.19278|2|73|125000|1708|299|s|E|1|0|1|0
+Lofty Island|-17.77108|-63.19466|1|51|91584|1800|408|n|P|1|1|0|0
+Lofty Island|-17.77108|-63.19466|1|70|118600|1700|408|n|P|1|1|0|0
+Lofty Island|-17.77108|-63.19466|2|101|167000|1646|408|n|P|1|1|0|0
+Sky Tower|-17.77204|-63.19191|0|36|68000|1889|238|s|P|1|1|0|1
+Edificio Vertical 60|-17.75757|-63.19135|1|42|65000|1548|287|s|E|1|1|0|0
+Onix Art By EliTe|-17.76617|-63.20178|0|43|88348|2055|291|s|E|1|0|0|0
+Malibu Inside|-17.76548|-63.19247|2|67|150000|2239|229|s|E|1|0|1|0
+Condominio Las Dalia|-17.76210|-63.19916|1|52|103448|2002|305|s|P|1|0|1|0
+Stone 3|-17.75880|-63.19363|0|34|67240|2000|132|s|E|1|1|1|0
+HH Once Equipetrol|-17.76411|-63.19353|1|56|77300|1380|308|s|P|1|0|1|0
+Condominio Cruz|-17.75370|-63.19177|2|92|142212|1548|35|n|-|1|0|0|1
+Sky Plaza Italia|-17.76950|-63.19669|0|42|66000|1556|210|s|-|1|0|0|0
+Condominio Las Dalia|-17.76209|-63.19936|2|75|188575|2514|180|s|P|0|0|0|0
+Lofty Island|-17.77086|-63.19457|2|101|167240|1648|182|n|P|1|1|1|0
+Alto Busch|-17.77029|-63.20045|1|54|60255|1116|165|s|-|1|1|0|0
+Edificio Aura Concep|-17.76659|-63.19513|2|72|108000|1500|163|s|E|1|1|1|1
+Alto Busch|-17.77029|-63.20045|1|53|57565|1086|165|s|-|1|0|0|0
+Condominio SKY EQUIN|-17.76140|-63.20261|1|54|82950|1536|166|s|P|1|0|1|0
+Sky Level|-17.76828|-63.19636|2|89|141000|1593|166|s|P|0|0|0|0
+Sky Level|-17.76828|-63.19636|2|89|132750|1500|166|s|P|0|0|0|0
+Aqua Tower|-17.76554|-63.19509|1|67|133720|1996|161|i|E|1|1|0|1
+Condado VI Plaza Ita|-17.76856|-63.19727|1|62|102647|1650|166|s|E|1|0|0|0
+Sky Onix|-17.76697|-63.19290|0|37|76000|2038|162|n|E|0|0|0|0
+Breeze Tower|-17.75464|-63.19198|1|59|85000|1441|161|i|E|1|0|0|0
+Sky Eclipse|-17.77237|-63.19194|0|40|74119|1853|161|s|E|1|1|0|1
+Edificio Bamboo|-17.75550|-63.19595|1|37|49500|1336|162|s|-|0|0|0|0
+Giardino|-17.76354|-63.19730|1|60|137284|2303|160|s|P|0|0|0|0
+Edificio Fragata|-17.77122|-63.19172|2|124|218500|1762|159|i|-|1|1|0|0
+Stone 5|-17.76472|-63.20304|2|58|108077|1865|168|s|P|1|1|1|0
+Stone 5|-17.76477|-63.20301|1|37|69882|1865|168|s|P|1|1|1|0
+Stone 5|-17.76474|-63.20313|0|32|59270|1865|168|s|P|1|1|1|0
+Stone 3|-17.75898|-63.19349|1|40|78585|1950|168|s|E|1|1|1|0
+Stone 3|-17.75896|-63.19359|0|38|75300|2000|168|s|E|1|1|1|0
+Stone 3|-17.75894|-63.19362|2|63|123045|1950|168|s|E|1|1|1|0
+Portobello Green|-17.76450|-63.19194|0|34|65846|1927|168|s|-|1|1|1|0
+PORTOBELLO 5|-17.75404|-63.19241|2|56|89709|1611|168|s|P|1|1|1|0
+PORTOBELLO 5|-17.75391|-63.19241|0|37|59671|1611|168|s|P|1|1|1|0
+PORTOBELLO 5|-17.75414|-63.19248|1|49|78509|1611|168|s|P|1|1|1|0
+Edificio Fragata|-17.77122|-63.19172|2|124|200000|1610|183|i|-|1|0|0|0
+INIZIO|-17.77068|-63.19733|0|30|40000|1329|153|s|-|0|0|0|0
+Sky Collection Art D|-17.76621|-63.19235|1|76|145000|1908|168|i|-|1|1|0|1
+Luxe Suites|-17.76691|-63.19657|0|35|67000|1942|149|s|E|1|1|0|0
+INIZIO|-17.77122|-63.19735|1|39|53000|1370|152|s|-|1|0|0|0
+Sky Moon|-17.75670|-63.19741|1|66|139000|2103|152|i|E|1|1|1|1
+Sky Lux|-17.75586|-63.19747|1|56|88500|1580|142|s|-|0|0|0|0
+Sky Eclipse|-17.77193|-63.19274|2|106|223391|2107|153|i|E|1|1|0|1
+Edificio Vertical 60|-17.75684|-63.19123|2|73|118000|1611|153|i|E|1|0|0|0
+Rhodium|-17.76282|-63.19910|0|36|88250|2454|142|s|P|1|0|0|0
++ PLUS ISUTO|-17.75723|-63.19278|2|66|110000|1670|152|i|-|0|0|0|0
+T-VEINTICINCO|-17.76530|-63.19216|1|82|114744|1400|134|s|-|1|1|0|0
+Uptown Drei|-17.77016|-63.19671|0|35|69825|1995|145|s|E|0|0|0|0
+Eurodesign Soho|-17.76697|-63.19290|1|50|130800|2611|135|i|-|0|0|0|1
+Green Tower|-17.75995|-63.19858|2|117|292500|2500|128|s|E|0|0|0|0
+Vertical Terra|-17.75942|-63.19393|1|48|75000|1563|131|s|E|0|0|0|0
+Condominio Stanza|-17.76800|-63.19544|1|47|83046|1750|128|s|E|0|0|1|0
+Stone 3|-17.75864|-63.19365|2|63|89500|1416|133|s|E|1|1|1|0
+Alto Busch|-17.77010|-63.20047|1|52|69000|1327|125|s|-|1|0|1|0
+Edificio Spazios|-17.76461|-63.19419|1|51|112500|2206|125|s|E|1|0|0|1
+HH Once Equipetrol|-17.76411|-63.19353|1|62|91500|1483|185|s|P|1|0|1|0
+HH Once Equipetrol|-17.76411|-63.19353|0|71|88300|1250|185|s|P|1|0|1|0
+HH Once Equipetrol|-17.76411|-63.19353|1|64|116600|1813|185|s|P|1|0|1|0
+HH Once Equipetrol|-17.76411|-63.19353|1|56|63000|1127|185|s|P|1|0|1|0
+Condominio Sky|-17.75698|-63.19809|2|110|115000|1045|119|i|E|1|1|0|0
+Breeze Tower|-17.75503|-63.19123|1|52|99000|1908|118|s|E|1|0|1|0
+Speranto Residenze|-17.76737|-63.19525|0|31|54000|1748|114|s|E|1|0|1|0
+Uptown Drei|-17.77021|-63.19715|2|127|159000|1252|114|i|E|1|1|1|0
+Condominio Maré|-17.76580|-63.20036|2|84|163500|1943|120|s|E|1|1|1|0
+Condominio Maré|-17.76554|-63.20059|1|45|87750|1962|138|s|E|0|0|0|0
+Stone 3|-17.75882|-63.19357|0|34|65900|1962|167|s|E|1|1|1|0
+SKY Luxury|-17.75769|-63.20099|2|65|127000|1954|113|s|E|1|1|0|1
+Golden Tower|-17.76697|-63.19290|1|51|115000|2255|128|s|E|1|1|1|1
+EURODESIGN NORDIC|-17.76214|-63.19701|1|56|125000|2228|119|s|E|1|1|0|1
+Edificio Elite Sirar|-17.76750|-63.20358|1|45|51126|1136|112|s|E|1|0|0|0
+Condominio Maré|-17.76545|-63.20036|0|44|88100|1986|110|s|E|1|0|0|0
+Madero Residence|-17.76501|-63.19962|2|102|200000|1961|107|i|E|1|0|0|1
+Omnia Eco Lux|-17.76425|-63.20005|1|75|179000|2386|113|i|-|1|0|0|0
+Condominio Maré|-17.76550|-63.20033|2|87|165470|1907|107|s|E|0|0|0|0
+Condominio Maré|-17.76550|-63.20033|2|73|137120|1876|107|s|E|0|0|0|0
+Condominio Maré|-17.76550|-63.20033|2|83|158660|1907|107|s|E|0|0|0|0
+Condominio Maré|-17.76550|-63.20033|1|52|101200|1959|107|s|E|0|0|0|0
+Condominio Maré|-17.76550|-63.20033|1|55|110000|2001|107|s|E|0|0|0|0
+Condominio Maré|-17.76550|-63.20033|2|85|162000|1907|107|s|E|0|0|0|0
+Sky Moon|-17.75682|-63.19748|0|42|85000|2048|105|s|E|1|1|1|1
+Uptown NUU|-17.77000|-63.19669|0|39|58900|1510|104|s|E|0|0|0|0
+Aqua Tower|-17.76558|-63.19507|1|67|133700|2000|113|s|E|1|1|0|0
+Aqua Tower|-17.76562|-63.19499|1|56|118749|2121|113|s|E|1|1|0|0
+Spazios Edén|-17.76697|-63.19290|1|42|92931|2213|121|s|P|1|1|1|0
+TERRAZO|-17.76697|-63.19290|1|50|87000|1751|104|s|-|0|1|0|0
+Torre Suant Isuto|-17.76528|-63.19151|2|116|145000|1250|104|s|-|1|1|0|1
+Edificio Europeo|-17.75950|-63.19911|1|52|97000|1865|147|i|-|1|1|0|0
+Onix Art By EliTe|-17.76617|-63.20178|1|60|75000|1250|100|i|E|1|1|1|0
+Sky Plaza Italia|-17.76819|-63.19562|2|104|209799|2017|117|i|-|0|0|0|0
+Luxe Tower|-17.77127|-63.19288|1|63|81000|1286|112|s|P|0|0|0|0
+Uptown Drei|-17.77016|-63.19647|1|53|95000|1792|119|s|E|1|1|0|0
+Speranto Residenze|-17.76863|-63.19649|0|33|56000|1693|120|s|E|1|0|1|0
+Uptown Drei|-17.77000|-63.19700|0|35|66000|1906|106|i|E|1|1|0|0
+Domus Tower|-17.77139|-63.18964|2|98|147495|1500|93|s|P|1|1|1|1
+Domus Tower|-17.77139|-63.18964|2|88|131400|1500|93|s|P|1|1|1|1
+Edificio Sirari Palm|-17.76391|-63.19928|1|49|84000|1725|93|s|E|1|0|0|0
+Platinum II|-17.75486|-63.19722|2|107|170000|1589|114|n|E|1|1|0|1
+Condominio Maré|-17.76568|-63.20026|2|86|174000|2016|104|i|E|1|1|1|1
+Stone 3|-17.75872|-63.19350|2|83|160000|1928|94|n|E|0|0|0|0
+Stone 3|-17.75872|-63.19350|1|40|67385|1672|94|n|E|0|0|0|0
+SÖLO Industrial Apar|-17.76616|-63.19306|1|44|68200|1554|91|n|E|0|0|0|0
+Spazios Edén|-17.76697|-63.19290|2|106|152520|1439|121|n|P|1|1|1|0
+Sky Eclipse|-17.77223|-63.19232|0|61|112600|1846|98|i|E|1|1|0|1
+HH Chuubi|-17.76801|-63.19449|2|109|160000|1468|126|i|P|1|0|1|1
+Element by Elite|-17.76442|-63.20358|0|41|72414|1766|97|n|E|0|0|0|0
+Domus Infinity|-17.76514|-63.19162|2|78|130000|1667|93|i|E|1|1|1|1
+Condominio Maré|-17.76565|-63.20037|2|80|170000|2125|107|i|E|0|0|0|0
+Luxe Suites|-17.76487|-63.19381|2|84|133000|1583|86|n|E|1|1|0|1
+HH Chuubi|-17.76801|-63.19449|1|48|78000|1620|157|i|P|1|0|1|1
+HH Chuubi|-17.76801|-63.19449|1|55|90600|1636|157|i|P|1|0|1|1
+HH Chuubi|-17.76801|-63.19449|1|54|92600|1718|157|i|P|1|0|1|1
+Eurodesign Suites|-17.76153|-63.19966|1|51|95000|1863|85|i|E|1|1|0|1
+NanoTec by Smart Stu|-17.76697|-63.19290|1|44|88000|2000|84|i|E|0|0|0|0
+Edificio Macororó 5|-17.75654|-63.19768|1|39|62000|1590|83|i|-|1|0|0|0
+Luxe Residence|-17.76697|-63.19290|2|81|133650|1650|141|n|E|1|1|0|0
+Macororo 7|-17.77053|-63.19440|2|79|130000|1641|87|i|-|1|0|0|1
+Lofty Island|-17.77085|-63.19457|0|36|69099|1940|182|i|P|1|1|1|0
+Lofty Island|-17.77087|-63.19455|1|68|83000|1217|182|i|-|1|1|1|0
+Lofty Island|-17.77081|-63.19455|2|101|167239|1648|182|i|P|1|1|1|0
+Haus Equipetrol|-17.76425|-63.19221|1|30|60000|2000|85|n|E|1|0|0|0
+Edificio Klug|-17.76464|-63.19427|2|71|145000|2054|95|i|E|1|1|1|0
+Condado VI Plaza Ita|-17.76859|-63.19731|2|87|144573|1662|79|n|E|1|1|0|0
+Stone 3|-17.75871|-63.19356|1|51|97510|1930|79|n|E|1|0|0|0
+Condominio Maré|-17.76547|-63.20036|1|52|100760|1950|97|n|E|1|1|1|0
+Sky Tower|-17.77140|-63.19117|1|55|135000|2455|83|i|P|1|1|0|1
+Grigia Residenze|-17.76015|-63.19718|1|37|70000|1892|79|n|E|1|0|1|0
+Sky Moon|-17.75682|-63.19735|1|62|135000|2167|86|i|E|1|1|1|1
+Grigia Residenze|-17.76003|-63.19703|0|33|65000|1948|77|n|E|1|0|1|0
+Condominio Du Nord X|-17.75812|-63.19753|0|30|82500|2750|77|n|E|1|0|0|0
+Luxe Suites|-17.76482|-63.19383|0|35|56711|1644|77|n|E|0|0|0|0
+Haus Equipetrol|-17.76425|-63.19221|2|72|120000|1673|84|n|E|0|0|0|0
+Stone 6|-17.75465|-63.19222|1|41|60990|1500|83|n|P|0|0|0|0
+Condominio Sky Luxia|-17.76574|-63.19420|0|35|85000|2429|76|n|E|0|0|0|0
+SÖLO Industrial Apar|-17.76659|-63.19337|1|46|70459|1539|78|n|E|1|0|1|0
+You Smart Studios|-17.75852|-63.19785|2|116|223000|1929|86|i|E|1|0|1|0
+Element by Elite|-17.76442|-63.20358|0|37|53650|1464|82|n|E|0|0|0|0
+Edificio Spazios|-17.76461|-63.19419|1|41|105000|2561|86|n|E|1|0|0|0
+Sky Plaza Italia|-17.76931|-63.19734|2|85|138000|1624|78|i|-|1|1|0|0
+PORTOBELLO 5|-17.75365|-63.19318|2|54|98000|1799|74|i|P|1|1|1|1
+Legendary by EliTe|-17.76120|-63.19911|0|36|65000|1798|74|i|E|1|0|0|0
+Stone 3|-17.75872|-63.19350|0|34|53000|1576|71|n|E|1|1|1|0
+Grigia Residenze|-17.75997|-63.19703|1|36|55000|1516|71|i|E|1|1|1|0
+You Smart Studios|-17.75842|-63.19776|2|116|220000|1894|71|i|E|1|0|1|0
+Speranto Residenze|-17.77090|-63.19809|0|78|89000|1143|72|i|E|1|1|1|0
+Speranto Residenze|-17.77090|-63.19809|0|43|60000|1384|72|i|E|1|1|1|0
+Sky Eclipse|-17.77170|-63.19081|1|65|150000|2308|75|i|E|1|1|0|1
+Sky Moon|-17.75702|-63.19744|2|102|208000|2041|69|i|E|1|1|1|1
+Condominio Sky Magno|-17.76625|-63.19567|0|40|79000|1975|69|n|E|0|0|0|0
+Torre Real|-17.77098|-63.19138|1|48|64500|1335|81|i|-|0|0|0|0
+Element by Elite|-17.76442|-63.20358|2|68|100000|1471|71|i|E|0|0|0|0
+Golden Tower|-17.76149|-63.19705|1|53|99500|1883|86|i|E|1|1|0|1
+Sky Eclipse|-17.77237|-63.19194|0|42|66000|1590|98|s|E|1|1|0|1
+Condominio Maré|-17.76563|-63.20038|1|52|110000|2129|64|i|E|1|1|1|1
+Uptown Drei|-17.76999|-63.19475|2|80|145000|1813|65|i|E|1|1|0|0
+Sky Level|-17.76828|-63.19636|2|90|141000|1567|63|n|P|0|0|0|0
+Sky Level|-17.76828|-63.19636|2|90|150400|1671|63|n|P|0|0|0|0
+Uptown Drei|-17.77020|-63.19662|2|68|100000|1471|72|n|E|1|1|0|1
+Luxe Suites|-17.76488|-63.19378|2|71|140000|1966|72|n|E|1|1|1|0
+Eurodesign Le Blanc|-17.75848|-63.19665|1|58|130000|2241|78|n|P|1|1|1|1
+STONE 2|-17.75569|-63.19161|2|66|79464|1200|61|i|E|1|1|1|0
+Sky Elite|-17.76648|-63.19630|0|32|73000|2281|58|n|E|1|1|1|1
+Uptown Drei|-17.77021|-63.19715|0|61|112850|1850|178|n|E|0|0|0|0
+Magnum Residencias E|-17.76856|-63.19253|1|109|185000|1699|68|n|-|1|1|0|1
+Magnum Residencias E|-17.76855|-63.19258|2|154|280000|1813|68|i|-|1|1|0|1
+Edificio Siria 2|-17.75559|-63.19338|0|32|42103|1316|117|i|E|1|0|0|0
+Sky Level|-17.76828|-63.19636|2|89|141600|1600|63|n|P|0|0|0|0
+Condado VI Plaza Ita|-17.76697|-63.19290|1|62|102647|1650|65|n|E|0|0|0|0
+EURODESIGN TOWER|-17.76656|-63.19713|1|57|102000|1789|58|i|P|1|1|1|0
+Luxe Suites|-17.76482|-63.19383|0|38|68000|1799|57|n|E|1|1|1|0
+Edif. SKY DESIGN - S|-17.76608|-63.19660|2|149|209000|1403|55|i|-|1|0|0|0
+Sky Eclipse|-17.77237|-63.19194|1|68|119000|1750|58|n|E|0|0|0|0
+Breeze Tower|-17.75506|-63.19132|2|90|147000|1642|58|n|E|1|1|0|0
+INIZIO|-17.77064|-63.19737|2|79|128888|1626|79|i|-|1|0|0|0
+Atrium|-17.76855|-63.19589|2|94|156000|1652|86|i|E|1|0|0|0
+Equipetrol Day Apart|-17.76336|-63.20037|2|152|275000|1809|55|i|-|0|0|0|0
+Eurodesign Suites|-17.76173|-63.20001|1|49|80000|1623|57|n|E|1|1|0|0
+You Smart Studios|-17.75852|-63.19785|2|95|190000|2000|62|i|E|0|0|0|0
+PORTOBELLO 5|-17.75408|-63.19237|1|49|75000|1539|52|i|P|1|1|1|0
+PORTOBELLO 5|-17.75416|-63.19237|0|48|70000|1468|52|i|P|1|1|1|0
+Sky Tower|-17.77131|-63.19109|1|55|110000|2000|58|i|P|0|0|0|0
+You Smart Studios|-17.75833|-63.19843|1|51|105000|2048|51|i|E|1|1|1|0
+Condominio Maré|-17.76563|-63.20038|1|74|119557|1616|51|n|E|0|0|0|0
+Sky Eclipse|-17.77235|-63.19194|1|68|115600|1700|64|n|E|1|1|0|1
+Portobello Green|-17.76447|-63.19168|0|36|75000|2064|49|n|E|1|1|1|0
+Sky Moon|-17.75682|-63.19735|2|105|227702|2169|50|i|E|0|0|0|0
+Green Tower|-17.75995|-63.19858|1|70|206000|2929|51|i|E|1|1|0|1
+Edificio Le Grand|-17.76295|-63.19987|2|113|198000|1752|47|i|-|0|0|0|0
+Domus Tower|-17.77145|-63.18943|1|31|55000|1795|47|n|-|1|1|1|1
+Luxe Tower|-17.77127|-63.19288|1|63|125000|1984|55|i|P|1|1|0|1
+Sky Eclipse|-17.77231|-63.19212|2|105|188000|1790|56|i|E|1|1|1|1
+Sky Collection Equip|-17.76625|-63.19567|2|88|145000|1648|42|i|-|1|1|1|0
+Edificio Sirari Palm|-17.76391|-63.19928|0|36|75431|2095|46|n|E|0|0|0|0
+Condominio Omnia Pri|-17.76662|-63.20314|2|88|126300|1435|48|i|E|1|0|0|0
+Piazza Once|-17.76882|-63.19150|2|109|135000|1239|48|i|-|1|0|0|0
+BARUC IV - EQUIPETRO|-17.75909|-63.19238|1|33|50700|1555|63|i|E|1|0|1|0
+Sky Eclipse|-17.77233|-63.19214|2|101|165948|1643|40|n|E|0|0|0|0
+SKY Luxury|-17.76697|-63.19290|1|42|64444|1534|41|n|E|1|0|0|1
+Luxe Tower|-17.77127|-63.19288|2|95|138000|1453|47|i|P|1|1|0|1
+Sky Moon|-17.75690|-63.19744|1|74|136621|1846|41|i|E|0|0|0|0
+Edificio Klug|-17.76490|-63.19479|1|48|74880|1552|49|n|E|1|1|1|0
+Phantom by Elite|-17.76289|-63.19867|1|48|98600|2054|43|i|E|0|0|0|0
+Stratto Up|-17.75852|-63.19473|0|44|65250|1500|37|i|E|1|1|1|1
+Sky Eclipse|-17.77233|-63.19214|2|101|165948|1643|36|i|E|0|0|0|0
+PÖRA by Vertical Hom|-17.76476|-63.20287|2|59|86000|1458|142|i|E|0|0|0|0
+Edificio Bamboo|-17.76770|-63.19450|1|37|71121|1920|41|n|-|0|0|0|0
+Green Tower|-17.75995|-63.19858|2|117|292500|2500|36|n|E|0|0|0|0
+Sky Moon|-17.75684|-63.19732|1|74|160000|2162|37|n|E|1|1|1|1
+Nano Smart|-17.76427|-63.19260|0|33|52000|1558|65|n|E|1|0|1|0
+HH Once Equipetrol|-17.76424|-63.19362|1|35|52600|1510|130|i|E|1|0|1|0
+Domus Onix|-17.76662|-63.20429|0|33|68820|2085|35|n|P|0|0|0|0
+Domus Insignia|-17.76898|-63.19785|0|49|77000|1570|29|n|P|1|1|1|1
+Condominio Maré|-17.76563|-63.20038|0|46|90386|1975|35|i|E|1|1|1|1
+Condominio Maré|-17.76563|-63.20038|2|86|164477|1906|35|i|E|1|1|1|1
+Condominio Maré|-17.76563|-63.20038|0|44|90842|2048|35|i|E|1|1|1|1
+Condominio Maré|-17.76563|-63.20038|0|43|88244|2058|35|i|E|1|1|1|1
+Domus Insignia|-17.77106|-63.19811|1|38|56475|1500|54|n|P|1|1|1|0
+Eurodesign Soho|-17.76920|-63.19687|2|85|180000|2128|29|i|-|1|1|1|1
+Edificio PLATINUM|-17.75592|-63.19767|1|64|100000|1563|31|i|E|1|1|0|1
+Yotau All Suites Hot|-17.77203|-63.19024|2|107|140000|1311|34|n|-|1|1|0|1
+One Soul by Smart St|-17.76040|-63.19675|0|38|76300|1983|43|i|E|1|0|1|0
+Portobello Green|-17.76432|-63.19163|1|51|98500|1920|27|n|P|1|0|0|0
+Condominio Maré|-17.76565|-63.20037|2|144|256058|1778|29|i|E|0|0|0|0
+SKY Luxury|-17.76697|-63.19290|1|42|50037|1191|36|s|E|1|1|1|1
+Edificio ITAIPU|-17.75539|-63.19582|1|63|87644|1395|27|s|-|1|1|0|0
+Edificio Klug|-17.76491|-63.19479|2|74|119000|1615|27|i|E|1|1|1|0
+Condominio Maré|-17.76563|-63.20038|1|76|130000|1711|22|n|E|1|1|0|0
+TRIVENTO IV|-17.76139|-63.19686|0|39|75883|1926|23|s|P|0|0|0|0
+Edificio Sirari Palm|-17.76391|-63.19928|2|66|95000|1439|29|s|E|1|0|0|0
+Uptown Drei|-17.77018|-63.19635|0|35|58500|1671|26|s|E|1|1|0|0
+One Soul by Smart St|-17.76050|-63.19679|0|35|58000|1663|26|s|E|1|0|0|0
+Speranto Residenze|-17.76727|-63.19530|2|66|111332|1687|21|i|E|1|0|1|0
+Sky Tower|-17.77130|-63.19112|0|36|78000|2167|20|s|P|0|0|0|0
+Sky Eclipse|-17.77237|-63.19194|0|41|73000|1780|22|s|E|1|1|0|1
+Domus Infinity|-17.76697|-63.19290|1|52|87890|1700|51|s|E|1|1|1|1
+Edificio Elite Sirar|-17.76433|-63.19977|1|46|67000|1457|20|n|E|1|0|0|0
+Nano Smart|-17.76427|-63.19260|0|33|77443|2315|84|s|E|0|0|0|0
+Condominio Sky Luxia|-17.76574|-63.19420|0|36|75000|2113|49|s|E|0|0|0|0
+Edificio Tanaro|-17.76073|-63.19722|2|90|139000|1538|92|s|E|0|0|0|0
+Edificio Tanaro|-17.76072|-63.19722|2|90|141000|1560|92|s|E|0|0|0|0
+Edificio Tanaro|-17.76072|-63.19722|2|76|120000|1576|92|s|E|0|0|0|0
+Luxe Tower|-17.77092|-63.19255|1|63|102000|1619|20|s|P|1|1|1|1
+Speranto Verdi|-17.76420|-63.20323|1|41|88000|2142|65|n|P|1|1|1|1
+Speranto Verdi|-17.76414|-63.20316|0|36|59500|1646|72|n|P|1|1|1|1
+Speranto Verdi|-17.76420|-63.20321|0|35|57000|1652|72|n|P|1|1|1|1
+Speranto Verdi|-17.76411|-63.20317|0|34|55500|1656|72|n|P|1|1|1|1
+Element by Elite|-17.76448|-63.20340|1|40|65000|1631|89|s|E|1|1|0|0
+Domus Tower|-17.77153|-63.18946|1|47|80600|1699|43|s|-|1|0|0|0
+La Riviera|-17.76055|-63.20177|2|100|180000|1801|70|i|E|1|0|0|0
+Domus Tower|-17.77152|-63.18946|1|42|71500|1702|54|s|-|0|0|0|0
+Condominio SKY EQUIN|-17.76593|-63.20504|0|35|75255|2138|41|s|P|0|0|0|0
+Sky Onix|-17.75797|-63.19901|2|72|132000|1833|92|i|E|0|1|0|0
+Element by Elite|-17.76441|-63.20347|1|40|65000|1631|91|s|E|1|1|0|0
+Speranto Verdi|-17.76412|-63.20314|0|35|58000|1644|72|n|P|1|1|1|1
+Speranto Verdi|-17.76414|-63.20316|0|32|52500|1649|72|s|P|1|1|1|1
+Speranto Verdi|-17.76414|-63.20316|1|44|72500|1667|72|s|P|1|1|1|1
+Speranto Verdi|-17.76414|-63.20316|0|37|61000|1645|72|s|P|1|1|1|1
+Grigia Deluxe|-17.76389|-63.19864|1|53|97000|1826|72|s|P|1|0|1|0
+Grigia Deluxe|-17.76389|-63.19864|1|57|104000|1818|72|s|P|1|0|1|0
+Speranto Verdi|-17.76420|-63.20323|1|43|86500|1999|65|s|P|1|1|1|1
+Speranto Verdi|-17.76414|-63.20314|1|43|85500|1983|65|s|P|1|1|1|1
+Condominio Maré|-17.76544|-63.20045|2|93|180000|1937|54|s|E|1|1|0|1
+Stone 5|-17.76212|-63.19954|2|58|108000|1864|52|s|P|1|1|0|0
+Stone 6|-17.75482|-63.19267|0|32|47000|1457|51|s|P|1|1|1|0
+Stone 3|-17.75888|-63.19356|1|51|70000|1386|40|s|E|1|1|1|0
+Los Cedros|-17.75523|-63.19207|2|90|140000|1557|28|s|-|1|1|0|0
+Edificio Suites Los |-17.76666|-63.20036|0|40|72019|1780|183|s|E|1|0|0|1
+Domus Tower|-17.77157|-63.18946|1|47|82590|1745|20|s|E|1|1|0|1
+Onix Art By EliTe|-17.76697|-63.19290|0|35|55000|1587|21|s|E|1|1|1|0
+Magnum Residencias E|-17.76853|-63.19255|1|81|133000|1640|41|s|-|1|1|0|1
+Sky Art|-17.76088|-63.19650|2|86|120296|1399|102|i|E|1|1|0|0
+NanoTec by Smart Stu|-17.76031|-63.19585|1|41|85000|2073|134|s|E|1|0|0|0
+Domus Infinity|-17.76517|-63.19198|1|48|84370|1745|20|s|E|1|1|0|1
+Uptown Drei|-17.77020|-63.19660|2|84|160000|1905|79|s|E|0|0|0|0
+Stone 3|-17.75874|-63.19357|0|38|55000|1461|21|s|E|1|1|1|0
+Uptown Drei|-17.77022|-63.19662|2|84|120000|1429|14|i|E|1|1|0|0
+Lofty Island|-17.77091|-63.19454|1|70|97706|1400|14|s|-|1|1|1|0
+Lofty Island|-17.77091|-63.19454|0|43|62843|1450|14|s|-|1|1|1|0
+Edificio Elite Sirar|-17.76427|-63.19978|0|38|55000|1447|14|s|E|1|0|0|0
+Portobello Green|-17.76444|-63.19168|0|37|50000|1362|15|s|E|1|1|1|0
+Condominio Stanza|-17.76806|-63.19539|1|58|95000|1650|14|s|E|1|1|0|0
+Uptown NUU|-17.76978|-63.19816|2|80|135000|1688|14|i|E|1|1|0|0
+Rhodium|-17.76282|-63.19910|2|75|141450|1897|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|2|79|156900|1978|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|0|38|73100|1949|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|2|75|133650|1793|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|0|38|63400|1690|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|0|38|70800|1883|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|2|75|135250|1814|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|0|38|74850|1995|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|1|44|83500|1905|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|0|37|75050|2021|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|0|38|69950|1861|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|0|42|76750|1828|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|0|36|68650|1909|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|0|38|62650|1670|13|s|P|1|0|0|0
+Rhodium|-17.76282|-63.19910|0|43|73950|1707|13|s|P|1|0|0|0
+Luxe Suites|-17.76625|-63.19567|2|80|135000|1698|13|n|E|0|0|0|0
+Luxe Suites|-17.76625|-63.19567|1|62|105000|1688|13|s|E|0|0|0|0
+Vertical Güemes|-17.76989|-63.19106|1|50|78484|1560|27|s|P|1|1|1|0
+Vertical Güemes|-17.76989|-63.19106|1|50|77981|1550|27|s|P|1|1|1|0
+Eurodesign Le Blanc|-17.75848|-63.19665|1|58|130000|2241|30|s|P|1|1|1|1
+Uptown Drei|-17.76697|-63.19290|1|53|100000|1902|10|i|E|1|1|1|0
+SKY Luxury|-17.76497|-63.19419|1|50|90000|1800|12|s|E|1|1|1|1
+Edificio Omnia Suite|-17.75598|-63.19469|1|44|71000|1615|116|i|-|1|0|0|0
+Bellini Suites Apart|-17.76716|-63.19620|0|31|70402|2271|99|s|-|0|0|0|1
+Vertical Güemes|-17.76992|-63.19118|1|50|75968|1510|19|s|P|1|1|1|0
+Sky Tower|-17.77180|-63.19088|0|36|72000|2000|12|s|P|0|0|0|0
+HH Once Equipetrol|-17.76405|-63.19356|1|56|90000|1609|9|s|E|1|0|1|0
+Edificio Condado II|-17.75749|-63.19876|2|80|118000|1484|21|i|E|1|0|0|0
+Stone 3|-17.75872|-63.19350|0|34|47100|1403|26|s|E|1|1|1|0
+Nomad by Smart Studi|-17.76755|-63.19553|2|62|118000|1913|11|s|E|1|0|1|0
+TORRE ARA|-17.77067|-63.18962|1|47|79000|1681|63|s|-|1|0|0|0
+Domus Insignia|-17.76858|-63.19793|1|38|56475|1496|11|s|P|0|0|0|0
+Lofty Island|-17.77087|-63.19452|1|70|85000|1218|182|n|E|1|1|1|0
+PÖRA by Vertical Hom|-17.76485|-63.20296|2|58|93000|1595|111|s|E|0|0|0|0
+Aura Residences|-17.75613|-63.19338|2|107|95079|889|7|s|-|0|0|1|1
+Condominio Puerto Ma|-17.76535|-63.20276|1|75|125000|1664|6|i|E|1|1|0|0
+Edif. SKY DESIGN - S|-17.76412|-63.20256|1|65|107407|1660|37|s|-|1|1|0|0
+EURODESIGN TOWER|-17.76650|-63.19720|1|48|71485|1480|5|s|P|0|0|0|0
+Stratto Up|-17.76697|-63.19290|0|40|75000|1873|8|s|E|1|1|1|1
+TRIVENTO IV|-17.76149|-63.19688|1|47|58975|1250|6|s|P|0|0|0|0
+Condominio Sky Luxia|-17.76647|-63.19506|0|31|75000|2404|6|s|E|1|1|0|1
+Luxe Tower|-17.76999|-63.19475|2|103|149900|1455|36|s|P|1|1|1|1
+Edificio Fragata|-17.77122|-63.19172|2|124|200000|1610|6|i|-|1|1|0|0
+Stone 3|-17.75872|-63.19350|1|51|98000|1941|5|s|E|1|1|1|0
+Element by Elite|-17.76441|-63.20347|1|40|55000|1380|91|s|E|1|1|0|0`;
 
-var excluidos={};
+var POOL=RAW.trim().split('\n').map(function(l){var f=l.split('|');
+ return {e:f[0],lat:+f[1],lon:+f[2],d:+f[3],a:+f[4],p:+f[5],m2:+f[6],dias:+f[7],pq:f[8],est:f[9],
+   am:{pis:+f[10],gym:+f[11],cow:+f[12],sau:+f[13]}};});
+
+/* política declarada — un solo lugar */
+var CONF={radios:[300,500,800], nMin:5, frescuraDias:180, areaTol:0.20, outlierIQR:1.5,
+          pqAjuste:{1:8.6}, serie:{0:[-18.4,-9.3],1:[-15.1,-5.6],2:[-22.2,-13.4]}};
+
+/* edificios únicos con su GPS (centroide) */
+var EDIFS=(function(){var m={};POOL.forEach(function(p){ if(!m[p.e])m[p.e]={n:0,lat:0,lon:0};
+  m[p.e].n++;m[p.e].lat+=p.lat;m[p.e].lon+=p.lon;});
+  return Object.keys(m).sort().map(function(k){return {e:k,lat:m[k].lat/m[k].n,lon:m[k].lon/m[k].n,n:m[k].n}});})();
+
+var MI={e:'Lofty Island',d:1,a:51,p:91584,pq:'n',est:'P'}, COH=null, excl={};
 function fm(n){return '$'+Math.round(n).toLocaleString('es-BO').replace(/,/g,'.')}
-function pct(arr,q){var s=arr.slice().sort(function(a,b){return a-b});var i=q*(s.length-1);
-  var lo=Math.floor(i),hi=Math.ceil(i);return lo===hi?s[lo]:s[lo]+(s[hi]-s[lo])*(i-lo);}
-function activos(){return COMPS.filter(function(c,i){return !excluidos[i]})}
-function stats(){var a=activos(),m=a.map(function(c){return c[3]});
-  return {n:a.length,p25:pct(m,.25),p50:pct(m,.5),p75:pct(m,.75),
-    dias:pct(a.map(function(c){return c[4]}),.5),
-    menores:m.filter(function(v){return v<YO.m2}).length};}
-function posicion(s){return YO.m2>s.p75?['sobre','SOBRE el rango']:(YO.m2<s.p25?['bajo','BAJO el rango']:['dentro','DENTRO del rango'])}
+function pctl(a,q){var s=a.slice().sort(function(x,y){return x-y});var i=q*(s.length-1),lo=Math.floor(i),hi=Math.ceil(i);
+  return lo===hi?s[lo]:s[lo]+(s[hi]-s[lo])*(i-lo);}
+function distM(aLat,aLon,bLat,bLon){var kx=111320*Math.cos((aLat+bLat)/2*Math.PI/180);
+  var dx=(aLon-bLon)*kx,dy=(aLat-bLat)*110570;return Math.sqrt(dx*dx+dy*dy);}
 
+/* ═══ MOTOR: cascada de radios + frescura + estado + outliers ═══ */
+function armarCohort(){
+  var ed=EDIFS.filter(function(x){return x.e===MI.e})[0];
+  var base=POOL.filter(function(p){
+    return p.d===MI.d && p.a>=MI.a*(1-CONF.areaTol) && p.a<=MI.a*(1+CONF.areaTol)
+      && !(p.e===MI.e && Math.abs(p.a-MI.a)<1 && Math.abs(p.p-MI.p)<1); })
+   .map(function(p){var o=Object.create(p);o.dist=Math.round(distM(ed.lat,ed.lon,p.lat,p.lon));return o;});
+
+  var mismoEstado=MI.est!=='?';
+  var pasos=[];
+  CONF.radios.forEach(function(r){ if(mismoEstado)pasos.push({r:r,est:true}); });
+  CONF.radios.forEach(function(r){ pasos.push({r:r,est:false}); });
+
+  for(var i=0;i<pasos.length;i++){
+    var s=pasos[i];
+    var cand=base.filter(function(p){return p.dist<=s.r && (!s.est || p.est===MI.est)});
+    var frescos=cand.filter(function(p){return p.dias<=CONF.frescuraDias});
+    if(frescos.length>=CONF.nMin){
+      var m2=frescos.map(function(p){return p.m2});
+      var q1=pctl(m2,.25),q3=pctl(m2,.75),iqr=q3-q1;
+      frescos.forEach(function(p){p.outlier = p.m2<q1-CONF.outlierIQR*iqr || p.m2>q3+CONF.outlierIQR*iqr;});
+      return {radio:s.r, mismoEstado:s.est, frescos:frescos,
+              viejos:cand.filter(function(p){return p.dias>CONF.frescuraDias})};
+    }
+  }
+  return null;
+}
+function activos(){return COH.frescos.filter(function(p,i){return !excl[i]})}
+function stats(){var a=activos(),m=a.map(function(p){return p.m2});
+  if(!m.length)return null;
+  return {n:a.length,p25:pctl(m,.25),p50:pctl(m,.5),p75:pctl(m,.75),
+    dias:pctl(a.map(function(p){return p.dias}),.5),
+    menores:m.filter(function(v){return v<MI.p/MI.a}).length};}
+
+/* ═══ RENDER ═══ */
+function calcular(){
+  MI.e=document.getElementById('f-edif').value;
+  MI.a=+document.getElementById('f-area').value||50;
+  var pv=document.getElementById('f-precio').value;
+  MI.p=pv===''?null:+pv;
+  excl={}; COH=armarCohort();
+  document.getElementById('s-form').classList.add('oculto');
+  document.getElementById('resultado').classList.remove('oculto');
+  document.getElementById('r-titulo').textContent=MI.e+' · '+(MI.d===0?'Monoambiente':MI.d+' dormitorio'+(MI.d>1?'s':''));
+  document.getElementById('r-subtitulo').textContent=MI.a+' m² · '+(MI.est==='P'?'en pozo':(MI.est==='E'?'entregado':'estado sin declarar'))+' · '+
+    (MI.pq==='i'?'con parqueo':(MI.pq==='n'?'sin parqueo':'parqueo sin declarar'));
+
+  if(!COH){ document.getElementById('bloque-rango').classList.add('oculto');
+    var sb=document.getElementById('sin-base'); sb.classList.remove('oculto');
+    sb.innerHTML='<b>Sin base suficiente.</b> No encontramos al menos '+CONF.nMin+' comparables frescos (≤'+CONF.frescuraDias+' días) de esta tipología y superficie ni siquiera ampliando a '+CONF.radios[CONF.radios.length-1]+' m. <b>Este informe no se emite</b> — preferimos no darle un número que no podemos sostener.';
+    document.getElementById('sello-txt').textContent='—';
+    ['s-antig','s-torre'].forEach(function(id){document.getElementById(id).classList.add('oculto')});
+    document.getElementById('chip-top').textContent='sin base'; document.getElementById('chip-top').className='pos pos-na';
+    document.getElementById('comps').innerHTML=''; return; }
+  document.getElementById('bloque-rango').classList.remove('oculto');
+  document.getElementById('sin-base').classList.add('oculto');
+  ['s-antig','s-torre'].forEach(function(id){document.getElementById(id).classList.remove('oculto')});
+  var s=stats();
+  var sl=document.getElementById('sim');
+  sl.min=Math.round(s.p25*MI.a*0.75/500)*500; sl.max=Math.round(s.p75*MI.a*1.25/500)*500;
+  sl.value=MI.p||Math.round(s.p50*MI.a);
+  document.getElementById('sim-min').textContent=fm(sl.min);
+  document.getElementById('sim-max').textContent=fm(sl.max);
+  render();
+}
 function render(){
-  var s=stats(), pos=posicion(s);
-  var lo=s.p25*YO.area, hi=s.p75*YO.area, med=s.p50*YO.area;
+  var s=stats(); if(!s)return;
+  var lo=s.p25*MI.a, hi=s.p75*MI.a, med=s.p50*MI.a, miM2=MI.p?MI.p/MI.a:null;
+  var pos = miM2===null?['na','sin precio']:(miM2>s.p75?['sobre','SOBRE el rango']:(miM2<s.p25?['bajo','BAJO el rango']:['dentro','DENTRO del rango']));
+  var chip=document.getElementById('chip-top'); chip.textContent=pos[1]; chip.className='pos pos-'+pos[0];
 
-  var chip=document.getElementById('chip-top');
-  chip.textContent=pos[1]; chip.className='pos pos-'+pos[0];
-
-  var conPq=activos().filter(function(c){return c[5]==='incl'}).length;
-  var sdPq=activos().filter(function(c){return c[5]==='sd'}).length;
+  var conPq=activos().filter(function(p){return p.pq==='i'}).length;
+  var sdPq=activos().filter(function(p){return p.pq==='s'}).length;
   document.getElementById('sello-txt').innerHTML=
-    '<b>'+s.n+' avisos comparables</b> a menos de 500 m · mismo tipo (1 dorm.) · superficie entre 41 y 61 m²<br>'+
-    '<span style="color:var(--gris)">De ellos: '+conPq+' declaran parqueo incluido · '+sdPq+' no declaran</span>';
+    '<b>'+s.n+' comparables</b> a menos de <b>'+COH.radio+' m</b> · '+(MI.d===0?'monoambientes':MI.d+' dorm.')+
+    ' · entre '+Math.round(MI.a*0.8)+' y '+Math.round(MI.a*1.2)+' m²'+
+    (COH.mismoEstado?' · <b>mismo estado de obra</b>'
+      :(MI.est==='?'?' · <span style="color:var(--gris)">estado de obra sin declarar: se comparó contra todos</span>'
+                    :' · <span style="color:var(--terra)">estado de obra mezclado: no había '+CONF.nMin+' comparables '+(MI.est==='P'?'en pozo':'entregados')+'</span>'))+
+    '<br><span style="color:var(--gris)">Antigüedad ≤'+CONF.frescuraDias+' días · '+conPq+' declaran parqueo, '+sdPq+' no declaran'+
+    (COH.viejos.length?' · '+COH.viejos.length+' avisos quedaron fuera por antigüedad':'')+'</span>';
 
   document.getElementById('rango-txt').innerHTML=fm(lo)+' <small>a</small> '+fm(hi);
-  document.getElementById('rango-nivel').textContent='Rango pedido (percentil 25 a 75) para una unidad de '+YO.area+' m² · mediana '+fm(med);
-
-  var min=Math.min(lo,YO.precio)*.94, max=Math.max(hi,YO.precio)*1.06;
-  function p(v){return Math.max(0,Math.min(100,100*(v-min)/(max-min)))}
-  document.getElementById('r-fill').style.left=p(lo)+'%';
-  document.getElementById('r-fill').style.width=(p(hi)-p(lo))+'%';
-  document.getElementById('r-med').style.left=p(med)+'%';
-  document.getElementById('r-yo').style.left=p(YO.precio)+'%';
+  document.getElementById('rango-nivel').textContent='Rango pedido (percentil 25 a 75) para '+MI.a+' m² · mediana '+fm(med);
+  var pmin=Math.min(lo,MI.p||lo)*.94, pmax=Math.max(hi,MI.p||hi)*1.06;
+  function px(v){return Math.max(0,Math.min(100,100*(v-pmin)/(pmax-pmin)))}
+  document.getElementById('r-fill').style.left=px(lo)+'%';
+  document.getElementById('r-fill').style.width=(px(hi)-px(lo))+'%';
+  document.getElementById('r-med').style.left=px(med)+'%';
+  document.getElementById('r-yo').style.display=MI.p?'block':'none';
+  if(MI.p)document.getElementById('r-yo').style.left=px(MI.p)+'%';
+  document.getElementById('r-flecha').style.visibility=MI.p?'visible':'hidden';
   document.getElementById('r-lo').textContent=fm(lo);
   document.getElementById('r-hi').textContent=fm(hi);
-
-  document.getElementById('frase-1').innerHTML='Usted pide <span>'+fm(YO.precio)+'</span>. '+
-    s.menores+' de los '+s.n+' comparables piden menos por metro cuadrado que usted.';
-
-  document.getElementById('frase-dias').innerHTML='Su aviso lleva <span>'+Math.round(YO.dias/s.dias)+' veces más tiempo</span> publicado que la mediana de sus comparables ('+Math.round(s.dias)+' días).';
+  document.getElementById('frase-1').innerHTML= MI.p
+    ? 'Usted pide <span>'+fm(MI.p)+'</span>. '+s.menores+' de los '+s.n+' comparables piden menos por metro cuadrado.'
+    : 'Todavía no definió precio. <span>La mediana de sus comparables</span> es '+fm(med)+' para '+MI.a+' m².';
 
   /* comparables */
-  var yoRow='<div class="comp yo"><div class="c1"><div class="nom">'+YO.edificio+' — SU UNIDAD</div>'+
-    '<div class="det">'+YO.area+' m² · '+YO.dias+' días · sin parqueo</div></div>'+
-    '<div class="c2"><div class="m2">'+fm(YO.m2)+'/m²</div><div class="pre">'+fm(YO.precio)+'</div></div></div>';
-  var filas=COMPS.map(function(c,i){
-    var pqTxt=c[5]==='incl'?'parqueo incl.':(c[5]==='no'?'sin parqueo':'parqueo s/d');
-    return '<div class="comp'+(excluidos[i]?' excluido':'')+'"><div class="c1">'+
-      '<div class="nom">'+c[0]+'</div><div class="det">'+c[1]+' m² · '+c[4]+' días · '+pqTxt+' · a '+c[6]+' m</div></div>'+
-      '<div class="c2"><div class="m2">'+fm(c[3])+'/m²</div><div class="pre">'+fm(c[2])+'</div></div>'+
-      '<button class="x" onclick="toggle('+i+')" title="excluir/incluir">'+(excluidos[i]?'↺':'✕')+'</button></div>';
+  var filas=COH.frescos.map(function(p,i){
+    var pqT=p.pq==='i'?'parqueo incl.':(p.pq==='n'?'sin parqueo':'parqueo s/d');
+    var amT=[p.am.pis?'piscina':'',p.am.gym?'gym':'',p.am.cow?'co-work':'',p.am.sau?'sauna':''].filter(Boolean).join(' · ')||'sin amenidades declaradas';
+    return '<div class="comp'+(excl[i]?' excluido':'')+'"><div class="c1">'+
+      '<div class="nom">'+p.e+(p.outlier?'<span class="tag tag-out">precio atípico</span>':'')+'</div>'+
+      '<div class="det">'+p.a+' m² · '+p.dias+' días · a '+p.dist+' m · '+(p.est==='P'?'pozo':(p.est==='E'?'entregado':'estado s/d'))+
+      '<br>'+pqT+' · '+amT+'</div></div>'+
+      '<div class="c2"><div class="m2">'+fm(p.m2)+'/m²</div><div class="pre">'+fm(p.p)+'</div></div>'+
+      '<button class="x" onclick="tog('+i+')">'+(excl[i]?'↺':'✕')+'</button></div>';
   }).join('');
-  /* la unidad propia se inserta en su posición por $/m² */
-  var todas=COMPS.map(function(c,i){return {html:filas.split('</div></div>')[0],m2:c[3],i:i}});
-  document.getElementById('comps').innerHTML=filas;
-  var cont=document.getElementById('comps');
-  var idx=COMPS.filter(function(c){return c[3]<YO.m2}).length;
-  cont.insertAdjacentHTML('afterbegin','');
-  var nodes=cont.querySelectorAll('.comp');
-  if(nodes[idx]) nodes[idx].insertAdjacentHTML('beforebegin',yoRow); else cont.insertAdjacentHTML('beforeend',yoRow);
+  var yo='<div class="comp yo"><div class="c1"><div class="nom">'+MI.e+' — SU UNIDAD</div>'+
+    '<div class="det">'+MI.a+' m²'+(MI.p?' · '+fm(MI.p):'')+'</div></div>'+
+    (MI.p?'<div class="c2"><div class="m2">'+fm(miM2)+'/m²</div></div>':'')+'</div>';
+  var cont=document.getElementById('comps'); cont.innerHTML=filas;
+  if(MI.p){var idx=COH.frescos.filter(function(p){return p.m2<miM2}).length;
+    var nodes=cont.querySelectorAll('.comp');
+    if(nodes[idx])nodes[idx].insertAdjacentHTML('beforebegin',yo); else cont.insertAdjacentHTML('beforeend',yo);}
 
-  var nEx=Object.keys(excluidos).filter(function(k){return excluidos[k]}).length;
+  var nEx=Object.keys(excl).filter(function(k){return excl[k]}).length;
   var rc=document.getElementById('recalc');
-  if(nEx){var base=(function(){var m=COMPS.map(function(c){return c[3]});
-      return {p25:pct(m,.25),p75:pct(m,.75)}})();
+  if(nEx){var m0=COH.frescos.map(function(p){return p.m2});
     rc.className='recalc on';
-    rc.innerHTML='<b>Con los '+s.n+' comparables restantes:</b> '+fm(s.p25*YO.area)+' – '+fm(s.p75*YO.area)+
-      '<br><span style="color:var(--gris)">Con los 23 originales: '+fm(base.p25*YO.area)+' – '+fm(base.p75*YO.area)+
+    rc.innerHTML='<b>Con los '+s.n+' comparables restantes:</b> '+fm(pctl(m0.filter(function(_,i){return !excl[i]}),.25)*MI.a)+' – '+fm(s.p75*MI.a)+
+      '<br><span style="color:var(--gris)">Con los '+COH.frescos.length+' originales: '+fm(pctl(m0,.25)*MI.a)+' – '+fm(pctl(m0,.75)*MI.a)+
       ' · se excluyeron '+nEx+' sin borrarlos del registro.</span>';
   } else rc.className='recalc';
 
-  /* torre */
-  document.getElementById('torre').innerHTML=TORRE.map(function(t){
-    var tip=t[0]===0?'Mono':(t[0]===null?'s/dato':t[0]+' dorm.');
-    var pqTxt=t[5]==='incl'?'parqueo incl.':(t[5]==='no'?'sin parqueo':'parqueo s/d');
-    return '<div class="comp'+(t[6]?' yo':'')+'"><div class="c1"><div class="nom">'+tip+' · '+t[1]+' m²'+(t[6]?' — SU UNIDAD':'')+'</div>'+
-      '<div class="det">'+t[4]+' días · '+pqTxt+'</div></div>'+
-      '<div class="c2"><div class="m2">'+fm(t[3])+'/m²</div><div class="pre">'+fm(t[2])+'</div></div></div>';
-  }).join('');
-  var pos1D=TORRE.filter(function(t){return t[0]===1}).sort(function(a,b){return b[3]-a[3]});
-  var masBarato=pos1D[pos1D.length-1];
-  document.getElementById('frase-torre').innerHTML='Su unidad es la <span>2ª más cara por m²</span> de su propio edificio. '+
-    'Y hay un 1 dormitorio de '+masBarato[1]+' m² a '+fm(masBarato[2])+': <span>más grande y más barato</span> que el suyo de '+YO.area+' m² a '+fm(YO.precio)+'.';
+  document.getElementById('fuera-muestra').innerHTML = COH.viejos.length?
+    '<div style="margin-top:14px"><div class="sub" style="margin-bottom:8px"><b>Fuera de la muestra por antigüedad</b> (más de '+CONF.frescuraDias+' días publicados — se muestran pero no entran al rango):</div>'+
+    COH.viejos.map(function(p){return '<div class="comp fuera"><div class="c1"><div class="nom">'+p.e+'<span class="tag tag-old">'+p.dias+' días</span></div>'+
+      '<div class="det">'+p.a+' m² · a '+p.dist+' m</div></div><div class="c2"><div class="m2">'+fm(p.m2)+'/m²</div><div class="pre">'+fm(p.p)+'</div></div></div>'}).join('')+'</div>' : '';
+
+  /* serie */
+  var se=CONF.serie[MI.d]||CONF.serie[1];
+  document.getElementById('serie-usd').textContent=se[0].toFixed(1).replace('.',',')+'%';
+  document.getElementById('serie-bs').textContent=se[1].toFixed(1).replace('.',',')+'%';
+  document.getElementById('frase-serie').innerHTML='Si usted no cambió su precio, <span>el mercado lo movió por usted</span>: su departamento se puso '+(se[0]<0?'más caro':'más barato')+' en términos relativos.';
+
+  /* antigüedad */
+  var maxD=Math.max(MI.p?0:0, s.dias, COH.viejos.length?0:0, 1);
+  var miDias=null; /* sin aviso publicado no hay antigüedad propia */
+  document.getElementById('antig-barras').innerHTML=
+    '<div class="bar-row"><div>Sus comparables</div><div class="bar-track"><div class="bar-fill" style="width:'+Math.min(100,s.dias/2)+'%;background:var(--salvia-viva)">'+Math.round(s.dias)+' días</div></div></div>'+
+    (COH.viejos.length?'<div class="bar-row"><div>Los que quedaron fuera</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--terra)">'+Math.round(pctl(COH.viejos.map(function(p){return p.dias}),.5))+' días</div></div></div>':'');
+  document.getElementById('frase-dias').innerHTML='La mitad de sus comparables lleva <span>menos de '+Math.round(s.dias)+' días</span> publicada.'+
+    (COH.viejos.length?' Los '+COH.viejos.length+' que quedaron fuera llevan mucho más: por eso no entran al rango.':'');
+
+  /* edificio */
+  var torre=POOL.filter(function(p){return p.e===MI.e}).sort(function(a,b){return b.m2-a.m2});
+  document.getElementById('torre-titulo').textContent=torre.length>1?'Sus vecinos directos':'Su edificio';
+  if(torre.length<2){ document.getElementById('torre').innerHTML='';
+    document.getElementById('frase-torre').innerHTML='No hay otras unidades publicadas hoy en '+MI.e+': <span>sin base para comparar dentro del edificio</span>.'; }
+  else{
+    document.getElementById('torre').innerHTML=torre.map(function(t){
+      var tip=t.d===0?'Mono':t.d+' dorm.';
+      return '<div class="comp"><div class="c1"><div class="nom">'+tip+' · '+t.a+' m²</div>'+
+        '<div class="det">'+t.dias+' días · '+(t.pq==='i'?'parqueo incl.':(t.pq==='n'?'sin parqueo':'parqueo s/d'))+'</div></div>'+
+        '<div class="c2"><div class="m2">'+fm(t.m2)+'/m²</div><div class="pre">'+fm(t.p)+'</div></div></div>'}).join('');
+    var mismaTip=torre.filter(function(t){return t.d===MI.d});
+    var barato=mismaTip.length?mismaTip[mismaTip.length-1]:null;
+    var pos1=MI.p? torre.filter(function(t){return t.m2>miM2}).length+1 : null;
+    document.getElementById('frase-torre').innerHTML=
+      (MI.p?'Su unidad sería la <span>'+pos1+'ª más cara por m²</span> de las '+(torre.length+1)+' publicadas en su edificio. ':'En su edificio hay '+torre.length+' unidades publicadas. ')+
+      (barato&&barato.a>MI.a&&MI.p&&barato.p<MI.p ? 'Y hay un '+(MI.d===0?'monoambiente':MI.d+' dorm.')+' de '+barato.a+' m² a '+fm(barato.p)+': <span>más grande y más barato</span> que el suyo.' : '');
+  }
+
+  /* método */
+  document.getElementById('met-ok').innerHTML=
+    '<li><b>Tipología</b> — solo '+(MI.d===0?'monoambientes':MI.d+' dormitorio'+(MI.d>1?'s':''))+'</li>'+
+    '<li><b>Superficie</b> — entre '+Math.round(MI.a*0.8)+' y '+Math.round(MI.a*1.2)+' m² (±20% de la suya)</li>'+
+    '<li><b>Distancia</b> — todos a menos de '+COH.radio+' m (se probó desde '+CONF.radios[0]+' m y se amplió hasta encontrar '+CONF.nMin+' comparables)</li>'+
+    (COH.mismoEstado?'<li><b>Estado de obra</b> — todos '+(MI.est==='P'?'en pozo':'entregados')+', igual que el suyo</li>':'')+
+    '<li><b>Antigüedad</b> — solo avisos de hasta '+CONF.frescuraDias+' días publicados</li>';
+  var aj=CONF.pqAjuste[MI.d];
+  document.getElementById('met-aj').innerHTML= aj
+    ? '<li><b>Parqueo</b> — en '+(MI.d===0?'monoambiente':MI.d+' dorm.')+', incluirlo se asocia a <b>+'+aj.toFixed(1).replace('.',',')+'%</b> por m² (medido a nivel mercado). '+
+      (MI.pq==='n'?'Su unidad <b>no incluye parqueo</b>: a igualdad de condiciones su precio efectivo es más alto que el que muestra la barra.'
+       :(MI.pq==='i'?'Su unidad <b>lo incluye</b>, igual que '+conPq+' de los comparables.':'Su unidad no lo declara: no se puede ajustar.'))+'</li>'
+    : '<li>En esta tipología <b>ningún atributo supera la política de contraste</b> (Δ≥5% con n≥30 por lado): no se aplica ningún ajuste.</li>';
 
   sim();
 }
-function toggle(i){excluidos[i]=!excluidos[i];render();}
+function tog(i){excl[i]=!excl[i];render();}
 function sim(){
-  var v=+document.getElementById('sim').value, m2=v/YO.area;
-  var s=stats();
-  var cerca=activos().filter(function(c){return Math.abs(c[3]-m2)/m2<=0.12});
-  var dm=cerca.length>=3?Math.round(pct(cerca.map(function(c){return c[4]}),.5)):null;
-  var menores=activos().filter(function(c){return c[3]<m2}).length;
-  var pos=m2>s.p75?['sobre','sobre el rango']:(m2<s.p25?['bajo','bajo el rango']:['dentro','dentro del rango']);
+  if(!COH)return; var s=stats(); if(!s)return;
+  var v=+document.getElementById('sim').value, m2=v/MI.a;
+  var cerca=activos().filter(function(p){return Math.abs(p.m2-m2)/m2<=0.12});
+  var dm=cerca.length>=3?Math.round(pctl(cerca.map(function(p){return p.dias}),.5)):null;
+  var men=activos().filter(function(p){return p.m2<m2}).length;
+  var pos=m2>s.p75?'sobre el rango':(m2<s.p25?'bajo el rango':'dentro del rango');
   document.getElementById('sim-precio').textContent=fm(v);
-  document.getElementById('sim-detalle').innerHTML=
-    '<b>'+fm(m2)+'/m²</b> — queda <b>'+pos[1]+'</b><br>'+
-    menores+' de '+s.n+' comparables piden menos<br>'+
-    (dm!==null? 'Los comparables de ese tramo llevan <b>'+dm+' días</b> publicados (mediana de '+cerca.length+')'
-              : '<span style="opacity:.7">Menos de 3 comparables en ese tramo: sin base para estimar antigüedad</span>');
+  document.getElementById('sim-detalle').innerHTML='<b>'+fm(m2)+'/m²</b> — queda <b>'+pos+'</b><br>'+
+    men+' de '+s.n+' comparables piden menos<br>'+
+    (dm!==null?'Los de ese tramo llevan <b>'+dm+' días</b> publicados (mediana de '+cerca.length+')'
+              :'<span style="opacity:.7">Menos de 3 comparables en ese tramo: sin base para estimar antigüedad</span>');
 }
-document.getElementById('sim').addEventListener('input',sim);
-render();
+function editar(){document.getElementById('resultado').classList.add('oculto');
+  document.getElementById('s-form').classList.remove('oculto');window.scrollTo(0,0);}
+
+/* init */
+(function(){
+  var sel=document.getElementById('f-edif');
+  sel.innerHTML=EDIFS.map(function(x){return '<option>'+x.e+'</option>'}).join('');
+  sel.value=MI.e; /* explícito: el navegador restaura el estado del select al recargar y pisa el default */
+  [['f-dorms','d'],['f-pq','pq'],['f-est','est']].forEach(function(par){
+    document.querySelectorAll('#'+par[0]+' button').forEach(function(b){b.onclick=function(){
+      document.querySelectorAll('#'+par[0]+' button').forEach(function(x){x.classList.remove('on')});
+      b.classList.add('on'); MI[par[1]]=par[1]==='d'?+b.dataset.v:b.dataset.v;};});});
+  document.getElementById('f-go').onclick=calcular;
+  document.getElementById('sim').addEventListener('input',sim);
+})();
 </script>
 </body>
 </html>
