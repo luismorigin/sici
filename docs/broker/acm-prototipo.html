@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simón · Posición de precio — Lofty Island 1D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--arena:#EDE8DC;--negro:#141414;--salvia:#3A6A48;--salvia-viva:#5E9C72;--suave:#E3EBE4;
+        --linea:#D8D2C4;--gris:#6B6B66;--terra:#C0623A;--sand:#E0CE96}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#C9C3B5;font-family:'DM Sans',system-ui,sans-serif;color:var(--negro);-webkit-text-size-adjust:100%}
+  .doc{max-width:460px;margin:0 auto;background:var(--arena);min-height:100vh;box-shadow:0 0 40px rgba(0,0,0,.2)}
+  h1,h2,h3,.big{font-family:'Figtree',system-ui,sans-serif}
+
+  /* header sticky con la posición siempre a la vista */
+  .top{position:sticky;top:0;z-index:20;background:rgba(237,232,220,.97);backdrop-filter:blur(8px);
+       border-bottom:1px solid var(--linea);padding:10px 18px;display:flex;align-items:center;gap:9px}
+  .top .punto{width:9px;height:9px;border-radius:50%;background:var(--salvia);flex-shrink:0}
+  .top .marca{font-family:'Figtree';font-weight:800;font-size:14px}
+  .top .pos{margin-left:auto;font-family:'Figtree';font-weight:800;font-size:11px;padding:4px 11px;border-radius:999px}
+  .pos-dentro{background:var(--suave);color:var(--salvia)}
+  .pos-sobre{background:#F3E3DA;color:var(--terra)}
+  .pos-bajo{background:#F2EDD9;color:#8A7118}
+
+  section{padding:30px 20px;border-bottom:1px solid var(--linea)}
+  .eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--salvia);font-weight:700;margin-bottom:9px;font-family:'Figtree'}
+  h2{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.25;margin-bottom:8px}
+  p.lead{font-size:14px;color:var(--gris);line-height:1.55}
+  .big{font-size:38px;font-weight:900;letter-spacing:-.03em;line-height:1.05;margin:14px 0 4px}
+  .big small{font-size:16px;font-weight:700;color:var(--gris)}
+  .sub{font-size:13px;color:var(--gris);line-height:1.5}
+  .frase{font-family:'Figtree';font-size:17px;font-weight:700;line-height:1.4;margin-top:16px;
+         border-left:4px solid var(--salvia);padding-left:13px}
+  .frase span{color:var(--salvia)}
+
+  /* sello de calidad de la evidencia */
+  .sello{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:13px 15px;margin-bottom:18px}
+  .sello .t{font-family:'Figtree';font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gris);margin-bottom:6px}
+  .sello .l{font-size:12.5px;line-height:1.65}
+  .sello b{font-weight:700}
+
+  /* barra de rango */
+  .rango{margin:20px 0 6px}
+  .rango-track{position:relative;height:13px;background:#DDD7C9;border-radius:7px}
+  .rango-fill{position:absolute;top:0;height:100%;background:#A8C4AF;border-radius:7px}
+  .rango-med{position:absolute;top:-5px;width:3px;height:23px;background:var(--gris);border-radius:2px}
+  .rango-yo{position:absolute;top:-9px;width:0;height:0;border-left:8px solid transparent;
+            border-right:8px solid transparent;border-top:12px solid var(--negro);transform:translateX(-8px)}
+  .rango-lbl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--gris);margin-top:9px}
+
+  /* comparables */
+  .comp{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:10px 12px;margin-bottom:7px;
+        display:flex;align-items:center;gap:10px;transition:.15s}
+  .comp.excluido{opacity:.4;background:#EFEAE0}
+  .comp .c1{flex:1;min-width:0}
+  .comp .nom{font-family:'Figtree';font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .comp .det{font-size:11px;color:var(--gris);margin-top:2px}
+  .comp .c2{text-align:right;flex-shrink:0}
+  .comp .m2{font-family:'Figtree';font-weight:800;font-size:14px}
+  .comp .pre{font-size:11px;color:var(--gris)}
+  .comp .x{border:none;background:none;color:var(--gris);font-size:16px;cursor:pointer;padding:0 2px;line-height:1}
+  .comp.yo{background:var(--negro);color:var(--arena);border-color:var(--negro)}
+  .comp.yo .det,.comp.yo .pre{color:#B9B4A6}
+  .recalc{background:var(--suave);border-radius:10px;padding:11px 13px;font-size:12.5px;line-height:1.55;margin-top:10px;display:none}
+  .recalc.on{display:block}
+
+  /* comparación de barras (días) */
+  .bar-row{display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:center;margin-bottom:9px;font-size:12.5px}
+  .bar-track{background:#DDD7C9;border-radius:6px;height:28px}
+  .bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;
+            padding-right:9px;color:#fff;font-weight:800;font-size:12px;font-family:'Figtree'}
+
+  /* simulador */
+  .sim-out{background:var(--negro);color:var(--arena);border-radius:14px;padding:18px;margin:16px 0 12px;text-align:center}
+  .sim-out .v{font-family:'Figtree';font-size:32px;font-weight:900;letter-spacing:-.02em}
+  .sim-out .l{font-size:12.5px;color:#B9B4A6;line-height:1.5;margin-top:6px}
+  .sim-out .l b{color:var(--arena)}
+  input[type=range]{width:100%;accent-color:var(--salvia);margin:6px 0}
+  .sim-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--gris)}
+
+  /* método */
+  .met{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+  .met h3{font-size:13px;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+  .met ul{list-style:none}
+  .met li{font-size:12.5px;line-height:1.55;padding-left:17px;position:relative;margin-bottom:7px;color:var(--gris)}
+  .met li b{color:var(--negro)}
+  .met.ok li::before{content:"✓";position:absolute;left:0;color:var(--salvia);font-weight:700}
+  .met.aj li::before{content:"⚙";position:absolute;left:0;color:var(--gris)}
+  .met.no li::before{content:"⚠";position:absolute;left:0;color:var(--terra)}
+
+  .pie{padding:22px 20px 34px;text-align:center;background:var(--negro);color:#8A867C;font-size:11.5px;line-height:1.65}
+  .pie b{color:var(--arena);font-family:'Figtree'}
+  .mock{position:fixed;top:8px;left:50%;transform:translateX(-50%);background:var(--negro);color:var(--arena);
+        font-size:9.5px;letter-spacing:.14em;padding:4px 12px;border-radius:999px;z-index:50;opacity:.9}
+</style>
+</head>
+<body>
+<div class="mock">PROTOTIPO · DATA REAL SHADOW 3-AGO-2026</div>
+<div class="doc">
+
+<div class="top">
+  <div class="punto"></div><span class="marca">Simón</span>
+  <span class="pos" id="chip-top"></span>
+</div>
+
+<!-- ══════ 1 · LA RESPUESTA ══════ -->
+<section>
+  <div class="eyebrow">Posición de precio</div>
+  <h2>Lofty Island · 1 dormitorio</h2>
+  <p class="lead">51 m² · Equipetrol Oeste · publicado hace 408 días</p>
+
+  <div class="sello" style="margin-top:18px">
+    <div class="t">Base de la comparación</div>
+    <div class="l" id="sello-txt"></div>
+  </div>
+
+  <div class="sub">Lo que hoy se pide por unidades como la suya:</div>
+  <div class="big" id="rango-txt"></div>
+  <div class="sub" id="rango-nivel"></div>
+
+  <div class="rango">
+    <div class="rango-track">
+      <div class="rango-fill" id="r-fill"></div>
+      <div class="rango-med" id="r-med"></div>
+      <div class="rango-yo" id="r-yo"></div>
+    </div>
+    <div class="rango-lbl"><span id="r-lo"></span><span>▲ su precio</span><span id="r-hi"></span></div>
+  </div>
+
+  <p class="frase" id="frase-1"></p>
+  <p class="sub" style="margin-top:14px"><b>Esto no es una tasación.</b> Es la posición de su precio dentro de la oferta publicada comparable, hoy.</p>
+</section>
+
+<!-- ══════ 2 · CONTRA QUIÉNES ══════ -->
+<section>
+  <div class="eyebrow">02 · La evidencia</div>
+  <h2>Contra quiénes se compara</h2>
+  <p class="lead">Los avisos reales que hoy compiten con el suyo. Si alguno no es comparable, quítelo — el documento recalcula y muestra ambos números.</p>
+  <div id="comps" style="margin-top:16px"></div>
+  <div class="recalc" id="recalc"></div>
+</section>
+
+<!-- ══════ 3 · EL TIEMPO ══════ -->
+<section style="background:var(--negro);color:var(--arena);border-bottom:none">
+  <div class="eyebrow" style="color:#9CC7A6">03 · Lo que cambió sin que usted lo tocara</div>
+  <h2>El mercado se movió</h2>
+  <p class="lead" style="color:#B9B4A6">Desde enero de 2026, el m² pedido del 1 dormitorio en Equipetrol:</p>
+
+  <div style="display:flex;gap:10px;margin:18px 0 8px">
+    <div style="flex:1;background:#1F1F1D;border-radius:12px;padding:14px">
+      <div style="font-family:Figtree;font-size:26px;font-weight:900;color:#D98B63">−15,1%</div>
+      <div style="font-size:11.5px;color:#8A867C;margin-top:3px">en dólares</div>
+    </div>
+    <div style="flex:1;background:#1F1F1D;border-radius:12px;padding:14px">
+      <div style="font-family:Figtree;font-size:26px;font-weight:900;color:#9CC7A6">−5,6%</div>
+      <div style="font-size:11.5px;color:#8A867C;margin-top:3px">en bolivianos</div>
+    </div>
+  </div>
+  <p class="sub" style="color:#8A867C">La diferencia es el tipo de cambio: subió 11,3% en el mismo período.</p>
+
+  <p class="frase" style="border-color:var(--salvia-viva);color:var(--arena);margin-top:20px">
+    Usted no subió su precio. <span>El mercado bajó.</span> Su departamento se puso más caro solo.</p>
+  <p class="sub" style="color:#8A867C;margin-top:14px">Serie reconstruida bajo una sola metodología de tipo de cambio, error de método ±7%. Sirve la dirección, no el nivel exacto de un día.</p>
+</section>
+
+<!-- ══════ 4 · LA ANTIGÜEDAD ══════ -->
+<section>
+  <div class="eyebrow">04 · El tiempo publicado</div>
+  <h2>Hace cuánto está en el mercado</h2>
+  <div style="margin:18px 0 4px">
+    <div class="bar-row"><div><b>Su aviso</b></div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--terra)">408 días</div></div></div>
+    <div class="bar-row"><div>Sus comparables</div><div class="bar-track"><div class="bar-fill" style="width:21%;background:var(--salvia-viva)">84</div></div></div>
+  </div>
+  <p class="frase" id="frase-dias"></p>
+  <p class="sub" style="margin-top:14px"><b>Cómo leerlo:</b> es la antigüedad del aviso publicado, <b>no</b> el tiempo que tarda en venderse. Admite dos lecturas — no rota, o se re-publicó y el contador volvió a cero. Ninguna de las dos es buena noticia a los 408 días.</p>
+</section>
+
+<!-- ══════ 5 · SU PROPIO EDIFICIO ══════ -->
+<section>
+  <div class="eyebrow">05 · Dentro de su edificio</div>
+  <h2>Sus vecinos directos</h2>
+  <p class="lead">En Lofty Island hay 11 unidades publicadas hoy. Ordenadas por precio del m²:</p>
+  <div id="torre" style="margin-top:16px"></div>
+  <p class="frase" id="frase-torre"></p>
+  <p class="sub" style="margin-top:14px">⚠️ Si todas las unidades del edificio las publica el mismo desarrollador o la misma agencia, son <b>una lista de precios repetida</b>, no observaciones independientes. Aun así, es contra ellas que su comprador va a comparar.</p>
+</section>
+
+<!-- ══════ 6 · SIMULADOR ══════ -->
+<section style="background:var(--suave);border-bottom-color:#C7D4C9">
+  <div class="eyebrow">06 · Simulador</div>
+  <h2>Mueva el precio</h2>
+  <p class="lead">Vea dónde queda su unidad y cuánto tiempo llevan publicados los comparables de ese tramo.</p>
+  <div class="sim-out">
+    <div class="v" id="sim-precio"></div>
+    <div class="l" id="sim-detalle"></div>
+  </div>
+  <input type="range" id="sim" min="65000" max="120000" step="500" value="91584">
+  <div class="sim-lbl"><span>$65.000</span><span>$120.000</span></div>
+  <p class="sub" style="margin-top:14px"><b>Qué NO dice esto:</b> no promete que a un precio dado se venda en X días. Muestra la antigüedad de los avisos comparables en ese tramo — que es un indicio, no una predicción.</p>
+</section>
+
+<!-- ══════ 7 · CÓMO SE COMPARÓ ══════ -->
+<section>
+  <div class="eyebrow">07 · Método</div>
+  <h2>Cómo se comparó</h2>
+
+  <div class="met ok" style="margin-top:16px">
+    <h3>Controlado por construcción</h3>
+    <ul>
+      <li><b>Tipología</b> — solo 1 dormitorio</li>
+      <li><b>Superficie</b> — entre 41 y 61 m² (±20% del suyo)</li>
+      <li><b>Distancia</b> — todos a menos de 500 m de su edificio</li>
+    </ul>
+  </div>
+
+  <div class="met aj">
+    <h3>Ajustable con evidencia</h3>
+    <ul>
+      <li><b>Parqueo</b> — en 1 dormitorio, incluirlo se asocia a <b>+8,6%</b> por m² (medido sobre 72 unidades: 39 con parqueo vs 33 sin). Su aviso <b>no incluye parqueo</b>: comparado a igualdad de condiciones, su precio efectivo es más alto que el que muestra la barra.</li>
+    </ul>
+  </div>
+
+  <div class="met no">
+    <h3>No ajustable — declarado</h3>
+    <ul>
+      <li><b>Amoblado</b> — 0 de 394 avisos de venta lo declaran. No sabemos si algún precio incluye muebles.</li>
+      <li><b>Amenidades</b> — la señal se contradice entre tipologías (ruido de composición): no se ajusta.</li>
+      <li><b>Piso y vista</b> — solo 46% de los avisos declara el piso.</li>
+      <li><b>Precios de cierre</b> — Bolivia no tiene registro público de transacciones. Todo acá son precios <b>pedidos</b>.</li>
+    </ul>
+  </div>
+
+  <p class="sub"><b>Fuente:</b> 396 avisos de venta de Equipetrol verificados uno por uno contra el portal la madrugada del 3-ago-2026, deduplicados, con un solo tipo de cambio y anclados a su edificio. Cobertura: Equipetrol. Fuera de esa zona, este documento no se emite.</p>
+</section>
+
+<div class="pie">
+  Preparado por <b>[Nombre del broker]</b><br>
+  Datos verificados por <b>Simón · Inteligencia Inmobiliaria</b><br>
+  <span style="display:block;margin-top:9px;opacity:.75">Nadie paga por aparecer mejor en este documento.<br>El mismo informe se le entrega a quien compra y a quien vende.</span>
+</div>
+</div>
+
+<script>
+/* ══════ DATA REAL — shadow, corte 3-ago-2026 ══════ */
+var YO={edificio:'Lofty Island',area:51,precio:91584,m2:1800,dias:408,pq:'no',zona:'Equipetrol Oeste'};
+/* comparables: [edificio, m², precio, $/m², días, parqueo, distancia_m] */
+var COMPS=[
+['SKY Luxury',42,50037,1191,36,'sd',492],['Torre Real',48,64500,1335,81,'incl',347],
+['SÖLO Industrial',47,70000,1486,275,'sd',485],['Vertical Güemes',50,75968,1510,19,'sd',390],
+['HH Chuubi',49,75000,1520,330,'no',337],['SKY Luxury',42,64444,1534,41,'no',492],
+['Vertical Güemes',50,77981,1550,27,'sd',403],['Vertical Güemes',50,78484,1560,27,'sd',403],
+['HH Chuubi',48,78000,1620,157,'incl',341],['HH Chuubi',55,90600,1636,157,'incl',341],
+['Condominio Stanza',58,95000,1650,14,'sd',344],['Domus Infinity',52,87890,1700,51,'sd',492],
+['HH Chuubi',54,92600,1718,157,'incl',341],['Condominio Stanza',47,83046,1750,128,'sd',352],
+['TERRAZO',50,87000,1751,104,'sd',492],['Uptown Drei',53,95000,1792,119,'sd',218],
+['Uptown Drei',53,100000,1902,10,'incl',492],['Sky Tower',55,110000,2000,58,'incl',379],
+['NanoTec',44,88000,2000,84,'incl',492],['Spazios Edén',42,92931,2213,121,'sd',492],
+['Golden Tower',51,115000,2255,128,'sd',492],['Sky Tower',55,135000,2455,83,'incl',372],
+['Eurodesign Soho',50,130800,2611,135,'incl',492]];
+/* su torre: [dorms, m², precio, $/m², días, parqueo, esYo] */
+var TORRE=[[0,36,69099,1940,182,'incl',false],[1,51,91584,1800,408,'no',true],
+[null,70,122000,1749,408,'no',false],[1,70,118600,1700,408,'no',false],
+[2,101,167240,1648,182,'no',false],[2,101,167239,1648,182,'incl',false],
+[2,101,167000,1646,408,'no',false],[0,43,62843,1450,14,'sd',false],
+[1,70,97706,1400,14,'sd',false],[1,70,85000,1218,182,'no',false],[1,68,83000,1217,182,'incl',false]];
+var CONF={nMinBase:5, pqAjustePct:8.6};
+
+var excluidos={};
+function fm(n){return '$'+Math.round(n).toLocaleString('es-BO').replace(/,/g,'.')}
+function pct(arr,q){var s=arr.slice().sort(function(a,b){return a-b});var i=q*(s.length-1);
+  var lo=Math.floor(i),hi=Math.ceil(i);return lo===hi?s[lo]:s[lo]+(s[hi]-s[lo])*(i-lo);}
+function activos(){return COMPS.filter(function(c,i){return !excluidos[i]})}
+function stats(){var a=activos(),m=a.map(function(c){return c[3]});
+  return {n:a.length,p25:pct(m,.25),p50:pct(m,.5),p75:pct(m,.75),
+    dias:pct(a.map(function(c){return c[4]}),.5),
+    menores:m.filter(function(v){return v<YO.m2}).length};}
+function posicion(s){return YO.m2>s.p75?['sobre','SOBRE el rango']:(YO.m2<s.p25?['bajo','BAJO el rango']:['dentro','DENTRO del rango'])}
+
+function render(){
+  var s=stats(), pos=posicion(s);
+  var lo=s.p25*YO.area, hi=s.p75*YO.area, med=s.p50*YO.area;
+
+  var chip=document.getElementById('chip-top');
+  chip.textContent=pos[1]; chip.className='pos pos-'+pos[0];
+
+  var conPq=activos().filter(function(c){return c[5]==='incl'}).length;
+  var sdPq=activos().filter(function(c){return c[5]==='sd'}).length;
+  document.getElementById('sello-txt').innerHTML=
+    '<b>'+s.n+' avisos comparables</b> a menos de 500 m · mismo tipo (1 dorm.) · superficie entre 41 y 61 m²<br>'+
+    '<span style="color:var(--gris)">De ellos: '+conPq+' declaran parqueo incluido · '+sdPq+' no declaran</span>';
+
+  document.getElementById('rango-txt').innerHTML=fm(lo)+' <small>a</small> '+fm(hi);
+  document.getElementById('rango-nivel').textContent='Rango pedido (percentil 25 a 75) para una unidad de '+YO.area+' m² · mediana '+fm(med);
+
+  var min=Math.min(lo,YO.precio)*.94, max=Math.max(hi,YO.precio)*1.06;
+  function p(v){return Math.max(0,Math.min(100,100*(v-min)/(max-min)))}
+  document.getElementById('r-fill').style.left=p(lo)+'%';
+  document.getElementById('r-fill').style.width=(p(hi)-p(lo))+'%';
+  document.getElementById('r-med').style.left=p(med)+'%';
+  document.getElementById('r-yo').style.left=p(YO.precio)+'%';
+  document.getElementById('r-lo').textContent=fm(lo);
+  document.getElementById('r-hi').textContent=fm(hi);
+
+  document.getElementById('frase-1').innerHTML='Usted pide <span>'+fm(YO.precio)+'</span>. '+
+    s.menores+' de los '+s.n+' comparables piden menos por metro cuadrado que usted.';
+
+  document.getElementById('frase-dias').innerHTML='Su aviso lleva <span>'+Math.round(YO.dias/s.dias)+' veces más tiempo</span> publicado que la mediana de sus comparables ('+Math.round(s.dias)+' días).';
+
+  /* comparables */
+  var yoRow='<div class="comp yo"><div class="c1"><div class="nom">'+YO.edificio+' — SU UNIDAD</div>'+
+    '<div class="det">'+YO.area+' m² · '+YO.dias+' días · sin parqueo</div></div>'+
+    '<div class="c2"><div class="m2">'+fm(YO.m2)+'/m²</div><div class="pre">'+fm(YO.precio)+'</div></div></div>';
+  var filas=COMPS.map(function(c,i){
+    var pqTxt=c[5]==='incl'?'parqueo incl.':(c[5]==='no'?'sin parqueo':'parqueo s/d');
+    return '<div class="comp'+(excluidos[i]?' excluido':'')+'"><div class="c1">'+
+      '<div class="nom">'+c[0]+'</div><div class="det">'+c[1]+' m² · '+c[4]+' días · '+pqTxt+' · a '+c[6]+' m</div></div>'+
+      '<div class="c2"><div class="m2">'+fm(c[3])+'/m²</div><div class="pre">'+fm(c[2])+'</div></div>'+
+      '<button class="x" onclick="toggle('+i+')" title="excluir/incluir">'+(excluidos[i]?'↺':'✕')+'</button></div>';
+  }).join('');
+  /* la unidad propia se inserta en su posición por $/m² */
+  var todas=COMPS.map(function(c,i){return {html:filas.split('</div></div>')[0],m2:c[3],i:i}});
+  document.getElementById('comps').innerHTML=filas;
+  var cont=document.getElementById('comps');
+  var idx=COMPS.filter(function(c){return c[3]<YO.m2}).length;
+  cont.insertAdjacentHTML('afterbegin','');
+  var nodes=cont.querySelectorAll('.comp');
+  if(nodes[idx]) nodes[idx].insertAdjacentHTML('beforebegin',yoRow); else cont.insertAdjacentHTML('beforeend',yoRow);
+
+  var nEx=Object.keys(excluidos).filter(function(k){return excluidos[k]}).length;
+  var rc=document.getElementById('recalc');
+  if(nEx){var base=(function(){var m=COMPS.map(function(c){return c[3]});
+      return {p25:pct(m,.25),p75:pct(m,.75)}})();
+    rc.className='recalc on';
+    rc.innerHTML='<b>Con los '+s.n+' comparables restantes:</b> '+fm(s.p25*YO.area)+' – '+fm(s.p75*YO.area)+
+      '<br><span style="color:var(--gris)">Con los 23 originales: '+fm(base.p25*YO.area)+' – '+fm(base.p75*YO.area)+
+      ' · se excluyeron '+nEx+' sin borrarlos del registro.</span>';
+  } else rc.className='recalc';
+
+  /* torre */
+  document.getElementById('torre').innerHTML=TORRE.map(function(t){
+    var tip=t[0]===0?'Mono':(t[0]===null?'s/dato':t[0]+' dorm.');
+    var pqTxt=t[5]==='incl'?'parqueo incl.':(t[5]==='no'?'sin parqueo':'parqueo s/d');
+    return '<div class="comp'+(t[6]?' yo':'')+'"><div class="c1"><div class="nom">'+tip+' · '+t[1]+' m²'+(t[6]?' — SU UNIDAD':'')+'</div>'+
+      '<div class="det">'+t[4]+' días · '+pqTxt+'</div></div>'+
+      '<div class="c2"><div class="m2">'+fm(t[3])+'/m²</div><div class="pre">'+fm(t[2])+'</div></div></div>';
+  }).join('');
+  var pos1D=TORRE.filter(function(t){return t[0]===1}).sort(function(a,b){return b[3]-a[3]});
+  var masBarato=pos1D[pos1D.length-1];
+  document.getElementById('frase-torre').innerHTML='Su unidad es la <span>2ª más cara por m²</span> de su propio edificio. '+
+    'Y hay un 1 dormitorio de '+masBarato[1]+' m² a '+fm(masBarato[2])+': <span>más grande y más barato</span> que el suyo de '+YO.area+' m² a '+fm(YO.precio)+'.';
+
+  sim();
+}
+function toggle(i){excluidos[i]=!excluidos[i];render();}
+function sim(){
+  var v=+document.getElementById('sim').value, m2=v/YO.area;
+  var s=stats();
+  var cerca=activos().filter(function(c){return Math.abs(c[3]-m2)/m2<=0.12});
+  var dm=cerca.length>=3?Math.round(pct(cerca.map(function(c){return c[4]}),.5)):null;
+  var menores=activos().filter(function(c){return c[3]<m2}).length;
+  var pos=m2>s.p75?['sobre','sobre el rango']:(m2<s.p25?['bajo','bajo el rango']:['dentro','dentro del rango']);
+  document.getElementById('sim-precio').textContent=fm(v);
+  document.getElementById('sim-detalle').innerHTML=
+    '<b>'+fm(m2)+'/m²</b> — queda <b>'+pos[1]+'</b><br>'+
+    menores+' de '+s.n+' comparables piden menos<br>'+
+    (dm!==null? 'Los comparables de ese tramo llevan <b>'+dm+' días</b> publicados (mediana de '+cerca.length+')'
+              : '<span style="opacity:.7">Menos de 3 comparables en ese tramo: sin base para estimar antigüedad</span>');
+}
+document.getElementById('sim').addEventListener('input',sim);
+render();
+</script>
+</body>
+</html>
