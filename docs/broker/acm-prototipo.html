@@ -74,6 +74,7 @@
     align-items:center;justify-content:center;font-size:8.5px;color:var(--gris);text-align:center;line-height:1.25;padding:3px}
   .comp .ver{display:inline-block;font-size:10px;font-weight:700;font-family:'Figtree';color:var(--salvia);
     text-decoration:none;margin-top:3px;border-bottom:1px dotted var(--salvia)}
+  .comp .ver2{color:var(--gris);border-bottom-color:var(--gris);margin-left:11px;font-weight:400}
   /* sensibilidad al radio */
   .rad{display:flex;gap:6px;margin:14px 0 4px}
   .rad div{flex:1;background:#fff;border:1px solid var(--linea);border-radius:10px;padding:9px 7px;text-align:center}
@@ -150,7 +151,10 @@
   .reco{background:var(--negro);color:var(--arena);border-radius:14px;padding:16px 17px;margin-top:18px}
   .reco .rt{font-family:'Figtree';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#9CC7A6;margin-bottom:7px}
   .reco .rp{font-family:'Figtree';font-size:27px;font-weight:900;letter-spacing:-.02em}
-  .reco .rx{font-size:13.5px;line-height:1.6;margin-top:8px;color:#DCD7C9}
+  .reco .ru{font-size:11.5px;line-height:1.5;margin-top:6px;color:#9CC7A6}
+  .reco .ru.fuera{color:#E0A07C}
+  .reco .ru b{color:inherit}
+  .reco .rx{font-size:13.5px;line-height:1.6;margin-top:10px;color:#DCD7C9;padding-top:10px;border-top:1px solid #333029}
   .reco .rf{font-size:10.5px;color:#8A867C;margin-top:12px;padding-top:9px;border-top:1px solid #333029;line-height:1.5}
   .panel{background:#F5F1E6;border:1px dashed var(--sand);border-radius:12px;padding:14px 15px;margin-top:18px}
   .panel .pt{font-family:'Figtree';font-weight:800;font-size:12.5px;margin-bottom:3px}
@@ -257,6 +261,8 @@
   <p class="lead" id="r-subtitulo"></p>
   <button class="lapiz solo-broker" onclick="editar()">✎ cambiar los datos</button>
 
+  <div id="aviso-estado"></div>
+
   <div id="bloque-rango">
     <div class="sub">Lo que hoy se pide por unidades como la suya:</div>
     <div class="big" id="rango-txt"></div>
@@ -280,7 +286,7 @@
     <h3 style="font-size:14px;margin:22px 0 4px">¿A qué precio quedaría dónde?</h3>
     <p class="sub" style="margin-bottom:10px">El rango no decide por usted. Esto traduce el rango a la posición que elija:</p>
     <div id="objetivos"></div>
-    <p class="sub" style="font-size:11.5px;margin-top:8px">No es una recomendación de precio: es la equivalencia entre precio y posición dentro de su cohorte, hoy.</p>
+    <p class="sub" style="font-size:11.5px;margin-top:8px">No es una recomendación de precio: es qué lugar ocupa cada precio entre los avisos que hoy compiten con el suyo.</p>
 
     <div id="difs-bloque"></div>
 
@@ -392,7 +398,7 @@
     <li><b>Los días publicados no siempre son independientes.</b> Marcamos <span class="tag tag-rep">cargado en bloque</span> cuando 3 o más unidades del mismo edificio muestran <b>exactamente</b> la misma antigüedad. Puede ser un lanzamiento (subieron todas juntas el primer día) o una re-publicación (se bajaron y volvieron a subir, y el contador arrancó de cero). En los dos casos significa lo mismo para leer el cuadro: <b>esos avisos cuentan el tiempo del lote, no el de cada unidad</b> — no son N observaciones distintas del mismo fenómeno. En esta muestra el patrón aparece en <b>20% de los avisos</b>.</li>
     <li><b>La fecha de entrega es la que declara el aviso</b>, no un compromiso verificado con el desarrollador. Cuando esa fecha <span style="color:var(--terra)">ya pasó</span> lo decimos: significa que el aviso no se actualizó, no necesariamente que la obra esté atrasada.</li>
     <li><b>Las fotos</b> — son de <b>un aviso</b> de ese edificio, no necesariamente de la unidad comparada. Sirven para reconocer el edificio, no para juzgar el interior. El 63% de los avisos tiene foto publicada; el resto aparece sin imagen.</li>
-    <li><b>Los enlaces van al aviso original</b> en el portal donde está publicado (C21 o Remax). No le pedimos que nos crea: cada comparable se puede verificar en su fuente. Si el aviso fue dado de baja después de nuestro corte, el enlace puede no abrir — esa es la diferencia entre un dato verificado anoche y uno de hoy.</li>
+    <li><b>Cada comparable tiene dos enlaces.</b> <b>Ver la ficha</b> abre esa unidad en el feed de Simón, con sus fotos, su ubicación y su contexto de mercado. <b>Verificar en C21/Remax</b> abre el aviso original: no le pedimos que nos crea, cada dato se puede contrastar en su fuente. Si el aviso fue dado de baja después de nuestro corte, ese segundo enlace puede no abrir — esa es la diferencia entre un dato verificado anoche y uno de hoy.</li>
     <li><b>El retorno de alquiler es bruto y sobre avisos</b>, no sobre contratos firmados. Se calcula con rentas <b>pedidas</b> de unidades comparables, antes de expensas, vacancia, impuestos y comisión. Además, en alquiler el amoblado <b>sí</b> se declara y empuja la renta hacia arriba: por eso mostramos cuántos de los comparables son amoblados. Del resto no afirmamos que no lo sean — el aviso simplemente no lo dice.</li>
   </ul></div></details>
 
@@ -1161,6 +1167,362 @@ var URLS={};URLS_RAW.trim().split('\n').forEach(function(l){var f=l.split('|');
   URLS[f[0]]=(f[1].charAt(0)==='c'?'https://c21.com.bo/propiedad/':'https://remax.bo/propiedad/')+f[1].slice(1);});
 function avisoDe(p){return URLS[Math.round(p.p)+'-'+Math.round(p.a)]||null;}
 
+/* id de la propiedad en el feed de Simón → simonbo.com/ventas?id=N abre su ficha.
+   El enlace PRINCIPAL va acá (ficha completa, fotos, contexto de mercado, y el broker
+   no pierde a su cliente en el portal); el del portal queda como verificación. */
+var IDS_RAW=`70000-47|20
+69000-31|30
+99750-67|31
+125000-73|35
+91584-51|43
+118600-70|49
+167000-101|52
+68000-36|56
+65000-42|69
+88348-43|172
+150000-67|200
+103448-52|324
+67240-34|348
+77300-56|368
+142212-92|408
+66000-42|465
+188575-75|621
+167240-101|823
+67000-41|893
+60255-54|908
+108000-72|910
+57565-53|916
+82950-54|918
+141000-89|920
+132750-89|923
+133720-67|967
+102647-62|968
+76000-37|971
+85000-59|977
+195000-131|980
+74119-40|1005
+49500-37|1010
+137284-60|1021
+218500-124|1040
+108077-58|1057
+69882-37|1058
+59270-32|1059
+78585-40|1061
+75300-38|1063
+123045-63|1064
+65846-34|1068
+89709-56|1069
+59671-37|1070
+78509-49|1071
+200000-124|1096
+40000-30|1120
+145000-76|1140
+67000-35|1160
+53000-39|1162
+139000-66|1188
+88500-56|1189
+223391-106|1227
+118000-73|1228
+88250-36|1252
+110000-66|1274
+114744-82|1283
+69825-35|1285
+130800-50|1286
+292500-117|1313
+75000-48|1315
+83046-47|1325
+89500-63|1332
+69000-52|1335
+112500-51|1344
+91500-62|1373
+88300-71|1374
+116600-64|1375
+63000-56|1376
+115000-110|1380
+99000-52|1400
+54000-31|1411
+159000-127|1412
+163500-84|1413
+87750-45|1414
+65900-34|1420
+127000-65|1427
+115000-51|1430
+125000-56|1432
+51126-45|1441
+88100-44|1540
+200000-102|1552
+179000-75|1553
+165470-87|1566
+137120-73|1567
+158660-83|1568
+101200-52|1569
+110000-55|1570
+162000-85|1572
+85000-42|1587
+58900-39|1596
+133700-67|1597
+118749-56|1598
+92931-42|1599
+87000-50|1615
+145000-116|1656
+97000-52|1668
+75000-60|1673
+209799-104|1674
+81000-63|1678
+81500-40|1688
+95000-53|1699
+56000-33|1710
+66000-35|1711
+102000-50|1718
+84000-33|1724
+188000-121|1728
+147495-98|1730
+131400-88|1731
+84000-49|1734
+170000-107|1736
+70000-56|1754
+174000-86|1758
+160000-83|1763
+67385-40|1764
+68200-44|1777
+152520-106|1779
+112600-61|1795
+160000-109|1800
+72414-41|1802
+130000-78|1810
+170000-80|1826
+133000-84|1828
+78000-48|1838
+90600-55|1839
+92600-54|1840
+95000-51|1841
+88000-44|1854
+62000-39|1856
+133650-81|1864
+130000-79|1869
+69099-36|1870
+83000-68|1871
+60000-30|1875
+145000-71|1876
+144573-87|1897
+97510-51|1899
+57570-37|1903
+100760-52|1905
+135000-55|1908
+70000-37|1909
+135000-62|1910
+65000-33|1923
+82500-30|1924
+56711-35|1926
+120000-72|1927
+60990-41|1928
+85000-35|1936
+70459-46|1937
+223000-116|1939
+53650-37|1949
+105000-41|1950
+138000-85|1960
+98000-54|2388
+65000-36|2394
+53000-34|2396
+210000-149|2408
+55000-36|2421
+220000-116|2422
+89000-78|2423
+60000-43|2424
+150000-65|2426
+208000-102|2429
+79000-40|2430
+64500-48|2433
+100000-68|2434
+99500-53|2487
+110000-52|2596
+145000-80|2598
+141000-90|2626
+150400-90|2628
+140000-71|2639
+130000-58|2654
+79464-66|2656
+73000-32|2666
+112850-61|2669
+185000-109|2670
+280000-154|2671
+42103-32|2675
+141600-89|2677
+107759-59|2696
+102000-57|2699
+68000-38|2715
+209000-149|2732
+119000-68|2734
+147000-90|2761
+128888-79|2770
+156000-94|2771
+275000-152|2774
+80000-49|2775
+190000-95|2776
+75000-49|2780
+70000-48|2781
+110000-55|2798
+105000-51|2799
+119557-74|2818
+115600-68|2819
+75000-36|2820
+227702-105|2832
+206000-70|2833
+198000-113|2870
+55000-31|2871
+125000-63|3339
+188000-105|3340
+75000-49|3342
+145000-88|3372
+75431-36|3374
+126300-88|3408
+135000-109|3409
+50700-33|3410
+165948-101|3434
+64444-42|3435
+138000-95|3436
+136621-74|3454
+74880-48|3456
+98600-48|3462
+65250-44|3463
+138000-85|3465
+86000-59|3493
+110632-48|3518
+71121-37|3538
+160000-74|3540
+52000-33|3541
+52600-35|3542
+68820-33|3565
+77000-49|3577
+90386-46|3579
+164477-86|3580
+90842-44|3581
+88244-43|3582
+56475-38|3583
+180000-85|3586
+100000-64|3605
+140000-107|3606
+76300-38|3607
+98500-51|3650
+256058-144|3656
+50037-42|3657
+87644-63|3658
+119000-74|3659
+52609-65|3660
+130000-76|3685
+70000-36|3686
+75883-39|3689
+95000-66|3690
+58500-35|3715
+58000-35|3719
+172500-95|3720
+111332-66|3721
+78000-36|3738
+73000-41|3739
+87890-52|3740
+67000-46|3741
+77443-33|3745
+163120-108|3746
+75000-36|3776
+139000-90|3778
+141000-90|3779
+120000-76|3780
+102000-63|3781
+88000-41|8000012
+59500-36|8000014
+57000-35|8000017
+55500-34|8000019
+65000-40|8000026
+80600-47|8000064
+180000-100|8000067
+71500-42|8000068
+75255-35|8000070
+132000-72|8000073
+58000-35|8000076
+52500-32|8000080
+72500-44|8000084
+61000-37|8000087
+97000-53|8000093
+104000-57|8000094
+86500-43|8000096
+85500-43|8000097
+180000-93|8000098
+108000-58|8000099
+47000-32|8000100
+70000-51|8000101
+140000-90|8000102
+72019-40|8000106
+82590-47|8000109
+55000-35|8000110
+84000-101|8000111
+133000-81|8000114
+120296-86|8000117
+85000-41|8000127
+84370-48|8000131
+71500-43|8000133
+160000-84|8000154
+55000-38|8000157
+79000-43|8000158
+74000-40|8000159
+120000-84|8000173
+97706-70|8000174
+62843-43|8000175
+50000-37|8000180
+95000-58|8000186
+135000-80|8000199
+141450-75|8000204
+156900-79|8000205
+73100-38|8000206
+133650-75|8000207
+63400-38|8000208
+70800-38|8000209
+135250-75|8000210
+74850-38|8000211
+83500-44|8000212
+78000-63|8000213
+75050-37|8000214
+69950-38|8000215
+76750-42|8000216
+68650-36|8000217
+62650-38|8000218
+73950-43|8000219
+150000-115|8000253
+105000-62|8000255
+78484-50|8000259
+77981-50|8000260
+100000-53|8000274
+90000-50|8000275
+71000-44|8000283
+70402-31|8000297
+75968-50|8000299
+72000-36|8000303
+90000-56|8000307
+118000-80|8000308
+47100-34|8000309
+118000-62|8000324
+79000-47|8000327
+128000-60|8000328
+85000-70|8000503
+93000-58|8000504
+95079-107|8000505
+125000-75|8000506
+107407-65|8000522
+71485-48|8000587
+75000-40|8000590
+58975-47|8000606
+75000-31|8000616
+149900-103|8000617
+131600-60|8000618
+88900-47|8000619
+69684-32|8000620
+98000-51|8000668
+55000-40|8000669
+86500-54|8000670`;
+var IDS={};IDS_RAW.trim().split('\n').forEach(function(l){var f=l.split('|');if(!IDS[f[0]])IDS[f[0]]=f[1];});
+function fichaDe(p){var id=IDS[Math.round(p.p)+'-'+Math.round(p.a)];
+  return id? 'https://simonbo.com/ventas?id='+id : null;}
+
 /* fecha de ENTREGA declarada en los avisos de preventa — clave precio-area */
 var ENTREGAS_RAW=`130000-58|Febrero 2026
 98500-51|Septiembre 2026
@@ -1450,11 +1812,25 @@ function publicar(){
   window.scrollTo(0,0);
 }
 function volverEditar(){MODO='broker'; document.body.classList.add('broker'); barraModo(); render(); window.scrollTo(0,0);}
-/* la recomendación se re-pinta sola mientras el broker escribe — sin tocar el resto del DOM */
+/* la recomendación se re-pinta sola mientras el broker escribe — sin tocar el resto del DOM.
+   🔴 Si el precio recomendado cae FUERA del rango medido, el documento lo dice. No para
+   corregir al broker (puede tener razón: él ve lo que el dato no ve), sino porque un
+   número presentado al lado de un rango, sin decir que está afuera, se lee como si
+   estuviera adentro. */
 function renderReco(){
+  var ubic='';
+  if(MI.recoP && COH){ var s=stats();
+    if(s){ var lo=s.p25*MI.a, hi=s.p75*MI.a, m2=MI.recoP/MI.a, pr=posDe(m2,s);
+      var d=MI.recoP>hi ? 100*(MI.recoP/hi-1) : (MI.recoP<lo ? 100*(1-MI.recoP/lo) : 0);
+      ubic = pr[0]==='dentro'
+        ? '<div class="ru">Cae <b>dentro</b> del rango medido ('+fm(lo)+' – '+fm(hi)+').</div>'
+        : '<div class="ru fuera">Cae <b>'+(MI.recoP>hi?'por encima':'por debajo')+'</b> del rango medido ('+fm(lo)+' – '+fm(hi)+') — un <b>'+d.toFixed(0)+'%</b> '+(MI.recoP>hi?'más que el techo':'menos que el piso')+'. '+
+          (MI.recoP>hi?'Pedir arriba del rango es una apuesta legítima si la unidad tiene algo que las otras no; el costo esperado es tiempo.'
+                      :'Salir abajo del piso acelera, y deja valor sobre la mesa si no había apuro.')+'</div>';
+    }}
   document.getElementById('reco-bloque').innerHTML = (MI.recoP||MI.recoT)
     ? '<div class="reco"><div class="rt">Recomendación de '+MI.broker+'</div>'+
-      (MI.recoP?'<div class="rp">'+fm(MI.recoP)+'</div>':'')+
+      (MI.recoP?'<div class="rp">'+fm(MI.recoP)+'</div>':'')+ubic+
       (MI.recoT?'<div class="rx">'+MI.recoT.replace(/[<>]/g,'')+'</div>':'')+
       '<div class="rf">Este bloque es el <b style="color:var(--arena)">criterio profesional de '+MI.broker+'</b>, no una medición de Simón. Simón informa el rango de la oferta publicada; la recomendación de precio la firma quien conoce la unidad y al comprador.</div></div>'
     : '';
@@ -1504,7 +1880,16 @@ function armarCohort(){
   }
   return null;
 }
-/* cohorte de ALQUILER — misma cascada de radios, misma tipología y superficie.
+/* ¿cuánto vale, medido, la diferencia preventa vs entregado EN ESA TIPOLOGÍA?
+   Por tipología y no global: mezclar tipologías es la trampa de composición.
+   Devuelve null si algún lado no llega a 8 avisos — sin base, no un número flojo. */
+function deltaEstado(d){
+  var P=POOL.filter(function(p){return p.d===d&&p.est==='P'&&p.dias<=CONF.frescuraDias}).map(function(p){return p.m2});
+  var E=POOL.filter(function(p){return p.d===d&&p.est==='E'&&p.dias<=CONF.frescuraDias}).map(function(p){return p.m2});
+  if(P.length<8||E.length<8)return null;
+  return 100*(pctl(P,.5)/pctl(E,.5)-1);
+}
+/* comparables de ALQUILER — misma cascada de radios, misma tipología y superficie.
    Se usa solo para la segunda lectura del simulador; nunca toca el rango de venta. */
 function rentaCohort(){
   var ed=EDIFS.filter(function(x){return x.e===MI.e})[0]; if(!ed)return null;
@@ -1570,6 +1955,7 @@ function calcular(){
     ['s-antig','s-torre','s-macro','s-sim'].forEach(function(id){document.getElementById(id).classList.add('oculto')});
     document.getElementById('chip-top').textContent='sin base'; document.getElementById('chip-top').className='pos pos-na';
     document.getElementById('comps').innerHTML='';
+    document.getElementById('aviso-estado').innerHTML='';
     document.getElementById('cierre-txt').textContent='Sin base suficiente no se emite un número. Lo que sí se puede hacer es ampliar la búsqueda a otra tipología o superficie, o volver cuando haya más avisos comparables publicados.';
     document.getElementById('caduca').innerHTML='';
     ordenar(false); return; }
@@ -1597,13 +1983,34 @@ function render(){
 
   var conPq=activos().filter(function(p){return p.pq==='i'}).length;
   var sdPq=activos().filter(function(p){return p.pq==='s'}).length;
+
+  /* ESTADO DE OBRA — un depa entregado y uno que se entrega en 2027 no compiten por el
+     mismo comprador aunque el $/m² se parezca. Si la muestra quedó mezclada se dice acá,
+     ANTES del número, con el conteo real y con cuánto vale medido la diferencia. */
+  var ae=document.getElementById('aviso-estado');
+  if(COH.mismoEstado || MI.est==='?'){
+    ae.innerHTML = MI.est==='?'
+      ? '<div class="aviso" style="background:#F5F1E6;color:var(--gris)">No declaró el estado de obra de su unidad, así que se comparó contra <b>preventa y entregados juntos</b>. Declararlo aprieta la comparación.</div>'
+      : '';
+  } else {
+    var otros=activos().filter(function(p){return p.est!==MI.est}).length;
+    var dEst=deltaEstado(MI.d);
+    ae.innerHTML='<div class="aviso"><b>La muestra mezcla estados de obra.</b> Su unidad está <b>'+(MI.est==='P'?'en preventa':'entregada')+'</b>, pero '+
+      (otros===s.n?'<b>ninguno</b> de los '+s.n+' comparables lo está':'<b>'+otros+' de los '+s.n+'</b> comparables no lo están')+
+      ': no había '+CONF.nMin+' avisos '+(MI.est==='P'?'en preventa':'entregados')+' de esta tipología y superficie ni ampliando a '+CONF.radios[CONF.radios.length-1]+' m.<br>'+
+      '<span style="color:#94512E">Un departamento que se ocupa mañana y uno que se entrega en dos años <b>no compiten por el mismo comprador</b>, aunque el precio por m² se parezca. '+
+      (dEst!==null
+        ? 'En su tipología la diferencia medida entre preventa y entregado es de <b>'+Math.abs(dEst).toFixed(1).replace('.',',')+'%</b> por m² — '+(Math.abs(dEst)<5?'chica, pero':'material, y')+' el rango de arriba no la corrige.'
+        : 'En su tipología no hay base suficiente para medir cuánto vale esa diferencia.')+
+      '</span></div>';
+  }
   document.getElementById('sello-tit').innerHTML='<b>'+s.n+' comparables</b> a '+COH.radio+' m <span class="cnt">· cómo se armó la base</span>';
   document.getElementById('sello-txt').innerHTML=
     '<b>'+s.n+' comparables</b> a menos de <b>'+COH.radio+' m</b> · '+(MI.d===0?'monoambientes':MI.d+' dorm.')+
     ' · entre '+Math.round(MI.a*0.8)+' y '+Math.round(MI.a*1.2)+' m²'+
     (COH.mismoEstado?' · <b>mismo estado de obra</b>'
-      :(MI.est==='?'?' · <span style="color:var(--gris)">estado de obra sin declarar: se comparó contra todos</span>'
-                    :' · <span style="color:var(--terra)">estado de obra mezclado: no había '+CONF.nMin+' comparables '+(MI.est==='P'?'en preventa':'entregados')+'</span>'))+
+      :(MI.est==='?'?' · <span style="color:var(--gris)">estado de obra sin declarar</span>'
+                    :' · <span style="color:var(--terra)">estado de obra mezclado (ver el aviso de arriba)</span>'))+
     '<br><span style="color:var(--gris)">Antigüedad ≤'+CONF.frescuraDias+' días · '+conPq+' declaran parqueo, '+sdPq+' no declaran'+
     (COH.viejos.length?' · '+COH.viejos.length+(COH.viejos.length===1?' aviso quedó':' avisos quedaron')+' fuera por antigüedad':'')+
     '<br><span style="color:var(--terra)">No incluye venta directa de desarrollador ni unidades no publicadas.</span></span>';
@@ -1639,7 +2046,7 @@ function render(){
   var m2s=activos().map(function(p){return p.m2}).sort(function(a,b){return a-b});
   var terceroBajo=m2s[Math.min(2,m2s.length-1)];
   var objs=[
-    ['Entre los 3 más baratos de su cohorte', 'la franja donde suele estar lo que se mueve primero', terceroBajo*MI.a],
+    ['Entre los 3 más baratos que compiten con usted', 'la franja donde suele estar lo que se mueve primero', terceroBajo*MI.a],
     ['En la mitad del mercado', s.n+' comparables: la mitad pide más, la mitad menos', med],
     ['En el cuarto más caro', 'apuesta a que su unidad se distingue de las demás', hi]];
   document.getElementById('objetivos').innerHTML=objs.map(function(o){
@@ -1669,9 +2076,10 @@ function render(){
       '<div class="det">'+p.a+' m² · '+p.dias+' días · a '+p.dist+' m · '+(p.est==='P'?'preventa':(p.est==='E'?'entregado':'estado s/d'))+
       (en?'<br><span class="'+(en.vencida?'ent-v':'ent')+'">entrega declarada: '+en.txt+(en.vencida?' — fecha ya pasada, el aviso no se actualizó':'')+'</span>':'')+
       '<br>'+pqT+' · '+amT+
-      (function(){var u=avisoDe(p); return u
-        ? '<br><a class="ver" href="'+u+'" target="_blank" rel="noopener">ver el aviso en '+(u.indexOf('c21')>=0?'C21':'Remax')+' ↗</a>'
-        : '<br><span class="ver" style="color:var(--gris);border-bottom-style:none">aviso sin enlace disponible</span>';})()+
+      (function(){var f=fichaDe(p), u=avisoDe(p);
+        if(!f && !u) return '<br><span class="ver" style="color:var(--gris);border-bottom-style:none">sin enlace disponible</span>';
+        return '<br>'+(f?'<a class="ver" href="'+f+'" target="_blank" rel="noopener">ver la ficha ↗</a>':'')+
+          (u?'<a class="ver ver2" href="'+u+'" target="_blank" rel="noopener">verificar en '+(u.indexOf('c21')>=0?'C21':'Remax')+' ↗</a>':'');})()+
       '</div></div>'+
       '<div class="c2"><div class="m2">'+fm(p.m2)+'/m²</div><div class="pre">'+fm(p.p)+'</div></div>'+
       (MODO==='broker'?'<button class="x" onclick="tog('+i+')">'+(excl[i]?'↺':'✕')+'</button>':'')+'</div>';
@@ -1731,11 +2139,12 @@ function render(){
   else{
     document.getElementById('torre').innerHTML=torre.map(function(t){
       var tip=t.d===0?'Mono':t.d+' dorm.';
-      var ut=avisoDe(t);
+      var tf=fichaDe(t), ut=avisoDe(t);
       return '<div class="comp">'+foto(t.e)+'<div class="c1"><div class="nom">'+tip+' · '+t.a+' m²</div>'+
         '<div class="det">'+t.dias+' días · '+(t.pq==='i'?'parqueo incl.':(t.pq==='n'?'sin parqueo':'parqueo s/d'))+
-        (ut?'<br><a class="ver" href="'+ut+'" target="_blank" rel="noopener">ver el aviso en '+(ut.indexOf('c21')>=0?'C21':'Remax')+' ↗</a>'
-           :'<br><span class="ver" style="color:var(--gris);border-bottom-style:none">aviso sin enlace disponible</span>')+
+        (tf||ut ? '<br>'+(tf?'<a class="ver" href="'+tf+'" target="_blank" rel="noopener">ver la ficha ↗</a>':'')+
+                  (ut?'<a class="ver ver2" href="'+ut+'" target="_blank" rel="noopener">verificar en '+(ut.indexOf('c21')>=0?'C21':'Remax')+' ↗</a>':'')
+                : '<br><span class="ver" style="color:var(--gris);border-bottom-style:none">sin enlace disponible</span>')+
         '</div></div>'+
         '<div class="c2"><div class="m2">'+fm(t.m2)+'/m²</div><div class="pre">'+fm(t.p)+'</div></div></div>'}).join('');
     var mismaTip=torre.filter(function(t){return t.d===MI.d});
