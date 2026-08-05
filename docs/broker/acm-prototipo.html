@@ -398,7 +398,7 @@
     <li><b>Los días publicados no siempre son independientes.</b> Marcamos <span class="tag tag-rep">cargado en bloque</span> cuando 3 o más unidades del mismo edificio muestran <b>exactamente</b> la misma antigüedad. Puede ser un lanzamiento (subieron todas juntas el primer día) o una re-publicación (se bajaron y volvieron a subir, y el contador arrancó de cero). En los dos casos significa lo mismo para leer el cuadro: <b>esos avisos cuentan el tiempo del lote, no el de cada unidad</b> — no son N observaciones distintas del mismo fenómeno. En esta muestra el patrón aparece en <b>20% de los avisos</b>.</li>
     <li><b>La fecha de entrega es la que declara el aviso</b>, no un compromiso verificado con el desarrollador. Cuando esa fecha <span style="color:var(--terra)">ya pasó</span> lo decimos: significa que el aviso no se actualizó, no necesariamente que la obra esté atrasada.</li>
     <li><b>Las fotos</b> — son de <b>un aviso</b> de ese edificio, no necesariamente de la unidad comparada. Sirven para reconocer el edificio, no para juzgar el interior. El 63% de los avisos tiene foto publicada; el resto aparece sin imagen.</li>
-    <li><b>Cada comparable tiene dos enlaces.</b> <b>Ver la ficha</b> abre esa unidad en el feed de Simón, con sus fotos, su ubicación y su contexto de mercado. <b>Verificar en C21/Remax</b> abre el aviso original: no le pedimos que nos crea, cada dato se puede contrastar en su fuente. Si el aviso fue dado de baja después de nuestro corte, ese segundo enlace puede no abrir — esa es la diferencia entre un dato verificado anoche y uno de hoy.</li>
+    <li><b>Cada comparable abre su ficha</b> en el feed de Simón, con sus fotos, su ubicación y su contexto de mercado — y ahí adentro está el camino al aviso original, para quien quiera contrastarlo en la fuente. No le pedimos que nos crea. <b>El feed lista avisos de hasta 300 días</b>: los que llevan más publicado se marcan como <i>fuera del feed</i> y no tienen ficha. Y si un aviso fue dado de baja después de nuestro corte, puede no abrir — esa es la diferencia entre un dato verificado anoche y uno de hoy.</li>
     <li><b>El retorno de alquiler es bruto y sobre avisos</b>, no sobre contratos firmados. Se calcula con rentas <b>pedidas</b> de unidades comparables, antes de expensas, vacancia, impuestos y comisión. Además, en alquiler el amoblado <b>sí</b> se declara y empuja la renta hacia arriba: por eso mostramos cuántos de los comparables son amoblados. Del resto no afirmamos que no lo sean — el aviso simplemente no lo dice.</li>
   </ul></div></details>
 
@@ -1520,8 +1520,26 @@ var IDS_RAW=`70000-47|20
 55000-40|8000669
 86500-54|8000670`;
 var IDS={};IDS_RAW.trim().split('\n').forEach(function(l){var f=l.split('|');if(!IDS[f[0]])IDS[f[0]]=f[1];});
-function fichaDe(p){var id=IDS[Math.round(p.p)+'-'+Math.round(p.a)];
+/* 🔴 El feed público solo lista avisos de hasta 300 días. Enlazar la ficha de uno más
+   viejo abre el feed sin abrir nada — un link que "funciona" y no lleva a ningún lado
+   es peor que no tenerlo. Ahí el portal queda como único enlace. */
+var DIAS_FEED=300;
+function fichaDe(p){ if(p.dias>DIAS_FEED)return null;
+  var id=IDS[Math.round(p.p)+'-'+Math.round(p.a)];
   return id? 'https://simonbo.com/ventas?id='+id : null;}
+/* El enlace al portal es una herramienta de VERIFICACIÓN del broker; en el documento
+   del cliente NUNCA aparece — mandarlo al portal es entregarle el contacto a otro.
+   Cuando no hay ficha, al cliente se le dice por qué en vez de dejarlo sin nada. */
+function enlaces(p){
+  var f=fichaDe(p), u=avisoDe(p), h='';
+  if(f) h+='<a class="ver" href="'+f+'" target="_blank" rel="noopener">ver la ficha ↗</a>';
+  if(u && MODO==='broker')
+    h+='<a class="ver'+(f?' ver2':'')+'" href="'+u+'" target="_blank" rel="noopener">'+
+       (f?'verificar en ':'ver el aviso en ')+(u.indexOf('c21')>=0?'C21':'Remax')+' ↗</a>';
+  if(h) return '<br>'+h;
+  return '<br><span class="ver" style="color:var(--gris);border-bottom-style:none">'+
+    (p.dias>DIAS_FEED?'lleva más de '+DIAS_FEED+' días publicado: fuera del feed':'sin ficha disponible')+'</span>';
+}
 
 /* fecha de ENTREGA declarada en los avisos de preventa — clave precio-area */
 var ENTREGAS_RAW=`130000-58|Febrero 2026
@@ -1808,10 +1826,12 @@ function publicar(){
   MI.recoP=+document.getElementById('f-reco-precio').value||null;
   MI.recoT=document.getElementById('f-reco-txt').value.trim();
   if(!MI.recoP && !MI.recoT && !confirm('Todavía no escribió su recomendación.\n\nSin ella el cliente recibe la medición de Simón sin su criterio — que es justamente lo que usted aporta.\n\n¿Generar igual?'))return;
-  MODO='lectura'; document.body.classList.remove('broker'); barraModo(); render();
+  MODO='lectura'; document.body.classList.remove('broker'); barraModo();
+  if(COH)render(); /* sin base no hay nada que re-pintar, pero el "no se emite" igual se firma */
   window.scrollTo(0,0);
 }
-function volverEditar(){MODO='broker'; document.body.classList.add('broker'); barraModo(); render(); window.scrollTo(0,0);}
+function volverEditar(){MODO='broker'; document.body.classList.add('broker'); barraModo();
+  if(COH)render(); window.scrollTo(0,0);}
 /* la recomendación se re-pinta sola mientras el broker escribe — sin tocar el resto del DOM.
    🔴 Si el precio recomendado cae FUERA del rango medido, el documento lo dice. No para
    corregir al broker (puede tener razón: él ve lo que el dato no ve), sino porque un
@@ -1954,8 +1974,11 @@ function calcular(){
     document.getElementById('sello-tit').textContent='Base de la comparación';
     ['s-antig','s-torre','s-macro','s-sim'].forEach(function(id){document.getElementById(id).classList.add('oculto')});
     document.getElementById('chip-top').textContent='sin base'; document.getElementById('chip-top').className='pos pos-na';
-    document.getElementById('comps').innerHTML='';
-    document.getElementById('aviso-estado').innerHTML='';
+    /* limpiar TODO lo del análisis anterior: si queda DOM viejo, al publicar sin base
+       el documento del cliente arrastra comparables y enlaces que ya no corresponden */
+    ['comps','torre','fuera-muestra','excl-dec','recalc','aviso-estado','objetivos','difs-bloque','reco-bloque','renta-bloque']
+      .forEach(function(id){document.getElementById(id).innerHTML='';});
+    document.getElementById('recalc').className='recalc';
     document.getElementById('cierre-txt').textContent='Sin base suficiente no se emite un número. Lo que sí se puede hacer es ampliar la búsqueda a otra tipología o superficie, o volver cuando haya más avisos comparables publicados.';
     document.getElementById('caduca').innerHTML='';
     ordenar(false); return; }
@@ -2076,10 +2099,7 @@ function render(){
       '<div class="det">'+p.a+' m² · '+p.dias+' días · a '+p.dist+' m · '+(p.est==='P'?'preventa':(p.est==='E'?'entregado':'estado s/d'))+
       (en?'<br><span class="'+(en.vencida?'ent-v':'ent')+'">entrega declarada: '+en.txt+(en.vencida?' — fecha ya pasada, el aviso no se actualizó':'')+'</span>':'')+
       '<br>'+pqT+' · '+amT+
-      (function(){var f=fichaDe(p), u=avisoDe(p);
-        if(!f && !u) return '<br><span class="ver" style="color:var(--gris);border-bottom-style:none">sin enlace disponible</span>';
-        return '<br>'+(f?'<a class="ver" href="'+f+'" target="_blank" rel="noopener">ver la ficha ↗</a>':'')+
-          (u?'<a class="ver ver2" href="'+u+'" target="_blank" rel="noopener">verificar en '+(u.indexOf('c21')>=0?'C21':'Remax')+' ↗</a>':'');})()+
+      enlaces(p)+
       '</div></div>'+
       '<div class="c2"><div class="m2">'+fm(p.m2)+'/m²</div><div class="pre">'+fm(p.p)+'</div></div>'+
       (MODO==='broker'?'<button class="x" onclick="tog('+i+')">'+(excl[i]?'↺':'✕')+'</button>':'')+'</div>';
@@ -2139,12 +2159,9 @@ function render(){
   else{
     document.getElementById('torre').innerHTML=torre.map(function(t){
       var tip=t.d===0?'Mono':t.d+' dorm.';
-      var tf=fichaDe(t), ut=avisoDe(t);
       return '<div class="comp">'+foto(t.e)+'<div class="c1"><div class="nom">'+tip+' · '+t.a+' m²</div>'+
         '<div class="det">'+t.dias+' días · '+(t.pq==='i'?'parqueo incl.':(t.pq==='n'?'sin parqueo':'parqueo s/d'))+
-        (tf||ut ? '<br>'+(tf?'<a class="ver" href="'+tf+'" target="_blank" rel="noopener">ver la ficha ↗</a>':'')+
-                  (ut?'<a class="ver ver2" href="'+ut+'" target="_blank" rel="noopener">verificar en '+(ut.indexOf('c21')>=0?'C21':'Remax')+' ↗</a>':'')
-                : '<br><span class="ver" style="color:var(--gris);border-bottom-style:none">sin enlace disponible</span>')+
+        enlaces(t)+
         '</div></div>'+
         '<div class="c2"><div class="m2">'+fm(t.m2)+'/m²</div><div class="pre">'+fm(t.p)+'</div></div></div>'}).join('');
     var mismaTip=torre.filter(function(t){return t.d===MI.d});
