@@ -156,7 +156,7 @@ if (!SOLO || SOLO === '1') {
     for (const d of [0, 1, 2, 3]) {
       const cand = POOL.filter((p) => p.d === d && p.dias <= 180 &&
         (p.est === 'P' || p.est === 'E') && p.e !== '(sin edificio)');
-      if (cand.length) elegido.push({ e: cand[0].e, d, a: cand[0].a, est: cand[0].est });
+      if (cand.length) elegido.push({ e: cand[0].e, pm: cand[0].pm ?? null, d, a: cand[0].a, est: cand[0].est });
     }
     return elegido;
   });
@@ -164,7 +164,9 @@ if (!SOLO || SOLO === '1') {
   for (const caso of casos) {
     const doc = await pagina.evaluate((c) => {
       AJ = { radio: 800, tol: 0.20, tipVecinas: false };
-      document.getElementById('f-edif').value = c.e;
+      // el select lleva la CLAVE del edificio, no su nombre
+      const ed = EDIFS.find((x) => (c.pm ? x.k === 'pm' + c.pm : x.e === c.e));
+      document.getElementById('f-edif').value = ed ? ed.k : c.e;
       document.querySelectorAll('#f-dorms button').forEach((b) => b.classList.toggle('on', +b.dataset.v === c.d));
       MI.d = c.d;
       document.querySelectorAll('#f-est button').forEach((b) => b.classList.toggle('on', b.dataset.v === c.est));
@@ -186,7 +188,7 @@ if (!SOLO || SOLO === '1') {
     const { data } = await db.rpc('acm_eval_cohorte', {}).then(() => ({ data: null })).catch(() => ({ data: null }));
     // no hay RPC: se recalcula acá con los mismos criterios, leyendo de la vista
     const { data: todos } = await db.from('v_mercado_venta_shadow')
-      .select('id,nombre_edificio,latitud,longitud,dormitorios,area_total_m2,precio_norm,precio_m2,dias_en_mercado,estado_construccion')
+      .select('id,nombre_edificio,id_proyecto_master,latitud,longitud,dormitorios,area_total_m2,precio_norm,precio_m2,dias_en_mercado,estado_construccion')
       .in('zona', ['Equipetrol Centro', 'Equipetrol Norte', 'Sirari', 'Villa Brigida', 'Equipetrol Oeste', 'Eq. 3er Anillo'])
       .lte('dormitorios', 3).gte('area_total_m2', 20).not('latitud', 'is', null);
     // el documento usa el estado INFERIDO (v_estado_obra_inferido_shadow), no el crudo:
@@ -198,7 +200,12 @@ if (!SOLO || SOLO === '1') {
         .in('propiedad_id', (todos ?? []).slice(i, i + 500).map((x) => x.id));
       for (const e of data ?? []) inferido.set(e.propiedad_id, e.estado_efectivo);
     }
-    const delEdificio = (todos ?? []).filter((x) => (x.nombre_edificio || '').trim() === caso.e);
+    // 🔴 El edificio se resuelve por id, no por nombre: el pool muestra el nombre
+    // OFICIAL del catálogo y los avisos usan variantes ("Sky Equinox" en el aviso,
+    // "Condominio SKY EQUINOX" en el catálogo). Buscar por nombre no encontraba nada.
+    const delEdificio = caso.pm
+      ? (todos ?? []).filter((x) => x.id_proyecto_master === caso.pm)
+      : (todos ?? []).filter((x) => (x.nombre_edificio || '').trim() === caso.e);
     if (!delEdificio.length) { difs.push(`${caso.e}: no está en la base`); continue; }
     const lat = delEdificio.reduce((s, x) => s + +x.latitud, 0) / delEdificio.length;
     const lon = delEdificio.reduce((s, x) => s + +x.longitud, 0) / delEdificio.length;

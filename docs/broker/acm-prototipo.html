@@ -1507,8 +1507,11 @@ function entregaDe(p){var t=ENTREGAS[p.id]; if(!t)return null;
   var q=t.trim().toLowerCase().split(/\s+/), ym=(+q[1])*100+(MESN[q[0]]||6);
   return {txt:t, vencida:ym<HOY_YM};}
 /* re-publicacion en bloque: 3+ unidades del mismo edificio con la MISMA antiguedad exacta */
-var REPUB=(function(){var m={};POOL.forEach(function(p){var k=p.e+'|'+p.dias;m[k]=(m[k]||0)+1;});
-  return function(p){return m[p.e+'|'+p.dias]>=3;};})();
+function construirRepub(){
+  var m={}; POOL.forEach(function(p){var k=claveEdif(p)+'|'+p.dias; m[k]=(m[k]||0)+1;});
+  return function(p){return m[claveEdif(p)+'|'+p.dias]>=3;};
+}
+var REPUB=construirRepub();
 
 /* ═══════ POOL DE ALQUILER — v_mercado_alquiler_shadow, Equipetrol, mismo corte ═══════
    edificio|lat|lon|dorms|m²|USD/mes|Bs/mes|amoblado(a/n/?)|parqueo(i/s)|días
@@ -1701,12 +1704,20 @@ var CONF={radios:[300,500,800], nMin:5, frescuraDias:180, areaTol:0.20, outlierI
 };
 var META_ACM={corte:'3 de agosto de 2026', cobertura:'Equipetrol'};
 
-/* edificios únicos con su GPS (centroide) */
-var EDIFS=(function(){var m={};POOL.forEach(function(p){ if(!m[p.e])m[p.e]={n:0,lat:0,lon:0};
-  m[p.e].n++;m[p.e].lat+=p.lat;m[p.e].lon+=p.lon;});
-  return Object.keys(m).sort().map(function(k){return {e:k,lat:m[k].lat/m[k].n,lon:m[k].lon/m[k].n,n:m[k].n}});})();
+/* edificios únicos con su GPS (centroide), agrupados por identidad y no por nombre */
+function construirEdifs(){
+  var m={};
+  POOL.forEach(function(p){var k=claveEdif(p);
+    if(!m[k])m[k]={e:p.e,n:0,lat:0,lon:0};
+    m[k].n++; m[k].lat+=p.lat; m[k].lon+=p.lon;});
+  return Object.keys(m).map(function(k){var x=m[k];
+    return {k:k, e:x.e, lat:x.lat/x.n, lon:x.lon/x.n, n:x.n};})
+    .sort(function(a,b){return a.e<b.e?-1:a.e>b.e?1:0});
+}
 
-var MI={e:'Lofty Island',d:1,a:51,p:91584,pq:'n',est:'P'}, COH=null, excl={};
+var EDIFS=construirEdifs();
+
+var MI={e:'Lofty Island',k:null,d:1,a:51,p:91584,pq:'n',est:'P'}, COH=null, excl={};
 /* excl[i] guarda el MOTIVO (string), no un booleano: una exclusión sin motivo
    es maquillaje, y el cliente tiene que poder leer por qué se sacó cada una. */
 var MODO='broker'; /* broker = edita · lectura = lo que ve el cliente */
@@ -1918,12 +1929,12 @@ function tipsPermitidas(){
   return [MI.d-1,MI.d,MI.d+1].filter(function(d){return d>=0&&d<=3});
 }
 function armarCohort(){
-  var ed=EDIFS.filter(function(x){return x.e===MI.e})[0];
+  var ed=miEdificio();
   if(!ed)return null; /* edificio desconocido → sin base, nunca una excepción */
   var tips=tipsPermitidas(), tol=AJ.tol;
   var base=POOL.filter(function(p){
     return tips.indexOf(p.d)>=0 && p.a>=MI.a*(1-tol) && p.a<=MI.a*(1+tol)
-      && !(p.e===MI.e && Math.abs(p.a-MI.a)<1 && Math.abs(p.p-MI.p)<1); })
+      && !(esMiEdificio(p) && Math.abs(p.a-MI.a)<1 && Math.abs(p.p-MI.p)<1); })
    .map(function(p){var o=Object.create(p);o.dist=Math.round(distM(ed.lat,ed.lon,p.lat,p.lon));return o;});
 
   var mismoEstado=MI.est!=='?';
@@ -1960,7 +1971,7 @@ function armarCohort(){
 /* comparables de ALQUILER — misma cascada de radios, misma tipología y superficie.
    Se usa solo para la segunda lectura del simulador; nunca toca el rango de venta. */
 function rentaCohort(){
-  var ed=EDIFS.filter(function(x){return x.e===MI.e})[0]; if(!ed)return null;
+  var ed=miEdificio(); if(!ed)return null;
   for(var i=0;i<CONF.radios.length;i++){ var r=CONF.radios[i];
     var tips=tipsPermitidas();
     var c=POOL_ALQ.filter(function(p){return tips.indexOf(p.d)>=0
@@ -1974,14 +1985,14 @@ function rentaCohort(){
 }
 /* sensibilidad: el MISMO cálculo a los tres radios — nadie puede elegir el que le conviene en secreto */
 function sensibilidad(){
-  var ed=EDIFS.filter(function(x){return x.e===MI.e})[0];
+  var ed=miEdificio(); if(!ed)return [];
   var tips=tipsPermitidas();
   return CONF.radios.map(function(r){
     var c=POOL.filter(function(p){
       return tips.indexOf(p.d)>=0 && p.a>=MI.a*(1-AJ.tol) && p.a<=MI.a*(1+AJ.tol)
         && p.dias<=CONF.frescuraDias && (MI.est==='?'||!COH||!COH.mismoEstado||p.est===MI.est)
         && distM(ed.lat,ed.lon,p.lat,p.lon)<=r
-        && !(p.e===MI.e && Math.abs(p.a-MI.a)<1 && Math.abs(p.p-MI.p)<1);});
+        && !(esMiEdificio(p) && Math.abs(p.a-MI.a)<1 && Math.abs(p.p-MI.p)<1);});
     if(c.length<CONF.nMin)return {r:r,n:c.length,ok:false};
     var m=c.map(function(p){return p.m2});
     return {r:r,n:c.length,ok:true,lo:pctl(m,.25)*MI.a,hi:pctl(m,.75)*MI.a};
@@ -1996,7 +2007,8 @@ function stats(){var a=activos(),m=a.map(function(p){return p.m2});
 
 /* ═══ RENDER ═══ */
 function calcular(){
-  MI.e=document.getElementById('f-edif').value;
+  MI.k=document.getElementById('f-edif').value;
+  MI.e=(miEdificio()||{e:MI.e}).e;
   MI.a=+document.getElementById('f-area').value||50;
   var pv=document.getElementById('f-precio').value;
   MI.p=pv===''?null:+pv;
@@ -2200,7 +2212,7 @@ function render(){
     (COH.viejos.length?' Los '+COH.viejos.length+' que quedaron fuera llevan mucho más: por eso no entran al rango.':'');
 
   /* edificio */
-  var torre=POOL.filter(function(p){return p.e===MI.e}).sort(function(a,b){return b.m2-a.m2});
+  var torre=POOL.filter(esMiEdificio).sort(function(a,b){return b.m2-a.m2});
   document.getElementById('torre-titulo').textContent=torre.length>1?'Sus vecinos directos':'Su edificio';
   if(torre.length<2){ document.getElementById('torre').innerHTML='';
     document.getElementById('frase-torre').innerHTML='No hay otras unidades publicadas hoy en '+MI.e+': <span>sin base para comparar dentro del edificio</span>.'; }
@@ -2218,6 +2230,24 @@ function render(){
     document.getElementById('frase-torre').innerHTML=
       (MI.p?'Su unidad sería la <span>'+pos1+'ª más cara por m²</span> de las '+(torre.length+1)+' publicadas en su edificio. ':'En su edificio hay '+torre.length+' unidades publicadas. ')+
       (barato&&barato.a>MI.a&&MI.p&&barato.p<MI.p ? 'Y hay un '+(MI.d===0?'monoambiente':MI.d+' dorm.')+' de '+barato.a+' m² a '+fm(barato.p)+': <span>más grande y más barato</span> que el suyo.' : '');
+    /* 🔴 Un edificio no está en preventa y entregado a la vez. Cuando sus avisos se
+       contradicen, casi siempre es que el edificio se entregó y los avisos viejos no
+       se actualizaron — se ve en los días publicados. Decirlo es más útil que mostrar
+       dos vecinos con etiquetas opuestas y dejar que el cliente lo note solo. */
+    /* solo los AVISOS: la unidad del broker no tiene días publicados, y meterla
+       con cero rompía la comparación de cuál está más desactualizado */
+    var estT={}; torre.forEach(function(t){
+      if(t.est==='P'||t.est==='E') (estT[t.est]=estT[t.est]||[]).push(t.dias);});
+    if(estT.P && estT.E){
+      var minP=Math.min.apply(0,estT.P), minE=Math.min.apply(0,estT.E);
+      document.getElementById('frase-torre').innerHTML+=
+        '<span style="display:block;font-size:12.5px;font-weight:400;color:var(--terra);margin-top:9px;line-height:1.55">'+
+        '⚠️ En este edificio hay avisos que dicen <b>preventa</b> y otros <b>entrega inmediata</b>. '+
+        (minE<minP
+          ? 'Los que dicen preventa son los más viejos ('+Math.max.apply(0,estT.P)+' días contra '+minE+'): lo más probable es que el edificio ya se haya entregado y esos avisos no se hayan actualizado.'
+          : 'Los días publicados no alcanzan para saber cuál está desactualizado.')+
+        '</span>';
+    }
   }
 
   /* método */
@@ -2326,6 +2356,16 @@ function editar(){document.getElementById('resultado').classList.add('oculto');
    Si el servidor no está (archivo suelto, sin red, error), se sigue con el pool
    embebido y el sello lo dice — nunca se calla de dónde salió el número. */
 var POOL_URL='/api/acm-pool';
+/* Clave de edificio: el id del catálogo si lo tiene, el nombre si no. Agrupar por
+   nombre parte el mismo edificio en varios ("Condominio Maré" / "Mare" / "Maré") y
+   junta dos distintos que se llamen igual. */
+function claveEdif(p){ return p.pm ? 'pm'+p.pm : 'n:'+String(p.e).trim(); }
+/* el edificio elegido, y si un comparable pertenece a él */
+function miEdificio(){
+  var porK = MI.k && EDIFS.filter(function(x){return x.k===MI.k})[0];
+  return porK || EDIFS.filter(function(x){return x.e===MI.e})[0] || null;
+}
+function esMiEdificio(p){ var ed=miEdificio(); return !!ed && claveEdif(p)===ed.k; }
 var POOL_ORIGEN='embebido';
 function aplicarPoolVivo(j){
   POOL=j.comparables.map(function(c){
@@ -2333,7 +2373,7 @@ function aplicarPoolVivo(j){
             m2:c.m2,dias:c.dias,pq:c.pq,est:c.est,am:c.am,
             /* lo que el pool congelado no tenía: si no se mapea acá, el documento no lo
                ve y los hechos de la muestra salen en cero */
-            b:c.b, pi:c.pi, eo:c.eo, mz:c.mz, amo:c.amo};});
+            b:c.b, pi:c.pi, eo:c.eo, mz:c.mz, amo:c.amo, pm:c.pm};});
   URLS_CRUDO={}; ENTREGAS={}; FOTOS_AV={};
   j.comparables.forEach(function(c){ var id=String(c.id);
     if(c.u)   URLS_CRUDO[id]=c.u;
@@ -2341,11 +2381,8 @@ function aplicarPoolVivo(j){
     if(c.foto)FOTOS_AV[id]=c.foto;});
   /* lo derivado del pool se rehace: si no, EDIFS y el detector de carga en bloque
      seguirían describiendo la muestra vieja */
-  EDIFS=(function(){var m={};POOL.forEach(function(p){ if(!m[p.e])m[p.e]={n:0,lat:0,lon:0};
-    m[p.e].n++;m[p.e].lat+=p.lat;m[p.e].lon+=p.lon;});
-    return Object.keys(m).sort().map(function(k){return {e:k,lat:m[k].lat/m[k].n,lon:m[k].lon/m[k].n,n:m[k].n}});})();
-  REPUB=(function(){var m={};POOL.forEach(function(p){var k=p.e+'|'+p.dias;m[k]=(m[k]||0)+1;});
-    return function(p){return m[p.e+'|'+p.dias]>=3;};})();
+  EDIFS=construirEdifs();
+  REPUB=construirRepub();
   var f=new Date(j.corte);
   META_ACM.corte=f.toLocaleDateString('es-BO',{day:'numeric',month:'long',year:'numeric'});
   POOL_ORIGEN='vivo';
@@ -2371,9 +2408,9 @@ function cargarPool(listo){
 (function(){
   var sel=document.getElementById('f-edif');
   function arrancar(){
-  sel.innerHTML=EDIFS.map(function(x){return '<option>'+x.e+'</option>'}).join('');
-  if(!EDIFS.some(function(x){return x.e===MI.e})) MI.e=EDIFS[0].e;
-  sel.value=MI.e; /* explícito: el navegador restaura el estado del select al recargar y pisa el default */
+  sel.innerHTML=EDIFS.map(function(x){return '<option value="'+x.k+'">'+x.e+'</option>'}).join('');
+  if(!miEdificio()){ MI.e=EDIFS[0].e; MI.k=EDIFS[0].k; }
+  sel.value=(miEdificio()||EDIFS[0]).k; /* explícito: el navegador restaura el estado del select al recargar y pisa el default */
   [['f-dorms','d'],['f-pq','pq'],['f-est','est']].forEach(function(par){
     document.querySelectorAll('#'+par[0]+' button').forEach(function(b){b.onclick=function(){
       document.querySelectorAll('#'+par[0]+' button').forEach(function(x){x.classList.remove('on')});

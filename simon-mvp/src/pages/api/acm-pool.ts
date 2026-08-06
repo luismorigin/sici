@@ -29,7 +29,8 @@ const TANDA = 1000
 
 export interface AcmComparable {
   id: number
-  e: string          // edificio
+  e: string          // edificio — el nombre OFICIAL, no el que puso cada aviso
+  pm?: number | null // id del edificio: es la identidad, el nombre no lo es
   lat: number
   lon: number
   d: number          // dormitorios
@@ -123,11 +124,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // proyectos_master. 🔴 La entrega NO sale de advisor_property_snapshot: ahí solo
     // la declaran 11 avisos contra 88 acá.
     const pms = Array.from(new Set(filas.map((f) => f.id_proyecto_master).filter(Boolean)))
-    const porEdificio = new Map<number, { am: string[]; ent: string | null }>()
+    const porEdificio = new Map<number, { nombre: string; am: string[]; ent: string | null }>()
     for (let i = 0; i < pms.length; i += 500) {
       const { data, error } = await supabase
         .from('proyectos_master')
-        .select('id_proyecto_master,amenidades_edificio,fecha_entrega')
+        .select('id_proyecto_master,nombre_oficial,amenidades_edificio,fecha_entrega')
         .in('id_proyecto_master', pms.slice(i, i + 500))
       // 🔴 Sin esto, una query rota deja el pool sin amenidades ni entregas y el
       // documento dice "amenidades no cargadas" en TODOS los comparables: un mensaje
@@ -135,6 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (error) throw new Error(`amenidades: ${error.message}`)
       for (const pm of data ?? []) {
         porEdificio.set(pm.id_proyecto_master, {
+          nombre: (pm.nombre_oficial || '').trim(),
           am: Array.isArray(pm.amenidades_edificio) ? pm.amenidades_edificio : [],
           ent: mesYAnio(pm.fecha_entrega),
         })
@@ -159,7 +161,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const cod = f.url ? String(f.url).replace(/^.*\/propiedad\//, '') : null
       return {
         id: f.id,
-        e: (f.nombre_edificio || '(sin edificio)').trim(),
+        // 🔴 El nombre del aviso NO identifica al edificio: 21 de 126 tienen dos o tres
+        // ("Condominio Maré / Mare / Maré", "Uptown / Uptown Nu / Uptown Nuu"), y eso
+        // parte 99 de 397 avisos en edificios fantasma — con vecinos incompletos y sin
+        // detectarse entre sí. La identidad es el id; el nombre que se muestra es el
+        // oficial del catálogo.
+        e: edif?.nombre || (f.nombre_edificio || '(sin edificio)').trim(),
+        pm: f.id_proyecto_master ?? null,
         lat: Number(f.latitud), lon: Number(f.longitud),
         d: f.dormitorios,
         a: Math.round(Number(f.area_total_m2)),
