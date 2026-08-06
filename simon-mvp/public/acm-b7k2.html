@@ -248,7 +248,7 @@
     <div class="campo">
       <label>Piso <span style="font-weight:400;color:var(--gris)">— opcional</span></label>
       <input type="number" id="f-piso" min="0" max="40" placeholder="Ej: 15">
-      <div class="hint">No se usa para ajustar el precio (solo el 46% de los avisos lo declara): se muestra como contexto.</div>
+      <div class="hint">No se usa para ajustar el precio: se muestra como contexto.</div>
     </div>
     <div class="campo">
       <label>Lo que este análisis no puede ver <span style="font-weight:400;color:var(--gris)">— opcional</span></label>
@@ -313,7 +313,7 @@
     <details class="col" style="margin-top:18px">
       <summary><span id="sello-tit"></span></summary>
       <div class="cont">
-        <div class="l" style="font-size:12.5px;line-height:1.65" id="sello-txt"></div>
+        <div class="l" style="font-size:12.5px;line-height:1.65"><span id="sello-txt"></span><span id="sello-mz"></span></div>
         <div class="sello-gen" id="sello-gen"></div>
       </div>
     </details>
@@ -421,15 +421,15 @@
   <details class="col no"><summary>No ajustable — declarado <span class="cnt" id="cnt-no"></span></summary>
     <div class="cont"><ul id="met-no">
     <li><b>Lo que no está publicado.</b> Este análisis ve <b>la oferta que se publica en portales</b>. No ve la venta directa del desarrollador en su sala de ventas, ni la unidad que se pasa entre brokers sin anunciar, ni la que se vende por el cartel del balcón. En preventa eso puede ser una parte grande del mercado — y suele venderse <b>por debajo</b> del precio de lista publicado. El rango de acá es el rango de <b>lo visible</b>, y esa es su definición completa: nadie puede decirle cuánto pide lo que nunca se anunció.</li>
-    <li><b>Amoblado</b> — 0 de 394 avisos de venta lo declaran. No sabemos si algún precio incluye muebles.</li>
+    <li id="met-amoblado"></li>
     <li><b>Amenidades</b> — se muestran por comparable como contexto, pero su señal de precio se contradice entre tipologías: no se usan para ajustar.</li>
     <li><b>Parte del estado de obra está deducido, no declarado.</b> La mitad de los avisos no dice si el departamento está terminado o en preventa. Cuando pasa, se deduce de dos señales que se midieron contra casos conocidos: <b>lo que declaran las otras unidades del mismo edificio</b> (acierta 96,7% cuando son unánimes) y <b>que haya un alquiler activo ahí</b> (95% — no se alquila lo que no está construido). Los comparables deducidos se marcan <span class="tag" style="background:#EFE7D2;color:var(--sand)">deducido</span>; los demás lo declaran en el aviso. Aun así queda un resto sin resolver, y ese aparece como "estado s/d".</li>
-    <li><b>Piso y vista</b> — solo el 46% de los avisos declara el piso, y ninguno la vista. Por eso los diferenciales que aporta el broker se muestran <b>declarados como aporte suyo</b> y no ajustan el número: sin comparables que declaren lo mismo, ajustar sería inventar precisión.</li>
+    <li id="met-piso"><b>Piso y vista</b> — solo una parte de los avisos declara el piso, y ninguno la vista. Por eso los diferenciales que aporta el broker se muestran <b>declarados como aporte suyo</b> y no ajustan el número: sin comparables que declaren lo mismo, ajustar sería inventar precisión.</li>
     <li><b>Quién dice qué</b> — Simón informa el rango de la oferta publicada. La <b>recomendación de precio</b> la firma el broker, que conoce la unidad y al comprador. Son dos cosas distintas y aparecen separadas a propósito.</li>
     <li><b>Precios de cierre</b> — Bolivia no tiene registro público de transacciones. Todo acá son precios <b>pedidos</b>.</li>
     <li><b>La antigüedad admite dos lecturas</b> — que el aviso no rote, o que se haya re-publicado y el contador vuelto a cero. Nunca es "el tiempo que tarda en venderse": eso no se observa.</li>
     <li><b>Un edificio no son varias opiniones</b> — cuando todas las unidades las publica el mismo desarrollador o la misma agencia, son una lista de precios repetida, no observaciones independientes.</li>
-    <li><b>Los días publicados no siempre son independientes.</b> Marcamos <span class="tag tag-rep">cargado en bloque</span> cuando 3 o más unidades del mismo edificio muestran <b>exactamente</b> la misma antigüedad. Puede ser un lanzamiento (subieron todas juntas el primer día) o una re-publicación (se bajaron y volvieron a subir, y el contador arrancó de cero). En los dos casos significa lo mismo para leer el cuadro: <b>esos avisos cuentan el tiempo del lote, no el de cada unidad</b> — no son N observaciones distintas del mismo fenómeno. En esta muestra el patrón aparece en <b>20% de los avisos</b>.</li>
+    <li><b>Los días publicados no siempre son independientes.</b> Marcamos <span class="tag tag-rep">cargado en bloque</span> cuando 3 o más unidades del mismo edificio muestran <b>exactamente</b> la misma antigüedad. Puede ser un lanzamiento (subieron todas juntas el primer día) o una re-publicación (se bajaron y volvieron a subir, y el contador arrancó de cero). En los dos casos significa lo mismo para leer el cuadro: <b>esos avisos cuentan el tiempo del lote, no el de cada unidad</b> — no son N observaciones distintas del mismo fenómeno. <span id="met-bloque"></span></li>
     <li><b>La fecha de entrega es la que declara el aviso</b>, no un compromiso verificado con el desarrollador. Cuando esa fecha <span style="color:var(--terra)">ya pasó</span> lo decimos: significa que el aviso no se actualizó, no necesariamente que la obra esté atrasada.</li>
     <li><b>Las fotos</b> — son la <b>primera foto de ese aviso</b>, la misma que muestra el feed. Sirven para reconocer la unidad, no para juzgar el interior: el aviso puede tener veinte más y esta es la que eligió quien publicó.</li>
     <li><b>Cada comparable abre su ficha</b> en el feed de Simón, con sus fotos, su ubicación y su contexto de mercado — y ahí adentro está el camino al aviso original, para quien quiera contrastarlo en la fuente. No le pedimos que nos crea. <b>El feed lista avisos de hasta 300 días</b>: los que llevan más publicado se marcan como <i>fuera del feed</i> y no tienen ficha. Y si un aviso fue dado de baja después de nuestro corte, puede no abrir — esa es la diferencia entre un dato verificado anoche y uno de hoy.</li>
@@ -1407,6 +1407,28 @@ Condominio Iguazú|-17.77232|-63.19227|2|200|584|6800|a|i|1`;
 var POOL_ALQ=ALQ_RAW.trim().split('\n').map(function(l){var f=l.split('|');
   return {e:f[0].trim(),lat:+f[1],lon:+f[2],d:+f[3],a:+f[4],pm:+f[5],bob:+f[6],amo:f[7],pq:f[8],dias:+f[9]};});
 
+/* ═══ HECHOS DE LA MUESTRA ═══
+   Ningún porcentaje del documento va escrito a mano: todos salen del pool que se
+   está usando. Un número fijo en el texto envejece con el mercado y termina
+   afirmando algo falso — que es exactamente lo que el método promete no hacer. */
+function hechos(){
+  var P=POOL, n=P.length, pct=function(k){return Math.round(100*k/n)};
+  var m={}; P.forEach(function(p){var k=p.e+'|'+p.dias; m[k]=(m[k]||0)+1;});
+  return {n:n,
+    sinDeclararParqueo: pct(P.filter(function(p){return p.pq==='s'}).length),
+    sinAmenidades:      pct(P.filter(function(p){return !amenidades(p).length}).length),
+    conPiso:            pct(P.filter(function(p){return p.pi}).length),
+    enBloque:           pct(P.filter(function(p){return m[p.e+'|'+p.dias]>=3}).length),
+    declaranAmoblado:   P.filter(function(p){return p.amo}).length};
+}
+/* el pool vivo manda la lista completa; el congelado, los cuatro flags de siempre */
+function amenidades(p){
+  if(Array.isArray(p.am)) return p.am;
+  var a=p.am||{};
+  return [a.pis?'Piscina':'',a.gym?'Gimnasio':'',a.cow?'Co-working':'',a.sau?'Sauna/Jacuzzi':'']
+    .filter(Boolean);
+}
+
 /* política declarada — un solo lugar */
 var CONF={radios:[300,500,800], nMin:5, frescuraDias:180, areaTol:0.20, outlierIQR:1.5,
 };
@@ -1783,7 +1805,16 @@ function render(){
         : 'En su tipología no hay base suficiente para medir cuánto vale esa diferencia.')+
       '</span></div>';
   }
+  /* el broker no piensa en metros, piensa en barrios: si la muestra cae en una o dos
+     microzonas, decirlo ubica mejor que el radio */
+  var mzs={}; activos().forEach(function(p){ if(p.mz)mzs[p.mz]=(mzs[p.mz]||0)+1; });
+  var mzLista=Object.keys(mzs).sort(function(a,b){return mzs[b]-mzs[a]});
+  var mzTxt = !mzLista.length ? ''
+    : mzLista.length===1 ? ' · todos en <b>'+mzLista[0]+'</b>'
+    : mzLista.length<=3 ? ' · '+mzLista.map(function(z){return z+' ('+mzs[z]+')'}).join(', ')
+    : ' · repartidos en '+mzLista.length+' microzonas';
   document.getElementById('sello-tit').innerHTML='<b>'+s.n+' comparables</b> a '+COH.radio+' m <span class="cnt">· cómo se armó la base</span>';
+  document.getElementById('sello-mz').innerHTML=mzTxt;
   document.getElementById('sello-txt').innerHTML=
     '<b>'+s.n+' comparables</b> a menos de <b>'+COH.radio+' m</b> · '+(MI.d===0?'monoambientes':MI.d+' dorm.')+
     ' · entre '+Math.round(MI.a*0.8)+' y '+Math.round(MI.a*1.2)+' m²'+
@@ -1863,7 +1894,10 @@ function render(){
   /* comparables */
   var filas=COH.frescos.map(function(p,i){
     var pqT=p.pq==='i'?'parqueo incl.':(p.pq==='n'?'sin parqueo':'parqueo s/d');
-    var amT=[p.am.pis?'piscina':'',p.am.gym?'gym':'',p.am.cow?'co-work':'',p.am.sau?'sauna':''].filter(Boolean).join(' · ')||'amenidades no cargadas';
+    var lista=amenidades(p);
+    /* con hasta 19 por edificio, mostrarlas todas tapa el resto de la ficha */
+    var amT=lista.length? lista.slice(0,5).join(' · ')+(lista.length>5?' +'+(lista.length-5)+' más':'')
+                        : 'amenidades no cargadas';
     var en=entregaDe(p), rep=REPUB(p);
     return '<div class="comp'+(excl[i]?' excluido':'')+'">'+foto(p)+'<div class="c1">'+
       '<div class="nom">'+p.e+(p.outlier?'<span class="tag tag-out">precio atípico</span>':'')+
@@ -1955,16 +1989,25 @@ function render(){
         : '(se probó desde '+CONF.radios[0]+' m y se amplió hasta encontrar '+CONF.nMin+' comparables)')+'</li>'+
     (COH.mismoEstado?'<li><b>Estado de obra</b> — todos '+(MI.est==='P'?'en preventa':'entregados')+', igual que el suyo</li>':'')+
     '<li><b>Antigüedad</b> — solo avisos de hasta '+CONF.frescuraDias+' días publicados</li>';
+  var H=hechos();
+  document.getElementById('met-amoblado').innerHTML='<b>Amoblado</b> — '+
+    (H.declaranAmoblado?H.declaranAmoblado+' de '+H.n+' avisos de venta lo declaran':
+     'ninguno de los '+H.n+' avisos de venta lo declara')+
+    '. No sabemos si algún precio incluye muebles.';
+  document.getElementById('met-piso').innerHTML='<b>Piso y vista</b> — solo el <b>'+H.conPiso+
+    '%</b> de los avisos declara el piso, y ninguno la vista. Por eso los diferenciales que aporta el broker se muestran <b>declarados como aporte suyo</b> y no ajustan el número: sin comparables que declaren lo mismo, ajustar sería inventar precisión.';
+  document.getElementById('met-bloque').innerHTML='En esta muestra el patrón aparece en <b>'+H.enBloque+'% de los avisos</b>.';
+
   /* 🔴 Acá NO va ningún ajuste, y el motivo no es que falten datos.
-     El 45% de los avisos no dice si incluye parqueo, y ese grupo no se parece ni a los
+     Casi la mitad de los avisos no dice si incluye parqueo, y ese grupo no se parece ni a los
      que dicen que sí ni a los que dicen que no: en monoambientes y en 2 dorm piden MÁS
      que los que declaran tenerlo. Comparar los declarados entre sí mide quién completó
      mejor el aviso, no cuánto vale un parqueo. Y aunque se declarara siempre, el
      parqueo va dentro del precio: para aislarlo haría falta la misma unidad vendida con
      y sin, y eso no existe. */
   document.getElementById('met-aj').innerHTML=
-    '<li><b>El parqueo no se puede aislar.</b> Va incluido en el precio, y <b>el 45% de los avisos ni siquiera dice si lo tiene</b> — ese grupo no se parece ni a los que declaran que sí ni a los que declaran que no. Comparar los declarados entre sí mediría quién completó mejor el aviso. Lo que sí se puede decir es cuántos lo declaran, y está arriba, en la base de la comparación.</li>'+
-    '<li><b>Las amenidades tampoco.</b> Además de que su señal de precio se contradice entre tipologías, <b>en 38% de los comparables la lista está vacía en nuestra base</b>: eso significa que no la tenemos cargada, <b>no</b> que el edificio no tenga. Por eso se muestran como contexto y nunca se descuenta por su ausencia.</li>'+
+    '<li><b>El parqueo no se puede aislar.</b> Va incluido en el precio, y <b>el '+H.sinDeclararParqueo+'% de los avisos ni siquiera dice si lo tiene</b> — ese grupo no se parece ni a los que declaran que sí ni a los que declaran que no. Comparar los declarados entre sí mediría quién completó mejor el aviso. Lo que sí se puede decir es cuántos lo declaran, y está arriba, en la base de la comparación.</li>'+
+    '<li><b>Las amenidades tampoco.</b> Además de que su señal de precio se contradice entre tipologías, <b>en '+H.sinAmenidades+'% de los comparables la lista está vacía en nuestra base</b>: eso significa que no la tenemos cargada, <b>no</b> que el edificio no tenga. Por eso se muestran como contexto y nunca se descuenta por su ausencia.</li>'+
     '<li><b>Si su unidad se distingue por algo de esto, dígalo usted</b> en «lo que este análisis no puede ver»: el broker sabe lo que el aviso no declara, y así queda escrito como aporte suyo en vez de perderse.</li>';
   /* los contadores del resumen plegado: se ve CUÁNTO hay antes de decidir si abrirlo */
   document.getElementById('cnt-ok').textContent=document.querySelectorAll('#met-ok li').length+' controles';
@@ -2043,7 +2086,10 @@ var POOL_ORIGEN='embebido';
 function aplicarPoolVivo(j){
   POOL=j.comparables.map(function(c){
     return {id:String(c.id),e:String(c.e).trim(),lat:c.lat,lon:c.lon,d:c.d,a:c.a,p:c.p,
-            m2:c.m2,dias:c.dias,pq:c.pq,est:c.est,am:c.am};});
+            m2:c.m2,dias:c.dias,pq:c.pq,est:c.est,am:c.am,
+            /* lo que el pool congelado no tenía: si no se mapea acá, el documento no lo
+               ve y los hechos de la muestra salen en cero */
+            b:c.b, pi:c.pi, eo:c.eo, mz:c.mz, amo:c.amo};});
   URLS_CRUDO={}; ENTREGAS={}; FOTOS_AV={};
   j.comparables.forEach(function(c){ var id=String(c.id);
     if(c.u)   URLS_CRUDO[id]=c.u;

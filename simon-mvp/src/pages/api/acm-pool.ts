@@ -39,8 +39,9 @@ export interface AcmComparable {
   dias: number       // días publicado
   pq: 'i' | 'n' | 's'  // parqueo: incluido / no / sin declarar
   est: 'P' | 'E' | '-' // preventa / entregado / sin declarar
-  am: { pis: 0 | 1; gym: 0 | 1; cow: 0 | 1; sau: 0 | 1 }
+  am: string[]         // las que tenga cargadas el edificio — vacío = no cargadas, NO "no tiene"
   mz?: string | null   // microzona
+  amo?: boolean        // ¿el aviso declara si está amoblado? (en venta: ninguno, hasta ahora)
   b?: number | null    // baños (lo declara el 95% de los avisos)
   pi?: number | null   // piso (lo declara el 47%)
   eo?: 'aviso' | 'vecinos' | 'alquiler' | null // de dónde salió el estado de obra
@@ -54,9 +55,6 @@ export interface AcmPoolResponse {
   n: number
   comparables: AcmComparable[]
 }
-
-const amenidad = (fl: unknown, clave: string): 0 | 1 =>
-  Array.isArray(fl) && fl.some((x) => String(x).toLowerCase().includes(clave)) ? 1 : 0
 
 // "Junio 2027" — el día no se declara en los avisos, así que decirlo sería inventarlo.
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -83,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('v_mercado_venta_shadow')
         .select('id,nombre_edificio,latitud,longitud,dormitorios,area_total_m2,precio_norm,' +
                 'precio_m2,dias_en_mercado,parqueo_incluido,estacionamientos,' +
-                'estado_construccion,id_proyecto_master,fuente,url,banos,piso,microzona,' +
+                'estado_construccion,id_proyecto_master,fuente,url,banos,piso,microzona,amoblado,' +
                 // misma fuente que el feed (buscar_unidades_simple_shadow): el aviso trae
                 // sus fotos en datos_json. Cubre 365/365 — el snapshot diario solo 213.
                 'datos_json->contenido->fotos_urls')
@@ -172,11 +170,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           : f.estado_construccion === 'preventa' || f.estado_construccion === 'pozo' ? 'P'
           : f.estado_construccion === 'entrega_inmediata' ? 'E' : '-',
         eo: inf ? (inf.origen as any) : (f.estado_construccion ? 'aviso' : null),
+        amo: f.amoblado != null,
         mz: f.microzona ?? mzPorEdificio.get((f.nombre_edificio || '').trim()) ?? null,
         b: f.banos != null ? Number(f.banos) : null,
         pi: f.piso != null ? Number(f.piso) : null,
-        am: { pis: amenidad(am, 'piscina'), gym: amenidad(am, 'gim'),
-              cow: amenidad(am, 'cowork') || amenidad(am, 'co-work'), sau: amenidad(am, 'sauna') },
+        am,
         u: cod ? (f.fuente === 'century21' ? 'c' : 'r') + cod : null,
         foto: Array.isArray(f.fotos_urls) && f.fotos_urls.length ? f.fotos_urls[0] : null,
         ent: edif?.ent ?? null,
