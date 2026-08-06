@@ -45,7 +45,11 @@ export interface AcmComparable {
   amo?: boolean        // ¿el aviso declara si está amoblado? (en venta: ninguno, hasta ahora)
   b?: number | null    // baños (lo declara el 95% de los avisos)
   pi?: number | null   // piso (lo declara el 47%)
-  eo?: 'aviso' | 'vecinos' | 'alquiler' | null // de dónde salió el estado de obra
+  // de dónde salió el estado de obra. 'conflicto_resuelto' y 'verificado' los agregó la
+  // mig 315: el primero cuando el edificio tiene avisos que se contradicen, el segundo
+  // cuando alguien lo comprobó a mano.
+  eo?: 'aviso' | 'vecinos' | 'alquiler' | 'conflicto_resuelto' | 'verificado' | null
+  ea?: 'P' | 'E' | null // lo que dice el AVISO, para poder marcar cuando difiere
   u?: string | null   // aviso original, prefijo 'c' (C21) o 'r' (Remax)
   foto?: string | null
   ent?: string | null // fecha de entrega declarada
@@ -185,6 +189,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           : f.estado_construccion === 'preventa' || f.estado_construccion === 'pozo' ? 'P'
           : f.estado_construccion === 'entrega_inmediata' ? 'E' : '-',
         eo: inf ? (inf.origen as any) : (f.estado_construccion ? 'aviso' : null),
+        // 🔴 Lo que declara el aviso, aparte del estado efectivo. Cuando la corrección
+        // de la mig 315 lo contradice —el aviso dice preventa y el edificio ya se
+        // entregó— el documento tiene que poder decirlo: si no, el broker abre el
+        // anuncio en C21, lee otra cosa, y el ACM queda sin explicación.
+        ea: f.estado_construccion === 'preventa' || f.estado_construccion === 'pozo' ? 'P'
+          : f.estado_construccion === 'entrega_inmediata' ? 'E' : null,
         amo: f.amoblado != null,
         mz: f.microzona ?? mzPorEdificio.get((f.nombre_edificio || '').trim()) ?? null,
         b: f.banos != null ? Number(f.banos) : null,

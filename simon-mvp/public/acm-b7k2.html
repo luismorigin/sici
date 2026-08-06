@@ -104,6 +104,7 @@
   .tag-out{background:#F3E3DA;color:var(--terra)}
   .tag-old{background:#EFE7D2;color:var(--sand)}
   .tag-rep{background:#EFE7D2;color:var(--sand)}
+  .det .inf.ok{background:var(--suave);color:var(--salvia)}
   .det .inf{display:inline-block;font-size:9px;font-weight:700;font-family:'Figtree';
     background:#EFE7D2;color:var(--sand);padding:0 5px;border-radius:999px;margin-left:5px;cursor:help}
   .det .ent{color:var(--salvia)}
@@ -451,7 +452,12 @@
     <li><b>Lo que no está publicado.</b> Este análisis ve <b>la oferta que se publica en portales</b>. No ve la venta directa del desarrollador en su sala de ventas, ni la unidad que se pasa entre brokers sin anunciar, ni la que se vende por el cartel del balcón. En preventa eso puede ser una parte grande del mercado — y suele venderse <b>por debajo</b> del precio de lista publicado. El rango de acá es el rango de <b>lo visible</b>, y esa es su definición completa: nadie puede decirle cuánto pide lo que nunca se anunció.</li>
     <li id="met-amoblado"></li>
     <li><b>Amenidades</b> — se muestran por comparable como contexto, pero su señal de precio se contradice entre tipologías: no se usan para ajustar.</li>
-    <li><b>Parte del estado de obra está deducido, no declarado.</b> La mitad de los avisos no dice si el departamento está terminado o en preventa. Cuando pasa, se deduce de dos señales que se midieron contra casos conocidos: <b>lo que declaran las otras unidades del mismo edificio</b> (acierta 96,7% cuando son unánimes) y <b>que haya un alquiler activo ahí</b> (95% — no se alquila lo que no está construido). Los comparables deducidos se marcan <span class="tag" style="background:#EFE7D2;color:var(--sand)">deducido</span>; los demás lo declaran en el aviso. Aun así queda un resto sin resolver, y ese aparece como "estado s/d".</li>
+    <li><b>Parte del estado de obra no sale del aviso.</b> La mitad no dice si está terminado o en preventa, y algunos avisos viejos dicen "preventa" cuando el edificio ya se entregó. Por eso el estado se resuelve así, en este orden:
+      <br>· <b>verificado</b> — alguien lo comprobó contra el edificio. Gana sobre todo lo demás.
+      <br>· <b>corregido</b> — el edificio tiene avisos que se contradicen y alguno ya figura entregado. Gana el estado más avanzado, no la mayoría: <b>un edificio no vuelve al pozo</b>, así que un solo aviso que diga "entregado" pesa más que cinco que digan "preventa" sin actualizar.
+      <br>· <b>deducido</b> — el aviso no lo declara y se toma de las otras unidades del edificio (acierta 96,7% cuando son unánimes) o de que haya un alquiler activo ahí (95%: no se alquila lo que no está construido).
+      <br>· sin marca — lo declara el aviso y nada lo contradice.
+      <br>Lo que no se resuelve queda como "estado s/d". <b>Cuando la corrección contradice al aviso, el comparable se marca</b>: si abre el anuncio va a leer otra cosa, y tiene derecho a saber por qué.</li>
     <li id="met-piso"><b>Piso y vista</b> — solo una parte de los avisos declara el piso, y ninguno la vista. Por eso los diferenciales que aporta el broker se muestran <b>declarados como aporte suyo</b> y no ajustan el número: sin comparables que declaren lo mismo, ajustar sería inventar precisión.</li>
     <li><b>Quién dice qué</b> — Simón informa el rango de la oferta publicada. La <b>recomendación de precio</b> la firma el broker, que conoce la unidad y al comprador. Son dos cosas distintas y aparecen separadas a propósito.</li>
     <li><b>Precios de cierre</b> — Bolivia no tiene registro público de transacciones. Todo acá son precios <b>pedidos</b>.</li>
@@ -1452,6 +1458,26 @@ function hechos(){
     enBloque:           pct(P.filter(function(p){return m[p.e+'|'+p.dias]>=3}).length),
     declaranAmoblado:   P.filter(function(p){return p.amo}).length};
 }
+/* De dónde salió el estado de obra de este comparable, y si contradice a su aviso.
+   🔴 Lo importante es el caso `conflicto_resuelto`: el aviso dice "preventa" y el
+   documento muestra "entregado" porque otras unidades del edificio ya se entregaron.
+   Sin marcarlo, el broker abre el anuncio, lee otra cosa y el ACM queda sin explicación
+   — peor que no corregirlo. */
+function marcaEstado(p){
+  if(p.est!=='P' && p.est!=='E') return '';
+  var contradice = p.ea && p.ea!==p.est;
+  if(p.eo==='verificado')
+    return '<span class="inf ok" title="Comprobado a mano contra el edificio, no deducido del aviso">verificado</span>';
+  if(p.eo==='conflicto_resuelto')
+    return '<span class="inf" title="'+(contradice
+      ? 'Este aviso dice ' + (p.ea==='P'?'preventa':'entregado') + ', pero otras unidades del mismo edificio ya figuran entregadas. Un edificio no vuelve al pozo, así que gana el estado más avanzado.'
+      : 'En este edificio hay avisos con estados distintos; gana el más avanzado porque un edificio no vuelve al pozo.')+'">'+
+      (contradice?'corregido':'según el edificio')+'</span>';
+  if(p.eo==='vecinos'||p.eo==='alquiler')
+    return '<span class="inf" title="No lo declara el aviso: se dedujo '+
+      (p.eo==='vecinos'?'de las otras unidades del edificio':'de que hay un alquiler activo ahí')+'">deducido</span>';
+  return '';
+}
 /* el pool vivo manda la lista completa; el congelado, los cuatro flags de siempre */
 function amenidades(p){
   if(Array.isArray(p.am)) return p.am;
@@ -1922,8 +1948,7 @@ function render(){
       '<div class="det">'+p.a+' m² · '+p.dias+' días · a '+p.dist+' m'+
       (p.b?' · '+p.b+' baño'+(p.b>1?'s':''):'')+(p.pi?' · piso '+p.pi:'')+
       ' · '+(p.est==='P'?'preventa':(p.est==='E'?'entregado':'estado s/d'))+
-      (p.eo==='vecinos'||p.eo==='alquiler'?'<span class="inf" title="No lo declara el aviso: se dedujo '+
-        (p.eo==='vecinos'?'de las otras unidades del edificio':'de que hay un alquiler activo ahí')+'">deducido</span>':'')+
+      marcaEstado(p)+
       (en?'<br><span class="'+(en.vencida?'ent-v':'ent')+'">entrega declarada: '+en.txt+(en.vencida?' — fecha ya pasada, el aviso no se actualizó':'')+'</span>':'')+
       '<br>'+pqT+' · '+amT+
       enlaces(p)+
@@ -2145,7 +2170,7 @@ function aplicarPoolVivo(j){
             m2:c.m2,dias:c.dias,pq:c.pq,est:c.est,am:c.am,
             /* lo que el pool congelado no tenía: si no se mapea acá, el documento no lo
                ve y los hechos de la muestra salen en cero */
-            b:c.b, pi:c.pi, eo:c.eo, mz:c.mz, amo:c.amo, pm:c.pm};});
+            b:c.b, pi:c.pi, eo:c.eo, ea:c.ea, mz:c.mz, amo:c.amo, pm:c.pm};});
   URLS_CRUDO={}; ENTREGAS={}; FOTOS_AV={};
   j.comparables.forEach(function(c){ var id=String(c.id);
     if(c.u)   URLS_CRUDO[id]=c.u;

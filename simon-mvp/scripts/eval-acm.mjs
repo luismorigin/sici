@@ -143,6 +143,29 @@ if (!SOLO || SOLO === '1') {
   const MINIMOS = { amenidades: 30, estado: 60, foto: 80, aviso: 90, microzona: 60, banos: 80 };
   const flojos = Object.keys(MINIMOS).filter((k) => cob[k] < MINIMOS[k])
     .map((k) => `${k} ${cob[k]}% (esperado ≥${MINIMOS[k]}%)`);
+  // 1d · ningún comparable puede contradecir a su aviso EN SILENCIO.
+  // 🔴 Nace de un caso real: la mig 315 corrige el estado de obra cuando los avisos de
+  // un edificio se contradicen ("un edificio no vuelve al pozo"), y el ACM mostraba
+  // "entregado" en avisos cuyo texto dice "preventa" sin marcarlo. El broker abre el
+  // anuncio, lee otra cosa, y el documento queda sin explicación.
+  const marcas = await pagina.evaluate(() => {
+    const r = { contradicen: 0, sinMarcar: [], porMarca: {} };
+    for (const p of POOL) {
+      const m = marcaEstado(p);
+      const t = m ? m.match(/>([^<]+)</)[1] : 'sin marca';
+      r.porMarca[t] = (r.porMarca[t] || 0) + 1;
+      if (p.ea && (p.est === 'P' || p.est === 'E') && p.ea !== p.est) {
+        r.contradicen++;
+        if (!m) r.sinMarcar.push(`${p.id} ${p.e}: el aviso dice ${p.ea}, se muestra ${p.est}`);
+      }
+    }
+    return r;
+  });
+  check(1, `los estados corregidos se declaran (${marcas.contradicen} contradicen a su aviso)`,
+    marcas.sinMarcar.length === 0,
+    marcas.sinMarcar.slice(0, 2).join(' · ') ||
+      Object.entries(marcas.porMarca).map(([k, v]) => `${k} ${v}`).join(' · '));
+
   check(1, 'el pool llega completo, no a medias', flojos.length === 0,
     flojos.join(' · ') || Object.keys(MINIMOS).map((k) => `${k} ${cob[k]}%`).join(' · '));
 

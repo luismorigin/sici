@@ -30,7 +30,7 @@ Dos minutos de leer código ajeno contra medio día de construir el camino equiv
 | **Fotos** | `datos_json->'contenido'->'fotos_urls'` — la misma fuente que el feed | 🔴 `datos_json->'fotos_urls'` y `datos_json_discovery->'imagenes'`: **vacíos**, 0 de 393. <br>🔴 `advisor_property_snapshot`: solo cubre 213 de 393 (54%). Yo lo usé y perdí 180 fotos. |
 | **Fecha de entrega** | `proyectos_master.fecha_entrega` — 88 avisos | 🔴 `advisor_property_snapshot.fecha_entrega`: **11 avisos**. Ocho veces menos, y el campo se llama igual. |
 | **Amenidades** | `proyectos_master.amenidades_edificio` (array de texto, 80 distintas) | 🔴 No está en la vista de mercado. <br>⚠️ Lista vacía = **no la tenemos cargada**, NO "el edificio no tiene". Pasa en el 38%. |
-| **Estado de obra** | `v_estado_obra_inferido_shadow` (`estado_efectivo` + `estado_origen`) | 🔴 `estado_construccion` crudo deja **la mitad sin declarar**; la vista rescata 119 de 182 con señales validadas (vecinos 96,7%, alquiler activo 95%). <br>🔴 El enum dice **`entrega_inmediata`**, no `entregado`. Escribirlo mal no rompe nada: deja a todos en "sin declarar". |
+| **Estado de obra** | `v_estado_obra_inferido_shadow` (`estado_efectivo` + `estado_origen`) | 🔴 `estado_construccion` crudo deja **la mitad sin declarar**. <br>🔴 El enum dice **`entrega_inmediata`**, no `entregado`. Escribirlo mal no rompe nada: deja a todos en "sin declarar". <br>🔴 `estado_origen` tiene **cinco** valores, no dos (mig 315): `verificado` · `conflicto_resuelto` · `aviso` · `vecinos` · `alquiler`. Tratar solo dos deja 27 avisos sin declarar su origen. |
 | **Identidad del edificio** | `id_proyecto_master` | 🔴 **`nombre_edificio` NO identifica**: 21 de 126 edificios tienen dos o tres nombres ("Condominio Maré / Mare / Maré"), y eso parte el 25% de los avisos en edificios fantasma. |
 | **Nombre para mostrar** | `proyectos_master.nombre_oficial` | ⚠️ El del aviso es una variante. El filtro del feed (`?edificio=`) busca por nombre oficial **y** por `alias_conocidos`, sin acentos. |
 | **Microzona** | `v_mercado_venta_shadow.microzona`, + rescate: si otro aviso del mismo edificio la tiene, vale para todos (257 → 348) | ⚠️ `get_zona_by_gps()` devuelve **solo zona**, no microzona. Pedirle microzona no falla: devuelve null. |
@@ -39,6 +39,23 @@ Dos minutos de leer código ajeno contra medio día de construir el camino equiv
 | **URL del aviso** | `url` de la vista. Para matchear, **el código**: C21 `/propiedad/<código>_slug`, Remax `...-<código>` | 🔴 La URL completa no sirve de clave: C21 **reescribe el slug** cuando editan el aviso. El código es único y sobrevive. |
 
 ---
+
+## El estado de obra tiene un orden de precedencia (mig 315)
+
+No es "lo que dice el aviso". Se resuelve así, y el ACM tiene que **declarar de cuál salió**:
+
+| Origen | Regla | En el documento |
+|---|---|---|
+| `verificado` | alguien lo comprobó contra el edificio. 🔴 **Asimétrico**: "entregado" vale para siempre, "en pozo" solo 365 días | badge verde `verificado` |
+| `conflicto_resuelto` | el edificio tiene avisos que se contradicen y **al menos uno** dice entregado → gana entregado. **Nunca por mayoría**: en HH Once la mayoría (5 de 7) se equivoca | `corregido` si contradice a su aviso, `según el edificio` si no |
+| `aviso` | lo declara el aviso y nada lo contradice | sin marca |
+| `vecinos` | consenso unánime del edificio (96,7% de acierto) | `deducido` |
+| `alquiler` | hay alquiler activo ahí (95%: no se alquila lo que no está construido) | `deducido` |
+
+🔴 **Cuando la corrección contradice al aviso hay que marcarlo.** Son 14 comparables hoy.
+Si el broker abre el anuncio en C21 y lee "preventa" mientras el ACM dice "entregado",
+sin explicación el documento pierde toda su autoridad. El eval lo verifica
+("los estados corregidos se declaran").
 
 ## Tres trampas que no son de ubicación
 
