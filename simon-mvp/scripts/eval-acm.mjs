@@ -164,6 +164,15 @@ if (!SOLO || SOLO === '1') {
       .select('id,nombre_edificio,latitud,longitud,dormitorios,area_total_m2,precio_norm,precio_m2,dias_en_mercado,estado_construccion')
       .in('zona', ['Equipetrol Centro', 'Equipetrol Norte', 'Sirari', 'Villa Brigida', 'Equipetrol Oeste', 'Eq. 3er Anillo'])
       .lte('dormitorios', 2).gte('area_total_m2', 20).not('latitud', 'is', null);
+    // el documento usa el estado INFERIDO (v_estado_obra_inferido_shadow), no el crudo:
+    // el check tiene que replicar la misma definición o mide otra cosa
+    const inferido = new Map();
+    for (let i = 0; i < (todos ?? []).length; i += 500) {
+      const { data } = await db.from('v_estado_obra_inferido_shadow')
+        .select('propiedad_id,estado_efectivo')
+        .in('propiedad_id', (todos ?? []).slice(i, i + 500).map((x) => x.id));
+      for (const e of data ?? []) inferido.set(e.propiedad_id, e.estado_efectivo);
+    }
     const delEdificio = (todos ?? []).filter((x) => (x.nombre_edificio || '').trim() === caso.e);
     if (!delEdificio.length) { difs.push(`${caso.e}: no está en la base`); continue; }
     const lat = delEdificio.reduce((s, x) => s + +x.latitud, 0) / delEdificio.length;
@@ -172,8 +181,11 @@ if (!SOLO || SOLO === '1') {
       const kx = 111320 * Math.cos(((aLat + bLat) / 2) * Math.PI / 180);
       return Math.hypot((aLon - bLon) * kx, (aLat - bLat) * 110570);
     };
-    const estDe = (x) => x.estado_construccion === 'preventa' || x.estado_construccion === 'pozo' ? 'P'
-      : x.estado_construccion === 'entrega_inmediata' ? 'E' : '-';
+    const estDe = (x) => {
+      const e = inferido.get(x.id) ?? x.estado_construccion;
+      return e === 'preventa' || e === 'pozo' ? 'P'
+        : e === 'entrega_inmediata' || e === 'entregado' ? 'E' : '-';
+    };
     let cand = (todos ?? []).filter((x) =>
       x.dormitorios === caso.d &&
       Math.round(+x.area_total_m2) >= caso.a * 0.8 && Math.round(+x.area_total_m2) <= caso.a * 1.2 &&

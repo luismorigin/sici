@@ -36,6 +36,9 @@ export interface AcmComparable {
   pq: 'i' | 'n' | 's'  // parqueo: incluido / no / sin declarar
   est: 'P' | 'E' | '-' // preventa / entregado / sin declarar
   am: { pis: 0 | 1; gym: 0 | 1; cow: 0 | 1; sau: 0 | 1 }
+  b?: number | null    // baños (lo declara el 95% de los avisos)
+  pi?: number | null   // piso (lo declara el 47%)
+  eo?: 'aviso' | 'vecinos' | 'alquiler' | null // de dónde salió el estado de obra
   u?: string | null   // aviso original, prefijo 'c' (C21) o 'r' (Remax)
   foto?: string | null
   ent?: string | null // fecha de entrega declarada
@@ -75,7 +78,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('v_mercado_venta_shadow')
         .select('id,nombre_edificio,latitud,longitud,dormitorios,area_total_m2,precio_norm,' +
                 'precio_m2,dias_en_mercado,parqueo_incluido,estacionamientos,' +
-                'estado_construccion,id_proyecto_master,fuente,url')
+                'estado_construccion,id_proyecto_master,fuente,url,banos,piso,' +
+                // misma fuente que el feed (buscar_unidades_simple_shadow): el aviso trae
+                // sus fotos en datos_json. Cubre 365/365 — el snapshot diario solo 213.
+                'datos_json->contenido->fotos_urls')
         .in('zona', ZONAS_EQUIPETROL_DB)
         .lte('dormitorios', DORMS_MAX)
         .gte('area_total_m2', AREA_MINIMA)
@@ -86,6 +92,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (error) throw error
       filas.push(...(data ?? []))
       if (!data || data.length < TANDA) break
+    }
+
+    // ESTADO DE OBRA. La vista v_estado_obra_inferido_shadow (migs 302/303) deduce el
+    // estado de los avisos que no lo declaran: rescata 119 de los 182 que acá quedaban
+    // en "sin declarar", o sea que la mezcla de preventa con entregado baja del 50% al
+    // 17%. 🔴 Trae `estado_origen` justamente para poder DECLARAR lo deducido: cuando
+    // sale de los vecinos del edificio o de que hay un alquiler activo, el documento lo
+    // dice — nunca se presenta una inferencia como si el aviso lo hubiera declarado.
+    const estados = new Map<number, { est: 'P' | 'E'; origen: string }>()
+    for (let i = 0; i < filas.length; i += 500) {
+      const { data } = await supabase
+        .from('v_estado_obra_inferido_shadow')
+        .select('propiedad_id,estado_efectivo,estado_origen')
+        .in('propiedad_id', filas.slice(i, i + 500).map((f) => f.id))
+      for (const e of data ?? []) {
+        const v = e.estado_efectivo === 'preventa' || e.estado_efectivo === 'pozo' ? 'P'
+          : e.estado_efectivo === 'entrega_inmediata' || e.estado_efectivo === 'entregado' ? 'E' : null
+        if (v) estados.set(e.propiedad_id, { est: v, origen: e.estado_origen })
+      }
     }
 
     // Amenidades y fecha de entrega son del EDIFICIO, no del aviso: viven en
@@ -106,37 +131,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // La FOTO sale del snapshot más reciente de cada aviso.
-    // 🔴 No alcanza con el último snapshot: cubre ~140 de 365 avisos, porque no todos
-    // se releen la misma noche. Hay que mirar hacia atrás y quedarse con el primero de
-    // cada propiedad — y paginar, porque son miles de filas y PostgREST corta en 1000
-    // sin avisar (un total exactamente redondo parece un dato y no lo es).
-    const ids = filas.map((f) => f.id)
-    const desdeFecha = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10)
-    const fotos = new Map<number, string>()
-    for (let i = 0; i < ids.length; i += 150) {
-      const tanda = ids.slice(i, i + 150)
-      for (let pag = 0; ; pag += TANDA) {
-        const { data, error } = await supabase
-          .from('advisor_property_snapshot')
-          .select('property_id,fotos_urls,snapshot_date')
-          .in('property_id', tanda)
-          .gte('snapshot_date', desdeFecha)
-          .order('property_id')
-          .order('snapshot_date', { ascending: false })
-          .range(pag, pag + TANDA - 1)
-        if (error) throw error
-        for (const s of data ?? []) {
-          // el orden garantiza que la primera de cada propiedad es la más reciente
-          if (fotos.has(s.property_id)) continue
-          if (Array.isArray(s.fotos_urls) && s.fotos_urls.length) fotos.set(s.property_id, s.fotos_urls[0])
-        }
-        if (!data || data.length < TANDA) break
-      }
-    }
-
     const comparables: AcmComparable[] = filas.map((f) => {
       const edif = porEdificio.get(f.id_proyecto_master)
+      const inf = estados.get(f.id)
       const am = edif?.am ?? []
       // El código del aviso, no la URL entera: el cliente le pone el dominio según el
       // prefijo. Ahorra ~40 caracteres por fila sobre 350 filas.
@@ -157,12 +154,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // 🔴 El enum dice `entrega_inmediata`, no `entregado`: escribirlo mal no rompe
         // nada, simplemente deja a todos "sin estado declarar" y el informe mezcla
         // preventa con entregado sin avisar.
-        est: f.estado_construccion === 'preventa' || f.estado_construccion === 'pozo' ? 'P'
+        est: inf ? inf.est
+          : f.estado_construccion === 'preventa' || f.estado_construccion === 'pozo' ? 'P'
           : f.estado_construccion === 'entrega_inmediata' ? 'E' : '-',
+        eo: inf ? (inf.origen as any) : (f.estado_construccion ? 'aviso' : null),
+        b: f.banos != null ? Number(f.banos) : null,
+        pi: f.piso != null ? Number(f.piso) : null,
         am: { pis: amenidad(am, 'piscina'), gym: amenidad(am, 'gim'),
               cow: amenidad(am, 'cowork') || amenidad(am, 'co-work'), sau: amenidad(am, 'sauna') },
         u: cod ? (f.fuente === 'century21' ? 'c' : 'r') + cod : null,
-        foto: fotos.get(f.id) ?? null,
+        foto: Array.isArray(f.fotos_urls) && f.fotos_urls.length ? f.fotos_urls[0] : null,
         ent: edif?.ent ?? null,
       }
     })

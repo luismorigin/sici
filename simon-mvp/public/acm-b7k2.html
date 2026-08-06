@@ -93,6 +93,8 @@
   .tag-out{background:#F3E3DA;color:var(--terra)}
   .tag-old{background:#EFE7D2;color:var(--sand)}
   .tag-rep{background:#EFE7D2;color:var(--sand)}
+  .det .inf{display:inline-block;font-size:9px;font-weight:700;font-family:'Figtree';
+    background:#EFE7D2;color:var(--sand);padding:0 5px;border-radius:999px;margin-left:5px;cursor:help}
   .det .ent{color:var(--salvia)}
   .det .ent-v{color:var(--terra)}
   .recalc{background:var(--suave);border-radius:10px;padding:11px 13px;font-size:12.5px;line-height:1.55;margin-top:10px;display:none}
@@ -421,6 +423,7 @@
     <li><b>Lo que no está publicado.</b> Este análisis ve <b>la oferta que se publica en portales</b>. No ve la venta directa del desarrollador en su sala de ventas, ni la unidad que se pasa entre brokers sin anunciar, ni la que se vende por el cartel del balcón. En preventa eso puede ser una parte grande del mercado — y suele venderse <b>por debajo</b> del precio de lista publicado. El rango de acá es el rango de <b>lo visible</b>, y esa es su definición completa: nadie puede decirle cuánto pide lo que nunca se anunció.</li>
     <li><b>Amoblado</b> — 0 de 394 avisos de venta lo declaran. No sabemos si algún precio incluye muebles.</li>
     <li><b>Amenidades</b> — se muestran por comparable como contexto, pero su señal de precio se contradice entre tipologías: no se usan para ajustar.</li>
+    <li><b>Parte del estado de obra está deducido, no declarado.</b> La mitad de los avisos no dice si el departamento está terminado o en preventa. Cuando pasa, se deduce de dos señales que se midieron contra casos conocidos: <b>lo que declaran las otras unidades del mismo edificio</b> (acierta 96,7% cuando son unánimes) y <b>que haya un alquiler activo ahí</b> (95% — no se alquila lo que no está construido). Los comparables deducidos se marcan <span class="tag" style="background:#EFE7D2;color:var(--sand)">deducido</span>; los demás lo declaran en el aviso. Aun así queda un resto sin resolver, y ese aparece como "estado s/d".</li>
     <li><b>Piso y vista</b> — solo el 46% de los avisos declara el piso, y ninguno la vista. Por eso los diferenciales que aporta el broker se muestran <b>declarados como aporte suyo</b> y no ajustan el número: sin comparables que declaren lo mismo, ajustar sería inventar precisión.</li>
     <li><b>Quién dice qué</b> — Simón informa el rango de la oferta publicada. La <b>recomendación de precio</b> la firma el broker, que conoce la unidad y al comprador. Son dos cosas distintas y aparecen separadas a propósito.</li>
     <li><b>Precios de cierre</b> — Bolivia no tiene registro público de transacciones. Todo acá son precios <b>pedidos</b>.</li>
@@ -428,7 +431,7 @@
     <li><b>Un edificio no son varias opiniones</b> — cuando todas las unidades las publica el mismo desarrollador o la misma agencia, son una lista de precios repetida, no observaciones independientes.</li>
     <li><b>Los días publicados no siempre son independientes.</b> Marcamos <span class="tag tag-rep">cargado en bloque</span> cuando 3 o más unidades del mismo edificio muestran <b>exactamente</b> la misma antigüedad. Puede ser un lanzamiento (subieron todas juntas el primer día) o una re-publicación (se bajaron y volvieron a subir, y el contador arrancó de cero). En los dos casos significa lo mismo para leer el cuadro: <b>esos avisos cuentan el tiempo del lote, no el de cada unidad</b> — no son N observaciones distintas del mismo fenómeno. En esta muestra el patrón aparece en <b>20% de los avisos</b>.</li>
     <li><b>La fecha de entrega es la que declara el aviso</b>, no un compromiso verificado con el desarrollador. Cuando esa fecha <span style="color:var(--terra)">ya pasó</span> lo decimos: significa que el aviso no se actualizó, no necesariamente que la obra esté atrasada.</li>
-    <li><b>Las fotos</b> — son de <b>un aviso</b> de ese edificio, no necesariamente de la unidad comparada. Sirven para reconocer el edificio, no para juzgar el interior. El 63% de los avisos tiene foto publicada; el resto aparece sin imagen.</li>
+    <li><b>Las fotos</b> — son la <b>primera foto de ese aviso</b>, la misma que muestra el feed. Sirven para reconocer la unidad, no para juzgar el interior: el aviso puede tener veinte más y esta es la que eligió quien publicó.</li>
     <li><b>Cada comparable abre su ficha</b> en el feed de Simón, con sus fotos, su ubicación y su contexto de mercado — y ahí adentro está el camino al aviso original, para quien quiera contrastarlo en la fuente. No le pedimos que nos crea. <b>El feed lista avisos de hasta 300 días</b>: los que llevan más publicado se marcan como <i>fuera del feed</i> y no tienen ficha. Y si un aviso fue dado de baja después de nuestro corte, puede no abrir — esa es la diferencia entre un dato verificado anoche y uno de hoy.</li>
     <li><b>El retorno de alquiler es bruto y sobre avisos</b>, no sobre contratos firmados. Se calcula con rentas <b>pedidas</b> de unidades comparables, antes de expensas, vacancia, impuestos y comisión. Además, en alquiler el amoblado <b>sí</b> se declara y empuja la renta hacia arriba: por eso mostramos cuántos de los comparables son amoblados. Del resto no afirmamos que no lo sean — el aviso simplemente no lo dice.</li>
   </ul></div></details>
@@ -1865,7 +1868,11 @@ function render(){
     return '<div class="comp'+(excl[i]?' excluido':'')+'">'+foto(p)+'<div class="c1">'+
       '<div class="nom">'+p.e+(p.outlier?'<span class="tag tag-out">precio atípico</span>':'')+
         (rep?'<span class="tag tag-rep">cargado en bloque</span>':'')+'</div>'+
-      '<div class="det">'+p.a+' m² · '+p.dias+' días · a '+p.dist+' m · '+(p.est==='P'?'preventa':(p.est==='E'?'entregado':'estado s/d'))+
+      '<div class="det">'+p.a+' m² · '+p.dias+' días · a '+p.dist+' m'+
+      (p.b?' · '+p.b+' baño'+(p.b>1?'s':''):'')+(p.pi?' · piso '+p.pi:'')+
+      ' · '+(p.est==='P'?'preventa':(p.est==='E'?'entregado':'estado s/d'))+
+      (p.eo==='vecinos'||p.eo==='alquiler'?'<span class="inf" title="No lo declara el aviso: se dedujo '+
+        (p.eo==='vecinos'?'de las otras unidades del edificio':'de que hay un alquiler activo ahí')+'">deducido</span>':'')+
       (en?'<br><span class="'+(en.vencida?'ent-v':'ent')+'">entrega declarada: '+en.txt+(en.vencida?' — fecha ya pasada, el aviso no se actualizó':'')+'</span>':'')+
       '<br>'+pqT+' · '+amT+
       enlaces(p)+
