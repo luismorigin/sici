@@ -1680,15 +1680,16 @@ function armarCohort(){
   }
   return null;
 }
-/* ¿cuánto vale, medido, la diferencia preventa vs entregado EN ESA TIPOLOGÍA?
-   Por tipología y no global: mezclar tipologías es la trampa de composición.
-   Devuelve null si algún lado no llega a 8 avisos — sin base, no un número flojo. */
-function deltaEstado(d){
-  var P=POOL.filter(function(p){return p.d===d&&p.est==='P'&&p.dias<=CONF.frescuraDias}).map(function(p){return p.m2});
-  var E=POOL.filter(function(p){return p.d===d&&p.est==='E'&&p.dias<=CONF.frescuraDias}).map(function(p){return p.m2});
-  if(P.length<8||E.length<8)return null;
-  return 100*(pctl(P,.5)/pctl(E,.5)-1);
-}
+/* 🔴 Acá había un deltaEstado() que medía la diferencia de precio entre preventa y
+   entregado. Se retiró: con el pool de hoy el signo se da vuelta según la métrica
+   (en 1 dorm, +2,2% por mediana y -1,4% por promedio) y los rangos se solapan casi
+   por completo — en monoambientes el de preventa queda entero dentro del de
+   entregado. Eso no es una diferencia chica: es una diferencia que no se distingue
+   del ruido, y ponerle un número le daba una precisión que no tiene.
+   Lo que SÍ importa del estado de obra no es cuánto cuesta: es que un departamento
+   que se ocupa mañana y uno que se entrega en dos años no compiten por el mismo
+   comprador. Eso se dice, y no se cuantifica. */
+
 /* comparables de ALQUILER — misma cascada de radios, misma tipología y superficie.
    Se usa solo para la segunda lectura del simulador; nunca toca el rango de venta. */
 function rentaCohort(){
@@ -1795,35 +1796,11 @@ function render(){
       : '';
   } else {
     var otros=activos().filter(function(p){return p.est!==MI.est}).length;
-    var dEst=deltaEstado(MI.d);
     ae.innerHTML='<div class="aviso"><b>La muestra mezcla estados de obra.</b> Su unidad está <b>'+(MI.est==='P'?'en preventa':'entregada')+'</b>, pero '+
       (otros===s.n?'<b>ninguno</b> de los '+s.n+' comparables lo está':'<b>'+otros+' de los '+s.n+'</b> comparables no lo están')+
       ': no había '+CONF.nMin+' avisos '+(MI.est==='P'?'en preventa':'entregados')+' de esta tipología y superficie ni ampliando a '+CONF.radios[CONF.radios.length-1]+' m.<br>'+
-      '<span style="color:#94512E">Un departamento que se ocupa mañana y uno que se entrega en dos años <b>no compiten por el mismo comprador</b>, aunque el precio por m² se parezca. '+
-      (dEst!==null
-        ? 'En su tipología la diferencia medida entre preventa y entregado es de <b>'+Math.abs(dEst).toFixed(1).replace('.',',')+'%</b> por m² — '+(Math.abs(dEst)<5?'chica, pero':'material, y')+' el rango de arriba no la corrige.'
-        : 'En su tipología no hay base suficiente para medir cuánto vale esa diferencia.')+
-      '</span></div>';
+      '<span style="color:#94512E">Un departamento que se ocupa mañana y uno que se entrega en dos años <b>no compiten por el mismo comprador</b>, aunque el precio por m² se parezca. No ponemos un número a esa diferencia: medida sobre los avisos publicados cambia de signo según cómo se la calcule, así que sería inventar precisión. Lo que sí se puede decir es que <b>el rango de arriba no la corrige</b>.</span></div>';
   }
-  /* el broker no piensa en metros, piensa en barrios: si la muestra cae en una o dos
-     microzonas, decirlo ubica mejor que el radio */
-  var mzs={}; activos().forEach(function(p){ if(p.mz)mzs[p.mz]=(mzs[p.mz]||0)+1; });
-  var mzLista=Object.keys(mzs).sort(function(a,b){return mzs[b]-mzs[a]});
-  var mzTxt = !mzLista.length ? ''
-    : mzLista.length===1 ? ' · todos en <b>'+mzLista[0]+'</b>'
-    : mzLista.length<=3 ? ' · '+mzLista.map(function(z){return z+' ('+mzs[z]+')'}).join(', ')
-    : ' · repartidos en '+mzLista.length+' microzonas';
-  document.getElementById('sello-tit').innerHTML='<b>'+s.n+' comparables</b> a '+COH.radio+' m <span class="cnt">· cómo se armó la base</span>';
-  document.getElementById('sello-mz').innerHTML=mzTxt;
-  document.getElementById('sello-txt').innerHTML=
-    '<b>'+s.n+' comparables</b> a menos de <b>'+COH.radio+' m</b> · '+(MI.d===0?'monoambientes':MI.d+' dorm.')+
-    ' · entre '+Math.round(MI.a*0.8)+' y '+Math.round(MI.a*1.2)+' m²'+
-    (COH.mismoEstado?' · <b>mismo estado de obra</b>'
-      :(MI.est==='?'?' · <span style="color:var(--gris)">estado de obra sin declarar</span>'
-                    :' · <span style="color:var(--terra)">estado de obra mezclado (ver el aviso de arriba)</span>'))+
-    '<br><span style="color:var(--gris)">Antigüedad ≤'+CONF.frescuraDias+' días · '+conPq+' declaran parqueo, '+sdPq+' no declaran'+
-    (COH.viejos.length?' · '+COH.viejos.length+(COH.viejos.length===1?' aviso quedó':' avisos quedaron')+' fuera por antigüedad':'')+
-    '<br><span style="color:var(--terra)">No incluye venta directa de desarrollador ni unidades no publicadas.</span></span>';
 
   /* criterios movidos por el broker: se declaran en el documento del cliente */
   var mov=ajustesMovidos();
