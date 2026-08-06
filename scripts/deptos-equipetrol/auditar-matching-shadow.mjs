@@ -113,7 +113,9 @@ function haversine(lat1, lon1, lat2, lon2) {
 // `fecha_publicacion` (2-ago-2026): no decide el dedup, pero DESEMPATA para el humano.
 // Dos avisos del mismo piso publicados el MISMO día son casi con seguridad el mismo depto;
 // publicados con días de diferencia, pueden ser dos unidades del piso. Se muestra en sup.3.
-const COLS = 'id,fuente,url,tipo_operacion,latitud,longitud,zona,nombre_edificio,id_proyecto_master,piso,duplicado_de,campos_bloqueados,precio_usd,precio_mensual_usd,precio_mensual_bob,area_total_m2,fecha_publicacion,datos_json';
+// `estado_construccion` + `fecha_discovery` los suma la SUPERFICIE 6 (6-ago-2026):
+// hacen falta para reproducir en JS la vigencia que en SQL calcula `es_propiedad_vigente()`.
+const COLS = 'id,fuente,url,tipo_operacion,latitud,longitud,zona,nombre_edificio,id_proyecto_master,piso,duplicado_de,campos_bloqueados,precio_usd,precio_mensual_usd,precio_mensual_bob,area_total_m2,fecha_publicacion,fecha_discovery,estado_construccion,datos_json';
 
 // 🔒 REGLA CRÍTICA #1 del proyecto: `campos_bloqueados` SIEMPRE se respetan (Manual > Automatic).
 // Si un humano ya decidió sobre este campo (ej. "este match es un FP, dejar sin pm"), el audit NO
@@ -516,10 +518,126 @@ async function main() {
     }
   }
 
+  // ── SUPERFICIE 6 — EL EDIFICIO SE CONTRADICE A SÍ MISMO (6-ago-2026) ──────────
+  // Origen: el founder encontró HH Once mostrándose a la vez como "preventa" y como
+  // "entrega inmediata" en el mismo feed. El daño NO es de cobertura (solo 7 props
+  // quedaban sin estado por esto) sino de CREDIBILIDAD: el mismo edificio con dos
+  // etiquetas contradictorias en la misma pantalla no se lee como "faltan datos",
+  // se lee como que el sitio no sabe lo que dice.
+  //
+  // 🔑 LA REGLA (mig 315) YA RESUELVE LA MAYORÍA hacia "entregado": un edificio no
+  //    vuelve al pozo, así que "entrega_inmediata" (evidencia positiva: alguien lo vio
+  //    parado) le gana a "preventa" (el default del aviso que nadie actualizó). Esta
+  //    superficie NO existe para arreglar el feed — existe para que un humano SELLE
+  //    la presunción, o la corrija cuando la regla se equivoque.
+  //
+  // 🔴 REPORTA, NO DECIDE — igual que la superficie 5. La regla es una presunción
+  //    razonable; el dictado del founder es lo único que la vuelve afirmable.
+  //
+  // Rastro que corta la relectura: `proyectos_master.entrega_verificada` (mig 315).
+  // Sin esto los mismos 8 edificios volverían todas las noches — el patrón de siempre
+  // (feedback_decision_terreno_va_al_catalogo): un veredicto sin rastro se repite.
+  const sup6 = [];
+  {
+    // Misma regla de vigencia que `es_propiedad_vigente()` en SQL: 300 días para todos,
+    // sobre fecha_publicacion y, si falta, fecha_discovery. Replicada acá y no consultada
+    // para no pedirle a la BD una fila por prop.
+    const HOY = new Date();
+    const vigente = (p) => {
+      const f = p.fecha_publicacion || p.fecha_discovery;
+      if (!f) return false;
+      return (HOY - new Date(f)) / 86400000 <= 300;
+    };
+    const estDe = (p) => (p.estado_construccion && p.estado_construccion !== 'no_especificado')
+      ? p.estado_construccion : null;
+
+    const porPm = new Map();
+    for (const p of filas) {
+      if (p.id_proyecto_master == null || p.duplicado_de != null) continue;
+      if (!porPm.has(p.id_proyecto_master)) porPm.set(p.id_proyecto_master, { venta: [], alquiler: [] });
+      porPm.get(p.id_proyecto_master)[p.tipo_operacion === 'venta' ? 'venta' : 'alquiler'].push(p);
+    }
+
+    const candidatos = [];
+    for (const [pm, g] of porPm) {
+      const ventaVig = g.venta.filter(vigente);
+      const declaran = ventaVig.filter((p) => estDe(p) !== null);
+      const estados = new Set(declaran.map(estDe));
+      const alqVig = g.alquiler.filter(vigente).length;
+
+      // Clase A · CONFLICTO INTERNO: los avisos de venta vigentes del mismo edificio
+      // se contradicen entre sí. Es el caso HH Once.
+      if (estados.size > 1) {
+        candidatos.push({
+          pm, clase: 'conflicto_interno',
+          avisos_entregado: declaran.filter((p) => estDe(p) === 'entrega_inmediata').length,
+          avisos_preventa:  declaran.filter((p) => estDe(p) === 'preventa').length,
+          alquileres_activos: alqVig,
+          props_afectadas: g.venta.length,
+          // Cómo lo resolvió la regla de la mig 315 (para que el humano confirme o corrija)
+          resuelto_por_regla: declaran.some((p) => estDe(p) === 'entrega_inmediata') ? 'entrega_inmediata' : null,
+          ejemplos: declaran.slice(0, 6).map((p) => ({ id: p.id, dice: estDe(p), url: p.url, pub: p.fecha_publicacion })),
+        });
+      // Clase B · CONFLICTO CRUZADO: todos los avisos de venta dicen "preventa" PERO
+      // hay alquiler activo. No se alquila lo que no está construido (señal 95%). La
+      // regla NO lo toca a propósito: el consenso de vecinos (96,7%) le gana al alquiler
+      // y son fuerzas parejas — quién tiene razón lo dice un humano, no un umbral.
+      } else if (estados.size === 1 && [...estados][0] === 'preventa' && alqVig > 0) {
+        candidatos.push({
+          pm, clase: 'conflicto_cruzado',
+          avisos_entregado: 0,
+          avisos_preventa: declaran.length,
+          alquileres_activos: alqVig,
+          props_afectadas: g.venta.length,
+          resuelto_por_regla: null,   // queda en 'preventa'; solo el dictado lo cambia
+          ejemplos: declaran.slice(0, 6).map((p) => ({ id: p.id, dice: estDe(p), url: p.url, pub: p.fecha_publicacion })),
+        });
+      }
+    }
+
+    if (candidatos.length) {
+      // Los ya dictados por un humano NO vuelven (rastro de la mig 315).
+      // ⚠️ TOLERANTE A LA MIG 315 SIN APLICAR: si las columnas todavía no existen, el
+      //    audit NO se cae — reporta la superficie completa y lo DECLARA. Un audit que
+      //    revienta por una migración pendiente se lleva puesto el parte de toda la noche.
+      const ids = candidatos.map((c) => c.pm);
+      let pmsEstado = null, sinMig315 = false;
+      {
+        const r1 = await sb.from('proyectos_master')
+          .select('id_proyecto_master,nombre_oficial,zona,fecha_entrega,entrega_verificada,entrega_verificada_at')
+          .in('id_proyecto_master', ids);
+        if (r1.error) {
+          sinMig315 = true;
+          const r2 = await sb.from('proyectos_master')
+            .select('id_proyecto_master,nombre_oficial,zona,fecha_entrega').in('id_proyecto_master', ids);
+          if (r2.error) throw r2.error;
+          pmsEstado = r2.data;
+          console.log(`   ⚠️  Superficie 6 sin memoria: la mig 315 (entrega_verificada) no está aplicada.`);
+          console.log(`      Los edificios ya dictados NO se pueden saltear → van a volver a aparecer.\n`);
+        } else pmsEstado = r1.data;
+      }
+      const idx = new Map((pmsEstado || []).map((r) => [r.id_proyecto_master, r]));
+      for (const c of candidatos) {
+        const r = idx.get(c.pm) || {};
+        if (r.entrega_verificada) continue;   // ya sellado por el founder → no se re-propone
+        sup6.push({
+          ...c,
+          pm_nombre: r.nombre_oficial ?? null,
+          pm_zona: r.zona ?? null,
+          // Respaldo independiente para el humano: una entrega prometida que YA venció
+          // apoya "entregado". NO decide (la ficha acierta 78% y las obras se atrasan).
+          fecha_entrega: r.fecha_entrega ?? null,
+          fecha_entrega_vencida: r.fecha_entrega ? new Date(r.fecha_entrega) <= HOY : null,
+        });
+      }
+      sup6.sort((a, b) => b.props_afectadas - a.props_afectadas);
+    }
+  }
+
   const file = join(OUT, `audit-matching-shadow-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, ops: OPS, total_filas: filas.length,
-    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, ya_confirmados_por_auditor: supConfirmadas.length },
+    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, superficie_6_estado_obra_contradictorio: sup6.length, superficie_6_props_afectadas: sup6.reduce((a, c) => a + c.props_afectadas, 0), ya_confirmados_por_auditor: supConfirmadas.length },
     superficie_5_umbral_metros: DISTANCIA_SOSPECHOSA_M,
     superficie_1: sup1, superficie_2: sup2,
     // Nombres YA juzgados como no-edificio (odónimo / familia ambigua) → no van al juez.
@@ -543,6 +661,11 @@ async function main() {
     // 4-ago, la mitad de los sospechosos tenían el match BIEN y el pin del portal mal.
     // El juez tiene que decidir cuál de los tres lados falla (aviso / ficha del pm / pin).
     superficie_5: sup5,
+    // SUPERFICIE 6 — el edificio se contradice a sí mismo sobre su estado de obra.
+    // `resuelto_por_regla` dice cómo lo dejó la mig 315; el humano lo SELLA con un
+    // dictado (`proyectos_master.entrega_verificada`) o lo corrige. Sin el sello,
+    // el edificio vuelve a esta lista todas las noches.
+    superficie_6: sup6,
     // Matches de superficie 2/4 que un juez YA confirmó (tag `datos_json.trazabilidad.confirmado_por`).
     // No vuelven al juez. Quedan acá para poder revocar una confirmación que hubiera salido mal.
     ya_confirmados_por_auditor: supConfirmadas.map((s) => ({
@@ -561,6 +684,25 @@ async function main() {
       console.log(`        sospechoso: ${s.sospechoso}${s.hermanos_del_pm != null ? `  (${s.hermanos_pegados_al_pm}/${s.hermanos_del_pm} hermanos pegados)` : ''}`);
     }
     if (sup5.length > 12) console.log(`     … y ${sup5.length - 12} más (todas en el JSON, ordenadas por distancia)`);
+    console.log('');
+  }
+  if (sup6.length) {
+    const props6 = sup6.reduce((a, c) => a + c.props_afectadas, 0);
+    console.log(`  🏗️  Superficie 6 (el EDIFICIO se contradice sobre su estado de obra): ${sup6.length} edificios · ${props6} props`);
+    console.log(`     ⚠️  REPORTA, NO DECIDE. La regla (mig 315) ya los resuelve hacia "entregado" —`);
+    console.log(`         un edificio no vuelve al pozo—, pero eso es una PRESUNCIÓN. El dictado del`);
+    console.log(`         founder (proyectos_master.entrega_verificada) es lo único que la vuelve afirmable,`);
+    console.log(`         y es lo que hace que el edificio no vuelva a esta lista mañana.`);
+    for (const s of sup6.slice(0, 12)) {
+      const cruz = s.clase === 'conflicto_cruzado';
+      console.log(`     pm ${s.pm} "${s.pm_nombre || '?'}" [${s.pm_zona || '?'}] · ${s.props_afectadas} props`);
+      console.log(`        ${cruz ? '↔ CRUZADO: todos los avisos dicen preventa PERO hay alquiler activo (no se alquila lo no construido)'
+                                 : `⇄ INTERNO: ${s.avisos_entregado} avisos dicen entregado vs ${s.avisos_preventa} preventa`}`
+                  + `${s.alquileres_activos ? ` · ${s.alquileres_activos} alquiler(es) activo(s)` : ''}`
+                  + `${s.fecha_entrega_vencida ? ' · ⏰ fecha_entrega YA VENCIDA' : ''}`);
+      console.log(`        la regla lo deja en: ${s.resuelto_por_regla || 'preventa (sin cambio) → necesita dictado'}`);
+    }
+    if (sup6.length > 12) console.log(`     … y ${sup6.length - 12} más (todos en el JSON)`);
     console.log('');
   }
   console.log(`  Superficie 1 (sin match + con nombre → PM_NUEVO/fuzzy): ${sup1.length}`);
