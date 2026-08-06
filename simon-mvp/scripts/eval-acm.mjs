@@ -60,7 +60,7 @@ if (!SOLO || SOLO === '0') {
     const sel = document.getElementById('f-edif');
     const CFG = [[0, '0.20', '0'], [800, '0.30', '1'], [500, '0.20', '0']];
     for (const x of EDIFS) for (const d of [0, 1, 2, 3]) for (const a of [40, 60, 90, 130]) for (const est of ['P', 'E']) {
-      sel.value = x.e;
+      sel.value = x.k;
       document.querySelectorAll('#f-dorms button').forEach((b) => b.classList.toggle('on', +b.dataset.v === d));
       MI.d = d;
       document.querySelectorAll('#f-est button').forEach((b) => b.classList.toggle('on', b.dataset.v === est));
@@ -249,13 +249,18 @@ if (!SOLO || SOLO === '2') {
   const armado = await pagina.evaluate(() => {
     window.prompt = () => 'piso bajo, frente a la avenida'; window.confirm = () => true;
     AJ = { radio: 0, tol: 0.20, tipVecinas: false };
-    document.getElementById('f-edif').value = 'Lofty Island';
-    document.querySelectorAll('#f-dorms button').forEach((b) => b.classList.toggle('on', b.dataset.v === '1'));
-    MI.d = 1;
-    document.querySelectorAll('#f-est button').forEach((b) => b.classList.toggle('on', b.dataset.v === 'P'));
-    MI.est = 'P';
-    document.getElementById('f-area').value = '51';
-    document.getElementById('f-precio').value = '95000';
+    // 🔴 El selector lleva la CLAVE del edificio, no su nombre: asignar el nombre lo
+    // dejaba en el primero de la lista y el nivel 2 probaba otra propiedad sin avisar.
+    // Se elige el edificio con más unidades, que es el que ejercita "sus vecinos".
+    const elegido = EDIFS.filter((x) => x.k.startsWith('pm')).sort((a, b) => b.n - a.n)[0];
+    document.getElementById('f-edif').value = elegido.k;
+    const dom = POOL.filter((p) => claveEdif(p) === elegido.k)[0];
+    document.querySelectorAll('#f-dorms button').forEach((b) => b.classList.toggle('on', +b.dataset.v === dom.d));
+    MI.d = dom.d;
+    document.querySelectorAll('#f-est button').forEach((b) => b.classList.toggle('on', b.dataset.v === dom.est));
+    MI.est = dom.est;
+    document.getElementById('f-area').value = String(dom.a);
+    document.getElementById('f-precio').value = String(dom.p);
     document.getElementById('f-broker').value = 'Eval';
     document.getElementById('f-go').click();
     tog(0);
@@ -264,6 +269,7 @@ if (!SOLO || SOLO === '2') {
     publicar();
     return { link: linkAcm(), rango: document.getElementById('rango-txt').innerText,
              n: stats().n, radio: COH.radio, corte: META_ACM.corte,
+             edificio: MI.e, vecinos: document.querySelectorAll('#torre .comp').length,
              excl: document.getElementById('excl-dec').textContent.length > 0,
              reco: document.querySelector('.reco .rp').innerText,
              wa: document.getElementById('btn-hablar').href };
@@ -324,6 +330,35 @@ if (!SOLO || SOLO === '2') {
   }
   check(2, `las fichas abren la propiedad en el celular (${fichas.length}, contra producción)`,
     malas.length === 0, malas.slice(0, 2).join(' · ') || 'todas');
+
+  // "Ver todo el edificio" filtra el feed por nombre oficial. Si el catálogo cambia un
+  // nombre y el filtro deja de matchear, el botón abre el feed entero sin filtrar —
+  // otro fallo silencioso: la página carga, solo que muestra 392 en vez de 6.
+  const edif = await pagina.evaluate(() => {
+    const a = document.querySelector('#torre-ver-todas a');
+    return a ? { href: a.href, nombre: MI.e, vecinos: document.querySelectorAll('#torre .comp').length } : null;
+  });
+  // Si el caso elegido no tiene vecinos, el check no probó nada: eso es una falla del
+  // eval, no un "no aplica". Un check que nunca corre es peor que no tenerlo.
+  if (!edif) check(2, 'ver todo el edificio filtra el feed', false,
+    `${armado.edificio} quedó sin vecinos (${armado.vecinos}): el check no llegó a correr`);
+  else {
+    await pag2.goto(edif.href, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    let filtrados = -1;
+    try {
+      // el feed muestra "1 / 6" como segunda línea de texto: ese es el total filtrado
+      const contador = () => document.body.innerText
+        .split(String.fromCharCode(10)).map((l) => l.trim()).filter(Boolean)[1] || '';
+      await pag2.waitForFunction(
+        () => /^\d+ \/ \d+$/.test(document.body.innerText
+          .split(String.fromCharCode(10)).map((l) => l.trim()).filter(Boolean)[1] || ''),
+        { timeout: 25000 });
+      filtrados = await pag2.evaluate(contador).then((t) => +t.split('/')[1].trim());
+    } catch { /* queda en -1 */ }
+    // tiene que filtrar de verdad: no el feed entero, y del orden de los vecinos del ACM
+    check(2, 'ver todo el edificio filtra el feed', filtrados > 0 && filtrados <= edif.vecinos + 3,
+      `${edif.nombre}: ${filtrados} en el feed vs ${edif.vecinos} en el análisis`);
+  }
 }
 
 await navegador.close();
