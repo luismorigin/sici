@@ -220,7 +220,7 @@
     <div class="campo">
       <label>Dormitorios</label>
       <div class="seg" id="f-dorms">
-        <button data-v="0">Monoambiente</button><button data-v="1" class="on">1 dorm.</button><button data-v="2">2 dorm.</button>
+        <button data-v="0">Mono</button><button data-v="1" class="on">1 dorm.</button><button data-v="2">2 dorm.</button><button data-v="3">3 dorm.</button>
       </div>
     </div>
     <div class="campo">
@@ -1870,7 +1870,7 @@ function distM(aLat,aLon,bLat,bLon){var kx=111320*Math.cos((aLat+bLat)/2*Math.PI
 var TIP_VECINAS_DESDE=60;
 function tipsPermitidas(){
   if(!AJ.tipVecinas || MI.a<TIP_VECINAS_DESDE) return [MI.d];
-  return [MI.d-1,MI.d,MI.d+1].filter(function(d){return d>=0&&d<=2});
+  return [MI.d-1,MI.d,MI.d+1].filter(function(d){return d>=0&&d<=3});
 }
 function armarCohort(){
   var ed=EDIFS.filter(function(x){return x.e===MI.e})[0];

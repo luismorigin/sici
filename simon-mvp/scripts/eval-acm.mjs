@@ -59,7 +59,7 @@ if (!SOLO || SOLO === '0') {
     window.prompt = () => 'motivo de prueba'; window.confirm = () => true;
     const sel = document.getElementById('f-edif');
     const CFG = [[0, '0.20', '0'], [800, '0.30', '1'], [500, '0.20', '0']];
-    for (const x of EDIFS) for (const d of [0, 1, 2]) for (const a of [40, 60, 90]) for (const est of ['P', 'E']) {
+    for (const x of EDIFS) for (const d of [0, 1, 2, 3]) for (const a of [40, 60, 90, 130]) for (const est of ['P', 'E']) {
       sel.value = x.e;
       document.querySelectorAll('#f-dorms button').forEach((b) => b.classList.toggle('on', +b.dataset.v === d));
       MI.d = d;
@@ -130,7 +130,7 @@ if (!SOLO || SOLO === '1') {
   // la fuente ("Maré" en la vista, "Condominio Maré" en el pool congelado).
   const casos = await pagina.evaluate(() => {
     const elegido = [];
-    for (const d of [0, 1, 2]) {
+    for (const d of [0, 1, 2, 3]) {
       const cand = POOL.filter((p) => p.d === d && p.dias <= 180 &&
         (p.est === 'P' || p.est === 'E') && p.e !== '(sin edificio)');
       if (cand.length) elegido.push({ e: cand[0].e, d, a: cand[0].a, est: cand[0].est });
@@ -155,7 +155,9 @@ if (!SOLO || SOLO === '1') {
                p25: Math.round(s.p25), p75: Math.round(s.p75),
                ids: COH.frescos.map((p) => +p.id).sort((x, y) => x - y) };
     }, caso);
-    if (!doc) { difs.push(`${caso.e}: el documento no emite`); continue; }
+    // "no emite" NO es una falla: es la respuesta correcta cuando no hay base, y pasa
+    // en 1 de cada 3 casos de 3 dormitorios. Lo que hay que verificar es que la
+    // DECISIÓN coincida — que SQL tampoco junte el mínimo.
 
     // el mismo cohorte, armado con SQL
     const { data } = await db.rpc('acm_eval_cohorte', {}).then(() => ({ data: null })).catch(() => ({ data: null }));
@@ -163,7 +165,7 @@ if (!SOLO || SOLO === '1') {
     const { data: todos } = await db.from('v_mercado_venta_shadow')
       .select('id,nombre_edificio,latitud,longitud,dormitorios,area_total_m2,precio_norm,precio_m2,dias_en_mercado,estado_construccion')
       .in('zona', ['Equipetrol Centro', 'Equipetrol Norte', 'Sirari', 'Villa Brigida', 'Equipetrol Oeste', 'Eq. 3er Anillo'])
-      .lte('dormitorios', 2).gte('area_total_m2', 20).not('latitud', 'is', null);
+      .lte('dormitorios', 3).gte('area_total_m2', 20).not('latitud', 'is', null);
     // el documento usa el estado INFERIDO (v_estado_obra_inferido_shadow), no el crudo:
     // el check tiene que replicar la misma definición o mide otra cosa
     const inferido = new Map();
@@ -191,6 +193,12 @@ if (!SOLO || SOLO === '1') {
       Math.round(+x.area_total_m2) >= caso.a * 0.8 && Math.round(+x.area_total_m2) <= caso.a * 1.2 &&
       x.dias_en_mercado <= 180 &&
       distM(lat, lon, +x.latitud, +x.longitud) <= 800);
+    if (!doc) {
+      // El documento no emitió. SQL tampoco tiene que alcanzar los 5 — ni con el
+      // estado mezclado, que es el último paso de la cascada antes de rendirse.
+      if (cand.length >= 5) difs.push(`${caso.e}: el doc no emite pero SQL junta ${cand.length}`);
+      continue;
+    }
     if (doc.mismoEstado) cand = cand.filter((x) => estDe(x) === caso.est);
     const ids = cand.map((x) => x.id).sort((a, b) => a - b);
     const pctl = (arr, q) => { const s = arr.slice().sort((a, b) => a - b); const i = q * (s.length - 1);

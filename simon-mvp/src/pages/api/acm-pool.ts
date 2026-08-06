@@ -6,9 +6,13 @@
 // entrega declarada. Sin esto el prototipo trabaja con un pool congelado y le muestra
 // precios viejos a un cliente real.
 //
-// 🔴 Alcance: Equipetrol, 1-2 dormitorios. Los 3+ dorm quedan afuera a propósito — hay
-// ~29 avisos en 21 edificios, así que al filtrar por superficie y radio casi nunca se
-// juntan los 5 comparables mínimos y el informe no se emitiría igual.
+// Alcance: Equipetrol, hasta 3 dormitorios.
+// Los 3 dorm entran aunque sean pocos (28 avisos en 20 edificios): medido unidad por
+// unidad, 19 de las 27 frescas SÍ alcanzan los 5 comparables mínimos a 800 m, con 6,2
+// de promedio. Dejarlos afuera por "son pocos" habría negado el informe a dos de cada
+// tres casos donde el dato alcanzaba. Cuando no alcanza, el motor no emite y lo dice —
+// que es la salida correcta y ya estaba construida.
+// Los 4+ dorm quedan afuera: hay UNO solo, no hay con qué compararlo.
 //
 // Precio: `precio_norm` de la vista shadow (régimen TC nuevo), nunca `precio_usd`
 // crudo — regla 1 del sistema de precios en CLAUDE.md.
@@ -18,7 +22,7 @@ import { createClient } from '@supabase/supabase-js'
 import { ZONAS_EQUIPETROL_DB } from '@/lib/zonas'
 
 const AREA_MINIMA = 20
-const DORMS_MAX = 2
+const DORMS_MAX = 3
 // PostgREST corta en 1000 filas sin avisar y un total exactamente redondo parece un
 // dato: se pide de a tandas explícitas hasta que una vuelva incompleta.
 const TANDA = 1000
@@ -36,6 +40,7 @@ export interface AcmComparable {
   pq: 'i' | 'n' | 's'  // parqueo: incluido / no / sin declarar
   est: 'P' | 'E' | '-' // preventa / entregado / sin declarar
   am: { pis: 0 | 1; gym: 0 | 1; cow: 0 | 1; sau: 0 | 1 }
+  mz?: string | null   // microzona
   b?: number | null    // baños (lo declara el 95% de los avisos)
   pi?: number | null   // piso (lo declara el 47%)
   eo?: 'aviso' | 'vecinos' | 'alquiler' | null // de dónde salió el estado de obra
@@ -78,7 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('v_mercado_venta_shadow')
         .select('id,nombre_edificio,latitud,longitud,dormitorios,area_total_m2,precio_norm,' +
                 'precio_m2,dias_en_mercado,parqueo_incluido,estacionamientos,' +
-                'estado_construccion,id_proyecto_master,fuente,url,banos,piso,' +
+                'estado_construccion,id_proyecto_master,fuente,url,banos,piso,microzona,' +
                 // misma fuente que el feed (buscar_unidades_simple_shadow): el aviso trae
                 // sus fotos en datos_json. Cubre 365/365 — el snapshot diario solo 213.
                 'datos_json->contenido->fotos_urls')
@@ -131,6 +136,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    // MICROZONA. El trigger no se la asignó a 108 de 365 avisos, pero la microzona es
+    // del EDIFICIO: si otro aviso de la misma torre la tiene, vale para todos. Eso sube
+    // la cobertura de 257 a 318 (87%). Los que quedan sin, quedan sin — no se inventa.
+    const mzPorEdificio = new Map<string, string>()
+    for (const f of filas) {
+      const e = (f.nombre_edificio || '').trim()
+      if (e && f.microzona && !mzPorEdificio.has(e)) mzPorEdificio.set(e, f.microzona)
+    }
+
     const comparables: AcmComparable[] = filas.map((f) => {
       const edif = porEdificio.get(f.id_proyecto_master)
       const inf = estados.get(f.id)
@@ -158,6 +172,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           : f.estado_construccion === 'preventa' || f.estado_construccion === 'pozo' ? 'P'
           : f.estado_construccion === 'entrega_inmediata' ? 'E' : '-',
         eo: inf ? (inf.origen as any) : (f.estado_construccion ? 'aviso' : null),
+        mz: f.microzona ?? mzPorEdificio.get((f.nombre_edificio || '').trim()) ?? null,
         b: f.banos != null ? Number(f.banos) : null,
         pi: f.piso != null ? Number(f.piso) : null,
         am: { pis: amenidad(am, 'piscina'), gym: amenidad(am, 'gim'),
