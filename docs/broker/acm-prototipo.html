@@ -38,6 +38,17 @@
   .campo input,.campo select{width:100%;padding:11px 12px;border:1px solid var(--linea);border-radius:10px;
     background:#fff;font-size:15px;font-family:'DM Sans';color:var(--negro)}
   .campo .hint{font-size:11px;color:var(--gris);margin-top:4px}
+  .pegar{background:var(--suave);border-radius:12px;padding:13px 15px;margin-top:18px}
+  .pegar label{display:block;font-size:11.5px;font-weight:700;font-family:'Figtree';margin-bottom:6px}
+  .pegar-fila{display:flex;gap:7px}
+  .pegar-fila input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--linea);border-radius:10px;
+    background:#fff;font-size:14px;font-family:'DM Sans'}
+  .pegar-fila button{flex-shrink:0;padding:10px 16px;background:var(--negro);color:var(--arena);border:none;
+    border-radius:10px;font-family:'Figtree';font-weight:800;font-size:13px;cursor:pointer}
+  .pegar-fila button:disabled{opacity:.5;cursor:wait}
+  .pegar .hint{font-size:11px;color:var(--gris);margin-top:7px;line-height:1.45}
+  .pegar .hint.mal{color:var(--terra)}
+  .pegar .hint.bien{color:var(--salvia);font-weight:700}
   .seg{display:flex;gap:6px}
   .seg button{flex:1;padding:10px 4px;border:1px solid var(--linea);background:#fff;border-radius:10px;
     font-size:12.5px;font-family:'Figtree';font-weight:700;color:var(--gris);cursor:pointer}
@@ -210,6 +221,18 @@
   <div class="eyebrow">Su propiedad</div>
   <h2>¿Qué quiere comparar?</h2>
   <p class="lead">No hace falta que esté publicada. Con estos datos armamos el conjunto de comparables reales.</p>
+
+  <!-- Si el aviso ya existe, el broker tiene el link a mano: pegarlo evita cargar
+       ocho campos. El formulario sigue abajo para lo que todavía no se publicó, que
+       es el caso de oro (la captación). -->
+  <div class="pegar">
+    <label>¿Ya está publicada? Pegue el link del aviso</label>
+    <div class="pegar-fila">
+      <input type="text" id="f-url" placeholder="c21.com.bo/propiedad/… o remax.bo/propiedad/…">
+      <button id="f-buscar">Buscar</button>
+    </div>
+    <div class="hint" id="url-estado">Century 21 y Remax. También sirve pegar solo el código del aviso.</div>
+  </div>
 
   <div style="margin-top:18px">
     <div class="campo">
@@ -2356,6 +2379,45 @@ function cargarPool(listo){
       document.querySelectorAll('#'+par[0]+' button').forEach(function(x){x.classList.remove('on')});
       b.classList.add('on'); MI[par[1]]=par[1]==='d'?+b.dataset.v:b.dataset.v;};});});
   document.getElementById('f-go').onclick=calcular;
+
+  /* Pegar el link del aviso en vez de cargar ocho campos. Si no se encuentra, el
+     formulario queda intacto y el motivo se dice en palabras: "no está" y "es de otra
+     zona" mandan al broker a hacer cosas distintas. */
+  function buscarPorUrl(){
+    var q=document.getElementById('f-url').value.trim();
+    var est=document.getElementById('url-estado'), btn=document.getElementById('f-buscar');
+    if(!q){est.className='hint';est.textContent='Pegue el link del aviso, o cargue los datos abajo.';return;}
+    btn.disabled=true; est.className='hint'; est.textContent='Buscando…';
+    fetch('/api/acm-buscar?url='+encodeURIComponent(q))
+      .then(function(r){return r.json()})
+      .then(function(j){
+        btn.disabled=false;
+        if(!j.encontrado){ est.className='hint mal';
+          est.textContent=j.detalle||'No se pudo resolver ese enlace.'; return; }
+        if(j.edificio && EDIFS.some(function(x){return x.e===j.edificio})){
+          document.getElementById('f-edif').value=j.edificio; MI.e=j.edificio;
+        }
+        if(j.dormitorios!=null){ MI.d=j.dormitorios;
+          document.querySelectorAll('#f-dorms button').forEach(function(b){
+            b.classList.toggle('on', +b.dataset.v===j.dormitorios);}); }
+        if(j.area) document.getElementById('f-area').value=j.area;
+        if(j.precio) document.getElementById('f-precio').value=j.precio;
+        if(j.piso) document.getElementById('f-piso').value=j.piso;
+        [['f-pq','pq',j.parqueo],['f-est','est',j.estado]].forEach(function(par){
+          if(!par[2])return; MI[par[1]]=par[2];
+          document.querySelectorAll('#'+par[0]+' button').forEach(function(b){
+            b.classList.toggle('on', b.dataset.v===par[2]);});});
+        est.className='hint bien';
+        est.textContent='Encontrado: '+(j.edificio||'edificio sin nombre')+' · '+j.area+' m²'+
+          (j.precio?' · $'+j.precio.toLocaleString('es-BO').replace(/,/g,'.'):'')+
+          '. Revise los datos abajo y confirme.';
+      })
+      .catch(function(){ btn.disabled=false; est.className='hint mal';
+        est.textContent='No pudimos consultar. Cargue los datos a mano.'; });
+  }
+  document.getElementById('f-buscar').onclick=buscarPorUrl;
+  document.getElementById('f-url').addEventListener('keydown',function(e){
+    if(e.key==='Enter'){e.preventDefault();buscarPorUrl();}});
   /* criterios de búsqueda: cada cambio re-arma la muestra y re-pinta */
   [['aj-radio','radio'],['aj-tol','tol'],['aj-tip','tipVecinas']].forEach(function(par){
     document.querySelectorAll('#'+par[0]+' button').forEach(function(b){b.onclick=function(){
