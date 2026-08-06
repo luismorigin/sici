@@ -105,10 +105,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // dice — nunca se presenta una inferencia como si el aviso lo hubiera declarado.
     const estados = new Map<number, { est: 'P' | 'E'; origen: string }>()
     for (let i = 0; i < filas.length; i += 500) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('v_estado_obra_inferido_shadow')
         .select('propiedad_id,estado_efectivo,estado_origen')
         .in('propiedad_id', filas.slice(i, i + 500).map((f) => f.id))
+      // Si esto falla en silencio, la mitad de los avisos vuelve a "estado sin
+      // declarar" y el informe mezcla preventa con entregado sin que nadie lo note.
+      if (error) throw new Error(`estado de obra: ${error.message}`)
       for (const e of data ?? []) {
         const v = e.estado_efectivo === 'preventa' || e.estado_efectivo === 'pozo' ? 'P'
           : e.estado_efectivo === 'entrega_inmediata' || e.estado_efectivo === 'entregado' ? 'E' : null
@@ -122,10 +125,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const pms = Array.from(new Set(filas.map((f) => f.id_proyecto_master).filter(Boolean)))
     const porEdificio = new Map<number, { am: string[]; ent: string | null }>()
     for (let i = 0; i < pms.length; i += 500) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('proyectos_master')
         .select('id_proyecto_master,amenidades_edificio,fecha_entrega')
         .in('id_proyecto_master', pms.slice(i, i + 500))
+      // 🔴 Sin esto, una query rota deja el pool sin amenidades ni entregas y el
+      // documento dice "amenidades no cargadas" en TODOS los comparables: un mensaje
+      // plausible sobre un error. Fallar fuerte es mejor que mentir en voz baja.
+      if (error) throw new Error(`amenidades: ${error.message}`)
       for (const pm of data ?? []) {
         porEdificio.set(pm.id_proyecto_master, {
           am: Array.isArray(pm.amenidades_edificio) ? pm.amenidades_edificio : [],

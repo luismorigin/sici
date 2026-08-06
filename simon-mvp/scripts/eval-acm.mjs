@@ -123,6 +123,29 @@ if (!SOLO || SOLO === '1') {
   check(1, `cada comparable coincide con la base (${pool.length})`, desfasados.length === 0,
     desfasados.slice(0, 3).join(' · ') || 'todos');
 
+  // 1c · ¿llegó todo lo que enriquece al comparable?
+  // 🔴 Este check nace de un bug real: una query del endpoint falló por pedir una
+  // columna que no existía, y como no se miraba `error`, el pool salió sin ese dato.
+  // El síntoma no era un error — era el documento diciendo "amenidades no cargadas"
+  // en todos los comparables, o "estado s/d" en la mitad. Mensajes plausibles sobre
+  // un fallo. Los umbrales son holgados a propósito: no miden calidad de datos, miden
+  // que la consulta no se haya roto en silencio.
+  const cob = await pagina.evaluate(() => {
+    const n = POOL.length, p = (k) => Math.round(100 * k / n);
+    return { n,
+      amenidades: p(POOL.filter((x) => amenidades(x).length).length),
+      estado:     p(POOL.filter((x) => x.est === 'P' || x.est === 'E').length),
+      foto:       p(POOL.filter((x) => FOTOS_AV[x.id]).length),
+      aviso:      p(POOL.filter((x) => avisoDe(x)).length),
+      microzona:  p(POOL.filter((x) => x.mz).length),
+      banos:      p(POOL.filter((x) => x.b != null).length) };
+  });
+  const MINIMOS = { amenidades: 30, estado: 60, foto: 80, aviso: 90, microzona: 60, banos: 80 };
+  const flojos = Object.keys(MINIMOS).filter((k) => cob[k] < MINIMOS[k])
+    .map((k) => `${k} ${cob[k]}% (esperado ≥${MINIMOS[k]}%)`);
+  check(1, 'el pool llega completo, no a medias', flojos.length === 0,
+    flojos.join(' · ') || Object.keys(MINIMOS).map((k) => `${k} ${cob[k]}%`).join(' · '));
+
   // 1b · el rango del documento = el mismo cálculo hecho en SQL.
   //      Si esto da igual, portar el motor al servidor es mecánico. Si difiere, hay una
   //      definición ambigua escondida en algún lado.
