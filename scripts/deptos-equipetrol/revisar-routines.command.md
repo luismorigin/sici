@@ -87,8 +87,19 @@ operación mal tipeada / basura estructural / etc.) · **multiproyecto** desviad
 > 📉 **Y es señal de mercado, no solo de higiene**: un slug reescrito = aviso editado, y en 3 de los 5
 > casos medidos el 4-ago **el precio había bajado** (Lofty Island −28%, Torre Ara −7%, Vertical Terra −11%).
 
-Del log del **audit** extraer: superficies 1/2/3 · veredictos (APROBAR / CONFIRMAR / CORREGIR /
+Del log del **audit** extraer: superficies 1/2/3/4/5/6 · veredictos (APROBAR / CONFIRMAR / CORREGIR /
 RECHAZAR / DEDUP / PM_NUEVO) · **SQL listo para aplicar** · bloqueos (PM_NUEVO que espera GPS del founder).
+
+> 🏗️ **Superficie 6 — el edificio se contradice sobre su estado de obra** (6-ago-2026). Nació de que el
+> founder vio **HH Once** publicado a la vez como *preventa* y como *entrega inmediata* en el mismo feed.
+> **Va al parte aunque la regla ya lo haya resuelto**, y por una razón: la mig 315 lo deja en "entregado"
+> por presunción (un edificio no vuelve al pozo), y lo que se necesita del founder es **sellarla** con un
+> dictado — o corregirla. Sin el sello, el mismo edificio vuelve todas las noches.
+> Buscá en el log del audit `Superficie 6` y reportá: cuántos edificios, cuántas props, y **cuáles
+> necesitan dictado**. Los `conflicto_cruzado` (todos los avisos dicen preventa pero hay alquiler activo)
+> son los que la regla NO toca: esos **sí o sí** esperan una decisión humana.
+> ⚠️ Si el log dice *"Superficie 6 sin memoria: la mig 315 no está aplicada"*, **subilo al parte**: el
+> audit no puede saltear los ya dictados y la lista se va a repetir entera.
 📌 Desde el 4-ago **la superficie 3 va a traer MENOS dedups**, y eso es esperado, no una regresión: la
 republicación por slug reescrito ahora se resuelve en la captura. Lo que queda ahí son apart-hoteles y
 republicaciones con códigos distintos.

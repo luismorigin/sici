@@ -36,7 +36,12 @@ Shadow **ya guarda el anuncio que el reader juzgó** (`datos_json.contenido.desc
 de ahí, **SIN re-fetch → $0 y sin riesgo de bloqueo de IP**. (Si el anuncio pudo haber cambiado desde la
 carga, eso lo cubre el otro comando, `/audit-deptos-shadow`, que sí re-fetchea por drift.)
 
-## Las tres superficies
+## Las superficies
+
+> ⚠️ Este encabezado decía **"las tres superficies"** hasta el 6-ago-2026, cuando el script ya tenía
+> cinco: la 4 (29-jul) y la 5 (4-ago) se sumaron al `.mjs` y **nunca se documentaron acá**. Quedan
+> descritas abajo en corto. La fuente de verdad de lo que se calcula es siempre
+> `auditar-matching-shadow.mjs`, no este archivo.
 
 1. **SIN MATCH con nombre** — `id_proyecto_master IS NULL AND nombre_edificio IS NOT NULL`
    (`metodo` sin_match/fuzzy_debil/ambiguo). Candidatos **PM_NUEVO** (595 Bloque La Salle, 3660 Hamburgo)
@@ -62,6 +67,33 @@ carga, eso lo cubre el otro comando, `/audit-deptos-shadow`, que sí re-fetchea 
    van a grupos separados y NUNCA se deduplican (aunque la desc sea ≥90%) — son unidades reales (caso Las Dalias
    324 piso1/325 piso5). Piso `null` = comodín (agrupan entre sí, no se pierden apart-hoteles sin piso declarado).
    $0, sin fetch (la desc ya está guardada). Caso canónico: MAI Suites (7 avisos, piso null).
+4. **EL LECTOR FIJÓ EL PM CON DUDAS** (29-jul-2026) — el MOAT guardó `confianza` no-alta al asignar el
+   edificio. Van al juez a CONFIRMAR / CORREGIR / SIN_NOMBRE. Las props cargadas antes del 29-jul no
+   guardan confianza → no entran (y el script lo **declara**, para no leer el 0 como "todo limpio").
+5. **EL MATCH QUEDÓ LEJOS DEL EDIFICIO** (4-ago-2026, umbral **800 m**) — 🔴 **REPORTA, NO DESCONECTA**:
+   medido el 4-ago, **3 de 6** tenían el match BIEN y el pin del portal MAL. El juez decide cuál de los
+   tres lados falla (aviso / ficha del pm / pin). Rastro que corta la relectura:
+   `datos_json.trazabilidad.distancia_revisada`.
+6. **EL EDIFICIO SE CONTRADICE SOBRE SU ESTADO DE OBRA** (6-ago-2026) — nació de que el founder vio
+   **HH Once** publicado a la vez como *preventa* y como *entrega inmediata* en el mismo feed.
+   🔴 **El daño no es de cobertura, es de credibilidad**: dos etiquetas contradictorias del mismo
+   edificio en la misma pantalla no se leen como "faltan datos", se leen como que el sitio no sabe.
+   Dos clases:
+   - **`conflicto_interno`** — los avisos de venta **vigentes** del edificio se contradicen entre sí.
+   - **`conflicto_cruzado`** — todos los avisos de venta dicen *preventa* **pero hay alquiler activo**
+     (no se alquila lo que no está construido). La regla NO lo toca a propósito: el consenso de vecinos
+     (96,7%) y la señal de alquiler (95%) son fuerzas parejas — lo dicta un humano, no un umbral.
+
+   🔑 **La regla de la mig 315 ya resuelve el `conflicto_interno` hacia "entregado"** (un edificio no
+   vuelve al pozo: *entrega_inmediata* es evidencia positiva, *preventa* es el default del aviso que
+   nadie actualizó). **Pero eso es una PRESUNCIÓN, y el script la declara como tal** (`estado_origen =
+   'conflicto_resuelto'`). Lo que se le pide al humano es **sellarla**, no arreglar el feed.
+   ⚠️ **NO se resuelve por mayoría**: en HH Once la mayoría dice preventa (4 vigentes contra 2) y **la
+   mayoría está equivocada** — la entrega fue en marzo de 2026 y esos 4 son catálogo de la
+   desarrolladora publicado antes de entregar.
+   **Rastro que corta la relectura:** `proyectos_master.entrega_verificada` (mig 315). Sin el dictado,
+   los mismos 10 edificios vuelven todas las noches.
+   📌 Al 6-ago: **10 edificios · 69 props** (8 internos + 2 cruzados), 4 de ellos en Equipetrol.
 
 ## Flujo de ejecución (desde `scripts/deptos-equipetrol/`)
 
@@ -152,6 +184,22 @@ solo tras verificación humana (el founder da el GPS en Google Maps). NO inventa
   ya deduplicadas al cluster. 🔴 **Desde el 4-ago `duplicado_de` ya NO viene solo heredado de prod**: lo
   escribe también el cargador en `--apply` cuando C21 reescribió el slug (`dedup_por='cargador_slug_reescrito'`).
   El filtro aplica igual — pero no asumas que una fila con `duplicado_de` nació en el régimen viejo.
+- **Superficie 6 (estado de obra):** el veredicto NO va a la propiedad, va al **catálogo del edificio**
+  — es una característica del edificio, no del aviso (si va en la prop hay que repetirla en cada aviso
+  nuevo). Y **se guarda la FECHA DE LA OBSERVACIÓN, no el estado a secas**: *"al 6-ago-2026 ya estaba
+  entregado"* es verdad para siempre; un estado suelto se pudre (por eso `estado_construccion` acierta
+  solo 78%). No hace falta averiguar cuándo se entregó: alcanza una fecha en la que ya lo estaba.
+  ```sql
+  UPDATE proyectos_master
+  SET entrega_verificada = 'entregado',        -- o 'en_pozo'
+      entrega_verificada_at = NOW(), entrega_verificada_por = 'founder',
+      entrega_verificada_notas = '<cómo lo supo: visita / foto / dato del captador>'
+  WHERE id_proyecto_master = <ID> AND entrega_verificada IS NULL;   -- candado
+  ```
+  ⚠️ **`'entregado'` no caduca nunca; `'en_pozo'` caduca a los 365 días** (lo aplica la vista, mig 315):
+  un *"lo vi en obra"* de hace dos años no dice nada del edificio de hoy.
+  ⚠️ **Toca PROD (`proyectos_master`)** — invariante shadow: pedir OK explícito, igual que los alias.
+  Plantilla: `output/07-ESTADO-OBRA-dictado-founder-2026-08-06.sql`.
 - Temp tables con VALUES multilínea para listas de IDs. Cerrar con SELECT de verificación; el humano
   hace COMMIT/ROLLBACK. **PM_NUEVO**: si el catálogo es prod (read-only en fase shadow), los alias/PM
   nuevos se REGISTRAN para el cutover — NO se escriben a `proyectos_master` ahora (invariante shadow).
