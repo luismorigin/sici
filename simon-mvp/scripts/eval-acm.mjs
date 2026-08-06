@@ -92,6 +92,38 @@ if (!SOLO || SOLO === '0') {
     for (const k of Object.keys(m)) if (new Set(m[k]).size > 1) fallos.cruzados++;
     return fallos;
   });
+  // 🔴 Los bloques de texto del documento tienen que TENER texto. Un reemplazo mal
+  // aplicado dejó el sello de la base vacío durante seis commits y nadie lo vio: el
+  // eval verificaba números y el flujo, nunca que las piezas dijeran algo.
+  const vacios = await pagina.evaluate(() => {
+    // sobre un caso CON base: el último de la grilla puede haber quedado en "sin base",
+    // donde estos bloques se vacían a propósito
+    const u = POOL.find((p) => p.est === 'P' || p.est === 'E');
+    document.getElementById('f-edif').value = EDIFS.find((x) => x.k === claveEdif(u)).k;
+    document.querySelectorAll('#f-dorms button').forEach((b) => b.classList.toggle('on', +b.dataset.v === u.d));
+    MI.d = u.d;
+    document.querySelectorAll('#f-est button').forEach((b) => b.classList.toggle('on', b.dataset.v === '?'));
+    MI.est = '?';
+    document.getElementById('f-area').value = u.a;
+    document.getElementById('f-precio').value = u.p;
+    document.getElementById('f-go').click();
+    if (!COH) return ['el caso de control no emite: el check no pudo correr'];
+
+    const debenTenerTexto = {
+      'sello-txt': 'la base de la comparación', 'sello-tit': 'el titular del sello',
+      'sello-gen': 'el sello de generación', 'rango-txt': 'el rango', 'rango-nivel': 'el nivel del rango',
+      'frase-1': 'la frase del rango', 'objetivos': 'el precio por objetivo',
+      'comps': 'los comparables', 'frase-dias': 'la frase de antigüedad',
+      'frase-torre': 'la frase del edificio', 'met-ok': 'los controles del método',
+      'met-aj': 'lo que no se ajusta', 'cierre-txt': 'el cierre', 'caduca': 'la caducidad',
+    };
+    return Object.entries(debenTenerTexto)
+      .filter(([id]) => ((document.getElementById(id) || {}).textContent || '').trim().length < 12)
+      .map(([id, q]) => `${q} (#${id})`);
+  });
+  check(0, 'ningún bloque del documento quedó vacío', vacios.length === 0,
+    vacios.join(' · ') || 'los 14 con contenido');
+
   check(0, `recorre la grilla completa (${n0.corridas} combinaciones)`, n0.corridas > 2000, `${n0.corridas}`);
   check(0, 'sin errores de consola', errores.length === 0, errores.slice(0, 2).join(' · ') || 'ninguno');
   check(0, 'ningún enlace apunta a otro edificio', n0.cruzados === 0, `${n0.cruzados} cruzados`);

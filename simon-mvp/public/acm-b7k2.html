@@ -104,6 +104,7 @@
   .tag-out{background:#F3E3DA;color:var(--terra)}
   .tag-old{background:#EFE7D2;color:var(--sand)}
   .tag-rep{background:#EFE7D2;color:var(--sand)}
+  .tag-mio{background:var(--suave);color:var(--salvia)}
   .det .inf.ok{background:var(--suave);color:var(--salvia)}
   .det .inf{display:inline-block;font-size:9px;font-weight:700;font-family:'Figtree';
     background:#EFE7D2;color:var(--sand);padding:0 5px;border-radius:999px;margin-left:5px;cursor:help}
@@ -301,6 +302,7 @@
   <button class="lapiz solo-broker" onclick="editar()">✎ cambiar los datos</button>
 
   <div id="aviso-estado"></div>
+  <div id="aviso-propio"></div>
   <div id="ajustes-dec"></div>
 
   <!-- Criterio profesional del broker. Cerrado por defecto: existe para el que lo va a
@@ -1581,7 +1583,7 @@ function renderReco(){
    cliente arrastra comparables y enlaces que ya no corresponden. */
 function limpiarAnalisis(){
   ['comps','torre','fuera-muestra','excl-dec','recalc','aviso-estado','ajustes-dec',
-   'objetivos','difs-bloque','reco-bloque','renta-bloque']
+   'aviso-propio','objetivos','difs-bloque','reco-bloque','renta-bloque']
     .forEach(function(id){document.getElementById(id).innerHTML='';});
   document.getElementById('recalc').className='recalc';
 }
@@ -1876,6 +1878,34 @@ function render(){
       '<span style="color:#94512E">Un departamento que se ocupa mañana y uno que se entrega en dos años <b>no compiten por el mismo comprador</b>, aunque el precio por m² se parezca. No ponemos un número a esa diferencia: medida sobre los avisos publicados cambia de signo según cómo se la calcule, así que sería inventar precisión. Lo que sí se puede decir es que <b>el rango de arriba no la corrige</b>.</span></div>';
   }
 
+  /* 🔴 Este bloque se perdió seis commits atrás: un reemplazo de texto se lo llevó por
+     delante y el sello quedó vacío. El eval no lo vio porque nunca miraba su contenido.
+     Ahora sí (check "el sello describe la base"). */
+  document.getElementById('sello-txt').innerHTML=
+    '<b>'+s.n+' comparables</b> a menos de <b>'+COH.radio+' m</b> · '+(MI.d===0?'monoambientes':MI.d+' dorm.')+
+    ' · entre '+Math.round(MI.a*(1-AJ.tol))+' y '+Math.round(MI.a*(1+AJ.tol))+' m²'+
+    (COH.mismoEstado?' · <b>mismo estado de obra</b>'
+      :(MI.est==='?'?' · <span style="color:var(--gris)">estado de obra sin declarar</span>'
+                    :' · <span style="color:var(--terra)">estado de obra mezclado (ver el aviso de arriba)</span>'))+
+    '<br><span style="color:var(--gris)">Antigüedad ≤'+CONF.frescuraDias+' días · '+conPq+' declaran parqueo, '+sdPq+' no declaran'+
+    (COH.viejos.length?' · '+COH.viejos.length+(COH.viejos.length===1?' aviso quedó':' avisos quedaron')+' fuera por antigüedad':'')+
+    '<br><span style="color:var(--terra)">No incluye venta directa de desarrollador ni unidades no publicadas.</span></span>';
+
+  /* 🔴 Los del propio edificio son los comparables más directos —misma ubicación, mismas
+     amenidades— pero si los publica el mismo desarrollador NO son observaciones
+     independientes: son una lista de precios. Pasa seguido: en 19% de los casos son la
+     mitad o más de la muestra, y en algunos son todos. No se excluyen; se declara. */
+  var propios=activos().filter(esMiEdificio).length;
+  document.getElementById('aviso-propio').innerHTML =
+    propios*2 < s.n ? '' :
+    '<div class="aviso"><b>'+(propios===s.n?'Los '+s.n:propios+' de los '+s.n)+' comparables son unidades de su mismo edificio.</b> '+
+    'Son los más parecidos que existen —misma ubicación, mismas amenidades— pero si los publica el mismo desarrollador '+
+    '<b>no son opiniones independientes: son una lista de precios</b>. '+
+    (propios===s.n
+      ? 'Acá el rango describe lo que pide su edificio, no lo que pide el mercado.'
+      : 'El rango se apoya sobre todo en ellos.')+
+    ' Ampliar el radio o la tolerancia de superficie trae comparables de otros edificios.</div>';
+
   /* criterios movidos por el broker: se declaran en el documento del cliente */
   var mov=ajustesMovidos();
   document.getElementById('ajustes-dec').innerHTML = mov.length
@@ -1952,7 +1982,8 @@ function render(){
     var en=entregaDe(p), rep=REPUB(p);
     return '<div class="comp'+(excl[i]?' excluido':'')+'">'+foto(p)+'<div class="c1">'+
       '<div class="nom">'+p.e+(p.outlier?'<span class="tag tag-out">precio atípico</span>':'')+
-        (rep?'<span class="tag tag-rep">cargado en bloque</span>':'')+'</div>'+
+        (rep?'<span class="tag tag-rep">cargado en bloque</span>':'')+
+        (esMiEdificio(p)?'<span class="tag tag-mio">su edificio</span>':'')+'</div>'+
       '<div class="det">'+p.a+' m² · '+p.dias+' días · a '+p.dist+' m'+
       (p.b?' · '+p.b+' baño'+(p.b>1?'s':''):'')+(p.pi?' · piso '+p.pi:'')+
       ' · '+(p.est==='P'?'preventa':(p.est==='E'?'entregado':'estado s/d'))+
