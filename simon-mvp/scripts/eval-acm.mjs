@@ -311,6 +311,23 @@ if (!SOLO || SOLO === '2') {
     portales: document.getElementById('resultado').querySelectorAll('a[href*="c21.com.bo"],a[href*="remax.bo"]').length,
   }));
 
+  // la fila "SU UNIDAD" se inserta contando cuántos piden menos por m²: si la lista no
+  // está ordenada por m², esa posición miente y el lector la lee como su lugar real
+  const orden = await pagina.evaluate(() => {
+    const m2 = Array.from(document.querySelectorAll('#comps .comp'))
+      .map((c) => ({ yo: c.classList.contains('yo'), excl: c.classList.contains('excluido'),
+        v: +(c.querySelector('.m2') || {}).textContent?.replace(/[^0-9]/g, '') || 0 }))
+      .filter((x) => x.v);
+    const asc = m2.every((x, i) => i === 0 || m2[i - 1].v <= x.v);
+    const iYo = m2.findIndex((x) => x.yo);
+    return { asc, iYo, debajo: m2.filter((x, i) => i < iYo && !x.excl).length, menores: stats().menores };
+  });
+  check(2, 'los comparables van ordenados por precio del m²', orden.asc,
+    orden.asc ? 'ascendente, con la unidad propia en su lugar' : 'salen en orden de captura');
+  check(2, 'la posición de "su unidad" coincide con lo que dice el texto',
+    orden.iYo < 0 || orden.debajo === orden.menores,
+    `${orden.debajo} debajo en pantalla vs "${orden.menores} piden menos"`);
+
   check(2, 'el enlace reconstruye el mismo rango', abierto.rango === armado.rango, `${armado.rango} → ${abierto.rango}`);
   check(2, 'los mismos comparables y radio', abierto.n === armado.n && abierto.radio === armado.radio,
     `n ${armado.n}→${abierto.n}, radio ${armado.radio}→${abierto.radio}`);

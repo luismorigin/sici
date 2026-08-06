@@ -1983,8 +1983,16 @@ function armarCohort(){
       var m2=frescos.map(function(p){return p.m2});
       var q1=pctl(m2,.25),q3=pctl(m2,.75),iqr=q3-q1;
       frescos.forEach(function(p){p.outlier = p.m2<q1-CONF.outlierIQR*iqr || p.m2>q3+CONF.outlierIQR*iqr;});
+      /* 🔴 Ordenados por precio del m², del más barato al más caro. Sin esto salían en
+         el orden en que quedaron al filtrar —el de captura en la base— y la fila "SU
+         UNIDAD", que se inserta contando cuántos piden menos por m², caía en un lugar
+         que no significaba nada. El lector la lee como "acá estoy yo", así que la
+         posición tiene que ser cierta. Ordenado, la lista se recorre como una escalera
+         y la frase "6 de los 9 piden menos" se ve sin contar. */
+      var porM2=function(a,b){return a.m2-b.m2};
+      frescos.sort(porM2);
       return {radio:s.r, mismoEstado:s.est, frescos:frescos,
-              viejos:cand.filter(function(p){return p.dias>CONF.frescuraDias})};
+              viejos:cand.filter(function(p){return p.dias>CONF.frescuraDias}).sort(porM2)};
     }
   }
   return null;
