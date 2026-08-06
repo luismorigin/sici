@@ -75,6 +75,19 @@ Heredadas de `docs/analysis/AUDITORIA_ESTADISTICA_MESA_INFORME.md`, `docs/canoni
 
 **Fuera de alcance por ahora:** el ACM del comprador (documento distinto, input distinto, orden distinto — mismo motor, otro modo), el PDF (el link se comparte mejor, se versiona y se mide), y que el cliente edite supuestos (si puede, el documento deja de ser del broker).
 
+## 🔴 Antes de escribir una query: `DONDE_VIVE_CADA_DATO.md`
+
+Cuatro de los errores de esta sesión fueron el mismo: **buscar el dato donde no vivía**.
+Las fotos en la tabla de snapshots (58% de cobertura) en vez de donde las saca el feed
+(100%); la fecha de entrega en el snapshot (11 avisos) en vez de `proyectos_master` (88);
+`precio_norm` pedido a la tabla cuando lo calcula la vista.
+
+Ninguno falló: devolvieron datos incompletos que el documento mostró como ciertos.
+
+`docs/broker/DONDE_VIVE_CADA_DATO.md` tiene la lista de dónde vive cada cosa y dónde ya
+busqué mal. **La regla que resume todo:** si una pantalla de Simón ya muestra ese dato,
+mirá de dónde lo saca ella antes de construir un camino nuevo.
+
 ## ▶️ Cómo se corre hoy (5-ago-2026)
 
 El prototipo dejó de ser un archivo con datos congelados: **lee el mercado de anoche**.
