@@ -415,7 +415,7 @@
       <div class="sub" id="rad-nota" style="font-size:11.5px"></div>
     </div></details>
 
-  <details class="col"><summary>Ajustable con evidencia <span class="cnt" id="cnt-aj"></span></summary>
+  <details class="col"><summary>Lo que no se ajusta, y por qué <span class="cnt" id="cnt-aj"></span></summary>
     <div class="cont"><ul id="met-aj"></ul></div></details>
 
   <details class="col no"><summary>No ajustable — declarado <span class="cnt" id="cnt-no"></span></summary>
@@ -1409,7 +1409,7 @@ var POOL_ALQ=ALQ_RAW.trim().split('\n').map(function(l){var f=l.split('|');
 
 /* política declarada — un solo lugar */
 var CONF={radios:[300,500,800], nMin:5, frescuraDias:180, areaTol:0.20, outlierIQR:1.5,
-          pqAjuste:{1:8.6}};
+};
 var META_ACM={corte:'3 de agosto de 2026', cobertura:'Equipetrol'};
 
 /* edificios únicos con su GPS (centroide) */
@@ -1863,7 +1863,7 @@ function render(){
   /* comparables */
   var filas=COH.frescos.map(function(p,i){
     var pqT=p.pq==='i'?'parqueo incl.':(p.pq==='n'?'sin parqueo':'parqueo s/d');
-    var amT=[p.am.pis?'piscina':'',p.am.gym?'gym':'',p.am.cow?'co-work':'',p.am.sau?'sauna':''].filter(Boolean).join(' · ')||'sin amenidades declaradas';
+    var amT=[p.am.pis?'piscina':'',p.am.gym?'gym':'',p.am.cow?'co-work':'',p.am.sau?'sauna':''].filter(Boolean).join(' · ')||'amenidades no cargadas';
     var en=entregaDe(p), rep=REPUB(p);
     return '<div class="comp'+(excl[i]?' excluido':'')+'">'+foto(p)+'<div class="c1">'+
       '<div class="nom">'+p.e+(p.outlier?'<span class="tag tag-out">precio atípico</span>':'')+
@@ -1955,15 +1955,22 @@ function render(){
         : '(se probó desde '+CONF.radios[0]+' m y se amplió hasta encontrar '+CONF.nMin+' comparables)')+'</li>'+
     (COH.mismoEstado?'<li><b>Estado de obra</b> — todos '+(MI.est==='P'?'en preventa':'entregados')+', igual que el suyo</li>':'')+
     '<li><b>Antigüedad</b> — solo avisos de hasta '+CONF.frescuraDias+' días publicados</li>';
-  var aj=CONF.pqAjuste[MI.d];
-  document.getElementById('met-aj').innerHTML= aj
-    ? '<li><b>Parqueo</b> — en '+(MI.d===0?'monoambiente':MI.d+' dorm.')+', incluirlo se asocia a <b>+'+aj.toFixed(1).replace('.',',')+'%</b> por m² (medido a nivel mercado). '+
-      (MI.pq==='n'?'Su unidad <b>no incluye parqueo</b>: a igualdad de condiciones su precio efectivo es más alto que el que muestra la barra.'
-       :(MI.pq==='i'?'Su unidad <b>lo incluye</b>, igual que '+conPq+' de los comparables.':'Su unidad no lo declara: no se puede ajustar.'))+'</li>'
-    : '<li>En esta tipología <b>ningún atributo supera la política de contraste</b> (Δ≥5% con n≥30 por lado): no se aplica ningún ajuste.</li>';
+  /* 🔴 Acá NO va ningún ajuste, y el motivo no es que falten datos.
+     El 45% de los avisos no dice si incluye parqueo, y ese grupo no se parece ni a los
+     que dicen que sí ni a los que dicen que no: en monoambientes y en 2 dorm piden MÁS
+     que los que declaran tenerlo. Comparar los declarados entre sí mide quién completó
+     mejor el aviso, no cuánto vale un parqueo. Y aunque se declarara siempre, el
+     parqueo va dentro del precio: para aislarlo haría falta la misma unidad vendida con
+     y sin, y eso no existe. */
+  document.getElementById('met-aj').innerHTML=
+    '<li><b>El parqueo no se puede aislar.</b> Va incluido en el precio, y <b>el 45% de los avisos ni siquiera dice si lo tiene</b> — ese grupo no se parece ni a los que declaran que sí ni a los que declaran que no. Comparar los declarados entre sí mediría quién completó mejor el aviso. Lo que sí se puede decir es cuántos lo declaran, y está arriba, en la base de la comparación.</li>'+
+    '<li><b>Las amenidades tampoco.</b> Además de que su señal de precio se contradice entre tipologías, <b>en 38% de los comparables la lista está vacía en nuestra base</b>: eso significa que no la tenemos cargada, <b>no</b> que el edificio no tenga. Por eso se muestran como contexto y nunca se descuenta por su ausencia.</li>'+
+    '<li><b>Si su unidad se distingue por algo de esto, dígalo usted</b> en «lo que este análisis no puede ver»: el broker sabe lo que el aviso no declara, y así queda escrito como aporte suyo en vez de perderse.</li>';
   /* los contadores del resumen plegado: se ve CUÁNTO hay antes de decidir si abrirlo */
   document.getElementById('cnt-ok').textContent=document.querySelectorAll('#met-ok li').length+' controles';
-  document.getElementById('cnt-aj').textContent=document.querySelectorAll('#met-aj li').length+(aj?' ajuste':' — ninguno');
+  /* la afirmación más honesta del documento: con esta evidencia, nada alcanza
+     para mover el número */
+  document.getElementById('cnt-aj').textContent='ningún ajuste aplicado';
   document.getElementById('cnt-rad').textContent=oks.length+' de 3 radios con base';
   document.getElementById('cnt-no').textContent=document.querySelectorAll('#met-no li').length+' límites';
 
@@ -2018,7 +2025,8 @@ function sim(){
       yLo.toFixed(1).replace('.',',')+'% y '+yHi.toFixed(1).replace('.',',')+'%</div>'+
     '<div class="rn"><b>Bruto</b>: antes de expensas, vacancia, impuestos y comisión. '+
       'Sobre <b>'+R.n+' alquileres pedidos</b> a menos de '+R.radio+' m · mediana <b>'+fm(R.p50)+'/mes</b>'+
-      (R.amo?' · <b>'+R.amo+' amoblados</b>, que empujan la renta hacia arriba':'')+'.</div></div>';
+      (R.amo?' · <b>'+R.amo+' se ofrecen amoblados</b>':'')+'.'+
+      '<br>🔴 <b>En Equipetrol prácticamente no se publica alquiler sin muebles</b>: de toda la zona, un solo aviso declara estar sin amoblar. Así que este retorno es el de una oferta amoblada. <b>Si piensa alquilar vacío, la renta será menor</b> — cuánto menos no se puede medir con avisos.</div></div>';
 }
 function editar(){document.getElementById('resultado').classList.add('oculto');
   document.getElementById('modo-bar').classList.add('oculto');
