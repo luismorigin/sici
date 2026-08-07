@@ -1,0 +1,2339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simón · Posición de precio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--arena:#EDE8DC;--negro:#141414;--salvia:#3A6A48;--salvia-viva:#5E9C72;--suave:#E3EBE4;
+        --linea:#D8D2C4;--gris:#6B6B66;--terra:#C0623A;--sand:#B08900}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#C9C3B5;font-family:'DM Sans',system-ui,sans-serif;color:var(--negro);-webkit-text-size-adjust:100%}
+  .doc{max-width:460px;margin:0 auto;background:var(--arena);min-height:100vh;box-shadow:0 0 40px rgba(0,0,0,.2)}
+  h1,h2,h3,.big{font-family:'Figtree',system-ui,sans-serif}
+  .top{position:sticky;top:0;z-index:20;background:rgba(237,232,220,.97);backdrop-filter:blur(8px);
+       border-bottom:1px solid var(--linea);padding:10px 18px;display:flex;align-items:center;gap:9px}
+  .top .punto{width:9px;height:9px;border-radius:50%;background:var(--salvia);flex-shrink:0}
+  .top .marca{font-family:'Figtree';font-weight:800;font-size:14px;
+              min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .top .pos{margin-left:auto;flex-shrink:0;font-family:'Figtree';font-weight:800;font-size:11px;padding:4px 11px;border-radius:999px}
+  .pos-dentro{background:var(--suave);color:var(--salvia)}
+  .pos-sobre{background:#F3E3DA;color:var(--terra)}
+  .pos-bajo{background:#F2EDD9;color:#8A7118}
+  .pos-na{background:#E7E2D4;color:var(--gris)}
+  section{padding:28px 20px;border-bottom:1px solid var(--linea)}
+  .eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--salvia);font-weight:700;margin-bottom:9px;font-family:'Figtree'}
+  h2{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.25;margin-bottom:8px}
+  p.lead{font-size:14px;color:var(--gris);line-height:1.55}
+  .big{font-size:36px;font-weight:900;letter-spacing:-.03em;line-height:1.05;margin:14px 0 4px}
+  .big small{font-size:16px;font-weight:700;color:var(--gris)}
+  .sub{font-size:13px;color:var(--gris);line-height:1.55}
+  .frase{font-family:'Figtree';font-size:17px;font-weight:700;line-height:1.4;margin-top:16px;border-left:4px solid var(--salvia);padding-left:13px}
+  .frase span{color:var(--salvia)}
+  /* formulario */
+  .campo{margin-bottom:13px}
+  .campo label{display:block;font-size:11.5px;font-weight:700;font-family:'Figtree';margin-bottom:5px}
+  .campo input,.campo select{width:100%;padding:11px 12px;border:1px solid var(--linea);border-radius:10px;
+    background:#fff;font-size:15px;font-family:'DM Sans';color:var(--negro)}
+  .campo .hint{font-size:11px;color:var(--gris);margin-top:4px}
+  .pegar{background:var(--suave);border-radius:12px;padding:13px 15px;margin-top:18px}
+  .pegar label{display:block;font-size:11.5px;font-weight:700;font-family:'Figtree';margin-bottom:6px}
+  .pegar-fila{display:flex;gap:7px}
+  .pegar-fila input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--linea);border-radius:10px;
+    background:#fff;font-size:14px;font-family:'DM Sans'}
+  .pegar-fila button{flex-shrink:0;padding:10px 16px;background:var(--negro);color:var(--arena);border:none;
+    border-radius:10px;font-family:'Figtree';font-weight:800;font-size:13px;cursor:pointer}
+  .pegar-fila button:disabled{opacity:.5;cursor:wait}
+  .pegar .hint{font-size:11px;color:var(--gris);margin-top:7px;line-height:1.45}
+  .pegar .hint.mal{color:var(--terra)}
+  .pegar .hint.bien{color:var(--salvia);font-weight:700}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;padding:10px 4px;border:1px solid var(--linea);background:#fff;border-radius:10px;
+    font-size:12.5px;font-family:'Figtree';font-weight:700;color:var(--gris);cursor:pointer}
+  .seg button.on{background:var(--negro);color:var(--arena);border-color:var(--negro)}
+  /* el de WhatsApp es un <a> real (window.open queda bloqueado dentro del marco
+     donde se publica), así que .btn tiene que servir para ambos */
+  .btn{display:block;text-align:center;text-decoration:none;box-sizing:border-box;
+       width:100%;padding:15px;background:var(--salvia);color:#fff;border:none;border-radius:12px;
+    font-family:'Figtree';font-weight:800;font-size:15px;cursor:pointer;margin-top:6px}
+  .btn.sec{background:transparent;color:var(--gris);border:1px solid var(--linea);padding:9px;font-size:12.5px;margin-top:10px}
+  /* sello */
+  .sello{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:13px 15px;margin-bottom:18px}
+  .sello .t{font-family:'Figtree';font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gris);margin-bottom:6px}
+  .sello .l{font-size:12.5px;line-height:1.65}
+  .sello b{font-weight:700}
+  /* rango */
+  .rango{margin:20px 0 6px}
+  .rango-track{position:relative;height:13px;background:#DDD7C9;border-radius:7px}
+  .rango-fill{position:absolute;top:0;height:100%;background:#A8C4AF;border-radius:7px}
+  .rango-med{position:absolute;top:-5px;width:3px;height:23px;background:var(--gris);border-radius:2px}
+  .rango-yo{position:absolute;top:-9px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:12px solid var(--negro);transform:translateX(-8px)}
+  .rango-lbl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--gris);margin-top:9px}
+  /* comparables */
+  .comp{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:10px 12px;margin-bottom:7px;display:flex;align-items:center;gap:9px}
+  .comp.excluido{opacity:.42;background:#EFEAE0}
+  .comp.fuera{background:#F5F1E6;border-style:dashed}
+  .comp .c1{flex:1;min-width:0}
+  .comp .nom{font-family:'Figtree';font-weight:700;font-size:13px;line-height:1.35}
+  .comp .nom .tag{margin-top:3px}
+  .comp .det{font-size:10.5px;color:var(--gris);margin-top:2px;line-height:1.45}
+  .comp .c2{text-align:right;flex-shrink:0}
+  .comp .m2{font-family:'Figtree';font-weight:800;font-size:14px}
+  .comp .pre{font-size:11px;color:var(--gris)}
+  .comp .x{border:none;background:none;color:var(--gris);font-size:15px;cursor:pointer;padding:0 2px;line-height:1}
+  .comp .foto{width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0;background:#DDD7C9}
+  .comp .nofoto{width:56px;height:56px;border-radius:8px;flex-shrink:0;background:#E3DED0;display:flex;
+    align-items:center;justify-content:center;font-size:8.5px;color:var(--gris);text-align:center;line-height:1.25;padding:3px}
+  .comp .ver{display:inline-block;font-size:10px;font-weight:700;font-family:'Figtree';color:var(--salvia);
+    text-decoration:none;margin-top:3px;border-bottom:1px dotted var(--salvia)}
+  .comp .ver2{color:var(--gris);border-bottom-color:var(--gris);margin-left:11px;font-weight:400}
+  /* sensibilidad al radio */
+  .rad{display:flex;gap:6px;margin:14px 0 4px}
+  .rad div{flex:1;background:#fff;border:1px solid var(--linea);border-radius:10px;padding:9px 7px;text-align:center}
+  .rad div.usado{border-color:var(--salvia);background:var(--suave)}
+  .rad .r{font-family:'Figtree';font-weight:800;font-size:12px}
+  .rad .n{font-size:10px;color:var(--gris);margin-top:2px}
+  .rad .v{font-size:10.5px;margin-top:4px;font-variant-numeric:tabular-nums}
+  .rad div.usado .r{color:var(--salvia)}
+  .comp.yo{background:var(--negro);color:var(--arena);border-color:var(--negro)}
+  .comp.yo .det,.comp.yo .pre{color:#B9B4A6}
+  .tag{display:inline-block;font-size:9px;font-weight:800;font-family:'Figtree';padding:1px 6px;border-radius:999px;margin-left:4px;vertical-align:1px}
+  .tag-out{background:#F3E3DA;color:var(--terra)}
+  .tag-old{background:#EFE7D2;color:var(--sand)}
+  .tag-rep{background:#EFE7D2;color:var(--sand)}
+  .tag-mio{background:var(--suave);color:var(--salvia)}
+  .det .inf.ok{background:var(--suave);color:var(--salvia)}
+  .det .inf{display:inline-block;font-size:9px;font-weight:700;font-family:'Figtree';
+    background:#EFE7D2;color:var(--sand);padding:0 5px;border-radius:999px;margin-left:5px;cursor:help}
+  .det .ent{color:var(--salvia)}
+  .det .ent-v{color:var(--terra)}
+  .recalc{background:var(--suave);border-radius:10px;padding:11px 13px;font-size:12.5px;line-height:1.55;margin-top:10px;display:none}
+  .recalc.on{display:block}
+  .bar-row{display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:center;margin-bottom:9px;font-size:12.5px}
+  .bar-track{background:#DDD7C9;border-radius:6px;height:28px}
+  .bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:9px;color:#fff;font-weight:800;font-size:12px;font-family:'Figtree'}
+  .sim-out{background:var(--negro);color:var(--arena);border-radius:14px;padding:18px;margin:16px 0 12px;text-align:center}
+  .sim-out .v{font-family:'Figtree';font-size:31px;font-weight:900;letter-spacing:-.02em}
+  .sim-out .l{font-size:12.5px;color:#B9B4A6;line-height:1.5;margin-top:6px}
+  .sim-out .l b{color:var(--arena)}
+  input[type=range]{width:100%;accent-color:var(--salvia);margin:6px 0}
+  .sim-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--gris)}
+  details.col li{font-size:12.5px;line-height:1.55;padding-left:17px;position:relative;margin-bottom:7px;color:var(--gris)}
+  details.col li b{color:var(--negro)}
+  details.col li::before{content:"⚙";position:absolute;left:0;color:var(--gris)}
+  details.col.ok li::before{content:"✓";color:var(--salvia);font-weight:700}
+  details.col.no li::before{content:"⚠";color:var(--terra)}
+  .pie{padding:22px 20px 34px;text-align:center;background:var(--negro);color:#8A867C;font-size:11.5px;line-height:1.65}
+  .pie b{color:var(--arena);font-family:'Figtree'}
+  .mock{position:fixed;bottom:8px;right:10px;background:var(--negro);color:var(--arena);
+        font-size:9px;letter-spacing:.12em;padding:3px 10px;border-radius:999px;z-index:50;opacity:.72}
+  .oculto{display:none}
+  .aviso{background:#F3E3DA;border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#7A3E22;margin-top:14px}
+  .obj{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--linea);
+       border-radius:10px;padding:11px 13px;margin-bottom:7px}
+  .obj .oi{flex:1}
+  .obj .ot{font-family:'Figtree';font-weight:700;font-size:12.5px}
+  .obj .od{font-size:11px;color:var(--gris);margin-top:2px}
+  .obj .ov{font-family:'Figtree';font-weight:800;font-size:16px;white-space:nowrap}
+  .difs{background:var(--suave);border-radius:10px;padding:12px 14px;margin-top:16px}
+  .difs .dt{font-family:'Figtree';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--salvia);margin-bottom:5px}
+  .difs .dl{font-size:13px;line-height:1.5}
+  .difs .dn{font-size:10.5px;color:var(--gris);margin-top:6px;line-height:1.45}
+  .sello-gen{font-size:10.5px;color:var(--gris);line-height:1.55;margin-top:10px;padding-top:9px;border-top:1px solid var(--linea)}
+  /* ── modo: el broker EDITA, el cliente LEE. Nunca la misma pantalla ── */
+  .modo-bar{position:sticky;top:41px;z-index:19;background:#2C2A26;color:#E8E3D5;padding:8px 14px 8px 18px;
+    display:flex;align-items:center;gap:9px;font-size:11px;font-family:'Figtree';font-weight:700}
+  .modo-bar .mb-t{flex:1;line-height:1.35;min-width:0}
+  .modo-bar .mb-t span{display:block;font-weight:400;color:#9B968B;font-size:10px;margin-top:1px}
+  .modo-bar button{background:var(--salvia-viva);color:#0F1A12;border:none;border-radius:8px;flex-shrink:0;
+    padding:7px 11px;font-family:'Figtree';font-weight:800;font-size:11px;cursor:pointer}
+  .modo-bar button.sec{background:transparent;color:#C9C4B7;border:1px solid #4A473F}
+  .solo-broker{display:none}
+  body.broker .solo-broker{display:block}
+  body.broker .solo-lectura{display:none}
+  /* ── colapsables: se cierra lo que solo lee el que duda ── */
+  details.col{background:#fff;border:1px solid var(--linea);border-radius:12px;margin-bottom:10px}
+  details.col>summary{list-style:none;cursor:pointer;padding:13px 15px;font-family:'Figtree';font-weight:700;
+    font-size:13px;display:flex;align-items:center;gap:8px}
+  details.col>summary::-webkit-details-marker{display:none}
+  details.col>summary::after{content:"▾";margin-left:auto;color:var(--gris);font-size:11px;flex-shrink:0}
+  details.col[open]>summary::after{content:"▴"}
+  details.col>summary .cnt{font-weight:400;color:var(--gris);font-size:11px}
+  details.col .cont{padding:0 15px 14px}
+  details.col .cont>ul{list-style:none}
+  details.col.ok>summary{color:var(--salvia)}
+  details.col.no>summary{color:var(--terra)}
+  /* ── recomendación del broker: su criterio, no la medición ── */
+  .reco{background:var(--negro);color:var(--arena);border-radius:14px;padding:16px 17px;margin-top:18px}
+  .reco .rt{font-family:'Figtree';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#9CC7A6;margin-bottom:7px}
+  .reco .rp{font-family:'Figtree';font-size:27px;font-weight:900;letter-spacing:-.02em}
+  .reco .ru{font-size:11.5px;line-height:1.5;margin-top:6px;color:#9CC7A6}
+  .reco .ru.fuera{color:#E0A07C}
+  .reco .ru b{color:inherit}
+  .reco .rx{font-size:13.5px;line-height:1.6;margin-top:10px;color:#DCD7C9;padding-top:10px;border-top:1px solid #333029}
+  .reco .rf{font-size:10.5px;color:#8A867C;margin-top:12px;padding-top:9px;border-top:1px solid #333029;line-height:1.5}
+  .panel{background:#F5F1E6;border:1px dashed var(--sand);border-radius:12px;padding:14px 15px;margin-top:18px}
+  .panel .pt{font-family:'Figtree';font-weight:800;font-size:12.5px;margin-bottom:3px}
+  .panel .pd{font-size:11.5px;color:var(--gris);line-height:1.5;margin-bottom:10px}
+  .panel textarea,.panel input{width:100%;padding:10px 12px;border:1px solid var(--linea);border-radius:10px;
+    background:#fff;font-size:14px;font-family:'DM Sans';color:var(--negro)}
+  .panel textarea{resize:vertical;min-height:72px;margin-top:8px}
+  .excl-dec{background:#F5F1E6;border-left:3px solid var(--sand);border-radius:0 10px 10px 0;
+    padding:11px 13px;margin-top:10px;font-size:12px;line-height:1.55}
+  .seg-sm button{padding:7px 3px;font-size:11px}
+  .aj-l{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'Figtree';
+    font-weight:700;color:var(--gris);margin:11px 0 5px}
+  .aj-n{font-size:11px;line-height:1.5;color:var(--gris);margin-top:10px;padding-top:9px;border-top:1px solid var(--linea)}
+  .seg button:disabled{opacity:.4;cursor:not-allowed}
+  /* ── navegación y cierre ── */
+  .ver-todas{display:inline-block;margin-top:14px;padding:10px 15px;background:#fff;
+    border:1px solid var(--linea);border-radius:10px;text-decoration:none;color:var(--negro);
+    font-family:'Figtree';font-weight:700;font-size:12.5px}
+  .ver-todas span{display:block;font-weight:400;font-size:11px;color:var(--gris);margin-top:2px}
+  .atajos{display:flex;gap:7px;margin-top:20px}
+  .atajos a{flex:1;text-align:center;background:#fff;border:1px solid var(--linea);border-radius:10px;
+    padding:9px 5px;font-size:11px;font-family:'Figtree';font-weight:700;color:var(--negro);text-decoration:none;line-height:1.3}
+  .cierre{padding:26px 20px 30px;background:var(--suave)}
+  .cierre .btn{margin-top:9px}
+  .cierre .btn.wa{background:var(--negro)}
+  .lapiz{background:none;border:none;color:var(--salvia);font-family:'Figtree';font-weight:700;
+    font-size:12px;cursor:pointer;padding:0;border-bottom:1px dotted var(--salvia);margin:8px 0 18px}
+  .caduca{background:#F3E3DA;border-radius:10px;padding:10px 13px;font-size:11.5px;line-height:1.5;color:#7A3E22;margin-top:14px}
+  /* ── segunda lectura: alquiler ── */
+  .renta{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:13px 15px;margin-top:14px}
+  .renta .rt{font-family:'Figtree';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--salvia);margin-bottom:6px}
+  .renta .rv{font-family:'Figtree';font-weight:800;font-size:17px;line-height:1.35}
+  .renta .rn{font-size:11px;color:var(--gris);line-height:1.5;margin-top:7px}
+</style>
+</head>
+<body>
+<div class="mock" id="mock">PROTOTIPO</div>
+<div class="doc">
+
+<div class="top">
+  <div class="punto"></div><span class="marca" id="marca-top">Simón</span>
+  <span class="pos pos-na" id="chip-top">complete los datos</span>
+</div>
+<div class="modo-bar oculto" id="modo-bar">
+  <div class="mb-t" id="mb-txt"></div>
+  <button class="sec" id="mb-b2" onclick="volverEditar()">Volver a editar</button>
+  <button id="mb-b1" onclick="publicar()">Generar para el cliente</button>
+</div>
+
+<!-- ══════ 0 · FORMULARIO ══════ -->
+<section id="s-form">
+  <div class="eyebrow">Su propiedad</div>
+  <h2>¿Qué quiere comparar?</h2>
+  <p class="lead">No hace falta que esté publicada. Con estos datos armamos el conjunto de comparables reales.</p>
+
+  <!-- Si el aviso ya existe, el broker tiene el link a mano: pegarlo evita cargar
+       ocho campos. El formulario sigue abajo para lo que todavía no se publicó, que
+       es el caso de oro (la captación). -->
+  <div class="pegar">
+    <label>¿Ya está publicada? Pegue el link del aviso</label>
+    <div class="pegar-fila">
+      <input type="text" id="f-url" placeholder="c21.com.bo/propiedad/… o remax.bo/propiedad/…">
+      <button id="f-buscar">Buscar</button>
+    </div>
+    <div class="hint" id="url-estado">Century 21 y Remax. También sirve pegar solo el código del aviso.</div>
+  </div>
+
+  <div style="margin-top:18px">
+    <div class="campo">
+      <label>Edificio</label>
+      <select id="f-edif"></select>
+      <div class="hint">Si no está en la lista, elija el más cercano — define la ubicación del análisis.</div>
+    </div>
+    <div class="campo">
+      <label>Dormitorios</label>
+      <div class="seg" id="f-dorms">
+        <button data-v="0">Mono</button><button data-v="1" class="on">1 dorm.</button><button data-v="2">2 dorm.</button><button data-v="3">3 dorm.</button>
+      </div>
+    </div>
+    <div class="campo">
+      <label>Superficie (m²)</label>
+      <input type="number" id="f-area" value="51" min="18" max="400">
+    </div>
+    <div class="campo">
+      <label>Precio que pide (USD) — opcional</label>
+      <input type="number" id="f-precio" value="91584" min="0" step="500" placeholder="Todavía no lo definí">
+      <div class="hint">Si lo deja vacío, el informe muestra el rango sin posicionarlo.</div>
+    </div>
+    <div class="campo">
+      <label>Parqueo</label>
+      <div class="seg" id="f-pq">
+        <button data-v="i">Incluido</button><button data-v="n" class="on">No incluye</button><button data-v="s">No sé</button>
+      </div>
+    </div>
+    <div class="campo">
+      <label>Estado de obra</label>
+      <div class="seg" id="f-est">
+        <button data-v="P" class="on">Preventa</button><button data-v="E">Entregado</button><button data-v="?">No sé</button>
+      </div>
+    </div>
+    <div class="campo">
+      <label>Piso <span style="font-weight:400;color:var(--gris)">— opcional</span></label>
+      <input type="number" id="f-piso" min="0" max="40" placeholder="Ej: 15">
+      <div class="hint">No se usa para ajustar el precio: se muestra como contexto.</div>
+    </div>
+    <div class="campo">
+      <label>Lo que este análisis no puede ver <span style="font-weight:400;color:var(--gris)">— opcional</span></label>
+      <input type="text" id="f-difs" placeholder="vista al parque, recién remodelado, orientación norte…">
+      <div class="hint">Diferenciales que usted conoce y el aviso no declara. Se muestran <b>declarados como aporte suyo</b>, nunca como ajuste al número.</div>
+    </div>
+    <div class="campo">
+      <label>Preparado por <span style="font-weight:400;color:var(--gris)">— su nombre o inmobiliaria</span></label>
+      <input type="text" id="f-broker" placeholder="Nombre del broker o inmobiliaria">
+    </div>
+    <button class="btn" id="f-go">Ver la posición de mi precio</button>
+  </div>
+</section>
+
+<div id="resultado" class="oculto">
+
+<!-- ══════ LA RESPUESTA ══════ -->
+<section id="s-resp">
+  <div class="eyebrow"><span class="num"></span>Posición de precio</div>
+  <h2 id="r-titulo"></h2>
+  <p class="lead" id="r-subtitulo"></p>
+  <button class="lapiz solo-broker" onclick="editar()">✎ cambiar los datos</button>
+
+  <div id="aviso-estado"></div>
+  <div id="aviso-propio"></div>
+  <div id="ajustes-dec"></div>
+
+  <!-- Criterio profesional del broker. Cerrado por defecto: existe para el que lo va a
+       usar, sin cobrarle el precio de la confusión al que no. En su idioma, no en el
+       de un analista. Todo lo que mueva se declara en el documento del cliente. -->
+  <details class="col solo-broker" id="panel-aj" style="margin-top:16px">
+    <summary>Ajustar la búsqueda <span class="cnt" id="aj-resumen"></span></summary>
+    <div class="cont">
+      <div class="pd" style="font-size:11.5px;color:var(--gris);line-height:1.5;margin-bottom:4px">Por defecto buscamos primero cerca y vamos ampliando hasta juntar <b>5</b> comparables. Si usted conoce la zona y sabe que otro corte compara mejor, cámbielo — <b>el cliente va a ver qué eligió</b>.</div>
+      <label class="aj-l">¿Hasta dónde buscamos?</label>
+      <div class="seg seg-sm" id="aj-radio">
+        <button data-v="0" class="on">Automático</button><button data-v="300">300 m</button><button data-v="500">500 m</button><button data-v="800">800 m</button><button data-v="1200">1.200 m</button>
+      </div>
+      <label class="aj-l">¿Cuánto puede variar el tamaño?</label>
+      <div class="seg seg-sm" id="aj-tol">
+        <button data-v="0.20" class="on">Parecido (±20%)</button><button data-v="0.30">Más amplio (±30%)</button>
+      </div>
+      <label class="aj-l">¿Sumamos departamentos parecidos?</label>
+      <div class="seg seg-sm" id="aj-tip">
+        <button data-v="0" class="on">Solo su tipo</button><button data-v="1">Sumar los de al lado</button>
+      </div>
+      <div class="aj-n" id="aj-nota"></div>
+    </div>
+  </details>
+
+  <div id="bloque-rango">
+    <div class="sub">Lo que hoy se pide por unidades como la suya:</div>
+    <div class="big" id="rango-txt"></div>
+    <div class="sub" id="rango-nivel"></div>
+    <div class="rango">
+      <div class="rango-track">
+        <div class="rango-fill" id="r-fill"></div><div class="rango-med" id="r-med"></div><div class="rango-yo" id="r-yo"></div>
+      </div>
+      <div class="rango-lbl"><span id="r-lo"></span><span id="r-flecha">▲ su precio</span><span id="r-hi"></span></div>
+    </div>
+    <p class="frase" id="frase-1"></p>
+
+    <details class="col" style="margin-top:18px">
+      <summary><span id="sello-tit"></span></summary>
+      <div class="cont">
+        <div class="l" style="font-size:12.5px;line-height:1.65"><span id="sello-txt"></span><span id="sello-mz"></span></div>
+        <div class="sello-gen" id="sello-gen"></div>
+      </div>
+    </details>
+
+    <h3 style="font-size:14px;margin:22px 0 4px">¿A qué precio quedaría dónde?</h3>
+    <p class="sub" style="margin-bottom:10px">El rango no decide por usted. Esto traduce el rango a la posición que elija:</p>
+    <div id="objetivos"></div>
+
+    <div id="difs-bloque"></div>
+
+    <!-- La recomendación del broker: SU criterio, separado de la medición -->
+    <div id="reco-bloque"></div>
+    <div class="panel solo-broker" id="panel-reco">
+      <div class="pt">Su recomendación</div>
+      <div class="pd">Esto es lo que el cliente va a leer con su nombre. Simón mide; <b>usted recomienda</b> — y así aparece rotulado.</div>
+      <input type="number" id="f-reco-precio" step="500" placeholder="Precio al que saldría (USD)">
+      <textarea id="f-reco-txt" placeholder="Por qué: qué sabe usted de esta unidad, del edificio o del comprador que el dato no muestra."></textarea>
+    </div>
+
+    <div class="atajos solo-lectura">
+      <a href="#s-evid">Ver los<br>comparables</a>
+      <a href="#s-torre">Ver mi<br>edificio</a>
+      <a href="#s-sim">Probar<br>precios</a>
+    </div>
+  </div>
+  <div id="sin-base" class="aviso oculto"></div>
+  <!-- Las TRES que van siempre a la vista. El resto vive en «Cómo se comparó»: siguen
+       estando, dejan de gritar. Un documento que se aclara trece veces se lee como
+       «no confíes en esto», y el rigor termina jugando en contra. -->
+  <p class="sub" style="margin-top:16px;padding-top:13px;border-top:1px solid var(--linea)">
+    <b>Tres cosas antes de decidir con esto.</b>
+    No es una tasación: es la posición de su precio dentro de la oferta publicada comparable, hoy.
+    Son precios <b>pedidos</b>, no de cierre — Bolivia no tiene registro público de transacciones.
+    Y solo ve lo que se publica: no la venta directa del desarrollador ni lo que se pasa entre brokers sin anunciar.
+    <span style="display:block;margin-top:5px;font-size:11.5px">Los demás límites, uno por uno, en <b>Cómo se comparó</b>.</span>
+  </p>
+</section>
+
+<!-- ══════ EVIDENCIA ══════ -->
+<section id="s-evid">
+  <div class="eyebrow"><span class="num"></span>La evidencia</div>
+  <h2>Contra quiénes se compara</h2>
+  <p class="lead solo-broker">Los avisos reales que hoy compiten con el suyo. Si alguno no es comparable, quítelo — le vamos a pedir el motivo, y el cliente va a ver cuáles sacó y por qué.</p>
+  <p class="lead solo-lectura">Los avisos reales que hoy compiten con el suyo. Cada uno se puede abrir en el portal donde está publicado.</p>
+  <div id="excl-dec"></div>
+  <div id="comps" style="margin-top:16px"></div>
+  <div class="recalc" id="recalc"></div>
+  <div id="fuera-muestra"></div>
+</section>
+
+<!-- La sección "El mercado se movió" (serie histórica de precio) se retiró el 5-ago-2026:
+     sus números estaban congelados a mano y, sobre todo, no cambiaba ninguna decisión.
+     Lo único que la habría hecho útil —proyectar el costo de esperar— es una predicción,
+     y en este panorama cambiario no se sostiene. Decisión del founder. -->
+
+<!-- ══════ ANTIGÜEDAD ══════ -->
+<section id="s-antig">
+  <div class="eyebrow"><span class="num"></span>El tiempo publicado</div>
+  <h2>Hace cuánto está en el mercado</h2>
+  <div id="antig-barras" style="margin:18px 0 4px"></div>
+  <p class="frase" id="frase-dias"></p>
+  <p class="sub" style="margin-top:14px">Es la antigüedad del <b>aviso</b>, no el tiempo que tarda en venderse.</p>
+</section>
+
+<!-- ══════ SU EDIFICIO ══════ -->
+<section id="s-torre">
+  <div class="eyebrow"><span class="num"></span>Dentro de su edificio</div>
+  <h2 id="torre-titulo"></h2>
+  <div id="torre" style="margin-top:14px"></div>
+  <p class="frase" id="frase-torre"></p>
+  <div id="torre-ver-todas"></div>
+  <p class="sub" style="margin-top:14px">Si las publica todas el mismo desarrollador, son <b>una lista de precios</b>, no opiniones independientes. Aun así, es contra ellas que compara su comprador.</p>
+</section>
+
+<!-- ══════ SIMULADOR ══════ -->
+<section id="s-sim" style="background:var(--suave);border-bottom-color:#C7D4C9">
+  <div class="eyebrow"><span class="num"></span>Simulador</div>
+  <h2>Mueva el precio</h2>
+  <p class="lead">Vea dónde queda su unidad y cuánto tiempo llevan publicados los comparables de ese tramo. Lo que elija acá se refleja arriba, en el rango y en la etiqueta del encabezado.</p>
+  <div class="sim-out"><div class="v" id="sim-precio"></div><div class="l" id="sim-detalle"></div></div>
+  <input type="range" id="sim" min="0" max="100" value="50">
+  <div class="sim-lbl"><span id="sim-min"></span><span id="sim-max"></span></div>
+  <div id="renta-bloque"></div>
+  <p class="sub" style="margin-top:14px">Los días son los que llevan publicados los comparables de ese tramo — un indicio, no una promesa de plazo.</p>
+</section>
+
+<!-- ══════ MÉTODO ══════ -->
+<section id="s-metodo">
+  <div class="eyebrow"><span class="num"></span>Método</div>
+  <h2>Cómo se comparó</h2>
+  <p class="lead" style="margin-bottom:16px">Todo lo que hay debajo se puede abrir. Nada está escondido — está plegado para que el informe se lea, y disponible para que se audite.</p>
+
+  <details class="col ok"><summary>Controlado por construcción <span class="cnt" id="cnt-ok"></span></summary>
+    <div class="cont"><ul id="met-ok"></ul></div></details>
+
+  <details class="col"><summary>Sensibilidad al radio <span class="cnt" id="cnt-rad"></span></summary>
+    <div class="cont">
+      <div class="sub" style="font-size:12px">El resultado depende de dónde se corte la búsqueda. Estos son los tres radios probados — se usa el más cercano que alcanza la muestra mínima, y se muestran los tres para que nadie elija el que le conviene.</div>
+      <div class="rad" id="rad-sens"></div>
+      <div class="sub" id="rad-nota" style="font-size:11.5px"></div>
+    </div></details>
+
+  <details class="col"><summary>Lo que no se ajusta, y por qué <span class="cnt" id="cnt-aj"></span></summary>
+    <div class="cont"><ul id="met-aj"></ul></div></details>
+
+  <details class="col no"><summary>No ajustable — declarado <span class="cnt" id="cnt-no"></span></summary>
+    <div class="cont"><ul id="met-no">
+    <li><b>Lo que no está publicado.</b> Este análisis ve <b>la oferta que se publica en portales</b>. No ve la venta directa del desarrollador en su sala de ventas, ni la unidad que se pasa entre brokers sin anunciar, ni la que se vende por el cartel del balcón. En preventa eso puede ser una parte grande del mercado — y suele venderse <b>por debajo</b> del precio de lista publicado. El rango de acá es el rango de <b>lo visible</b>, y esa es su definición completa: nadie puede decirle cuánto pide lo que nunca se anunció.</li>
+    <li id="met-amoblado"></li>
+    <li><b>Amenidades</b> — se muestran por comparable como contexto, pero su señal de precio se contradice entre tipologías: no se usan para ajustar.</li>
+    <li><b>Parte del estado de obra no sale del aviso.</b> La mitad no dice si está terminado o en preventa, y algunos avisos viejos dicen "preventa" cuando el edificio ya se entregó. Por eso el estado se resuelve así, en este orden:
+      <br>· <b>verificado</b> — alguien lo comprobó contra el edificio. Gana sobre todo lo demás.
+      <br>· <b>corregido</b> — el edificio tiene avisos que se contradicen y alguno ya figura entregado. Gana el estado más avanzado, no la mayoría: <b>un edificio no vuelve al pozo</b>, así que un solo aviso que diga "entregado" pesa más que cinco que digan "preventa" sin actualizar.
+      <br>· <b>deducido</b> — el aviso no lo declara y se toma de las otras unidades del edificio (acierta 96,7% cuando son unánimes) o de que haya un alquiler activo ahí (95%: no se alquila lo que no está construido).
+      <br>· sin marca — lo declara el aviso y nada lo contradice.
+      <br>Lo que no se resuelve queda como "estado s/d". <b>Cuando la corrección contradice al aviso, el comparable se marca</b>: si abre el anuncio va a leer otra cosa, y tiene derecho a saber por qué.</li>
+    <li id="met-piso"><b>Piso y vista</b> — solo una parte de los avisos declara el piso, y ninguno la vista. Por eso los diferenciales que aporta el broker se muestran <b>declarados como aporte suyo</b> y no ajustan el número: sin comparables que declaren lo mismo, ajustar sería inventar precisión.</li>
+    <li><b>Quién dice qué</b> — Simón informa el rango de la oferta publicada. La <b>recomendación de precio</b> la firma el broker, que conoce la unidad y al comprador. Son dos cosas distintas y aparecen separadas a propósito.</li>
+    <li><b>Precios de cierre</b> — Bolivia no tiene registro público de transacciones. Todo acá son precios <b>pedidos</b>.</li>
+    <li><b>La antigüedad admite dos lecturas</b> — que el aviso no rote, o que se haya re-publicado y el contador vuelto a cero. Nunca es "el tiempo que tarda en venderse": eso no se observa.</li>
+    <li><b>Un edificio no son varias opiniones</b> — cuando todas las unidades las publica el mismo desarrollador o la misma agencia, son una lista de precios repetida, no observaciones independientes.</li>
+    <li><b>Los días publicados no siempre son independientes.</b> Marcamos <span class="tag tag-rep">cargado en bloque</span> cuando 3 o más unidades del mismo edificio muestran <b>exactamente</b> la misma antigüedad. Puede ser un lanzamiento (subieron todas juntas el primer día) o una re-publicación (se bajaron y volvieron a subir, y el contador arrancó de cero). En los dos casos significa lo mismo para leer el cuadro: <b>esos avisos cuentan el tiempo del lote, no el de cada unidad</b> — no son N observaciones distintas del mismo fenómeno. <span id="met-bloque"></span></li>
+    <li><b>La fecha de entrega es la que declara el aviso</b>, no un compromiso verificado con el desarrollador. Cuando esa fecha <span style="color:var(--terra)">ya pasó</span> lo decimos: significa que el aviso no se actualizó, no necesariamente que la obra esté atrasada.</li>
+    <li><b>Las fotos</b> — son la <b>primera foto de ese aviso</b>, la misma que muestra el feed. Sirven para reconocer la unidad, no para juzgar el interior: el aviso puede tener veinte más y esta es la que eligió quien publicó.</li>
+    <li><b>Cada comparable abre su ficha</b> en el feed de Simón, con sus fotos, su ubicación y su contexto de mercado — y ahí adentro está el camino al aviso original, para quien quiera contrastarlo en la fuente. No le pedimos que nos crea. <b>El feed lista avisos de hasta 300 días</b>: los que llevan más publicado se marcan como <i>fuera del feed</i> y no tienen ficha. Y si un aviso fue dado de baja después de nuestro corte, puede no abrir — esa es la diferencia entre un dato verificado anoche y uno de hoy.</li>
+    <li><b>El retorno de alquiler es bruto y sobre avisos</b>, no sobre contratos firmados. Se calcula con rentas <b>pedidas</b> de unidades comparables, antes de expensas, vacancia, impuestos y comisión. Además, en alquiler el amoblado <b>sí</b> se declara y empuja la renta hacia arriba: por eso mostramos cuántos de los comparables son amoblados. Del resto no afirmamos que no lo sean — el aviso simplemente no lo dice.</li>
+  </ul></div></details>
+
+  <p class="sub" style="margin-top:14px"><b>Fuente:</b> avisos de venta de Equipetrol verificados uno por uno contra el portal la madrugada del 3-ago-2026, deduplicados, con un solo tipo de cambio y anclados a su edificio. <b>Cobertura: Equipetrol.</b> Fuera de esa zona este informe no se emite.</p>
+</section>
+
+<!-- ══════ CIERRE ══════ -->
+<div class="cierre" id="s-cierre">
+  <h2 style="font-size:18px">¿Y ahora?</h2>
+  <p class="sub" id="cierre-txt" style="margin-top:6px"></p>
+  <button class="btn" onclick="compartir()">Compartir este análisis</button>
+  <a class="btn wa" id="btn-hablar" href="#" target="_blank" rel="noopener">Hablar por WhatsApp</a>
+  <div class="caduca" id="caduca"></div>
+</div>
+
+<div class="pie">
+  Preparado por <b id="pie-broker">[Nombre del broker]</b><br>
+  Datos verificados por <b>Simón · Inteligencia Inmobiliaria</b>
+  <span style="display:block;margin-top:9px;opacity:.75">Nadie paga por aparecer mejor en este documento.<br>El mismo informe se le entrega a quien compra y a quien vende.</span>
+</div>
+</div><!-- /resultado -->
+</div>
+
+<script>
+/* ═══════ POOL REAL — shadow Equipetrol, corte 3-ago-2026 ═══════
+   edificio|lat|lon|dorms|m²|precio|$/m²|días|parqueo(i/n/s)|estado(P/E/-)|piscina|gym|cowork|sauna */
+var RAW=`20|SÖLO Industrial Apar|-17.76684|-63.19350|1|47|70000|1486|275|s|E|1|0|1|0
+30|Condominio Sky Luxia|-17.77082|-63.19270|0|31|69000|2212|239|s|E|1|0|0|1
+31|Sky Eclipse|-17.77220|-63.19193|0|67|99750|1500|239|s|E|1|1|0|1
+35|Condominio Avanti|-17.75892|-63.19278|2|73|125000|1708|299|s|E|1|0|1|0
+43|Lofty Island|-17.77108|-63.19466|1|51|91584|1800|408|n|P|1|1|0|0
+49|Lofty Island|-17.77108|-63.19466|1|70|118600|1700|408|n|P|1|1|0|0
+52|Lofty Island|-17.77108|-63.19466|2|101|167000|1646|408|n|P|1|1|0|0
+56|Sky Tower|-17.77204|-63.19191|0|36|68000|1889|238|s|P|1|1|0|1
+69|Edificio Vertical 60|-17.75757|-63.19135|1|42|65000|1548|287|s|E|1|1|0|0
+172|Onix Art By EliTe|-17.76617|-63.20178|0|43|88348|2055|291|s|E|1|0|0|0
+200|Malibu Inside|-17.76548|-63.19247|2|67|150000|2239|229|s|E|1|0|1|0
+324|Condominio Las Dalia|-17.76210|-63.19916|1|52|103448|2002|305|s|P|1|0|1|0
+348|Stone 3|-17.75880|-63.19363|0|34|67240|2000|132|s|E|1|1|1|0
+368|HH Once Equipetrol|-17.76411|-63.19353|1|56|77300|1380|308|s|P|1|0|1|0
+408|Condominio Cruz|-17.75370|-63.19177|2|92|142212|1548|35|n|-|1|0|0|1
+465|Sky Plaza Italia|-17.76950|-63.19669|0|42|66000|1556|210|s|-|1|0|0|0
+621|Condominio Las Dalia|-17.76209|-63.19936|2|75|188575|2514|180|s|P|0|0|0|0
+823|Lofty Island|-17.77086|-63.19457|2|101|167240|1648|182|n|P|1|1|1|0
+908|Alto Busch|-17.77029|-63.20045|1|54|60255|1116|165|s|-|1|1|0|0
+910|Edificio Aura Concep|-17.76659|-63.19513|2|72|108000|1500|163|s|E|1|1|1|1
+916|Alto Busch|-17.77029|-63.20045|1|53|57565|1086|165|s|-|1|0|0|0
+918|Condominio SKY EQUIN|-17.76140|-63.20261|1|54|82950|1536|166|s|P|1|0|1|0
+920|Sky Level|-17.76828|-63.19636|2|89|141000|1593|166|s|P|0|0|0|0
+923|Sky Level|-17.76828|-63.19636|2|89|132750|1500|166|s|P|0|0|0|0
+967|Aqua Tower|-17.76554|-63.19509|1|67|133720|1996|161|i|E|1|1|0|1
+968|Condado VI Plaza Ita|-17.76856|-63.19727|1|62|102647|1650|166|s|E|1|0|0|0
+971|Sky Onix|-17.76697|-63.19290|0|37|76000|2038|162|n|E|0|0|0|0
+977|Breeze Tower|-17.75464|-63.19198|1|59|85000|1441|161|i|E|1|0|0|0
+1005|Sky Eclipse|-17.77237|-63.19194|0|40|74119|1853|161|s|E|1|1|0|1
+1010|Edificio Bamboo|-17.75550|-63.19595|1|37|49500|1336|162|s|-|0|0|0|0
+1021|Giardino|-17.76354|-63.19730|1|60|137284|2303|160|s|P|0|0|0|0
+1040|Edificio Fragata|-17.77122|-63.19172|2|124|218500|1762|159|i|-|1|1|0|0
+1057|Stone 5|-17.76472|-63.20304|2|58|108077|1865|168|s|P|1|1|1|0
+1058|Stone 5|-17.76477|-63.20301|1|37|69882|1865|168|s|P|1|1|1|0
+1059|Stone 5|-17.76474|-63.20313|0|32|59270|1865|168|s|P|1|1|1|0
+1061|Stone 3|-17.75898|-63.19349|1|40|78585|1950|168|s|E|1|1|1|0
+1063|Stone 3|-17.75896|-63.19359|0|38|75300|2000|168|s|E|1|1|1|0
+1064|Stone 3|-17.75894|-63.19362|2|63|123045|1950|168|s|E|1|1|1|0
+1068|Portobello Green|-17.76450|-63.19194|0|34|65846|1927|168|s|-|1|1|1|0
+1069|PORTOBELLO 5|-17.75404|-63.19241|2|56|89709|1611|168|s|P|1|1|1|0
+1070|PORTOBELLO 5|-17.75391|-63.19241|0|37|59671|1611|168|s|P|1|1|1|0
+1071|PORTOBELLO 5|-17.75414|-63.19248|1|49|78509|1611|168|s|P|1|1|1|0
+1096|Edificio Fragata|-17.77122|-63.19172|2|124|200000|1610|183|i|-|1|0|0|0
+1120|INIZIO|-17.77068|-63.19733|0|30|40000|1329|153|s|-|0|0|0|0
+1140|Sky Collection Art D|-17.76621|-63.19235|1|76|145000|1908|168|i|-|1|1|0|1
+1160|Luxe Suites|-17.76691|-63.19657|0|35|67000|1942|149|s|E|1|1|0|0
+1162|INIZIO|-17.77122|-63.19735|1|39|53000|1370|152|s|-|1|0|0|0
+1188|Sky Moon|-17.75670|-63.19741|1|66|139000|2103|152|i|E|1|1|1|1
+1189|Sky Lux|-17.75586|-63.19747|1|56|88500|1580|142|s|-|0|0|0|0
+1227|Sky Eclipse|-17.77193|-63.19274|2|106|223391|2107|153|i|E|1|1|0|1
+1228|Edificio Vertical 60|-17.75684|-63.19123|2|73|118000|1611|153|i|E|1|0|0|0
+1252|Rhodium|-17.76282|-63.19910|0|36|88250|2454|142|s|P|1|0|0|0
+1274|+ PLUS ISUTO|-17.75723|-63.19278|2|66|110000|1670|152|i|-|0|0|0|0
+1283|T-VEINTICINCO|-17.76530|-63.19216|1|82|114744|1400|134|s|-|1|1|0|0
+1285|Uptown Drei|-17.77016|-63.19671|0|35|69825|1995|145|s|E|0|0|0|0
+1286|Eurodesign Soho|-17.76697|-63.19290|1|50|130800|2611|135|i|-|0|0|0|1
+1313|Green Tower|-17.75995|-63.19858|2|117|292500|2500|128|s|E|0|0|0|0
+1315|Vertical Terra|-17.75942|-63.19393|1|48|75000|1563|131|s|E|0|0|0|0
+1325|Condominio Stanza|-17.76800|-63.19544|1|47|83046|1750|128|s|E|0|0|1|0
+1332|Stone 3|-17.75864|-63.19365|2|63|89500|1416|133|s|E|1|1|1|0
+1335|Alto Busch|-17.77010|-63.20047|1|52|69000|1327|125|s|-|1|0|1|0
+1344|Edificio Spazios|-17.76461|-63.19419|1|51|112500|2206|125|s|E|1|0|0|1
+1373|HH Once Equipetrol|-17.76411|-63.19353|1|62|91500|1483|185|s|P|1|0|1|0
+1374|HH Once Equipetrol|-17.76411|-63.19353|0|71|88300|1250|185|s|P|1|0|1|0
+1375|HH Once Equipetrol|-17.76411|-63.19353|1|64|116600|1813|185|s|P|1|0|1|0
+1376|HH Once Equipetrol|-17.76411|-63.19353|1|56|63000|1127|185|s|P|1|0|1|0
+1380|Condominio Sky|-17.75698|-63.19809|2|110|115000|1045|119|i|E|1|1|0|0
+1400|Breeze Tower|-17.75503|-63.19123|1|52|99000|1908|118|s|E|1|0|1|0
+1411|Speranto Residenze|-17.76737|-63.19525|0|31|54000|1748|114|s|E|1|0|1|0
+1412|Uptown Drei|-17.77021|-63.19715|2|127|159000|1252|114|i|E|1|1|1|0
+1413|Condominio Maré|-17.76580|-63.20036|2|84|163500|1943|120|s|E|1|1|1|0
+1414|Condominio Maré|-17.76554|-63.20059|1|45|87750|1962|138|s|E|0|0|0|0
+1420|Stone 3|-17.75882|-63.19357|0|34|65900|1962|167|s|E|1|1|1|0
+1427|SKY Luxury|-17.75769|-63.20099|2|65|127000|1954|113|s|E|1|1|0|1
+1430|Golden Tower|-17.76697|-63.19290|1|51|115000|2255|128|s|E|1|1|1|1
+1432|EURODESIGN NORDIC|-17.76214|-63.19701|1|56|125000|2228|119|s|E|1|1|0|1
+1441|Edificio Elite Sirar|-17.76750|-63.20358|1|45|51126|1136|112|s|E|1|0|0|0
+1540|Condominio Maré|-17.76545|-63.20036|0|44|88100|1986|110|s|E|1|0|0|0
+1552|Madero Residence|-17.76501|-63.19962|2|102|200000|1961|107|i|E|1|0|0|1
+1553|Omnia Eco Lux|-17.76425|-63.20005|1|75|179000|2386|113|i|-|1|0|0|0
+1566|Condominio Maré|-17.76550|-63.20033|2|87|165470|1907|107|s|E|0|0|0|0
+1567|Condominio Maré|-17.76550|-63.20033|2|73|137120|1876|107|s|E|0|0|0|0
+1568|Condominio Maré|-17.76550|-63.20033|2|83|158660|1907|107|s|E|0|0|0|0
+1569|Condominio Maré|-17.76550|-63.20033|1|52|101200|1959|107|s|E|0|0|0|0
+1570|Condominio Maré|-17.76550|-63.20033|1|55|110000|2001|107|s|E|0|0|0|0
+1572|Condominio Maré|-17.76550|-63.20033|2|85|162000|1907|107|s|E|0|0|0|0
+1587|Sky Moon|-17.75682|-63.19748|0|42|85000|2048|105|s|E|1|1|1|1
+1596|Uptown NUU|-17.77000|-63.19669|0|39|58900|1510|104|s|E|0|0|0|0
+1597|Aqua Tower|-17.76558|-63.19507|1|67|133700|2000|113|s|E|1|1|0|0
+1598|Aqua Tower|-17.76562|-63.19499|1|56|118749|2121|113|s|E|1|1|0|0
+1599|Spazios Edén|-17.76697|-63.19290|1|42|92931|2213|121|s|P|1|1|1|0
+1615|TERRAZO|-17.76697|-63.19290|1|50|87000|1751|104|s|-|0|1|0|0
+1656|Torre Suant Isuto|-17.76528|-63.19151|2|116|145000|1250|104|s|-|1|1|0|1
+1668|Edificio Europeo|-17.75950|-63.19911|1|52|97000|1865|147|i|-|1|1|0|0
+1673|Onix Art By EliTe|-17.76617|-63.20178|1|60|75000|1250|100|i|E|1|1|1|0
+1674|Sky Plaza Italia|-17.76819|-63.19562|2|104|209799|2017|117|i|-|0|0|0|0
+1678|Luxe Tower|-17.77127|-63.19288|1|63|81000|1286|112|s|P|0|0|0|0
+1699|Uptown Drei|-17.77016|-63.19647|1|53|95000|1792|119|s|E|1|1|0|0
+1710|Speranto Residenze|-17.76863|-63.19649|0|33|56000|1693|120|s|E|1|0|1|0
+1711|Uptown Drei|-17.77000|-63.19700|0|35|66000|1906|106|i|E|1|1|0|0
+1730|Domus Tower|-17.77139|-63.18964|2|98|147495|1500|93|s|P|1|1|1|1
+1731|Domus Tower|-17.77139|-63.18964|2|88|131400|1500|93|s|P|1|1|1|1
+1734|Edificio Sirari Palm|-17.76391|-63.19928|1|49|84000|1725|93|s|E|1|0|0|0
+1736|Platinum II|-17.75486|-63.19722|2|107|170000|1589|114|n|E|1|1|0|1
+1758|Condominio Maré|-17.76568|-63.20026|2|86|174000|2016|104|i|E|1|1|1|1
+1763|Stone 3|-17.75872|-63.19350|2|83|160000|1928|94|n|E|0|0|0|0
+1764|Stone 3|-17.75872|-63.19350|1|40|67385|1672|94|n|E|0|0|0|0
+1777|SÖLO Industrial Apar|-17.76616|-63.19306|1|44|68200|1554|91|n|E|0|0|0|0
+1779|Spazios Edén|-17.76697|-63.19290|2|106|152520|1439|121|n|P|1|1|1|0
+1795|Sky Eclipse|-17.77223|-63.19232|0|61|112600|1846|98|i|E|1|1|0|1
+1800|HH Chuubi|-17.76801|-63.19449|2|109|160000|1468|126|i|P|1|0|1|1
+1802|Element by Elite|-17.76442|-63.20358|0|41|72414|1766|97|n|E|0|0|0|0
+1810|Domus Infinity|-17.76514|-63.19162|2|78|130000|1667|93|i|E|1|1|1|1
+1826|Condominio Maré|-17.76565|-63.20037|2|80|170000|2125|107|i|E|0|0|0|0
+1828|Luxe Suites|-17.76487|-63.19381|2|84|133000|1583|86|n|E|1|1|0|1
+1838|HH Chuubi|-17.76801|-63.19449|1|48|78000|1620|157|i|P|1|0|1|1
+1839|HH Chuubi|-17.76801|-63.19449|1|55|90600|1636|157|i|P|1|0|1|1
+1840|HH Chuubi|-17.76801|-63.19449|1|54|92600|1718|157|i|P|1|0|1|1
+1841|Eurodesign Suites|-17.76153|-63.19966|1|51|95000|1863|85|i|E|1|1|0|1
+1854|NanoTec by Smart Stu|-17.76697|-63.19290|1|44|88000|2000|84|i|E|0|0|0|0
+1856|Edificio Macororó 5|-17.75654|-63.19768|1|39|62000|1590|83|i|-|1|0|0|0
+1864|Luxe Residence|-17.76697|-63.19290|2|81|133650|1650|141|n|E|1|1|0|0
+1869|Macororo 7|-17.77053|-63.19440|2|79|130000|1641|87|i|-|1|0|0|1
+1870|Lofty Island|-17.77085|-63.19457|0|36|69099|1940|182|i|P|1|1|1|0
+1871|Lofty Island|-17.77087|-63.19455|1|68|83000|1217|182|i|-|1|1|1|0
+|Lofty Island|-17.77081|-63.19455|2|101|167239|1648|182|i|P|1|1|1|0
+1875|Haus Equipetrol|-17.76425|-63.19221|1|30|60000|2000|85|n|E|1|0|0|0
+1876|Edificio Klug|-17.76464|-63.19427|2|71|145000|2054|95|i|E|1|1|1|0
+1897|Condado VI Plaza Ita|-17.76859|-63.19731|2|87|144573|1662|79|n|E|1|1|0|0
+1899|Stone 3|-17.75871|-63.19356|1|51|97510|1930|79|n|E|1|0|0|0
+1905|Condominio Maré|-17.76547|-63.20036|1|52|100760|1950|97|n|E|1|1|1|0
+1908|Sky Tower|-17.77140|-63.19117|1|55|135000|2455|83|i|P|1|1|0|1
+1909|Grigia Residenze|-17.76015|-63.19718|1|37|70000|1892|79|n|E|1|0|1|0
+1910|Sky Moon|-17.75682|-63.19735|1|62|135000|2167|86|i|E|1|1|1|1
+1923|Grigia Residenze|-17.76003|-63.19703|0|33|65000|1948|77|n|E|1|0|1|0
+1924|Condominio Du Nord X|-17.75812|-63.19753|0|30|82500|2750|77|n|E|1|0|0|0
+1926|Luxe Suites|-17.76482|-63.19383|0|35|56711|1644|77|n|E|0|0|0|0
+1927|Haus Equipetrol|-17.76425|-63.19221|2|72|120000|1673|84|n|E|0|0|0|0
+1928|Stone 6|-17.75465|-63.19222|1|41|60990|1500|83|n|P|0|0|0|0
+1936|Condominio Sky Luxia|-17.76574|-63.19420|0|35|85000|2429|76|n|E|0|0|0|0
+1937|SÖLO Industrial Apar|-17.76659|-63.19337|1|46|70459|1539|78|n|E|1|0|1|0
+1939|You Smart Studios|-17.75852|-63.19785|2|116|223000|1929|86|i|E|1|0|1|0
+1949|Element by Elite|-17.76442|-63.20358|0|37|53650|1464|82|n|E|0|0|0|0
+1950|Edificio Spazios|-17.76461|-63.19419|1|41|105000|2561|86|n|E|1|0|0|0
+3465|Sky Plaza Italia|-17.76931|-63.19734|2|85|138000|1624|78|i|-|1|1|0|0
+2388|PORTOBELLO 5|-17.75365|-63.19318|2|54|98000|1799|74|i|P|1|1|1|1
+2394|Legendary by EliTe|-17.76120|-63.19911|0|36|65000|1798|74|i|E|1|0|0|0
+2396|Stone 3|-17.75872|-63.19350|0|34|53000|1576|71|n|E|1|1|1|0
+2421|Grigia Residenze|-17.75997|-63.19703|1|36|55000|1516|71|i|E|1|1|1|0
+2422|You Smart Studios|-17.75842|-63.19776|2|116|220000|1894|71|i|E|1|0|1|0
+2423|Speranto Residenze|-17.77090|-63.19809|0|78|89000|1143|72|i|E|1|1|1|0
+2424|Speranto Residenze|-17.77090|-63.19809|0|43|60000|1384|72|i|E|1|1|1|0
+2426|Sky Eclipse|-17.77170|-63.19081|1|65|150000|2308|75|i|E|1|1|0|1
+2429|Sky Moon|-17.75702|-63.19744|2|102|208000|2041|69|i|E|1|1|1|1
+2430|Condominio Sky Magno|-17.76625|-63.19567|0|40|79000|1975|69|n|E|0|0|0|0
+2433|Torre Real|-17.77098|-63.19138|1|48|64500|1335|81|i|-|0|0|0|0
+2434|Element by Elite|-17.76442|-63.20358|2|68|100000|1471|71|i|E|0|0|0|0
+2487|Golden Tower|-17.76149|-63.19705|1|53|99500|1883|86|i|E|1|1|0|1
+2582|Sky Eclipse|-17.77237|-63.19194|0|42|66000|1590|98|s|E|1|1|0|1
+2596|Condominio Maré|-17.76563|-63.20038|1|52|110000|2129|64|i|E|1|1|1|1
+2598|Uptown Drei|-17.76999|-63.19475|2|80|145000|1813|65|i|E|1|1|0|0
+2626|Sky Level|-17.76828|-63.19636|2|90|141000|1567|63|n|P|0|0|0|0
+2628|Sky Level|-17.76828|-63.19636|2|90|150400|1671|63|n|P|0|0|0|0
+2636|Uptown Drei|-17.77020|-63.19662|2|68|100000|1471|72|n|E|1|1|0|1
+2639|Luxe Suites|-17.76488|-63.19378|2|71|140000|1966|72|n|E|1|1|1|0
+2654|Eurodesign Le Blanc|-17.75848|-63.19665|1|58|130000|2241|78|n|P|1|1|1|1
+2656|STONE 2|-17.75569|-63.19161|2|66|79464|1200|61|i|E|1|1|1|0
+2666|Sky Elite|-17.76648|-63.19630|0|32|73000|2281|58|n|E|1|1|1|1
+2669|Uptown Drei|-17.77021|-63.19715|0|61|112850|1850|178|n|E|0|0|0|0
+2670|Magnum Residencias E|-17.76856|-63.19253|1|109|185000|1699|68|n|-|1|1|0|1
+2671|Magnum Residencias E|-17.76855|-63.19258|2|154|280000|1813|68|i|-|1|1|0|1
+2675|Edificio Siria 2|-17.75559|-63.19338|0|32|42103|1316|117|i|E|1|0|0|0
+2677|Sky Level|-17.76828|-63.19636|2|89|141600|1600|63|n|P|0|0|0|0
+968|Condado VI Plaza Ita|-17.76697|-63.19290|1|62|102647|1650|65|n|E|0|0|0|0
+2699|EURODESIGN TOWER|-17.76656|-63.19713|1|57|102000|1789|58|i|P|1|1|1|0
+2715|Luxe Suites|-17.76482|-63.19383|0|38|68000|1799|57|n|E|1|1|1|0
+2732|Edif. SKY DESIGN - S|-17.76608|-63.19660|2|149|209000|1403|55|i|-|1|0|0|0
+2734|Sky Eclipse|-17.77237|-63.19194|1|68|119000|1750|58|n|E|0|0|0|0
+2761|Breeze Tower|-17.75506|-63.19132|2|90|147000|1642|58|n|E|1|1|0|0
+2770|INIZIO|-17.77064|-63.19737|2|79|128888|1626|79|i|-|1|0|0|0
+2771|Atrium|-17.76855|-63.19589|2|94|156000|1652|86|i|E|1|0|0|0
+2774|Equipetrol Day Apart|-17.76336|-63.20037|2|152|275000|1809|55|i|-|0|0|0|0
+2775|Eurodesign Suites|-17.76173|-63.20001|1|49|80000|1623|57|n|E|1|1|0|0
+2776|You Smart Studios|-17.75852|-63.19785|2|95|190000|2000|62|i|E|0|0|0|0
+3342|PORTOBELLO 5|-17.75408|-63.19237|1|49|75000|1539|52|i|P|1|1|1|0
+2781|PORTOBELLO 5|-17.75416|-63.19237|0|48|70000|1468|52|i|P|1|1|1|0
+2798|Sky Tower|-17.77131|-63.19109|1|55|110000|2000|58|i|P|0|0|0|0
+2799|You Smart Studios|-17.75833|-63.19843|1|51|105000|2048|51|i|E|1|1|1|0
+2818|Condominio Maré|-17.76563|-63.20038|1|74|119557|1616|51|n|E|0|0|0|0
+2819|Sky Eclipse|-17.77235|-63.19194|1|68|115600|1700|64|n|E|1|1|0|1
+2820|Portobello Green|-17.76447|-63.19168|0|36|75000|2064|49|n|E|1|1|1|0
+2832|Sky Moon|-17.75682|-63.19735|2|105|227702|2169|50|i|E|0|0|0|0
+2833|Green Tower|-17.75995|-63.19858|1|70|206000|2929|51|i|E|1|1|0|1
+2870|Edificio Le Grand|-17.76295|-63.19987|2|113|198000|1752|47|i|-|0|0|0|0
+2871|Domus Tower|-17.77145|-63.18943|1|31|55000|1795|47|n|-|1|1|1|1
+3339|Luxe Tower|-17.77127|-63.19288|1|63|125000|1984|55|i|P|1|1|0|1
+3340|Sky Eclipse|-17.77231|-63.19212|2|105|188000|1790|56|i|E|1|1|1|1
+3372|Sky Collection Equip|-17.76625|-63.19567|2|88|145000|1648|42|i|-|1|1|1|0
+3374|Edificio Sirari Palm|-17.76391|-63.19928|0|36|75431|2095|46|n|E|0|0|0|0
+3408|Condominio Omnia Pri|-17.76662|-63.20314|2|88|126300|1435|48|i|E|1|0|0|0
+3409|Piazza Once|-17.76882|-63.19150|2|109|135000|1239|48|i|-|1|0|0|0
+3410|BARUC IV - EQUIPETRO|-17.75909|-63.19238|1|33|50700|1555|63|i|E|1|0|1|0
+3434|Sky Eclipse|-17.77233|-63.19214|2|101|165948|1643|40|n|E|0|0|0|0
+3435|SKY Luxury|-17.76697|-63.19290|1|42|64444|1534|41|n|E|1|0|0|1
+3436|Luxe Tower|-17.77127|-63.19288|2|95|138000|1453|47|i|P|1|1|0|1
+3454|Sky Moon|-17.75690|-63.19744|1|74|136621|1846|41|i|E|0|0|0|0
+3456|Edificio Klug|-17.76490|-63.19479|1|48|74880|1552|49|n|E|1|1|1|0
+3462|Phantom by Elite|-17.76289|-63.19867|1|48|98600|2054|43|i|E|0|0|0|0
+3463|Stratto Up|-17.75852|-63.19473|0|44|65250|1500|37|i|E|1|1|1|1
+3434|Sky Eclipse|-17.77233|-63.19214|2|101|165948|1643|36|i|E|0|0|0|0
+3493|PÖRA by Vertical Hom|-17.76476|-63.20287|2|59|86000|1458|142|i|E|0|0|0|0
+3538|Edificio Bamboo|-17.76770|-63.19450|1|37|71121|1920|41|n|-|0|0|0|0
+1313|Green Tower|-17.75995|-63.19858|2|117|292500|2500|36|n|E|0|0|0|0
+3540|Sky Moon|-17.75684|-63.19732|1|74|160000|2162|37|n|E|1|1|1|1
+3541|Nano Smart|-17.76427|-63.19260|0|33|52000|1558|65|n|E|1|0|1|0
+3542|HH Once Equipetrol|-17.76424|-63.19362|1|35|52600|1510|130|i|E|1|0|1|0
+3565|Domus Onix|-17.76662|-63.20429|0|33|68820|2085|35|n|P|0|0|0|0
+3577|Domus Insignia|-17.76898|-63.19785|0|49|77000|1570|29|n|P|1|1|1|1
+3579|Condominio Maré|-17.76563|-63.20038|0|46|90386|1975|35|i|E|1|1|1|1
+3580|Condominio Maré|-17.76563|-63.20038|2|86|164477|1906|35|i|E|1|1|1|1
+3581|Condominio Maré|-17.76563|-63.20038|0|44|90842|2048|35|i|E|1|1|1|1
+3582|Condominio Maré|-17.76563|-63.20038|0|43|88244|2058|35|i|E|1|1|1|1
+3583|Domus Insignia|-17.77106|-63.19811|1|38|56475|1500|54|n|P|1|1|1|0
+3586|Eurodesign Soho|-17.76920|-63.19687|2|85|180000|2128|29|i|-|1|1|1|1
+3605|Edificio PLATINUM|-17.75592|-63.19767|1|64|100000|1563|31|i|E|1|1|0|1
+3606|Yotau All Suites Hot|-17.77203|-63.19024|2|107|140000|1311|34|n|-|1|1|0|1
+3607|One Soul by Smart St|-17.76040|-63.19675|0|38|76300|1983|43|i|E|1|0|1|0
+3650|Portobello Green|-17.76432|-63.19163|1|51|98500|1920|27|n|P|1|0|0|0
+3656|Condominio Maré|-17.76565|-63.20037|2|144|256058|1778|29|i|E|0|0|0|0
+3657|SKY Luxury|-17.76697|-63.19290|1|42|50037|1191|36|s|E|1|1|1|1
+3658|Edificio ITAIPU|-17.75539|-63.19582|1|63|87644|1395|27|s|-|1|1|0|0
+3659|Edificio Klug|-17.76491|-63.19479|2|74|119000|1615|27|i|E|1|1|1|0
+3685|Condominio Maré|-17.76563|-63.20038|1|76|130000|1711|22|n|E|1|1|0|0
+3689|TRIVENTO IV|-17.76139|-63.19686|0|39|75883|1926|23|s|P|0|0|0|0
+3690|Edificio Sirari Palm|-17.76391|-63.19928|2|66|95000|1439|29|s|E|1|0|0|0
+3715|Uptown Drei|-17.77018|-63.19635|0|35|58500|1671|26|s|E|1|1|0|0
+3719|One Soul by Smart St|-17.76050|-63.19679|0|35|58000|1663|26|s|E|1|0|0|0
+3721|Speranto Residenze|-17.76727|-63.19530|2|66|111332|1687|21|i|E|1|0|1|0
+3738|Sky Tower|-17.77130|-63.19112|0|36|78000|2167|20|s|P|0|0|0|0
+3739|Sky Eclipse|-17.77237|-63.19194|0|41|73000|1780|22|s|E|1|1|0|1
+3740|Domus Infinity|-17.76697|-63.19290|1|52|87890|1700|51|s|E|1|1|1|1
+3741|Edificio Elite Sirar|-17.76433|-63.19977|1|46|67000|1457|20|n|E|1|0|0|0
+3745|Nano Smart|-17.76427|-63.19260|0|33|77443|2315|84|s|E|0|0|0|0
+3776|Condominio Sky Luxia|-17.76574|-63.19420|0|36|75000|2113|49|s|E|0|0|0|0
+3778|Edificio Tanaro|-17.76073|-63.19722|2|90|139000|1538|92|s|E|0|0|0|0
+3779|Edificio Tanaro|-17.76072|-63.19722|2|90|141000|1560|92|s|E|0|0|0|0
+3780|Edificio Tanaro|-17.76072|-63.19722|2|76|120000|1576|92|s|E|0|0|0|0
+3781|Luxe Tower|-17.77092|-63.19255|1|63|102000|1619|20|s|P|1|1|1|1
+8000012|Speranto Verdi|-17.76420|-63.20323|1|41|88000|2142|65|n|P|1|1|1|1
+8000014|Speranto Verdi|-17.76414|-63.20316|0|36|59500|1646|72|n|P|1|1|1|1
+8000017|Speranto Verdi|-17.76420|-63.20321|0|35|57000|1652|72|n|P|1|1|1|1
+8000019|Speranto Verdi|-17.76411|-63.20317|0|34|55500|1656|72|n|P|1|1|1|1
+8000026|Element by Elite|-17.76448|-63.20340|1|40|65000|1631|89|s|E|1|1|0|0
+8000064|Domus Tower|-17.77153|-63.18946|1|47|80600|1699|43|s|-|1|0|0|0
+8000067|La Riviera|-17.76055|-63.20177|2|100|180000|1801|70|i|E|1|0|0|0
+8000068|Domus Tower|-17.77152|-63.18946|1|42|71500|1702|54|s|-|0|0|0|0
+8000070|Condominio SKY EQUIN|-17.76593|-63.20504|0|35|75255|2138|41|s|P|0|0|0|0
+8000073|Sky Onix|-17.75797|-63.19901|2|72|132000|1833|92|i|E|0|1|0|0
+8000026|Element by Elite|-17.76441|-63.20347|1|40|65000|1631|91|s|E|1|1|0|0
+8000076|Speranto Verdi|-17.76412|-63.20314|0|35|58000|1644|72|n|P|1|1|1|1
+8000080|Speranto Verdi|-17.76414|-63.20316|0|32|52500|1649|72|s|P|1|1|1|1
+8000084|Speranto Verdi|-17.76414|-63.20316|1|44|72500|1667|72|s|P|1|1|1|1
+8000087|Speranto Verdi|-17.76414|-63.20316|0|37|61000|1645|72|s|P|1|1|1|1
+8000093|Grigia Deluxe|-17.76389|-63.19864|1|53|97000|1826|72|s|P|1|0|1|0
+8000094|Grigia Deluxe|-17.76389|-63.19864|1|57|104000|1818|72|s|P|1|0|1|0
+8000096|Speranto Verdi|-17.76420|-63.20323|1|43|86500|1999|65|s|P|1|1|1|1
+8000097|Speranto Verdi|-17.76414|-63.20314|1|43|85500|1983|65|s|P|1|1|1|1
+8000098|Condominio Maré|-17.76544|-63.20045|2|93|180000|1937|54|s|E|1|1|0|1
+8000099|Stone 5|-17.76212|-63.19954|2|58|108000|1864|52|s|P|1|1|0|0
+8000100|Stone 6|-17.75482|-63.19267|0|32|47000|1457|51|s|P|1|1|1|0
+8000101|Stone 3|-17.75888|-63.19356|1|51|70000|1386|40|s|E|1|1|1|0
+8000102|Los Cedros|-17.75523|-63.19207|2|90|140000|1557|28|s|-|1|1|0|0
+8000106|Edificio Suites Los |-17.76666|-63.20036|0|40|72019|1780|183|s|E|1|0|0|1
+8000109|Domus Tower|-17.77157|-63.18946|1|47|82590|1745|20|s|E|1|1|0|1
+8000110|Onix Art By EliTe|-17.76697|-63.19290|0|35|55000|1587|21|s|E|1|1|1|0
+8000114|Magnum Residencias E|-17.76853|-63.19255|1|81|133000|1640|41|s|-|1|1|0|1
+8000117|Sky Art|-17.76088|-63.19650|2|86|120296|1399|102|i|E|1|1|0|0
+8000127|NanoTec by Smart Stu|-17.76031|-63.19585|1|41|85000|2073|134|s|E|1|0|0|0
+8000131|Domus Infinity|-17.76517|-63.19198|1|48|84370|1745|20|s|E|1|1|0|1
+8000154|Uptown Drei|-17.77020|-63.19660|2|84|160000|1905|79|s|E|0|0|0|0
+8000157|Stone 3|-17.75874|-63.19357|0|38|55000|1461|21|s|E|1|1|1|0
+8000173|Uptown Drei|-17.77022|-63.19662|2|84|120000|1429|14|i|E|1|1|0|0
+8000174|Lofty Island|-17.77091|-63.19454|1|70|97706|1400|14|s|-|1|1|1|0
+8000175|Lofty Island|-17.77091|-63.19454|0|43|62843|1450|14|s|-|1|1|1|0
+8000179|Edificio Elite Sirar|-17.76427|-63.19978|0|38|55000|1447|14|s|E|1|0|0|0
+8000180|Portobello Green|-17.76444|-63.19168|0|37|50000|1362|15|s|E|1|1|1|0
+8000186|Condominio Stanza|-17.76806|-63.19539|1|58|95000|1650|14|s|E|1|1|0|0
+8000199|Uptown NUU|-17.76978|-63.19816|2|80|135000|1688|14|i|E|1|1|0|0
+8000204|Rhodium|-17.76282|-63.19910|2|75|141450|1897|13|s|P|1|0|0|0
+8000205|Rhodium|-17.76282|-63.19910|2|79|156900|1978|13|s|P|1|0|0|0
+8000206|Rhodium|-17.76282|-63.19910|0|38|73100|1949|13|s|P|1|0|0|0
+8000207|Rhodium|-17.76282|-63.19910|2|75|133650|1793|13|s|P|1|0|0|0
+8000208|Rhodium|-17.76282|-63.19910|0|38|63400|1690|13|s|P|1|0|0|0
+8000209|Rhodium|-17.76282|-63.19910|0|38|70800|1883|13|s|P|1|0|0|0
+8000210|Rhodium|-17.76282|-63.19910|2|75|135250|1814|13|s|P|1|0|0|0
+8000211|Rhodium|-17.76282|-63.19910|0|38|74850|1995|13|s|P|1|0|0|0
+8000212|Rhodium|-17.76282|-63.19910|1|44|83500|1905|13|s|P|1|0|0|0
+8000214|Rhodium|-17.76282|-63.19910|0|37|75050|2021|13|s|P|1|0|0|0
+8000215|Rhodium|-17.76282|-63.19910|0|38|69950|1861|13|s|P|1|0|0|0
+8000216|Rhodium|-17.76282|-63.19910|0|42|76750|1828|13|s|P|1|0|0|0
+8000217|Rhodium|-17.76282|-63.19910|0|36|68650|1909|13|s|P|1|0|0|0
+8000218|Rhodium|-17.76282|-63.19910|0|38|62650|1670|13|s|P|1|0|0|0
+8000219|Rhodium|-17.76282|-63.19910|0|43|73950|1707|13|s|P|1|0|0|0
+8000254|Luxe Suites|-17.76625|-63.19567|2|80|135000|1698|13|n|E|0|0|0|0
+8000255|Luxe Suites|-17.76625|-63.19567|1|62|105000|1688|13|s|E|0|0|0|0
+8000259|Vertical Güemes|-17.76989|-63.19106|1|50|78484|1560|27|s|P|1|1|1|0
+8000260|Vertical Güemes|-17.76989|-63.19106|1|50|77981|1550|27|s|P|1|1|1|0
+2654|Eurodesign Le Blanc|-17.75848|-63.19665|1|58|130000|2241|30|s|P|1|1|1|1
+8000274|Uptown Drei|-17.76697|-63.19290|1|53|100000|1902|10|i|E|1|1|1|0
+8000275|SKY Luxury|-17.76497|-63.19419|1|50|90000|1800|12|s|E|1|1|1|1
+8000283|Edificio Omnia Suite|-17.75598|-63.19469|1|44|71000|1615|116|i|-|1|0|0|0
+8000297|Bellini Suites Apart|-17.76716|-63.19620|0|31|70402|2271|99|s|-|0|0|0|1
+8000299|Vertical Güemes|-17.76992|-63.19118|1|50|75968|1510|19|s|P|1|1|1|0
+8000303|Sky Tower|-17.77180|-63.19088|0|36|72000|2000|12|s|P|0|0|0|0
+8000307|HH Once Equipetrol|-17.76405|-63.19356|1|56|90000|1609|9|s|E|1|0|1|0
+8000308|Edificio Condado II|-17.75749|-63.19876|2|80|118000|1484|21|i|E|1|0|0|0
+8000309|Stone 3|-17.75872|-63.19350|0|34|47100|1403|26|s|E|1|1|1|0
+8000324|Nomad by Smart Studi|-17.76755|-63.19553|2|62|118000|1913|11|s|E|1|0|1|0
+8000327|TORRE ARA|-17.77067|-63.18962|1|47|79000|1681|63|s|-|1|0|0|0
+3583|Domus Insignia|-17.76858|-63.19793|1|38|56475|1496|11|s|P|0|0|0|0
+8000503|Lofty Island|-17.77087|-63.19452|1|70|85000|1218|182|n|E|1|1|1|0
+8000504|PÖRA by Vertical Hom|-17.76485|-63.20296|2|58|93000|1595|111|s|E|0|0|0|0
+8000505|Aura Residences|-17.75613|-63.19338|2|107|95079|889|7|s|-|0|0|1|1
+8000506|Condominio Puerto Ma|-17.76535|-63.20276|1|75|125000|1664|6|i|E|1|1|0|0
+8000522|Edif. SKY DESIGN - S|-17.76412|-63.20256|1|65|107407|1660|37|s|-|1|1|0|0
+8000587|EURODESIGN TOWER|-17.76650|-63.19720|1|48|71485|1480|5|s|P|0|0|0|0
+8000590|Stratto Up|-17.76697|-63.19290|0|40|75000|1873|8|s|E|1|1|1|1
+8000606|TRIVENTO IV|-17.76149|-63.19688|1|47|58975|1250|6|s|P|0|0|0|0
+8000616|Condominio Sky Luxia|-17.76647|-63.19506|0|31|75000|2404|6|s|E|1|1|0|1
+8000617|Luxe Tower|-17.76999|-63.19475|2|103|149900|1455|36|s|P|1|1|1|1
+1096|Edificio Fragata|-17.77122|-63.19172|2|124|200000|1610|6|i|-|1|1|0|0
+8000668|Stone 3|-17.75872|-63.19350|1|51|98000|1941|5|s|E|1|1|1|0
+8000669|Element by Elite|-17.76441|-63.20347|1|40|55000|1380|91|s|E|1|1|0|0`;
+
+var POOL=RAW.trim().split('\n').map(function(l){var f=l.split('|');
+ /* trim: hay nombres con espacio final en la BD y el <option> lo colapsa → sel.value dejaba de matchear */
+ /* el id va primero: es la ÚNICA clave que identifica un aviso. Todo lo demás
+    (foto, aviso original, entrega, ficha) se busca por él y no por atributos. */
+ return {id:f[0],e:f[1].trim(),lat:+f[2],lon:+f[3],d:+f[4],a:+f[5],p:+f[6],m2:+f[7],dias:+f[8],pq:f[9],est:f[10],
+   am:{pis:+f[11],gym:+f[12],cow:+f[13],sau:+f[14]}};});
+
+
+/* ═══════ FOTO DEL AVISO — indexada por id ═══════
+   Es la foto de ESE aviso (advisor_property_snapshot, que se rehace cada noche),
+   no una generica del edificio. Van embebidas a 112 px porque se muestran a 56 y
+   porque publicado no se puede pedir una imagen a otro host. */
+var FOTOS_AV_RAW=``; /* servido: las fotos llegan con el pool vivo */
+var FOTOS_AV={};FOTOS_AV_RAW.trim().split(String.fromCharCode(10)).forEach(function(l){var i=l.indexOf('|');FOTOS_AV[l.slice(0,i)]=l.slice(i+1);});
+
+/* foto por edificio (advisor_property_snapshot, corte 5-ago) · "~" = CDN de C21.
+   Es la foto de UN aviso de ese edificio, no necesariamente de la unidad comparada. */
+var FOTOS_RAW=``;
+var FOTOS={};FOTOS_RAW.trim().split(String.fromCharCode(10)).forEach(function(l){var i=l.indexOf('|');FOTOS[l.slice(0,i).trim()]=l.slice(i+1);});
+
+/* URL del AVISO ORIGINAL por comparable — indexada por id · 'c'=C21, 'r'=Remax.
+   Va al anuncio real: es la verificación ("no me crea, mírelo"). */
+var URLS_RAW=`20|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125002205-51
+30|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120045022-125
+31|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120045022-124
+35|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120088023-177
+43|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120088023-173
+49|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120088023-167
+52|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120088023-166
+56|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120045022-126
+69|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120043044-77
+172|c89448_edificio-onix-art-by-elite-monoambiente-en-venta
+200|c95249_departamento-de-2-dormitorios-totalmente-amoblado-y-equipado-en-equipetrol-venta
+324|c86588_departamento-en-pre-venta-en-equipetrol
+348|c92551_stone-3-monoambiente-tipo-a-equipetrol-en-venta
+368|c88404_departamento-de-1-dormitorio-modelo-1d-a-en-equipetrol-edificio-hh-once
+408|c89368_departamento-en-venta-de-2d-equipetrol-brigida
+465|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001318-39
+621|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034093-273
+823|c100250_departamento-de-2-dormitorios-en-suite-en-fachada-y-con-balcon
+908|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001323-57
+910|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001292-185
+916|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001323-58
+918|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034039-410
+920|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034039-418
+923|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034039-416
+967|c101261_departamento-de-lujo-en-venta
+968|c100914_departamento-en-venta-condado-park-6
+971|c101268_en-venta-monoambiente-amoblado-edif-sky-onix
+977|c101265_departamento-a-estrenar-de-1-dormitorio
+1005|c100577_monoambiente-de-lujo-en-venta-sky-eclipse
+1010|c101427_dpto-en-venta-edificio-bamboo-equipetrol
+1021|rventa-garajebaulera-santa-cruz-de-la-sierra-equipetrolnoroeste-120034041-772
+1040|c101763_venta-de-departamento-edificio-torre-fragata-av-san-martin-equipetrol
+1057|c101958_stone-v-departamento-en-pre-venta-2-dormitorios
+1058|c101284_stone-v-departamento-en-pre-venta-1-dormitorio
+1059|c101981_stone-v-departamento-en-pre-venta-monoambiente
+1061|c101983_stone-iii-departamento-en-venta-1-dormitorio
+1063|c102000_stone-iii-monoambiente-en-venta
+1064|c102002_stone-iii-departamento-en-venta-2-dormitorios
+1068|c102020_portobello-green-monoambiente-en-venta
+1069|c102008_portobello-v-departamento-2-dormitorios-en-pre-venta
+1070|c102015_portobello-v-departamento-monoambiente-en-pre-venta
+1071|c102017_portobello-v-departamento-1-dormitorios-en-pre-venta
+1096|c117690_departamento-en-venta-en-la-mejor-zona-de-santa-cruz
+1120|c102747_monoambiente-en-venta-condomio-inizio-i
+1140|c100904_departamento-de-lujo-de-1-dormitorio-en-venta-equipetrol-sky-art-collection
+1160|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-1250016143-30
+1162|c102898_departamento-de-1-dormitorio-en-venta-condominio-inizio-1
+1188|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-1200794408-18
+1189|c103517_hermoso-departamento-venta-sky-lusx-1-dormitorio
+1227|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120016002-426
+1228|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125002206-47
+1252|c104088_preventa-depto-monoambiente-en-quipetrol-norte-ed-rhodium
+1274|c103988_departamento-en-venta-de-2-dormitorios-edificio-plus-isuto
+1283|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120096005-30
+1285|c103877_monoambiente-en-venta-uptown-drei-equipetrol
+1286|c104600_venta-de-departamento-amoblado-de-1-dormitorio-soho-eurodesing-con-parqueo
+1313|c114998_departamento-en-venta-green-tower
+1315|c104788_equipetrol-depto-de-1-dorm-en-venta-edificio-vertical-terra
+1325|c105175_departamento-en-venta-condominio-stanza-zona-equipetrol
+1332|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120016052-176
+1335|c105710_departamento-totalmente-equipado-en-venta-edificio-alto-busch
+1344|c105745_departamento-de-lujo-de-1-dormitorio-en-venta-condominio-spazios
+1373|c106023_departamento-de-1-dormitorio-modelo-1d-a-ct-en-equipetrol-edificio-hh-once
+1374|c105908_departamento-monoambiente-m-d-ct-en-equipetrol-edificio-hh-once
+1375|c106025_departamento-de-1-dormitorio-modelo-1d-b-en-equipetrol-edificio-hh-once
+1376|c106024_departamento-de-1-dormitorio-modelo-1d-a-lt-en-equipetrol-edificio-hh-once
+1380|c106071_amplio-dto-en-venta-2-dormitorios
+1400|c106223_departamento-de-1-dormitorio-en-suite-en-venta
+1411|c106493_monoambiente-a-estrenar-en-venta-en-speranto-residenze-equipetrol
+1412|c106264_departamento-a-estrenar-en-venta
+1413|c105985_departamento-de-lujo-de-2-dormitorios-en-venta
+1414|c104174_departamento-de-1-dorm-en-mare
+1420|c101517_monoambiente-a-estrenar-en-venta
+1427|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001358-89
+1430|c105543_en-venta-departamento-de-1-dorm-de-lujo-a-estrenar-en-equipetrol
+1432|c106534_dpto-de-1-dormitorio-en-venta
+1441|c106776_departamento-amoblado-y-equipado-en-venta-de-1-dormitorio-edificio-elite-sirari
+1540|c107039_monoambiente-en-venta-edificio-mare
+1552|c107131_departamento-de-lujo-en-venta
+1553|c106794_departamento-en-venta-amoblado-omnia-eco-lux
+1566|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034041-807
+1567|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034041-808
+1568|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034041-809
+1569|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034041-810
+1570|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034041-811
+1572|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034041-813
+1587|c107353_monoambiente-amoblado-y-equipado-en-venta
+1596|c107596_inverti-o-vivi-en-uptown-nu-monoambiente-de-lujo
+1597|c107553_departamento-en-venta-sobre-av-san-martin-equipetrol-santa-cruz-bolivia
+1598|c107545_departamento-en-venta-1-dormitorio-aqua-tower
+1599|c107466_departamento-de-un-dormitorio-en-pre-venta
+1615|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034115-108
+1656|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001292-204
+1668|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034022-406
+1673|c107714_onix-art-sirari-depto-de-1-dorm-a-estrenar-balcon-a-la-calle
+1674|c107811_departamento-en-venta-en-equipetrol
+1678|c107903_departamento-en-venta-en-condominio-luxe-tower
+1699|c108019_departamento-de-1-dormitorio-en-venta-en-equipetrol
+1710|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001318-43
+1711|c108118_dpto-monoambiente-en-venta-a-estrenar-piso-14-en-equipetrol
+1730|rventa-departamento-120099008-386
+1731|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120099008-387
+1734|c108521_hermoso-dpto-de-1-dormitorio-a-estrenar-en-venta
+1736|c106505_en-venta-departamento-de-lujo
+1758|c108965_departamento-de-lujo-en-venta-mare
+1763|c108830_departamento-de-2-dormitorios-en-venta
+1764|c108871_departamento-de-1-dormitorio-en-venta
+1777|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120088024-629
+1779|c107560_departamento-de-dos-dormitorios-en-pre-venta
+1795|c109202_monoambiente-de-lujo-con-parqueo-en-sky-eclipse-equipetrol
+1800|c109239_preventa-departamento-de-2-dormitorios-edificio-hh-chuubi-equipetrol
+1802|c108990_monoambiente-en-venta-en-edificio-element-by-elite
+1810|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120033063-90
+1826|c108824_dpto-lujo-en-venta-edif-mare-equipetrol-2-dormit
+1828|c109515_departamento-de-lujo-luxe-suite-equipetrol
+1838|c109559_preventa-departamento-de-1-dormitorio-modelo-1d-c-edificio-hh-chuubi-equipetrol
+1839|c109556_preventa-departamento-de-1-dormitorio-modelo-1d-d-edificio-hh-chuubi-equipetrol
+1840|c109562_preventa-de-duplex-de-1-dormitorio-modelo-dx-a-edificio-hh-chuubi-equipetrol
+1841|c109662_moderno-departamento-de-1-dormitorio-amoblado-en-venta-edif-eurodesign-suites
+1854|c109762_departamento-amoblado-y-equipado
+1856|c109554_hermoso-departamento-1-dormitorio-macororo-v-remodelado
+1864|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001310-352
+1869|c109429_departemento-en-venta-2-dorm-macororo-7-atras-del-colegio-aleman
+1870|c109849_departamento-monoambiente-equipado-en-fachada-y-con-balcon
+1871|c109850_departamento-de-1-dormitorio-en-suite-con-2-banos-en-fachada-y-con-balcon
+1875|c109859_departamento-en-edificio-haus-equipe
+1876|c109807_en-venta-departamento-de-2-dormitorios-edificio-klug-equipetrol
+1897|c110128_departamento-en-venta-de-2-dormitorios
+1899|c110087_departamento-de-1-dormitorio-en-venta-edificio-stone-3
+1905|c108855_depto-1-dorm-edificio-mare-a-estrenar
+1908|c110199_departamento-en-venta-1-dormitorio-sky-tower-equipetrol
+1909|c101430_departamento-amoblado-en-venta-de-1-dormitorio-en-equipetrol-norte
+1910|c110196_departamento-de-lujo-en-venta-sky-moon-equipetrol
+1923|c110403_monoambiente-amoblado-y-equipado-en-venta
+1924|c110363_en-venta-monoambiente-amoblado-equipetrol
+1926|c110450_monoambiente-amoblado-en-venta-en-luxe-suites-precio-660000-bs
+1927|c110415_departamento-en-venta-en-edificio-haus-equipe
+1928|c110135_departamento-de-1-dormitorio-en-pre-venta-edificio-stone-vi
+1936|c110567_monoambiente-en-venta-sky-luxia-equipetrol
+1937|c110343_dpto-a-estrenar-en-venta-de-1-dorm-en-equipetrol-edificio-solo
+1939|c109527_you-plaza-2-dorms-en-suite-en-venta
+1949|c110632_departamento-en-venta-en-equipetrol
+1950|c109691_equipetrol-departamento-de-1-suite-a-estrenar-amoblado-y-equipado
+2388|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120045022-137
+2394|c110969_monoambiente-amoblado-con-balcon-en-venta
+2396|c111013_monoambiente-en-venta-en-condominio-stone-3
+2421|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120088023-237
+2422|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001310-370
+2423|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120088023-236
+2424|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120088023-235
+2426|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-1250013586-8
+2429|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120016146-41
+2430|c111283_monoambiente-en-venta-sky-collection-magnolia-moderno-y-totalmente-amoblado
+2433|c111086_hermoso-departamento-de-1-dormitorio-en-venta-en-equipetrol
+2434|c111241_departamento-en-venta-en-edificio-element-by-elite
+2487|c109517_hermoso-departamento-1-dormitorio-golden-tower
+2582|c111891_monoambiente-en-venta
+2596|c111966_dpto-de-lujo-a-estrenar-en-venta
+2598|c112049_departamento-en-venta-uptown-drei-2-habitaciones
+2626|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034039-458
+2628|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034039-461
+2636|c112138_departamento-a-estrenar-de-2-dormitorios-en-uptown-drei-piso-12-equipetrol
+2639|c112127_departamento-en-venta-luxe-suites-equipetrol
+2654|c110420_departamento-de-lujo-de-1-dormitorio-en-edificio-eurodesign-le-blanc
+2656|c112226_en-venta-departamento-2-dormitorios-balcon-en-fachada-cond-stone-ii-brigida
+2666|c112282_hermoso-monoambiente-amoblado-en-venta
+2669|c99771_departamento-de-1-habitacion-en-venta-uptown-drei-equipetrol
+2670|c112095_departamento-en-venta-magnum-residencias-equipetrol
+2671|c112105_departamento-en-venta-magnum-residencias-equipetrol
+2675|c112124_oferta-de-monoambiente-equipado-mas-garaje-en-venta-zona-equipetrol-norte
+2677|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034039-456
+2699|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034092-75
+2715|c112563_luxe-suites-equipetrol-monoambiente-en-venta-a-fachada
+2732|c112744_amplio-departamento-en-venta-sky-desing
+2734|c112712_equipetrol-departamento-en-venta-a-estrenar
+2761|c112899_departamento-en-venta-e-equipetrol-a-tipo-de-cambio-6-96-breeze-tower
+2770|c111034_duplex-en-equipetrol-condominio-inizio
+2771|c109523_departamento-2-dormitorios-atrium-venta
+2774|c112708_equipetrol-norte-venta-hermoso-departamento
+2775|c112220_departamento-amoblado-en-venta-condominio-eurodesign-suites
+2776|c112925_you-plaza-2-dormitorios-en-venta
+2781|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120096011-10
+2798|c112355_sky-tower-departamento-de-lujo-en-venta
+2799|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120099004-432
+2818|c113200_departamento-en-venta-edificio-mare-equipetrol
+2819|c112010_departamento-en-venta
+2820|c113204_monoambiente-amoblado-y-equipado-en-venta-portobello-green-equipetrol
+2832|c113176_departamento-de-2-habitaciones-en-suite-piso-15-sky-moon
+2833|c109729_monoambiente-en-venta-en-green-tower
+2870|c113429_departamento-en-venta-en-edificio-legrand
+2871|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034004-239
+3339|c112815_departamento-en-venta-en-edificio-luxe-tower
+3340|c113607_departameno-de-lujo-en-venta-a-estrenar-2-dormitorios-sky-eclipse
+3342|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120096011-8
+3372|c113688_departamento-en-venta-en-sky-collection
+3374|c113743_monoambiente-amoblado-en-venta-en-equipetrol-condominio-sirari-palm
+3408|c113215_departamento-de-2-dormitorios-en-venta
+3409|c113803_departamento-de-dos-dormitorios-en-venta-en-equipetrol
+3410|c113541_departamento-de-1-dormitorio-en-venta
+3434|c113981_departamento-2-dormitorios-en-sky-eclipse
+3435|c114022_departamento-en-venta-de-1-dormitorio-en-condominio-sky-luxury
+3436|c113970_departamento-en-venta-en-edificio-luxe-tower
+3454|c114031_departamento-en-venta-1-dorm-escritorio-y-parqueo-sky-moon
+3456|c114113_venta-departamento-en-corazon-de-equipetrol
+3462|c113610_departamento-totalmente-equipado-en-venta-equipetrol
+3463|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-1200796309-7
+3465|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120099007-59
+3493|c103747_departamento-de-2-habitaciones-en-venta-edificio-pora
+3538|c113854_dpto-de-1-dormitorio
+3540|c114401_departamento-en-venta-sky-moon
+3541|c111568_monoambiente-en-venta-en-equipetrol
+3542|c105826_departamento-en-venta-a-estrenar-en-equipetrol-us-52-600-edificio-hh-once
+3565|c115301_departamento-en-preventa-en-domus-onix
+3577|c115390_departamento-en-venta-edificio-domus-insignia
+3579|c115184_departamento-en-venta
+3580|c115180_departamento-de-venta
+3581|c115179_departamento-en-venta
+3582|c115182_departamento-en-venta
+3583|c114235_inverti-donde-el-mercado-sigue-creciendo
+3586|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034041-820
+3605|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034022-425
+3606|c115018_equipetrol-hotel-yotau-departamento-de-2-dormitorios-en-venta
+3607|c115465_monoambiente-en-venta-one-soul-equipetrol
+3650|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120097002-16
+3656|c115658_dpto-de-2-dormitorios-de-lujo-en-venta-edificio-mare-equipetrol
+3657|c115725_departamento-en-venta-sky-luxury-equipetrol
+3658|c115615_departamento-en-venta-de-1-dormitorio-en-equipetrol
+3659|c115584_departamento-en-fachada-a-estrenar-de-2-dormitorios-con-parqueo-en-equipetrol
+3685|c116019_condominio-mare-departamento-un-dormitorio-en-suite
+3689|c115861_monoambiente-en-pre-venta-trivento-iv-equipetrol
+3690|c115475_departamento-en-venta-en-edificio-sirari-palm
+3715|c115995_monoambiente-en-venta
+3719|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120099006-255
+3721|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034093-278
+3738|c116321_monoambiente-en-venta-sky-tower
+3739|c116099_invierte-o-vive-con-estilo-en-sky-eclipse-el-corazon-de-equipetrol
+3740|c112868_a-estrenar-departamento-1-dormitorio-con-balcon-domus-infinity
+3741|c116085_departamento-amoblado-en-venta-en-equipetrol
+3745|c109794_monoambiente-amoblado-de-lujo-en-venta-nano-by-smartstudio-equipetrol
+3776|c116402_monoambiente-en-venta-en-equpetrol-sky-luxia
+3778|c116398_departamento-a-estrenar-en-venta
+3779|c116405_departamento-a-estrenar-en-venta
+3780|c116407_departamento-a-estrenar-en-venta
+3781|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001318-51
+8000012|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-245
+8000014|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-224
+8000017|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-207
+8000019|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-209
+8000026|rventa-departamento-santa-cruz-de-la-sierra-sirari-1200996280-1
+8000064|rventa-departamento-santa-cruz-de-la-sierra-pirai-1200996283-66
+8000067|rventa-departamento-santa-cruz-de-la-sierra-sirari-120034112-32
+8000068|rventa-departamento-santa-cruz-de-la-sierra-pirai-1200996283-63
+8000070|c113834_monoambiente-sky-equinox
+8000073|rventa-departamento-santa-cruz-de-la-sierra-banzer-1er-a-3er-anillo-125001292-211
+8000076|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-204
+8000080|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-214
+8000084|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-218
+8000087|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-221
+8000093|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-232
+8000094|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-233
+8000096|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-241
+8000097|rventa-departamento-santa-cruz-de-la-sierra-sirari-120088023-244
+8000098|rventa-departamento-120079022-34
+8000099|rventa-departamento-santa-cruz-de-la-sierra-sirari-120096011-12
+8000100|rventa-departamento-santa-cruz-de-la-sierra-radial-26-120096011-13
+8000101|rventa-departamento-santa-cruz-de-la-sierra-noroeste-125001154-155
+8000102|rventa-departamento-santa-cruz-de-la-sierra-radial-26-120043100-19
+8000106|rventa-departamento-santa-cruz-de-la-sierra-oeste-120043060-43
+8000109|c116512_departamento-en-venta
+8000110|c115962_equipetrol-monoambiente-amoblado-en-venta-condominio-onix-art
+8000114|c114163_edificio-magnum-depto-en-venta
+8000117|c110314_venta-dpto-amoblado-en-sky-art
+8000127|rventa-departamento-santa-cruz-de-la-sierra-sur-120034041-776
+8000131|c116516_departamento-en-venta
+8000154|c116493_departamento-en-venta-uptown-drei
+8000157|c116008_monoambiente-semiamoblado-en-venta-en-edificio-stone-3
+8000173|c113559_hermoso-departamento-en-venta-a-estrenar-uptown-drei
+8000174|c116750_deparatamento-de-1-dormitorio-en-venta-en-lofty-island-equipetrol
+8000175|c116759_monoambiente-en-venta-en-lofty-island-equipetrol
+8000179|c116794_monoambiente-venta
+8000180|c116619_monoambiente-en-venta-en-equipetrol-en-portobello-green
+8000186|rventa-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001306-124
+8000199|c116836_departamento-en-venta-en-uptown-equipetrol
+8000204|c114071_preventa-depto-2-dorm-en-suite-en-quipetrol-norte-ed-rhodium
+8000205|c114073_departamento-de-2-dorm-en-preventa-en-equipterol-ed-rhodium
+8000206|c114074_preventa-depto-2-dorm-en-suite-en-quipetrol-norte-ed-rhodium
+8000207|c114076_preventa-dpto-2-dorm-en-suite-en-equipetrol-norte-ed-rhodium
+8000208|c114078_preventa-monoambiente-equipetrol-norte-ed-rhodium
+8000209|c114079_preventa-monoambiente-con-balcon-equipetrol-norte-ed-rhodium
+8000210|c114080_preventa-dpto-2-dorm-en-suite-en-equipetrol-norte-ed-rhodium
+8000211|c114081_preventa-monoambiente-con-balcon-equipetrol-norte-ed-rhodium
+8000212|c114082_preventa-1dorm-2-banos-y-balcon-equipetrol-norte-ed-rhodium
+8000214|c114083_preventa-depto-monoambiente-en-equipetrol-norte-ed-rhodium
+8000215|c114084_preventa-depto-monoambiente-en-equipetrol-norte-ed-rhodium
+8000216|c114085_preventa-depto-equipetrol-en-equipetrol-norte-ed-rhodium
+8000217|c114086_preventa-depto-monoambiente-en-quipetrol-norte-ed-rhodium
+8000218|c114075_preventa-depto-monoambiente-en-equipetrol-norte-ed-rhodium
+8000219|c114077_preventa-depto-monoambiente-en-quipetrol-norte-ed-rhodium
+8000254|c116885_a-estrenar-departamento-de-dormitorios-en-venta-zona-equipetrol
+8000255|c116941_departamento-en-venta-de-1-dormitorio-en-fachada
+8000259|c117041_departamentos-de-1-dormitorio-en-preventa-edificio-vertical-guemes
+8000260|c117040_departamentos-de-1-dormitorio-en-preventa-edificio-vertical-guemes
+8000274|c117133_departamento-de-1-dormitorio-con-parqueo-en-venta
+8000275|c116753_departamento-de-1-dormitorio-en-sky-luxury
+8000283|c106580_venta-departamento-en-equipetrol-torre-omnia-suites
+8000297|c112090_monoambiente-completamente-amoblado-en-equipetrol-edificio-bellini
+8000299|c117255_departamento-en-pre-venta
+8000303|c117050_monoambiente-en-venta-sky-tower
+8000307|c117266_depto-en-equipetrol-hh-once
+8000308|c117451_departamento-en-venta-en-condominio-condado-ii
+8000309|c115633_monoambiente-en-venta-stone-3
+8000324|c117245_departamento-venta-equipetrol
+8000327|c112132_torre-ara-1-dorm-piso-7
+8000503|c109851_departamento-de-1-dormitorio-en-suite-con-2-banos-en-fachada-a-estrenar
+8000504|c117846_departamento-de-2-dormitorios-en-venta-pora-vertical-homes
+8000505|c117494_departamento-duplex-de-2-dormitorios-con-terraza-en-equipetrol
+8000506|rventa-departamento-santa-cruz-de-la-sierra-sirari-120034075-127
+8000522|c114310_departamento-en-venta-de-1-dormitorio-en-edificio-sky-design
+8000587|c118155_departamento-en-venta-de-1-dormitorio-en-eurodesign-tower
+8000590|c117977_monoambiente-de-lujo-a-estrenar-stratto-up-equipetrol
+8000606|c117870_trivento-iv-equipetrol-departamentos-en-pre-venta
+8000616|c117532_monoambiente-sky-luxia
+8000617|c114416_departamento-de-2-dormitorios-en-preventa-equipetrol-luxe-tower
+8000668|c118208_departamento-en-venta-zona-equipetrol-edificio-stone-iii
+8000669|rventa-departamento-santa-cruz-de-la-sierra-sirari-120099006-258`;
+var URLS_CRUDO={};URLS_RAW.trim().split(String.fromCharCode(10)).forEach(function(l){var i=l.indexOf('|');URLS_CRUDO[l.slice(0,i)]=l.slice(i+1);});
+function avisoDe(p){
+  var u=URLS_CRUDO[p.id];
+  if(!u)return null;
+  return (u.charAt(0)==='c'?'https://c21.com.bo/propiedad/':'https://remax.bo/propiedad/')+u.slice(1);}
+
+/* id de la propiedad en el feed de Simón → simonbo.com/ventas?id=N abre su ficha.
+   El enlace PRINCIPAL va acá (ficha completa, fotos, contexto de mercado, y el broker
+   no pierde a su cliente en el portal); el del portal queda como verificación. */
+/* 🔴 El feed público solo lista avisos de hasta 300 días. Enlazar la ficha de uno más
+   viejo abre el feed sin abrir nada — un link que "funciona" y no lleva a ningún lado
+   es peor que no tenerlo. Ahí el portal queda como único enlace. */
+var DIAS_FEED=300;
+function fichaDe(p){ if(p.dias>DIAS_FEED)return null;
+  return p.id? 'https://simonbo.com/ventas?id='+p.id : null;}
+/* El enlace al portal es una herramienta de VERIFICACIÓN del broker; en el documento
+   del cliente NUNCA aparece — mandarlo al portal es entregarle el contacto a otro.
+   Cuando no hay ficha, al cliente se le dice por qué en vez de dejarlo sin nada. */
+function enlaces(p){
+  var f=fichaDe(p), u=avisoDe(p), h='';
+  if(f) h+='<a class="ver" href="'+f+'" target="_blank" rel="noopener">ver la ficha ↗</a>';
+  if(u && MODO==='broker')
+    h+='<a class="ver'+(f?' ver2':'')+'" href="'+u+'" target="_blank" rel="noopener">'+
+       (f?'verificar en ':'ver el aviso en ')+(u.indexOf('c21')>=0?'C21':'Remax')+' ↗</a>';
+  if(h) return '<br>'+h;
+  return '<br><span class="ver" style="color:var(--gris);border-bottom-style:none">'+
+    (p.dias>DIAS_FEED?'lleva más de '+DIAS_FEED+' días publicado: fuera del feed':'sin ficha disponible')+'</span>';
+}
+
+/* fecha de ENTREGA declarada en los avisos de preventa — indexada por id */
+var ENTREGAS_RAW=`43|Mayo 2026
+49|Mayo 2026
+52|Mayo 2026
+56|Junio 2026
+324|Enero 2026
+368|Diciembre 2025
+621|Mayo 2026
+823|Mayo 2026
+918|Junio 2027
+920|Diciembre 2026
+923|Diciembre 2026
+1252|Julio 2026
+1570|Julio 2026
+1599|Junio 2027
+1779|Junio 2027
+1800|Diciembre 2026
+1838|Diciembre 2026
+1839|Diciembre 2026
+1840|Diciembre 2026
+1870|Mayo 2026
+1871|Mayo 2026
+1908|Junio 2026
+1928|Septiembre 2026
+2388|Julio 2026
+2626|Diciembre 2026
+2628|Diciembre 2026
+2654|Febrero 2026
+2677|Diciembre 2026
+2699|Junio 2027
+2781|Julio 2026
+2798|Julio 2026
+3339|Noviembre 2026
+3342|Julio 2026
+3493|Julio 2026
+3583|Diciembre 2026
+3650|Septiembre 2026
+3719|Marzo 2028
+3779|Diciembre 2026
+3781|Noviembre 2026
+8000012|Marzo 2028
+8000014|Marzo 2028
+8000017|Marzo 2028
+8000019|Marzo 2028
+8000070|Junio 2027
+8000076|Marzo 2028
+8000100|Diciembre 2026
+8000204|Septiembre 2026
+8000205|Septiembre 2026
+8000206|Septiembre 2026
+8000207|Septiembre 2026
+8000208|Septiembre 2026
+8000209|Septiembre 2026
+8000210|Septiembre 2026
+8000211|Septiembre 2026
+8000212|Septiembre 2026
+8000214|Septiembre 2026
+8000215|Septiembre 2026
+8000216|Septiembre 2026
+8000217|Septiembre 2026
+8000218|Septiembre 2026
+8000219|Septiembre 2026
+8000303|Julio 2026
+8000587|Junio 2027`;
+var ENTREGAS={};ENTREGAS_RAW.trim().split('\n').forEach(function(l){var f=l.split('|');ENTREGAS[f[0]]=f[1];});
+var MESN={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12};
+var HOY_YM=2026*100+8; /* corte 3-ago-2026 */
+function entregaDe(p){var t=ENTREGAS[p.id]; if(!t)return null;
+  var q=t.trim().toLowerCase().split(/\s+/), ym=(+q[1])*100+(MESN[q[0]]||6);
+  return {txt:t, vencida:ym<HOY_YM};}
+/* re-publicacion en bloque: 3+ unidades del mismo edificio con la MISMA antiguedad exacta */
+function construirRepub(){
+  var m={}; POOL.forEach(function(p){var k=claveEdif(p)+'|'+p.dias; m[k]=(m[k]||0)+1;});
+  return function(p){return m[claveEdif(p)+'|'+p.dias]>=3;};
+}
+var REPUB=construirRepub();
+
+/* ═══════ POOL DE ALQUILER — v_mercado_alquiler_shadow, Equipetrol, mismo corte ═══════
+   edificio|lat|lon|dorms|m²|USD/mes|Bs/mes|amoblado(a/n/?)|parqueo(i/s)|días
+   🔴 amoblado: 97 declaran "sí", 1 declara "no", 78 NO lo declaran. Del "?" NO se
+   afirma que no sea amoblado — el aviso simplemente no lo dice. */
+var ALQ_RAW=`Saota Park|-17.77012|-63.19966|0|27|241|2800|?|s|12
+Saota Park|-17.77000|-63.19951|0|27|301|3500|a|s|76
+One Life Sirari|-17.76697|-63.19290|0|31|258|3000|a|s|44
+Avanti|-17.75860|-63.19276|0|31|258|3000|a|s|98
+(sin edificio)|-17.76593|-63.19435|0|31|275|3200|?|s|15
+Murure|-17.76805|-63.19456|0|31|301|3500|a|s|49
+Santorini Suites|-17.76313|-63.19877|0|31|292|3400|?|s|75
+Domus Infinity|-17.76524|-63.19323|0|32|344|4000|a|s|16
+Nano Smart|-17.76417|-63.19192|0|32|314|3650|a|s|55
+Siria 2|-17.75581|-63.19389|0|32|301|3500|a|s|9
+Nano by Smart Studio|-17.76412|-63.19193|0|32|288|3350|a|s|36
+Malibu Inside|-17.76516|-63.19196|0|32|258|3000|a|s|25
+Torre Baruc 2|-17.76576|-63.19599|0|33|284|3300|a|s|14
+Baruc 2|-17.76567|-63.19596|0|33|284|3300|a|i|58
+Haus Equipe|-17.76452|-63.19303|0|33|292|3400|a|s|19
+Santorini Suites|-17.76277|-63.19836|0|33|241|2800|a|s|49
+Nano Samart|-17.76448|-63.19254|0|33|284|3300|a|s|114
+Baruc 1|-17.76719|-63.19497|0|34|241|2800|a|i|26
+Soul by Smart Studio|-17.76349|-63.19896|0|34|241|2800|a|s|2
+Onix Art|-17.76307|-63.19390|0|35|301|3500|a|s|20
+One Soul|-17.76044|-63.19669|0|35|301|3500|a|s|63
+You|-17.76697|-63.19290|0|35|279|3250|a|s|15
+Garden Equipetrol|-17.75618|-63.19417|0|36|301|3500|a|s|55
+Smart Soul|-17.76335|-63.19899|0|36|309|3600|a|i|30
+Sky Luxia|-17.76580|-63.19424|0|36|395|4600|?|i|4
+Sky Elite|-17.76606|-63.19658|0|36|335|3900|a|s|81
+Portobello Green|-17.76444|-63.19168|0|37|301|3500|a|s|14
+(sin edificio)|-17.77002|-63.19836|0|37|301|3500|?|s|22
+Sirari Palm|-17.76391|-63.19928|0|38|258|3000|a|s|9
+Sky Magnolia|-17.76360|-63.20313|0|38|249|2900|?|s|77
+Baruc 3|-17.77258|-63.19456|0|38|258|3000|a|s|34
+Sky Collection Magnolia|-17.76356|-63.20302|0|38|361|4200|a|s|63
+Luxe Suite|-17.76479|-63.19366|0|38|288|3350|?|s|12
+Domus Deluxe|-17.76449|-63.19335|0|38|314|3650|a|s|19
+Malibu Inside|-17.76521|-63.19194|0|39|223|2600|?|s|21
+Uptown Drei|-17.77014|-63.19662|0|39|301|3500|?|s|29
+Sky Collection Magnolia|-17.76356|-63.20303|0|40|344|4000|a|s|28
+Element by Elite|-17.76442|-63.20358|0|40|284|3300|a|s|41
+Sky Eclipse|-17.77237|-63.19194|0|40|369|4300|a|s|44
+Sky Eclipse|-17.77251|-63.19216|0|40|387|4500|a|s|90
+(sin edificio)|-17.76669|-63.19311|0|41|292|3400|a|s|14
+Stratto Equipetrol|-17.75893|-63.19520|0|41|318|3700|a|s|41
+Solo Industrial Apartments|-17.76660|-63.19337|0|41|258|3000|?|s|30
+(sin edificio)|-17.76697|-63.19290|0|41|258|3000|?|s|12
+Sky Eclipse|-17.77261|-63.19175|0|42|430|5000|?|s|92
+Sky Eclipse|-17.77237|-63.19194|0|42|387|4500|?|s|28
+Sky Moon|-17.75682|-63.19735|0|42|387|4500|a|s|83
+Sky Moon|-17.75682|-63.19735|0|42|412|4800|a|s|82
+Sky Moon|-17.75687|-63.19748|0|42|412|4800|a|s|106
+Sky Moon|-17.75689|-63.19739|0|42|412|4800|a|i|142
+Sky Moon|-17.75682|-63.19735|0|42|369|4300|a|s|85
+Sky Moon|-17.75682|-63.19735|0|42|395|4600|a|s|106
+Stratto Up|-17.75854|-63.19470|0|42|318|3700|?|s|23
+Maré|-17.76566|-63.20030|0|43|447|5200|?|s|7
+Maré|-17.76565|-63.20037|0|44|473|5500|a|s|42
+Mare|-17.76563|-63.20038|0|44|421|4900|a|s|76
+Golden Tower|-17.76156|-63.19673|0|45|404|4700|a|s|41
+(sin edificio)|-17.75555|-63.19315|0|46|241|2800|?|s|19
+(sin edificio)|-17.75858|-63.19478|0|54|335|3900|?|s|23
+Sky Plaza|-17.76163|-63.19978|0|55|275|3200|a|s|104
+(sin edificio)|-17.76660|-63.19337|0|60|301|3500|?|s|16
+Infinity by Elite|-17.76676|-63.20279|0|60|361|4200|a|i|42
+Du Nord 10|-17.75864|-63.19848|1|30|301|3500|a|s|77
+One Soul by Smart Studio|-17.76040|-63.19675|1|34|301|3500|?|i|106
+Aura Concept|-17.76656|-63.19509|1|37|301|3500|a|i|57
+(sin edificio)|-17.76377|-63.19157|1|37|284|3300|a|s|61
+Domus Tower Deluxe|-17.77143|-63.18956|1|37|361|4200|?|s|65
+Haus Equipetrol|-17.76425|-63.19221|1|37|284|3300|?|s|29
+(sin edificio)|-17.76377|-63.19157|1|37|258|3000|?|s|41
+Vertical Terra|-17.75947|-63.19402|1|38|344|4000|?|s|20
+(sin edificio)|-17.76737|-63.19525|1|39|275|3200|?|s|33
+Stone 2|-17.75516|-63.19168|1|40|258|3000|?|s|29
+NanoTec by Smart Studio|-17.76063|-63.19587|1|42|361|4200|a|s|41
+Sky Luxury|-17.75768|-63.19847|1|42|430|5000|a|s|19
+Spazios Edén|-17.76459|-63.19418|1|42|327|3800|a|s|37
+Sky Luxury|-17.75708|-63.19817|1|42|352|4100|a|s|54
+Maré|-17.76577|-63.19988|1|42|473|5500|a|i|35
+Domus Tower|-17.77153|-63.18951|1|43|301|3500|?|s|30
+Phantom by Elite|-17.76278|-63.19824|1|43|344|4000|a|s|119
+Macororo 9|-17.76385|-63.19170|1|43|361|4200|a|i|28
+Sky Collection Tulip|-17.76788|-63.19505|1|44|344|4000|?|s|15
+(sin edificio)|-17.76064|-63.19688|1|44|327|3800|?|s|26
+Nano Tec|-17.76697|-63.19290|1|44|387|4500|a|s|57
+Gold|-17.76377|-63.19246|1|44|301|3500|?|s|51
+NanoTec by Smart Studio|-17.76063|-63.19587|1|44|430|5000|?|s|83
+Maré|-17.76548|-63.20058|1|45|559|6500|?|i|48
+(sin edificio)|-17.76793|-63.19925|1|45|284|3300|?|s|20
+Atrium|-17.76854|-63.19589|1|45|275|3200|?|s|84
+Atrium|-17.76875|-63.19589|1|46|387|4500|a|i|111
+Elite Sirari|-17.76429|-63.19979|1|46|344|4000|a|s|105
+Nomad Smart Studio|-17.76771|-63.19575|1|46|335|3900|a|s|28
+Klug|-17.76497|-63.19478|1|47|361|4200|a|i|40
+Garden Equipetrol|-17.75599|-63.19419|1|47|387|4500|?|s|30
+Vertical Terra|-17.75945|-63.19397|1|48|430|5000|a|s|55
+Stratto Up|-17.75850|-63.19465|1|48|361|4200|?|s|20
+Garden Equipetrol|-17.75759|-63.19350|1|48|387|4500|a|s|55
+Uptown NUU|-17.77000|-63.19669|1|50|361|4200|?|i|32
+(sin edificio)|-17.76697|-63.19290|1|50|344|4000|?|s|49
+Maré|-17.76557|-63.20025|1|50|430|5000|?|s|27
+(sin edificio)|-17.76207|-63.19716|1|50|258|3000|?|s|7
+Condominio Mare|-17.76508|-63.20079|1|52|601|7000|a|i|36
+Breeze Tower|-17.75495|-63.19132|1|52|361|4200|?|i|15
+Golden Tower|-17.76138|-63.19683|1|53|447|5200|a|i|29
+Golden Tower|-17.76125|-63.19680|1|53|430|5000|?|s|72
+Eurodesign Nordic|-17.76212|-63.19689|1|54|387|4500|a|s|34
+Torre Sirari|-17.76751|-63.20277|1|54|387|4500|a|s|82
+Sky Luxia|-17.76574|-63.19420|1|55|516|6000|?|s|16
+(sin edificio)|-17.76147|-63.19692|1|55|412|4800|a|s|27
+Eurodesign Suites|-17.75830|-63.19692|1|56|344|4000|a|s|11
+Stanza|-17.76798|-63.19521|1|56|275|3200|a|s|55
+Le Blanc|-17.75667|-63.19814|1|56|498|5800|?|i|7
+(sin edificio)|-17.76150|-63.19713|1|58|430|5000|?|s|72
+Breeze Tower|-17.75505|-63.19131|1|59|384|4470|?|i|84
+Luxe Residence|-17.75829|-63.19901|1|60|473|5500|a|s|118
+Domus Infinity|-17.76508|-63.19155|1|61|344|4000|?|s|58
+Sky Eclipse|-17.77237|-63.19194|1|65|507|5900|a|s|42
+Golden Tower|-17.76148|-63.19688|1|67|430|5000|?|s|77
+Sky Eclipse|-17.77237|-63.19194|1|68|455|5300|?|s|120
+Stratto Up|-17.75914|-63.19478|1|74|473|5500|a|i|16
+Sky Moon|-17.75683|-63.19746|1|74|601|7000|?|i|28
+Puerto Madero|-17.76547|-63.20292|1|75|387|4500|n|s|2
+Mai Suites|-17.76360|-63.20340|1|80|584|6800|a|s|46
+Green Tower|-17.76000|-63.19879|1|83|988|11500|a|s|69
+(sin edificio)|-17.76478|-63.20285|2|60|464|5400|?|s|1
+Smart Soul|-17.76334|-63.19891|2|60|387|4500|?|i|23
+NanoTec by Smart Studio|-17.76137|-63.19582|2|65|498|5800|a|i|21
+Vertical 60|-17.75691|-63.19134|2|73|730|8500|a|i|58
+Sky Luxia|-17.76542|-63.19430|2|73|627|7300|?|s|42
+Impera Tower|-17.76466|-63.20209|2|75|559|6500|?|i|63
+(sin edificio)|-17.76066|-63.19328|2|75|430|5000|a|i|90
+(sin edificio)|-17.77047|-63.19441|2|79|473|5500|a|i|22
+Metta|-17.76128|-63.19887|2|80|559|6500|a|i|139
+(sin edificio)|-17.77016|-63.19722|2|80|447|5200|?|i|35
+(sin edificio)|-17.76827|-63.19153|2|80|473|5500|?|i|69
+Sky Tulip|-17.76484|-63.20322|2|80|498|5800|a|i|56
+MAIA|-17.76198|-63.19926|2|80|387|4500|?|i|23
+Maré|-17.76568|-63.20030|2|84|859|10000|a|i|21
+Sky Moon|-17.75692|-63.19751|2|84|730|8500|?|i|19
+Spazios|-17.76461|-63.19419|2|86|601|7000|?|i|13
+Sky Art|-17.76088|-63.19650|2|86|644|7500|a|i|103
+(sin edificio)|-17.76854|-63.19722|2|87|670|7800|?|i|64
+Mare|-17.76443|-63.19866|2|94|773|9000|?|i|6
+Sky Eclipse|-17.77215|-63.19203|2|95|644|7500|?|s|51
+La Riviera|-17.76033|-63.20171|2|100|653|7600|a|i|53
+La Riviera|-17.76031|-63.20078|2|100|1375|16000|?|i|42
+Madero Residence|-17.76799|-63.19657|2|102|687|8000|a|i|93
+Sky Lumiere|-17.76080|-63.19584|2|103|688|8004|?|i|77
+Sky Lumiere|-17.76080|-63.19584|2|103|658|7656|?|i|47
+Sky Moon|-17.75682|-63.19735|2|105|902|10500|?|s|48
+Sky Eclipse|-17.77215|-63.19203|2|105|816|9500|a|s|51
+Sky Eclipse|-17.77237|-63.19194|2|106|842|9800|a|i|43
+Platinium|-17.75490|-63.19722|2|107|507|5900|?|s|139
+(sin edificio)|-17.77142|-63.19768|2|130|447|5200|?|i|43
+Madero Residence|-17.76805|-63.19651|2|130|876|10200|a|s|103
+Madero Residence|-17.76697|-63.19290|2|138|842|9800|?|i|14
+La Riviera Beauty Plaza|-17.76049|-63.20195|2|145|988|11500|a|i|61
+Condominio Iguazú|-17.77232|-63.19227|2|200|584|6800|a|i|1`;
+var POOL_ALQ=ALQ_RAW.trim().split('\n').map(function(l){var f=l.split('|');
+  return {e:f[0].trim(),lat:+f[1],lon:+f[2],d:+f[3],a:+f[4],pm:+f[5],bob:+f[6],amo:f[7],pq:f[8],dias:+f[9]};});
+
+/* ═══ HECHOS DE LA MUESTRA ═══
+   Ningún porcentaje del documento va escrito a mano: todos salen del pool que se
+   está usando. Un número fijo en el texto envejece con el mercado y termina
+   afirmando algo falso — que es exactamente lo que el método promete no hacer. */
+function hechos(){
+  var P=POOL, n=P.length, pct=function(k){return Math.round(100*k/n)};
+  var m={}; P.forEach(function(p){var k=p.e+'|'+p.dias; m[k]=(m[k]||0)+1;});
+  return {n:n,
+    sinDeclararParqueo: pct(P.filter(function(p){return p.pq==='s'}).length),
+    sinAmenidades:      pct(P.filter(function(p){return !amenidades(p).length}).length),
+    conPiso:            pct(P.filter(function(p){return p.pi}).length),
+    enBloque:           pct(P.filter(function(p){return m[p.e+'|'+p.dias]>=3}).length),
+    declaranAmoblado:   P.filter(function(p){return p.amo}).length};
+}
+/* De dónde salió el estado de obra de este comparable, y si contradice a su aviso.
+   🔴 Lo importante es el caso `conflicto_resuelto`: el aviso dice "preventa" y el
+   documento muestra "entregado" porque otras unidades del edificio ya se entregaron.
+   Sin marcarlo, el broker abre el anuncio, lee otra cosa y el ACM queda sin explicación
+   — peor que no corregirlo. */
+function marcaEstado(p){
+  if(p.est!=='P' && p.est!=='E') return '';
+  var contradice = p.ea && p.ea!==p.est;
+  if(p.eo==='verificado')
+    return '<span class="inf ok" title="Comprobado a mano contra el edificio, no deducido del aviso">verificado</span>';
+  if(p.eo==='conflicto_resuelto')
+    return '<span class="inf" title="'+(contradice
+      ? 'Este aviso dice ' + (p.ea==='P'?'preventa':'entregado') + ', pero otras unidades del mismo edificio ya figuran entregadas. Un edificio no vuelve al pozo, así que gana el estado más avanzado.'
+      : 'En este edificio hay avisos con estados distintos; gana el más avanzado porque un edificio no vuelve al pozo.')+'">'+
+      (contradice?'corregido':'según el edificio')+'</span>';
+  if(p.eo==='vecinos'||p.eo==='alquiler')
+    return '<span class="inf" title="No lo declara el aviso: se dedujo '+
+      (p.eo==='vecinos'?'de las otras unidades del edificio':'de que hay un alquiler activo ahí')+'">deducido</span>';
+  return '';
+}
+/* el pool vivo manda la lista completa; el congelado, los cuatro flags de siempre */
+function amenidades(p){
+  if(Array.isArray(p.am)) return p.am;
+  var a=p.am||{};
+  return [a.pis?'Piscina':'',a.gym?'Gimnasio':'',a.cow?'Co-working':'',a.sau?'Sauna/Jacuzzi':'']
+    .filter(Boolean);
+}
+
+/* política declarada — un solo lugar */
+var CONF={radios:[300,500,800], nMin:5, frescuraDias:180, areaTol:0.20, outlierIQR:1.5,
+};
+var META_ACM={corte:'3 de agosto de 2026', cobertura:'Equipetrol'};
+
+/* edificios únicos con su GPS (centroide), agrupados por identidad y no por nombre */
+function construirEdifs(){
+  var m={};
+  POOL.forEach(function(p){var k=claveEdif(p);
+    if(!m[k])m[k]={e:p.e,n:0,lat:0,lon:0};
+    m[k].n++; m[k].lat+=p.lat; m[k].lon+=p.lon;});
+  return Object.keys(m).map(function(k){var x=m[k];
+    return {k:k, e:x.e, lat:x.lat/x.n, lon:x.lon/x.n, n:x.n};})
+    .sort(function(a,b){return a.e<b.e?-1:a.e>b.e?1:0});
+}
+
+var EDIFS=construirEdifs();
+
+var MI={e:'Lofty Island',k:null,d:1,a:51,p:91584,pq:'n',est:'P'}, COH=null, excl={};
+/* excl[i] guarda el MOTIVO (string), no un booleano: una exclusión sin motivo
+   es maquillaje, y el cliente tiene que poder leer por qué se sacó cada una. */
+var MODO='broker'; /* broker = edita · lectura = lo que ve el cliente */
+/* criterios de búsqueda: los defaults son la política declarada; el broker los puede
+   mover, y todo lo que mueva queda escrito en el documento del cliente. */
+var AJ={radio:0, tol:0.20, tipVecinas:false};
+var PMIN=0,PMAX=1; /* escala de la barra del rango, para que el simulador pueda mover la aguja */
+var SIM_TOCADO=false;
+/* cohorte guardado en el enlace: si está, calcular() lo usa tal cual en vez
+   de rearmarlo contra el pool de hoy */
+var CONGELADO=null;
+function fm(n){return '$'+Math.round(n).toLocaleString('es-BO').replace(/,/g,'.')}
+function px(v){return Math.max(0,Math.min(100,100*(v-PMIN)/(PMAX-PMIN)))}
+function posDe(m2,s){return m2===null||m2===undefined?['na','sin precio']
+  :(m2>s.p75?['sobre','SOBRE el rango']:(m2<s.p25?['bajo','BAJO el rango']:['dentro','DENTRO del rango']));}
+
+/* ═══ ORDEN DE SECCIONES — sigue al diagnóstico, no a un índice fijo ═══
+   Cada sección responde la objeción que abre la anterior:
+   rango → "¿de dónde lo sacaste?" → "el mío es distinto" → "¿por qué no se vende?" → "¿qué hago?" */
+var ORDEN=['s-resp','s-evid','s-torre','s-antig','s-sim','s-metodo'];
+var ORDEN_HECHO=false;
+function ordenar(){
+  if(ORDEN_HECHO)return; /* mover nodos enfocados hace blur: una sola vez */
+  ORDEN_HECHO=true;
+  var cont=document.getElementById('resultado'), ancla=document.getElementById('s-cierre');
+  ORDEN.forEach(function(id,i){
+    var sec=document.getElementById(id); cont.insertBefore(sec,ancla);
+    var n=sec.querySelector('.num'); if(n)n.textContent='0'+(i+1)+' · ';});
+}
+
+/* ═══ MODO — el broker EDITA en privado, el cliente LEE un documento congelado ═══ */
+function barraModo(){
+  var t=document.getElementById('mb-txt');
+  document.getElementById('mb-b1').style.display=MODO==='broker'?'':'none';
+  document.getElementById('mb-b2').style.display=MODO==='broker'?'none':'';
+  t.innerHTML=MODO==='broker'
+    ? 'Modo edición<span>El cliente no ve esta barra, ni el ✕, ni el panel de recomendación.</span>'
+    : 'Vista del cliente<span>Así llega el análisis por WhatsApp. Congelado al '+META_ACM.corte+'.</span>';
+}
+function publicar(){
+  MI.recoP=+document.getElementById('f-reco-precio').value||null;
+  MI.recoT=document.getElementById('f-reco-txt').value.trim();
+  if(!MI.recoP && !MI.recoT && !confirm('Todavía no escribió su recomendación.\n\nSin ella el cliente recibe la medición de Simón sin su criterio — que es justamente lo que usted aporta.\n\n¿Generar igual?'))return;
+  MODO='lectura'; document.body.classList.remove('broker'); barraModo();
+  if(COH)render(); /* sin base no hay nada que re-pintar, pero el "no se emite" igual se firma */
+  window.scrollTo(0,0);
+}
+function volverEditar(){MODO='broker'; document.body.classList.add('broker'); barraModo();
+  if(COH)render(); window.scrollTo(0,0);}
+/* la recomendación se re-pinta sola mientras el broker escribe — sin tocar el resto del DOM.
+   🔴 Si el precio recomendado cae FUERA del rango medido, el documento lo dice. No para
+   corregir al broker (puede tener razón: él ve lo que el dato no ve), sino porque un
+   número presentado al lado de un rango, sin decir que está afuera, se lee como si
+   estuviera adentro. */
+function renderReco(){
+  var ubic='';
+  if(MI.recoP && COH){ var s=stats();
+    if(s){ var lo=s.p25*MI.a, hi=s.p75*MI.a, m2=MI.recoP/MI.a, pr=posDe(m2,s);
+      var d=MI.recoP>hi ? 100*(MI.recoP/hi-1) : (MI.recoP<lo ? 100*(1-MI.recoP/lo) : 0);
+      ubic = pr[0]==='dentro'
+        ? '<div class="ru">Cae <b>dentro</b> del rango medido ('+fm(lo)+' – '+fm(hi)+').</div>'
+        : '<div class="ru fuera">Cae <b>'+(MI.recoP>hi?'por encima':'por debajo')+'</b> del rango medido ('+fm(lo)+' – '+fm(hi)+') — un <b>'+d.toFixed(0)+'%</b> '+(MI.recoP>hi?'más que el techo':'menos que el piso')+'. '+
+          (MI.recoP>hi?'Pedir arriba del rango es una apuesta legítima si la unidad tiene algo que las otras no; el costo esperado es tiempo.'
+                      :'Salir abajo del piso acelera, y deja valor sobre la mesa si no había apuro.')+'</div>';
+    }}
+  document.getElementById('reco-bloque').innerHTML = (MI.recoP||MI.recoT)
+    ? '<div class="reco"><div class="rt">Recomendación de '+MI.broker+'</div>'+
+      (MI.recoP?'<div class="rp">'+fm(MI.recoP)+'</div>':'')+ubic+
+      (MI.recoT?'<div class="rx">'+MI.recoT.replace(/[<>]/g,'')+'</div>':'')+
+      '<div class="rf"><b style="color:var(--arena)">Criterio profesional de '+MI.broker+'</b> — no una medición de Simón.</div></div>'
+    : '';
+}
+/* Todo rastro del análisis anterior. Si queda DOM viejo, al publicar el documento del
+   cliente arrastra comparables y enlaces que ya no corresponden. */
+function limpiarAnalisis(){
+  ['comps','torre','fuera-muestra','excl-dec','recalc','aviso-estado','ajustes-dec',
+   'aviso-propio','objetivos','difs-bloque','reco-bloque','renta-bloque']
+    .forEach(function(id){document.getElementById(id).innerHTML='';});
+  document.getElementById('recalc').className='recalc';
+}
+/* re-arma la muestra con los criterios que movió el broker y re-pinta todo */
+function reAjustar(){
+  if(!document.getElementById('resultado').classList.contains('oculto')){
+    excl={}; COH=armarCohort(); /* mover un criterio es pedir otra muestra: acá no se respeta el congelado */
+    if(!COH){ limpiarAnalisis();
+      document.getElementById('bloque-rango').classList.add('oculto');
+      ['s-antig','s-torre','s-sim'].forEach(function(id){document.getElementById(id).classList.add('oculto')});
+      var sb=document.getElementById('sin-base'); sb.classList.remove('oculto');
+      sb.innerHTML='<b>Con estos criterios no se junta la muestra mínima</b> ('+CONF.nMin+' comparables frescos). Amplíe el radio o la tolerancia de superficie, o vuelva a <b>Automático</b>.';
+      document.getElementById('chip-top').textContent='sin base';
+      document.getElementById('chip-top').className='pos pos-na';
+      document.getElementById('aj-nota').innerHTML='<b style="color:var(--terra)">Sin base con estos criterios.</b> Amplíe el radio o la tolerancia, o vuelva a Automático.';
+      return; }
+    document.getElementById('bloque-rango').classList.remove('oculto');
+    document.getElementById('sin-base').classList.add('oculto');
+    ['s-antig','s-torre','s-sim'].forEach(function(id){document.getElementById(id).classList.remove('oculto')});
+    var sl=document.getElementById('sim'), s=stats();
+    sl.min=Math.round(s.p25*MI.a*0.75/500)*500; sl.max=Math.round(s.p75*MI.a*1.25/500)*500;
+    sl.value=MI.p||Math.round(s.p50*MI.a); SIM_TOCADO=false;
+    document.getElementById('sim-min').textContent=fm(sl.min);
+    document.getElementById('sim-max').textContent=fm(sl.max);
+    render();
+  }
+}
+/* qué se apartó del default — se declara en el documento y se resume en el panel */
+function ajustesMovidos(){
+  var m=[];
+  if(AJ.radio) m.push({k:'radio', t:'buscó a <b>'+AJ.radio+' m</b> en vez de dejar que el radio se ampliara solo desde '+CONF.radios[0]+' m'});
+  if(AJ.tol!==CONF.areaTol) m.push({k:'tol', t:'aceptó superficies de <b>±'+Math.round(AJ.tol*100)+'%</b> en vez de ±'+Math.round(CONF.areaTol*100)+'%'});
+  if(AJ.tipVecinas && MI.a>=TIP_VECINAS_DESDE) m.push({k:'tip', t:'sumó las <b>tipologías vecinas</b> (a partir de '+TIP_VECINAS_DESDE+' m² la diferencia de precio por m² entre tipologías contiguas es chica)'});
+  return m;
+}
+/* ═══ EL ENLACE LLEVA EL ANÁLISIS ADENTRO ═══
+   Todo el estado congelado (unidad, criterios, exclusiones con su motivo, la
+   recomendación firmada) va codificado en el hash de la URL. Sin servidor y sin
+   base de datos: el link YA se puede mandar por WhatsApp y quien lo abre ve
+   exactamente este análisis, no uno recalculado.
+   En producción esto es una fila en la base y un hash corto — pero el contrato
+   es el mismo: lo que se comparte está congelado. */
+/* 🔴 El enlace guarda los COMPARABLES, no solo lo que cargó el broker.
+   Con el pool vivo, guardar únicamente los datos de entrada haría que el mismo link
+   diera otro número cada noche: el cliente abre a los diez días y el rango cambió sin
+   que nadie se lo dijera. Un ACM es un documento fechado. Los comparables congelados
+   son lo que sostiene el rango; el resto del documento (su edificio, el mercado de
+   alquiler) se recalcula y no toca el número. */
+function estadoAcm(){
+  var base={e:MI.e, d:MI.d, a:MI.a, p:MI.p, pq:MI.pq, es:MI.est, pi:MI.piso, df:MI.difs,
+            b:MI.broker, rp:MI.recoP, rt:MI.recoT, x:excl, aj:AJ, ct:META_ACM.corte};
+  if(!COH)return base;
+  var min=function(p){return [p.id,p.e,p.lat,p.lon,p.d,p.a,p.p,p.m2,p.dias,p.pq,p.est,
+                              p.am.pis,p.am.gym,p.am.cow,p.am.sau,p.outlier?1:0,p.dist];};
+  base.c={r:COH.radio, me:COH.mismoEstado?1:0,
+          f:COH.frescos.map(min), v:COH.viejos.map(min)};
+  return base;
+}
+/* reconstruye el cohorte guardado sin volver a mirar el pool */
+function cohortDesde(c){
+  var vol=function(a){return {id:a[0],e:a[1],lat:a[2],lon:a[3],d:a[4],a:a[5],p:a[6],m2:a[7],
+    dias:a[8],pq:a[9],est:a[10],am:{pis:a[11],gym:a[12],cow:a[13],sau:a[14]},outlier:!!a[15],
+    dist:a[16]};};
+  return {radio:c.r, mismoEstado:!!c.me, frescos:c.f.map(vol), viejos:(c.v||[]).map(vol), congelado:true};
+}
+function aB64(o){ return btoa(unescape(encodeURIComponent(JSON.stringify(o))))
+  .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function deB64(t){ try{ return JSON.parse(decodeURIComponent(escape(
+  atob(t.replace(/-/g,'+').replace(/_/g,'/'))))); }catch(e){ return null; } }
+function linkAcm(){ return location.href.split('#')[0]+'#'+aB64(estadoAcm()); }
+
+/* Abre un análisis compartido: reconstruye el estado y lo muestra como lo ve el cliente. */
+function abrirCompartido(st){
+  MI.e=st.e; MI.d=st.d; MI.a=st.a; MI.p=st.p; MI.pq=st.pq; MI.est=st.es;
+  AJ = st.aj || AJ;
+  document.getElementById('f-edif').value=st.e;
+  document.getElementById('f-area').value=st.a;
+  document.getElementById('f-precio').value=st.p==null?'':st.p;
+  document.getElementById('f-piso').value=st.pi||'';
+  document.getElementById('f-difs').value=st.df||'';
+  document.getElementById('f-broker').value=st.b||'';
+  [['f-dorms',st.d],['f-pq',st.pq],['f-est',st.es]].forEach(function(par){
+    document.querySelectorAll('#'+par[0]+' button').forEach(function(b){
+      b.classList.toggle('on', b.dataset.v===String(par[1]));});});
+  [['aj-radio',AJ.radio],['aj-tol',AJ.tol],['aj-tip',AJ.tipVecinas?1:0]].forEach(function(par){
+    document.querySelectorAll('#'+par[0]+' button').forEach(function(b){
+      b.classList.toggle('on', +b.dataset.v===+par[1]);});});
+  if(st.ct) META_ACM.corte=st.ct;   /* la fecha del documento es la de cuando se emitió */
+  CONGELADO = st.c ? cohortDesde(st.c) : null;
+  calcular();                       /* usa el cohorte congelado si viene; si no, recalcula */
+  CONGELADO = null;
+  if(COH && st.x) excl=st.x;        /* y vuelve a quitar lo que el broker excluyó */
+  document.getElementById('f-reco-precio').value=st.rp||'';
+  document.getElementById('f-reco-txt').value=st.rt||'';
+  publicar();
+}
+function msgAcm(){
+  var s=COH&&stats();
+  return 'Le preparé el análisis de precio de su departamento en '+MI.e+' ('+MI.a+' m²).\n\n'+
+    (s? 'Hoy se piden entre '+fm(s.p25*MI.a)+' y '+fm(s.p75*MI.a)+' por unidades comparables a menos de '+COH.radio+' m — son '+s.n+' avisos reales, con foto y enlace.\n\n':'')+
+    (MI.recoP? 'Mi recomendación: salir en '+fm(MI.recoP)+'.\n\n':'')+
+    linkAcm()+'\n\n— '+MI.broker;
+}
+function compartir(){
+  var t=msgAcm();
+  if(navigator.share){navigator.share({title:'Posición de precio · '+MI.e,text:t}).catch(function(){});return;}
+  if(navigator.clipboard) navigator.clipboard.writeText(t).catch(function(){});
+  alert('Esto es lo que recibe su cliente (copiado al portapapeles):\n\n'+t+
+    '\n\n· En el prototipo el enlace es de ejemplo.');
+}
+/* la foto es de UN aviso de ese edificio — se declara así, no se presenta como la unidad comparada */
+function foto(p){
+  var propia=FOTOS_AV[p.id];
+  var u=propia||FOTOS[p.e];
+  if(!u) return '<div class="nofoto">sin foto publicada</div>';
+  return '<img class="foto" src="'+u+'" alt="" loading="lazy" title="'+
+    (propia?'Foto de este aviso':'Foto de otro aviso de '+p.e)+'" '+
+    'onerror="this.outerHTML=&#39;<div class=&quot;nofoto&quot;>foto no disponible</div>&#39;">';}
+function pctl(a,q){var s=a.slice().sort(function(x,y){return x-y});var i=q*(s.length-1),lo=Math.floor(i),hi=Math.ceil(i);
+  return lo===hi?s[lo]:s[lo]+(s[hi]-s[lo])*(i-lo);}
+function distM(aLat,aLon,bLat,bLon){var kx=111320*Math.cos((aLat+bLat)/2*Math.PI/180);
+  var dx=(aLon-bLon)*kx,dy=(aLat-bLat)*110570;return Math.sqrt(dx*dx+dy*dy);}
+
+/* ═══ MOTOR: cascada de radios + frescura + estado + outliers ═══ */
+/* ¿qué tipologías entran? Medido en el pool: a igual superficie, un monoambiente pide
+   11,6% más por m² que un 1 dorm en el tramo 30-45 m² — abajo el rótulo SÍ discrimina.
+   De 60 m² para arriba la diferencia entre 1 y 2 dorm cae a 2,3%, dentro del ruido.
+   Por eso "sumar vecinas" solo se habilita arriba del umbral, y nunca por defecto. */
+var TIP_VECINAS_DESDE=60;
+function tipsPermitidas(){
+  if(!AJ.tipVecinas || MI.a<TIP_VECINAS_DESDE) return [MI.d];
+  return [MI.d-1,MI.d,MI.d+1].filter(function(d){return d>=0&&d<=3});
+}
+function armarCohort(){
+  var ed=miEdificio();
+  if(!ed)return null; /* edificio desconocido → sin base, nunca una excepción */
+  var tips=tipsPermitidas(), tol=AJ.tol;
+  var base=POOL.filter(function(p){
+    return tips.indexOf(p.d)>=0 && p.a>=MI.a*(1-tol) && p.a<=MI.a*(1+tol)
+      && !(esMiEdificio(p) && Math.abs(p.a-MI.a)<1 && Math.abs(p.p-MI.p)<1); })
+   .map(function(p){var o=Object.create(p);o.dist=Math.round(distM(ed.lat,ed.lon,p.lat,p.lon));return o;});
+
+  var mismoEstado=MI.est!=='?';
+  /* radio fijado por el broker → un solo paso; si no, la cascada de siempre */
+  var radios=AJ.radio?[AJ.radio]:CONF.radios;
+  var pasos=[];
+  radios.forEach(function(r){ if(mismoEstado)pasos.push({r:r,est:true}); });
+  radios.forEach(function(r){ pasos.push({r:r,est:false}); });
+
+  for(var i=0;i<pasos.length;i++){
+    var s=pasos[i];
+    var cand=base.filter(function(p){return p.dist<=s.r && (!s.est || p.est===MI.est)});
+    var frescos=cand.filter(function(p){return p.dias<=CONF.frescuraDias});
+    if(frescos.length>=CONF.nMin){
+      var m2=frescos.map(function(p){return p.m2});
+      var q1=pctl(m2,.25),q3=pctl(m2,.75),iqr=q3-q1;
+      frescos.forEach(function(p){p.outlier = p.m2<q1-CONF.outlierIQR*iqr || p.m2>q3+CONF.outlierIQR*iqr;});
+      /* 🔴 Ordenados por precio del m², del más barato al más caro. Sin esto salían en
+         el orden en que quedaron al filtrar —el de captura en la base— y la fila "SU
+         UNIDAD", que se inserta contando cuántos piden menos por m², caía en un lugar
+         que no significaba nada. El lector la lee como "acá estoy yo", así que la
+         posición tiene que ser cierta. Ordenado, la lista se recorre como una escalera
+         y la frase "6 de los 9 piden menos" se ve sin contar. */
+      var porM2=function(a,b){return a.m2-b.m2};
+      frescos.sort(porM2);
+      return {radio:s.r, mismoEstado:s.est, frescos:frescos,
+              viejos:cand.filter(function(p){return p.dias>CONF.frescuraDias}).sort(porM2)};
+    }
+  }
+  return null;
+}
+/* 🔴 Acá había un deltaEstado() que medía la diferencia de precio entre preventa y
+   entregado. Se retiró: con el pool de hoy el signo se da vuelta según la métrica
+   (en 1 dorm, +2,2% por mediana y -1,4% por promedio) y los rangos se solapan casi
+   por completo — en monoambientes el de preventa queda entero dentro del de
+   entregado. Eso no es una diferencia chica: es una diferencia que no se distingue
+   del ruido, y ponerle un número le daba una precisión que no tiene.
+   Lo que SÍ importa del estado de obra no es cuánto cuesta: es que un departamento
+   que se ocupa mañana y uno que se entrega en dos años no compiten por el mismo
+   comprador. Eso se dice, y no se cuantifica. */
+
+/* comparables de ALQUILER — misma cascada de radios, misma tipología y superficie.
+   Se usa solo para la segunda lectura del simulador; nunca toca el rango de venta. */
+function rentaCohort(){
+  var ed=miEdificio(); if(!ed)return null;
+  for(var i=0;i<CONF.radios.length;i++){ var r=CONF.radios[i];
+    var tips=tipsPermitidas();
+    var c=POOL_ALQ.filter(function(p){return tips.indexOf(p.d)>=0
+      && p.a>=MI.a*(1-AJ.tol) && p.a<=MI.a*(1+AJ.tol)
+      && distM(ed.lat,ed.lon,p.lat,p.lon)<=r;});
+    if(c.length>=CONF.nMin){ var m=c.map(function(p){return p.pm});
+      return {n:c.length, radio:r, p25:pctl(m,.25), p50:pctl(m,.5), p75:pctl(m,.75),
+              amo:c.filter(function(p){return p.amo==='a'}).length,
+              sd:c.filter(function(p){return p.amo==='?'}).length}; } }
+  return null;
+}
+/* sensibilidad: el MISMO cálculo a los tres radios — nadie puede elegir el que le conviene en secreto */
+function sensibilidad(){
+  var ed=miEdificio(); if(!ed)return [];
+  var tips=tipsPermitidas();
+  return CONF.radios.map(function(r){
+    var c=POOL.filter(function(p){
+      return tips.indexOf(p.d)>=0 && p.a>=MI.a*(1-AJ.tol) && p.a<=MI.a*(1+AJ.tol)
+        && p.dias<=CONF.frescuraDias && (MI.est==='?'||!COH||!COH.mismoEstado||p.est===MI.est)
+        && distM(ed.lat,ed.lon,p.lat,p.lon)<=r
+        && !(esMiEdificio(p) && Math.abs(p.a-MI.a)<1 && Math.abs(p.p-MI.p)<1);});
+    if(c.length<CONF.nMin)return {r:r,n:c.length,ok:false};
+    var m=c.map(function(p){return p.m2});
+    return {r:r,n:c.length,ok:true,lo:pctl(m,.25)*MI.a,hi:pctl(m,.75)*MI.a};
+  });
+}
+function activos(){return COH.frescos.filter(function(p,i){return !excl[i]})}
+function stats(){var a=activos(),m=a.map(function(p){return p.m2});
+  if(!m.length)return null;
+  return {n:a.length,p25:pctl(m,.25),p50:pctl(m,.5),p75:pctl(m,.75),
+    dias:pctl(a.map(function(p){return p.dias}),.5),
+    menores:m.filter(function(v){return v<MI.p/MI.a}).length};}
+
+/* ═══ RENDER ═══ */
+function calcular(){
+  MI.k=document.getElementById('f-edif').value;
+  MI.e=(miEdificio()||{e:MI.e}).e;
+  MI.a=+document.getElementById('f-area').value||50;
+  var pv=document.getElementById('f-precio').value;
+  MI.p=pv===''?null:+pv;
+  MI.piso=document.getElementById('f-piso').value.trim();
+  MI.difs=document.getElementById('f-difs').value.trim();
+  MI.broker=document.getElementById('f-broker').value.trim()||'[Nombre del broker]';
+  document.getElementById('marca-top').textContent=MI.broker==='[Nombre del broker]'?'Simón':MI.broker;
+  document.getElementById('pie-broker').textContent=MI.broker;
+  excl={}; SIM_TOCADO=false; COH=CONGELADO||armarCohort();
+  MODO='broker'; document.body.classList.add('broker'); barraModo();
+  document.getElementById('s-form').classList.add('oculto');
+  document.getElementById('resultado').classList.remove('oculto');
+  document.getElementById('modo-bar').classList.remove('oculto');
+  document.getElementById('r-titulo').textContent=MI.e+' · '+(MI.d===0?'Monoambiente':MI.d+' dormitorio'+(MI.d>1?'s':''));
+  document.getElementById('r-subtitulo').textContent=MI.a+' m²'+(MI.piso?' · piso '+MI.piso:'')+' · '+(MI.est==='P'?'en preventa':(MI.est==='E'?'entregado':'estado sin declarar'))+' · '+
+    (MI.pq==='i'?'con parqueo':(MI.pq==='n'?'sin parqueo':'parqueo sin declarar'));
+
+  document.getElementById('sello-gen').innerHTML='Generado el '+META_ACM.corte+' por <b>'+MI.broker+'</b> para '+MI.e+' · '+MI.a+' m² · '+
+    (MI.d===0?'monoambiente':MI.d+' dorm.')+'<br>Datos verificados por Simón. Este documento <b>informa sobre oferta publicada; no tasa ni garantiza un precio de venta</b>.'+
+    (POOL_ORIGEN==='vivo' ? ''
+      : '<br><span style="color:var(--terra)">Comparables de una copia guardada, no de la última lectura: no se pudo consultar el mercado al abrir este análisis.</span>');
+
+  if(!COH){ document.getElementById('bloque-rango').classList.add('oculto');
+    var sb=document.getElementById('sin-base'); sb.classList.remove('oculto');
+    sb.innerHTML='<b>Sin base suficiente.</b> No encontramos al menos '+CONF.nMin+' comparables frescos (≤'+CONF.frescuraDias+' días) de esta tipología y superficie ni siquiera ampliando a '+CONF.radios[CONF.radios.length-1]+' m. <b>Este informe no se emite</b> — preferimos no darle un número que no podemos sostener.';
+    document.getElementById('sello-txt').textContent='—';
+    document.getElementById('sello-tit').textContent='Base de la comparación';
+    ['s-antig','s-torre','s-sim'].forEach(function(id){document.getElementById(id).classList.add('oculto')});
+    document.getElementById('chip-top').textContent='sin base'; document.getElementById('chip-top').className='pos pos-na';
+    /* limpiar TODO lo del análisis anterior: si queda DOM viejo, al publicar sin base
+       el documento del cliente arrastra comparables y enlaces que ya no corresponden */
+    limpiarAnalisis();
+    document.getElementById('cierre-txt').textContent='Sin base suficiente no se emite un número. Lo que sí se puede hacer es ampliar la búsqueda a otra tipología o superficie, o volver cuando haya más avisos comparables publicados.';
+    document.getElementById('caduca').innerHTML='';
+    ordenar(); return; }
+  document.getElementById('bloque-rango').classList.remove('oculto');
+  document.getElementById('sin-base').classList.add('oculto');
+  ['s-antig','s-torre','s-sim'].forEach(function(id){document.getElementById(id).classList.remove('oculto')});
+  var s=stats();
+  var sl=document.getElementById('sim');
+  sl.min=Math.round(s.p25*MI.a*0.75/500)*500; sl.max=Math.round(s.p75*MI.a*1.25/500)*500;
+  sl.value=MI.p||Math.round(s.p50*MI.a);
+  document.getElementById('sim-min').textContent=fm(sl.min);
+  document.getElementById('sim-max').textContent=fm(sl.max);
+  render();
+}
+function render(){
+  var s=stats(); if(!s)return;
+  var lo=s.p25*MI.a, hi=s.p75*MI.a, med=s.p50*MI.a, miM2=MI.p?MI.p/MI.a:null;
+  var pos = posDe(miM2,s);
+  var chip=document.getElementById('chip-top'); chip.textContent=pos[1]; chip.className='pos pos-'+pos[0];
+  ordenar();
+
+  var conPq=activos().filter(function(p){return p.pq==='i'}).length;
+  var sdPq=activos().filter(function(p){return p.pq==='s'}).length;
+
+  /* ESTADO DE OBRA — un depa entregado y uno que se entrega en 2027 no compiten por el
+     mismo comprador aunque el $/m² se parezca. Si la muestra quedó mezclada se dice acá,
+     ANTES del número, con el conteo real y con cuánto vale medido la diferencia. */
+  var ae=document.getElementById('aviso-estado');
+  if(COH.mismoEstado || MI.est==='?'){
+    ae.innerHTML = MI.est==='?'
+      ? '<div class="aviso" style="background:#F5F1E6;color:var(--gris)">No declaró el estado de obra de su unidad, así que se comparó contra <b>preventa y entregados juntos</b>. Declararlo aprieta la comparación.</div>'
+      : '';
+  } else {
+    var otros=activos().filter(function(p){return p.est!==MI.est}).length;
+    ae.innerHTML='<div class="aviso"><b>La muestra mezcla estados de obra.</b> Su unidad está <b>'+(MI.est==='P'?'en preventa':'entregada')+'</b>, pero '+
+      (otros===s.n?'<b>ninguno</b> de los '+s.n+' comparables lo está':'<b>'+otros+' de los '+s.n+'</b> comparables no lo están')+
+      ': no había '+CONF.nMin+' avisos '+(MI.est==='P'?'en preventa':'entregados')+' de esta tipología y superficie ni ampliando a '+CONF.radios[CONF.radios.length-1]+' m.<br>'+
+      '<span style="color:#94512E">Un departamento que se ocupa mañana y uno que se entrega en dos años <b>no compiten por el mismo comprador</b>, aunque el precio por m² se parezca. No ponemos un número a esa diferencia: medida sobre los avisos publicados cambia de signo según cómo se la calcule, así que sería inventar precisión. Lo que sí se puede decir es que <b>el rango de arriba no la corrige</b>.</span></div>';
+  }
+
+  /* 🔴 Este bloque se perdió seis commits atrás: un reemplazo de texto se lo llevó por
+     delante y el sello quedó vacío. El eval no lo vio porque nunca miraba su contenido.
+     Ahora sí (check "el sello describe la base"). */
+  document.getElementById('sello-txt').innerHTML=
+    '<b>'+s.n+' comparables</b> a menos de <b>'+COH.radio+' m</b> · '+(MI.d===0?'monoambientes':MI.d+' dorm.')+
+    ' · entre '+Math.round(MI.a*(1-AJ.tol))+' y '+Math.round(MI.a*(1+AJ.tol))+' m²'+
+    (COH.mismoEstado?' · <b>mismo estado de obra</b>'
+      :(MI.est==='?'?' · <span style="color:var(--gris)">estado de obra sin declarar</span>'
+                    :' · <span style="color:var(--terra)">estado de obra mezclado (ver el aviso de arriba)</span>'))+
+    '<br><span style="color:var(--gris)">Antigüedad ≤'+CONF.frescuraDias+' días · '+conPq+' declaran parqueo, '+sdPq+' no declaran'+
+    (COH.viejos.length?' · '+COH.viejos.length+(COH.viejos.length===1?' aviso quedó':' avisos quedaron')+' fuera por antigüedad':'')+
+    '<br><span style="color:var(--terra)">No incluye venta directa de desarrollador ni unidades no publicadas.</span></span>';
+
+  /* 🔴 Los del propio edificio son los comparables más directos —misma ubicación, mismas
+     amenidades— pero si los publica el mismo desarrollador NO son observaciones
+     independientes: son una lista de precios. Pasa seguido: en 19% de los casos son la
+     mitad o más de la muestra, y en algunos son todos. No se excluyen; se declara. */
+  var propios=activos().filter(esMiEdificio).length;
+  document.getElementById('aviso-propio').innerHTML =
+    propios*2 < s.n ? '' :
+    '<div class="aviso"><b>'+(propios===s.n?'Los '+s.n:propios+' de los '+s.n)+' comparables son unidades de su mismo edificio.</b> '+
+    'Son los más parecidos que existen —misma ubicación, mismas amenidades— pero si los publica el mismo desarrollador '+
+    '<b>no son opiniones independientes: son una lista de precios</b>. '+
+    (propios===s.n
+      ? 'Acá el rango describe lo que pide su edificio, no lo que pide el mercado.'
+      : 'El rango se apoya sobre todo en ellos.')+
+    ' Ampliar el radio o la tolerancia de superficie trae comparables de otros edificios.</div>';
+
+  /* criterios movidos por el broker: se declaran en el documento del cliente */
+  var mov=ajustesMovidos();
+  document.getElementById('ajustes-dec').innerHTML = mov.length
+    ? '<div class="excl-dec"><b>'+MI.broker+' ajustó los criterios de búsqueda.</b> Por defecto se compara con la misma tipología, ±'+Math.round(CONF.areaTol*100)+'% de superficie y el radio más chico que junte '+CONF.nMin+' comparables. Para este análisis '+
+      (function(l){return l.length<2?l[0]:l.slice(0,-1).join('; ')+'; y '+l[l.length-1];})(mov.map(function(x){return x.t}))+
+      '.<span style="color:var(--gris);font-size:11px;display:block;margin-top:6px">Ampliar la búsqueda suma comparables y suele ensanchar el rango. Los tres radios de referencia siguen en «Cómo se comparó».</span></div>'
+    : '';
+  document.getElementById('aj-nota').innerHTML='Con estos criterios: <b>'+s.n+' comparables</b> a '+COH.radio+' m'+
+    (mov.length?' · <b style="color:var(--sand)">'+mov.length+' criterio'+(mov.length>1?'s':'')+' fuera del default</b>, declarado'+(mov.length>1?'s':'')+' en el informe':' · todo en el default');
+  document.getElementById('aj-resumen').innerHTML= mov.length
+    ? '<b style="color:var(--sand)">'+s.n+' comparables · '+mov.length+' criterio'+(mov.length>1?'s':'')+' cambiado'+(mov.length>1?'s':'')+'</b>'
+    : s.n+' comparables a '+COH.radio+' m';
+  var bTip=document.querySelector('#aj-tip button[data-v="1"]');
+  bTip.disabled = MI.a<TIP_VECINAS_DESDE;
+  bTip.title = bTip.disabled? 'Bajo '+TIP_VECINAS_DESDE+' m² la tipología sí cambia el precio por m² (medido: 11,6% entre monoambiente y 1 dorm): sumarlas mezclaría productos distintos.' : '';
+
+  /* sensibilidad al radio */
+  var sens=sensibilidad();
+  document.getElementById('rad-sens').innerHTML=sens.map(function(x){
+    return '<div class="'+(x.r===COH.radio?'usado':'')+'"><div class="r">'+x.r+' m</div>'+
+      '<div class="n">'+x.n+' comp.</div>'+
+      '<div class="v">'+(x.ok?fm(x.lo).replace('$','')+'–'+fm(x.hi).replace('$',''):'<span style="color:var(--gris)">sin base</span>')+'</div></div>';}).join('');
+  var oks=sens.filter(function(x){return x.ok});
+  var estable=oks.length>1 && (Math.max.apply(0,oks.map(function(x){return x.hi}))/Math.min.apply(0,oks.map(function(x){return x.hi}))<1.12);
+  document.getElementById('rad-nota').innerHTML= oks.length<2
+    ? 'Solo un radio alcanza la muestra mínima: se usa ese y se declara.'
+    : (estable? '✓ <b>El rango casi no cambia</b> entre los tres radios: el resultado es robusto — no depende de dónde se corte.'
+              : '⚠ El rango <b>cambia según el radio</b>: el entorno inmediato y el más amplio no piden lo mismo. Se usa el más cercano que alcanza '+CONF.nMin+' comparables (marcado), y se muestran los tres para que nadie elija el que le conviene.');
+  document.getElementById('rango-txt').innerHTML=fm(lo)+' <small>a</small> '+fm(hi);
+  document.getElementById('rango-nivel').textContent='Rango pedido (percentil 25 a 75) para '+MI.a+' m² · mediana '+fm(med);
+  PMIN=Math.min(lo,MI.p||lo)*.94; PMAX=Math.max(hi,MI.p||hi)*1.06;
+  document.getElementById('r-fill').style.left=px(lo)+'%';
+  document.getElementById('r-fill').style.width=(px(hi)-px(lo))+'%';
+  document.getElementById('r-med').style.left=px(med)+'%';
+  document.getElementById('r-yo').style.display=MI.p?'block':'none';
+  if(MI.p)document.getElementById('r-yo').style.left=px(MI.p)+'%';
+  document.getElementById('r-flecha').style.visibility=MI.p?'visible':'hidden';
+  document.getElementById('r-lo').textContent=fm(lo);
+  document.getElementById('r-hi').textContent=fm(hi);
+  document.getElementById('frase-1').innerHTML= MI.p
+    ? 'Usted pide <span>'+fm(MI.p)+'</span>. '+s.menores+' de los '+s.n+' comparables piden menos por metro cuadrado.'
+    : 'Todavía no definió precio. <span>La mediana de sus comparables</span> es '+fm(med)+' para '+MI.a+' m².';
+
+  /* precio por objetivo: traduce el rango a posición elegida */
+  var m2s=activos().map(function(p){return p.m2}).sort(function(a,b){return a-b});
+  var terceroBajo=m2s[Math.min(2,m2s.length-1)];
+  var objs=[
+    ['Entre los 3 más baratos que compiten con usted', 'la franja donde suele estar lo que se mueve primero', terceroBajo*MI.a],
+    ['En la mitad del mercado', s.n+' comparables: la mitad pide más, la mitad menos', med],
+    ['En el cuarto más caro', 'apuesta a que su unidad se distingue de las demás', hi]];
+  document.getElementById('objetivos').innerHTML=objs.map(function(o){
+    return '<div class="obj"><div class="oi"><div class="ot">'+o[0]+'</div><div class="od">'+o[1]+'</div></div>'+
+      '<div class="ov">'+fm(o[2])+'</div></div>';}).join('');
+
+  /* diferenciales aportados por el broker */
+  document.getElementById('difs-bloque').innerHTML = (MI.difs||MI.piso)
+    ? '<div class="difs"><div class="dt">Lo que este análisis no puede ver</div>'+
+      '<div class="dl">'+[MI.piso?'Piso '+MI.piso:'',MI.difs].filter(Boolean).join(' · ')+'</div>'+
+      '<div class="dn">Aportado por '+MI.broker+', no medido por Simón. <b>No cambia el rango.</b></div></div>'
+    : (MODO==='broker'
+      ? '<div class="difs" style="background:#F5F1E6;border:1px dashed var(--linea)"><div class="dt" style="color:var(--gris)">Lo que este análisis no puede ver</div>'+
+        '<div class="dn" style="margin-top:0">¿Esta unidad tiene algo que el aviso no muestra —vista, piso alto, una remodelación reciente? <b onclick="editar()" style="color:var(--salvia);cursor:pointer;border-bottom:1px dotted">Agréguelo acá</b>: se muestra declarado como aporte suyo, sin tocar el número.</div></div>'
+      : '');
+
+  renderReco();
+
+  /* comparables */
+  var filas=COH.frescos.map(function(p,i){
+    var pqT=p.pq==='i'?'parqueo incl.':(p.pq==='n'?'sin parqueo':'parqueo s/d');
+    var lista=amenidades(p);
+    /* con hasta 19 por edificio, mostrarlas todas tapa el resto de la ficha */
+    var amT=lista.length? lista.slice(0,5).join(' · ')+(lista.length>5?' +'+(lista.length-5)+' más':'')
+                        : 'amenidades no cargadas';
+    var en=entregaDe(p), rep=REPUB(p);
+    return '<div class="comp'+(excl[i]?' excluido':'')+'">'+foto(p)+'<div class="c1">'+
+      '<div class="nom">'+p.e+(p.outlier?'<span class="tag tag-out">precio atípico</span>':'')+
+        (rep?'<span class="tag tag-rep">cargado en bloque</span>':'')+
+        (esMiEdificio(p)?'<span class="tag tag-mio">su edificio</span>':'')+'</div>'+
+      '<div class="det">'+p.a+' m² · '+p.dias+' días · a '+p.dist+' m'+
+      (p.b?' · '+p.b+' baño'+(p.b>1?'s':''):'')+(p.pi?' · piso '+p.pi:'')+
+      ' · '+(p.est==='P'?'preventa':(p.est==='E'?'entregado':'estado s/d'))+
+      marcaEstado(p)+
+      (en?'<br><span class="'+(en.vencida?'ent-v':'ent')+'">entrega declarada: '+en.txt+(en.vencida?' — fecha ya pasada, el aviso no se actualizó':'')+'</span>':'')+
+      '<br>'+pqT+' · '+amT+
+      enlaces(p)+
+      '</div></div>'+
+      '<div class="c2"><div class="m2">'+fm(p.m2)+'/m²</div><div class="pre">'+fm(p.p)+'</div></div>'+
+      (MODO==='broker'?'<button class="x" onclick="tog('+i+')">'+(excl[i]?'↺':'✕')+'</button>':'')+'</div>';
+  }).join('');
+  var yo='<div class="comp yo"><div class="c1"><div class="nom">'+MI.e+' — SU UNIDAD'+
+    (MI.p?'<span class="tag pos-'+pos[0]+'">'+pos[1].toLowerCase()+'</span>':'')+'</div>'+
+    '<div class="det">'+MI.a+' m²'+(MI.p?' · '+fm(MI.p):'')+'</div></div>'+
+    (MI.p?'<div class="c2"><div class="m2">'+fm(miM2)+'/m²</div></div>':'')+'</div>';
+  var cont=document.getElementById('comps'); cont.innerHTML=filas;
+  if(MI.p){var idx=COH.frescos.filter(function(p){return p.m2<miM2}).length;
+    var nodes=cont.querySelectorAll('.comp');
+    if(nodes[idx])nodes[idx].insertAdjacentHTML('beforebegin',yo); else cont.insertAdjacentHTML('beforeend',yo);}
+
+  var exIdx=Object.keys(excl).filter(function(k){return excl[k]});
+  var nEx=exIdx.length;
+  var rc=document.getElementById('recalc');
+  if(nEx){var m0=COH.frescos.map(function(p){return p.m2});
+    rc.className='recalc on';
+    rc.innerHTML='<b>Con los '+s.n+' comparables restantes:</b> '+fm(pctl(m0.filter(function(_,i){return !excl[i]}),.25)*MI.a)+' – '+fm(s.p75*MI.a)+
+      '<br><span style="color:var(--gris)">Con los '+COH.frescos.length+' originales: '+fm(pctl(m0,.25)*MI.a)+' – '+fm(pctl(m0,.75)*MI.a)+
+      ' · se excluyeron '+nEx+' sin borrarlos del registro.</span>';
+  } else rc.className='recalc';
+
+  /* exclusiones declaradas: si el broker sacó comparables, el cliente ve CUÁLES y POR QUÉ.
+     Sin esto el ✕ sería una herramienta para maquillar el rango. */
+  document.getElementById('excl-dec').innerHTML = nEx
+    ? '<div class="excl-dec"><b>'+MI.broker+' excluyó '+nEx+' comparable'+(nEx>1?'s':'')+'</b> por no considerarlo'+(nEx>1?'s':'')+' equivalente'+(nEx>1?'s':'')+':<ul style="margin:6px 0 0 15px">'+
+      exIdx.map(function(k){return '<li>'+COH.frescos[k].e+' · '+COH.frescos[k].a+' m² — «'+String(excl[k]).replace(/[<>]/g,'')+'»</li>'}).join('')+
+      '</ul><span style="color:var(--gris);font-size:11px;display:block;margin-top:6px">Quedan tachados, no borrados, y el rango con los '+COH.frescos.length+' originales se muestra abajo. Usted puede comparar los dos.</span></div>'
+    : '';
+
+  document.getElementById('fuera-muestra').innerHTML = COH.viejos.length?
+    '<div style="margin-top:14px"><div class="sub" style="margin-bottom:8px"><b>Fuera de la muestra por antigüedad</b> (más de '+CONF.frescuraDias+' días publicados — se muestran pero no entran al rango):</div>'+
+    COH.viejos.map(function(p){return '<div class="comp fuera"><div class="c1"><div class="nom">'+p.e+'<span class="tag tag-old">'+p.dias+' días</span></div>'+
+      '<div class="det">'+p.a+' m² · a '+p.dist+' m</div></div><div class="c2"><div class="m2">'+fm(p.m2)+'/m²</div><div class="pre">'+fm(p.p)+'</div></div></div>'}).join('')+'</div>' : '';
+
+  /* antigüedad */
+  var maxD=Math.max(MI.p?0:0, s.dias, COH.viejos.length?0:0, 1);
+  var miDias=null; /* sin aviso publicado no hay antigüedad propia */
+  document.getElementById('antig-barras').innerHTML=
+    '<div class="bar-row"><div>Sus comparables</div><div class="bar-track"><div class="bar-fill" style="width:'+Math.min(100,s.dias/2)+'%;background:var(--salvia-viva)">'+Math.round(s.dias)+' días</div></div></div>'+
+    (COH.viejos.length?'<div class="bar-row"><div>Los que quedaron fuera</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--terra)">'+Math.round(pctl(COH.viejos.map(function(p){return p.dias}),.5))+' días</div></div></div>':'');
+  document.getElementById('frase-dias').innerHTML='La mitad de sus comparables lleva <span>menos de '+Math.round(s.dias)+' días</span> publicada.'+
+    (COH.viejos.length?' Los '+COH.viejos.length+' que quedaron fuera llevan mucho más: por eso no entran al rango.':'');
+
+  /* edificio */
+  var torre=POOL.filter(esMiEdificio).sort(function(a,b){return b.m2-a.m2});
+  document.getElementById('torre-titulo').textContent=torre.length>1?'Sus vecinos directos':'Su edificio';
+  if(torre.length<2){ document.getElementById('torre').innerHTML='';
+    document.getElementById('frase-torre').innerHTML='No hay otras unidades publicadas hoy en '+MI.e+': <span>sin base para comparar dentro del edificio</span>.'; }
+  else{
+    document.getElementById('torre').innerHTML=torre.map(function(t){
+      var tip=t.d===0?'Mono':t.d+' dorm.';
+      return '<div class="comp">'+foto(t)+'<div class="c1"><div class="nom">'+tip+' · '+t.a+' m²</div>'+
+        '<div class="det">'+t.dias+' días · '+(t.pq==='i'?'parqueo incl.':(t.pq==='n'?'sin parqueo':'parqueo s/d'))+
+        enlaces(t)+
+        '</div></div>'+
+        '<div class="c2"><div class="m2">'+fm(t.m2)+'/m²</div><div class="pre">'+fm(t.p)+'</div></div></div>'}).join('');
+    var mismaTip=torre.filter(function(t){return t.d===MI.d});
+    var barato=mismaTip.length?mismaTip[mismaTip.length-1]:null;
+    var pos1=MI.p? torre.filter(function(t){return t.m2>miM2}).length+1 : null;
+    document.getElementById('frase-torre').innerHTML=
+      (MI.p?'Su unidad sería la <span>'+pos1+'ª más cara por m²</span> de las '+(torre.length+1)+' publicadas en su edificio. ':'En su edificio hay '+torre.length+' unidades publicadas. ')+
+      (barato&&barato.a>MI.a&&MI.p&&barato.p<MI.p ? 'Y hay un '+(MI.d===0?'monoambiente':MI.d+' dorm.')+' de '+barato.a+' m² a '+fm(barato.p)+': <span>más grande y más barato</span> que el suyo.' : '');
+    /* 🔴 Un edificio no está en preventa y entregado a la vez. Cuando sus avisos se
+       contradicen, casi siempre es que el edificio se entregó y los avisos viejos no
+       se actualizaron — se ve en los días publicados. Decirlo es más útil que mostrar
+       dos vecinos con etiquetas opuestas y dejar que el cliente lo note solo. */
+    /* solo los AVISOS: la unidad del broker no tiene días publicados, y meterla
+       con cero rompía la comparación de cuál está más desactualizado */
+    var estT={}; torre.forEach(function(t){
+      if(t.est==='P'||t.est==='E') (estT[t.est]=estT[t.est]||[]).push(t.dias);});
+    if(estT.P && estT.E){
+      var minP=Math.min.apply(0,estT.P), minE=Math.min.apply(0,estT.E);
+      document.getElementById('frase-torre').innerHTML+=
+        '<span style="display:block;font-size:12.5px;font-weight:400;color:var(--terra);margin-top:9px;line-height:1.55">'+
+        '⚠️ En este edificio hay avisos que dicen <b>preventa</b> y otros <b>entrega inmediata</b>. '+
+        (minE<minP
+          ? 'Los que dicen preventa son los más viejos ('+Math.max.apply(0,estT.P)+' días contra '+minE+'): lo más probable es que el edificio ya se haya entregado y esos avisos no se hayan actualizado.'
+          : 'Los días publicados no alcanzan para saber cuál está desactualizado.')+
+        '</span>';
+    }
+  }
+
+  /* método */
+  var tipsUsadas=tipsPermitidas();
+  var nomTip=function(d){return d===0?'monoambientes':d+' dorm.'};
+  /* Ver todo el edificio junto. El enlace de cada fila lleva a ESA unidad, que es lo
+     que dice; esto responde otra pregunta —"¿qué más hay en mi edificio?"— y por eso
+     se suma en vez de reemplazar. El feed filtra por nombre oficial y por alias, que
+     es justo el nombre que trae el pool. */
+  var vt=document.getElementById('torre-ver-todas');
+  vt.innerHTML = torre.length>=2
+    ? '<a class="ver-todas" target="_blank" rel="noopener" href="https://simonbo.com/ventas?edificio='+
+      encodeURIComponent(MI.e)+'">Ver todo '+MI.e+' en Simón ↗'+
+      '<span>Las unidades publicadas del edificio, en una sola lista</span></a>'
+    : '';
+
+  document.getElementById('met-ok').innerHTML=
+    '<li><b>Tipología</b> — '+(tipsUsadas.length===1
+        ? 'solo '+(MI.d===0?'monoambientes':MI.d+' dormitorio'+(MI.d>1?'s':''))
+        : tipsUsadas.map(nomTip).join(', ')+' <b>(tipologías vecinas sumadas por '+MI.broker+')</b> — a partir de '+TIP_VECINAS_DESDE+' m² la diferencia de precio por m² entre tipologías contiguas cae dentro del ruido')+'</li>'+
+    '<li><b>Superficie</b> — entre '+Math.round(MI.a*(1-AJ.tol))+' y '+Math.round(MI.a*(1+AJ.tol))+' m² (±'+Math.round(AJ.tol*100)+'% de la suya'+(AJ.tol!==CONF.areaTol?', ampliado por '+MI.broker:'')+')</li>'+
+    '<li><b>Distancia</b> — todos a menos de '+COH.radio+' m '+(AJ.radio
+        ? '(<b>radio fijado por '+MI.broker+'</b>)'
+        : '(se probó desde '+CONF.radios[0]+' m y se amplió hasta encontrar '+CONF.nMin+' comparables)')+'</li>'+
+    (COH.mismoEstado?'<li><b>Estado de obra</b> — todos '+(MI.est==='P'?'en preventa':'entregados')+', igual que el suyo</li>':'')+
+    '<li><b>Antigüedad</b> — solo avisos de hasta '+CONF.frescuraDias+' días publicados</li>';
+  var H=hechos();
+  document.getElementById('met-amoblado').innerHTML='<b>Amoblado</b> — '+
+    (H.declaranAmoblado?H.declaranAmoblado+' de '+H.n+' avisos de venta lo declaran':
+     'ninguno de los '+H.n+' avisos de venta lo declara')+
+    '. No sabemos si algún precio incluye muebles.';
+  document.getElementById('met-piso').innerHTML='<b>Piso y vista</b> — solo el <b>'+H.conPiso+
+    '%</b> de los avisos declara el piso, y ninguno la vista. Por eso los diferenciales que aporta el broker se muestran <b>declarados como aporte suyo</b> y no ajustan el número: sin comparables que declaren lo mismo, ajustar sería inventar precisión.';
+  document.getElementById('met-bloque').innerHTML='En esta muestra el patrón aparece en <b>'+H.enBloque+'% de los avisos</b>.';
+
+  /* 🔴 Acá NO va ningún ajuste, y el motivo no es que falten datos.
+     Casi la mitad de los avisos no dice si incluye parqueo, y ese grupo no se parece ni a los
+     que dicen que sí ni a los que dicen que no: en monoambientes y en 2 dorm piden MÁS
+     que los que declaran tenerlo. Comparar los declarados entre sí mide quién completó
+     mejor el aviso, no cuánto vale un parqueo. Y aunque se declarara siempre, el
+     parqueo va dentro del precio: para aislarlo haría falta la misma unidad vendida con
+     y sin, y eso no existe. */
+  document.getElementById('met-aj').innerHTML=
+    '<li><b>El parqueo no se puede aislar.</b> Va incluido en el precio, y <b>el '+H.sinDeclararParqueo+'% de los avisos ni siquiera dice si lo tiene</b> — ese grupo no se parece ni a los que declaran que sí ni a los que declaran que no. Comparar los declarados entre sí mediría quién completó mejor el aviso. Lo que sí se puede decir es cuántos lo declaran, y está arriba, en la base de la comparación.</li>'+
+    '<li><b>Las amenidades tampoco.</b> Además de que su señal de precio se contradice entre tipologías, <b>en '+H.sinAmenidades+'% de los comparables la lista está vacía en nuestra base</b>: eso significa que no la tenemos cargada, <b>no</b> que el edificio no tenga. Por eso se muestran como contexto y nunca se descuenta por su ausencia.</li>'+
+    '<li><b>Si su unidad se distingue por algo de esto, dígalo usted</b> en «lo que este análisis no puede ver»: el broker sabe lo que el aviso no declara, y así queda escrito como aporte suyo en vez de perderse.</li>';
+  /* los contadores del resumen plegado: se ve CUÁNTO hay antes de decidir si abrirlo */
+  document.getElementById('cnt-ok').textContent=document.querySelectorAll('#met-ok li').length+' controles';
+  /* la afirmación más honesta del documento: con esta evidencia, nada alcanza
+     para mover el número */
+  document.getElementById('cnt-aj').textContent='ningún ajuste aplicado';
+  document.getElementById('cnt-rad').textContent=oks.length+' de 3 radios con base';
+  document.getElementById('cnt-no').textContent=document.querySelectorAll('#met-no li').length+' límites';
+
+  /* cierre */
+  document.getElementById('cierre-txt').innerHTML= MODO==='broker'
+    ? 'Cuando termine, <b>Generar para el cliente</b> congela este análisis y le deja un enlace para mandarle. Después de eso los números no se mueven solos.'
+    : 'Compártalo con quien tome la decisión con usted, o vuelva a hablar con <b>'+MI.broker+'</b> sobre lo que acaba de leer.';
+  document.getElementById('btn-hablar').href='https://wa.me/?text='+encodeURIComponent(msgAcm());
+  document.getElementById('caduca').innerHTML='Este análisis está <b>congelado al '+META_ACM.corte+'</b> y no se actualiza solo — un documento que cambia de número sin avisar no sirve para decidir. Pasados unos dos meses conviene pedirle a '+MI.broker+' una versión nueva.';
+
+  sim();
+}
+/* excluir exige MOTIVO: sin él, el ✕ es una herramienta para maquillar el rango */
+function tog(i){
+  if(excl[i]){excl[i]=null;render();return;}
+  var m=prompt('¿Por qué este comparable no es equivalente?\n\n'+COH.frescos[i].e+' · '+COH.frescos[i].a+' m² · '+fm(COH.frescos[i].p)+
+    '\n\nEl cliente va a leer este motivo.');
+  if(!m||!m.trim())return; /* sin motivo no se excluye */
+  excl[i]=m.trim(); render();
+}
+function sim(){
+  if(!COH)return; var s=stats(); if(!s)return;
+  var v=+document.getElementById('sim').value, m2=v/MI.a;
+  var cerca=activos().filter(function(p){return Math.abs(p.m2-m2)/m2<=0.12});
+  var dm=cerca.length>=3?Math.round(pctl(cerca.map(function(p){return p.dias}),.5)):null;
+  var men=activos().filter(function(p){return p.m2<m2}).length;
+  var pl=posDe(m2,s);
+  document.getElementById('sim-precio').textContent=fm(v);
+  document.getElementById('sim-detalle').innerHTML='<b>'+fm(m2)+'/m²</b> — queda <b>'+pl[1].toLowerCase()+'</b><br>'+
+    men+' de '+s.n+' comparables piden menos<br>'+
+    (dm!==null?'Los de ese tramo llevan <b>'+dm+' días</b> publicados (mediana de '+cerca.length+')'
+              :'<span style="opacity:.7">Menos de 3 comparables en ese tramo: sin base para estimar antigüedad</span>');
+
+  /* el precio en juego contagia al documento: la etiqueta de arriba y la aguja del rango.
+     Sin precio declarado y sin haber tocado la barra, NO se afirma ninguna posición. */
+  var probando = SIM_TOCADO && (!MI.p || Math.abs(v-MI.p)>1);
+  if(MI.p || SIM_TOCADO){
+    var chip=document.getElementById('chip-top');
+    chip.textContent=pl[1]+(probando?' · probando':''); chip.className='pos pos-'+pl[0];
+    var yo=document.getElementById('r-yo');
+    yo.style.display='block'; yo.style.left=px(v)+'%';
+    document.getElementById('r-flecha').style.visibility='visible';
+    document.getElementById('r-flecha').textContent=probando?'▲ probando':'▲ su precio';
+  }
+
+  /* segunda lectura: si en vez de vender, alquilara */
+  var R=rentaCohort(), rb=document.getElementById('renta-bloque');
+  if(!R){rb.innerHTML=''; return;}
+  var yLo=R.p25*12/v*100, yHi=R.p75*12/v*100;
+  rb.innerHTML='<div class="renta"><div class="rt">Segunda lectura — si en vez de vender, alquilara</div>'+
+    '<div class="rv">A '+fm(v)+', el retorno <b>bruto</b> anual estaría entre '+
+      yLo.toFixed(1).replace('.',',')+'% y '+yHi.toFixed(1).replace('.',',')+'%</div>'+
+    '<div class="rn"><b>Bruto</b>: antes de expensas, vacancia, impuestos y comisión. '+
+      'Sobre <b>'+R.n+' alquileres pedidos</b> a menos de '+R.radio+' m · mediana <b>'+fm(R.p50)+'/mes</b>'+
+      (R.amo?' · <b>'+R.amo+' se ofrecen amoblados</b>':'')+'.'+
+      '<br>🔴 <b>En Equipetrol prácticamente no se publica alquiler sin muebles</b>: de toda la zona, un solo aviso declara estar sin amoblar. Así que este retorno es el de una oferta amoblada. <b>Si piensa alquilar vacío, la renta será menor</b> — cuánto menos no se puede medir con avisos.</div></div>';
+}
+function editar(){document.getElementById('resultado').classList.add('oculto');
+  document.getElementById('modo-bar').classList.add('oculto');
+  document.getElementById('s-form').classList.remove('oculto');window.scrollTo(0,0);}
+
+/* ═══ POOL VIVO ═══
+   Los comparables de acá abajo están congelados al corte. Si hay un servidor que
+   sirva /api/acm-pool, se usan los de anoche: mostrarle a un cliente real precios
+   de hace un mes es peor que no mostrarle nada.
+   Si el servidor no está (archivo suelto, sin red, error), se sigue con el pool
+   embebido y el sello lo dice — nunca se calla de dónde salió el número. */
+var POOL_URL='/api/acm-pool';
+/* Clave de edificio: el id del catálogo si lo tiene, el nombre si no. Agrupar por
+   nombre parte el mismo edificio en varios ("Condominio Maré" / "Mare" / "Maré") y
+   junta dos distintos que se llamen igual. */
+function claveEdif(p){ return p.pm ? 'pm'+p.pm : 'n:'+String(p.e).trim(); }
+/* el edificio elegido, y si un comparable pertenece a él */
+function miEdificio(){
+  var porK = MI.k && EDIFS.filter(function(x){return x.k===MI.k})[0];
+  return porK || EDIFS.filter(function(x){return x.e===MI.e})[0] || null;
+}
+function esMiEdificio(p){ var ed=miEdificio(); return !!ed && claveEdif(p)===ed.k; }
+var POOL_ORIGEN='embebido';
+function aplicarPoolVivo(j){
+  POOL=j.comparables.map(function(c){
+    return {id:String(c.id),e:String(c.e).trim(),lat:c.lat,lon:c.lon,d:c.d,a:c.a,p:c.p,
+            m2:c.m2,dias:c.dias,pq:c.pq,est:c.est,am:c.am,
+            /* lo que el pool congelado no tenía: si no se mapea acá, el documento no lo
+               ve y los hechos de la muestra salen en cero */
+            b:c.b, pi:c.pi, eo:c.eo, ea:c.ea, mz:c.mz, amo:c.amo, pm:c.pm};});
+  URLS_CRUDO={}; ENTREGAS={}; FOTOS_AV={};
+  j.comparables.forEach(function(c){ var id=String(c.id);
+    if(c.u)   URLS_CRUDO[id]=c.u;
+    if(c.ent) ENTREGAS[id]=c.ent;
+    if(c.foto)FOTOS_AV[id]=c.foto;});
+  /* lo derivado del pool se rehace: si no, EDIFS y el detector de carga en bloque
+     seguirían describiendo la muestra vieja */
+  EDIFS=construirEdifs();
+  REPUB=construirRepub();
+  var f=new Date(j.corte);
+  META_ACM.corte=f.toLocaleDateString('es-BO',{day:'numeric',month:'long',year:'numeric'});
+  POOL_ORIGEN='vivo';
+}
+function cargarPool(listo){
+  if(typeof fetch!=='function') return listo();
+  /* 12 s: el endpoint tarda ~2 s en caliente, pero en frío la primera consulta del día
+     se va a 8-10 s. Cortar antes hace que el broker vea la copia guardada sin motivo. */
+  var cerrado=false, corta=setTimeout(function(){cerrado=true;listo();},12000);
+  fetch(POOL_URL,{cache:'no-store'})
+    .then(function(r){return r.ok?r.json():Promise.reject(new Error(r.status));})
+    .then(function(j){
+      if(cerrado)return;
+      clearTimeout(corta);
+      /* un pool corto es un pool roto: mejor el congelado que un rango sobre 12 avisos */
+      if(!j||!j.comparables||j.comparables.length<100) throw new Error('pool corto');
+      aplicarPoolVivo(j); listo();
+    })
+    .catch(function(){ if(cerrado)return; clearTimeout(corta); listo(); });
+}
+
+/* init */
+(function(){
+  var sel=document.getElementById('f-edif');
+  function arrancar(){
+  sel.innerHTML=EDIFS.map(function(x){return '<option value="'+x.k+'">'+x.e+'</option>'}).join('');
+  if(!miEdificio()){ MI.e=EDIFS[0].e; MI.k=EDIFS[0].k; }
+  sel.value=(miEdificio()||EDIFS[0]).k; /* explícito: el navegador restaura el estado del select al recargar y pisa el default */
+  [['f-dorms','d'],['f-pq','pq'],['f-est','est']].forEach(function(par){
+    document.querySelectorAll('#'+par[0]+' button').forEach(function(b){b.onclick=function(){
+      document.querySelectorAll('#'+par[0]+' button').forEach(function(x){x.classList.remove('on')});
+      b.classList.add('on'); MI[par[1]]=par[1]==='d'?+b.dataset.v:b.dataset.v;};});});
+  document.getElementById('f-go').onclick=calcular;
+
+  /* Pegar el link del aviso en vez de cargar ocho campos. Si no se encuentra, el
+     formulario queda intacto y el motivo se dice en palabras: "no está" y "es de otra
+     zona" mandan al broker a hacer cosas distintas. */
+  function buscarPorUrl(){
+    var q=document.getElementById('f-url').value.trim();
+    var est=document.getElementById('url-estado'), btn=document.getElementById('f-buscar');
+    if(!q){est.className='hint';est.textContent='Pegue el link del aviso, o cargue los datos abajo.';return;}
+    btn.disabled=true; est.className='hint'; est.textContent='Buscando…';
+    fetch('/api/acm-buscar?url='+encodeURIComponent(q))
+      .then(function(r){return r.json()})
+      .then(function(j){
+        btn.disabled=false;
+        if(!j.encontrado){ est.className='hint mal';
+          est.textContent=j.detalle||'No se pudo resolver ese enlace.'; return; }
+        if(j.edificio && EDIFS.some(function(x){return x.e===j.edificio})){
+          document.getElementById('f-edif').value=j.edificio; MI.e=j.edificio;
+        }
+        if(j.dormitorios!=null){ MI.d=j.dormitorios;
+          document.querySelectorAll('#f-dorms button').forEach(function(b){
+            b.classList.toggle('on', +b.dataset.v===j.dormitorios);}); }
+        if(j.area) document.getElementById('f-area').value=j.area;
+        if(j.precio) document.getElementById('f-precio').value=j.precio;
+        if(j.piso) document.getElementById('f-piso').value=j.piso;
+        [['f-pq','pq',j.parqueo],['f-est','est',j.estado]].forEach(function(par){
+          if(!par[2])return; MI[par[1]]=par[2];
+          document.querySelectorAll('#'+par[0]+' button').forEach(function(b){
+            b.classList.toggle('on', b.dataset.v===par[2]);});});
+        est.className='hint bien';
+        est.textContent='Encontrado: '+(j.edificio||'edificio sin nombre')+' · '+j.area+' m²'+
+          (j.precio?' · $'+j.precio.toLocaleString('es-BO').replace(/,/g,'.'):'')+
+          '. Revise los datos abajo y confirme.';
+      })
+      .catch(function(){ btn.disabled=false; est.className='hint mal';
+        est.textContent='No pudimos consultar. Cargue los datos a mano.'; });
+  }
+  document.getElementById('f-buscar').onclick=buscarPorUrl;
+  document.getElementById('f-url').addEventListener('keydown',function(e){
+    if(e.key==='Enter'){e.preventDefault();buscarPorUrl();}});
+  /* criterios de búsqueda: cada cambio re-arma la muestra y re-pinta */
+  [['aj-radio','radio'],['aj-tol','tol'],['aj-tip','tipVecinas']].forEach(function(par){
+    document.querySelectorAll('#'+par[0]+' button').forEach(function(b){b.onclick=function(){
+      if(b.disabled)return;
+      document.querySelectorAll('#'+par[0]+' button').forEach(function(x){x.classList.remove('on')});
+      b.classList.add('on');
+      AJ[par[1]] = par[1]==='tipVecinas' ? b.dataset.v==='1' : +b.dataset.v;
+      reAjustar();};});});
+  document.getElementById('sim').addEventListener('input',function(){SIM_TOCADO=true;sim();});
+
+  /* ── Un análisis compartido gana sobre todo lo demás ── */
+  var compartido = location.hash.length>1 ? deB64(location.hash.slice(1)) : null;
+  if(compartido && compartido.e){ abrirCompartido(compartido); return; }
+
+  /* ── DEMO: abre en el documento terminado, no en un formulario vacío ──
+     El pitch necesita el golpe primero y el trámite después. Con ?form=1 arranca
+     en el formulario, como lo haría un broker que entra a armar uno nuevo. */
+  if(location.search.indexOf('form=1')<0){
+    /* Nombre inequívocamente de ejemplo: este documento se comparte, y firmar la
+       demo con una persona o una inmobiliaria real sería atribuirle algo que no dijo. */
+    document.getElementById('f-broker').value='Broker de ejemplo';
+    document.getElementById('f-piso').value='15';
+    document.getElementById('f-difs').value='vista despejada al parque, cocina recién renovada';
+    calcular();
+    document.getElementById('f-reco-precio').value='98000';
+    document.getElementById('f-reco-txt').value='Saldría en 98.000 y sostendría el precio 45 días. La vista al parque no la tiene ninguno de los comparables, y el edificio ya está entregado: quien compra se muda este mes, no en 2027.';
+    publicar();
+  }
+  ['f-reco-precio','f-reco-txt'].forEach(function(id){
+    document.getElementById(id).addEventListener('input',function(){
+      MI.recoP=+document.getElementById('f-reco-precio').value||null;
+      MI.recoT=document.getElementById('f-reco-txt').value.trim();
+      renderReco();});});
+  }
+  /* el pool primero: arrancar con el congelado y refrescar después haría que el
+     número cambie delante del cliente */
+  cargarPool(function(){
+    /* el badge dice de cuándo son los datos, no una fecha escrita a mano que envejece */
+    document.getElementById('mock').textContent=
+      'PROTOTIPO · '+(POOL_ORIGEN==='vivo'?'datos al '+META_ACM.corte:'copia guardada');
+    arrancar();
+  });
+})();
+</script>
+</body>
+</html>
