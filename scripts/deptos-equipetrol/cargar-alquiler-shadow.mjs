@@ -32,7 +32,7 @@ import { reBucket } from './lib/canonicalizar.mjs';
 import { reservarIdsShadow } from './lib/reservar-ids-shadow.mjs';
 import { resolverZona, conSufijo } from './lib/zonas-hibrido.mjs';
 import { detalleDesdeBase } from './lib/detalle-desde-base.mjs';
-import { leerRechazados, guardarRechazados, TTL_DIAS } from './lib/rechazados.mjs';
+import { leerRechazados, guardarRechazados, TTL_DIAS, UMBRAL_FETCH_FALLIDO, RAZON_FETCH_FALLIDO } from './lib/rechazados.mjs';
 import { traerTodo } from './lib/traer-todo.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -237,11 +237,20 @@ async function prepNuevas(discoveryFile, n) {
   if (yaCargadas) console.log(`   (${yaCargadas} de las ${(disc.nuevas || []).length} del discovery ya están en shadow → se saltean; quedan ${pendientes.length} pendientes)`);
   console.log(`\n🌱 PREP NUEVAS ALQUILER — ${nuevas.length} deptos del discovery (no en prod). tasa_paralelo=${tasaParalelo}. ids reservados ${poolIds.length ? `${poolIds[0]}–${poolIds[poolIds.length - 1]}` : '(ninguno)'}. NO escribe a la BD.\n`);
   const entradas = [];
+  // 7-ago-2026: los avisos que NO se pueden descargar también dejan rastro. Antes
+  // este `continue` era mudo → un aviso muerto (404) se re-intentaba todas las
+  // noches para siempre. Caso: `57808` y `57806`, 3 noches seguidas.
+  // No se saltean desde la primera vez: ver UMBRAL_FETCH_FALLIDO en lib/rechazados.mjs.
+  const fallosFetch = [];
   for (const nv of nuevas) {
     if (circuit.tripped) { console.log('🛑 circuit breaker.'); break; }
     let h = null, err = null;
     try { h = await fetchDetalleDepto(nv.fuente, nv.url); } catch (e) { err = String(e.message); }
-    if (!h) { console.log(`   ✗ fetch ${nv.url.slice(0, 55)}: ${err || ''}`); await pace(400); continue; }
+    if (!h) {
+      console.log(`   ✗ fetch ${nv.url.slice(0, 55)}: ${err || ''}`);
+      fallosFetch.push({ url: nv.url, razon: RAZON_FETCH_FALLIDO });
+      await pace(400); continue;
+    }
     const id = poolIds.shift();                             // id ya reservado en la BD (TEMPORAL; al cutover lo da prod)
     if (id == null) { console.log('   ✗ se agotó el pool de ids reservados — corto acá.'); break; }
     const area = h.area_const_m2 ?? h.area_texto ?? null;
@@ -280,6 +289,11 @@ async function prepNuevas(discoveryFile, n) {
     });
     console.log(`   ${id} ${nv.fuente} nueva  crudo=${crudo} ${moneda || '?'}  slug:${(slugDe(nv.url) || '').slice(0, 44)}`);
     await pace(500);
+  }
+  if (fallosFetch.length) {
+    const m = guardarRechazados(REJ_FILE, fallosFetch);
+    console.log(`   📝 ${fallosFetch.length} fallo(s) de fetch registrados (${m.repetidos} ya venían de noches anteriores).`
+      + ` A partir de la ${UMBRAL_FETCH_FALLIDO}ª noche seguida dejan de re-intentarse; vuelven a los ${TTL_DIAS}d.`);
   }
   // El material declara de qué ZONA es, igual que --prep (arriba) y que su gemelo de venta.
   // Este camino quedó sin la perilla y el daño era SILENCIOSO: `partir-lectura.mjs` resuelve la
