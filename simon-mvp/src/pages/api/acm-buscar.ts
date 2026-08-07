@@ -36,6 +36,22 @@ export interface AcmBuscarResponse {
   piso?: number | null
 }
 
+/** Lo que la vista devuelve para precargar el formulario.
+ *  Hace falta declararlo: el cliente de Supabase no tiene los tipos generados de las
+ *  vistas shadow, así que infiere la fila como error genérico y `tsc` rechaza cada
+ *  campo — lo que rompe el build de Vercel, no solo el editor. */
+interface FilaVista {
+  id: number
+  nombre_edificio: string | null
+  dormitorios: number | null
+  area_total_m2: number | null
+  precio_norm: number | null
+  parqueo_incluido: boolean | null
+  estacionamientos: number | null
+  estado_construccion: string | null
+  piso: number | null
+}
+
 /** El código del aviso dentro de la URL. C21: /propiedad/100250_slug → "100250".
  *  Remax: .../venta-departamento-120034093-274 → "120034093-274". */
 export function codigoDeUrl(raw: string): { fuente: 'century21' | 'remax'; codigo: string } | null {
@@ -109,22 +125,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       .eq('id', p.id)
       .limit(1)
     if (eVista) { console.error('[acm-buscar] vista:', eVista.message); return no('error') }
-    const m = v?.[0]
+    const m = (v as unknown as FilaVista[] | null)?.[0]
     if (!m) return no('no_pasa_calidad')
+
+    // ESTADO DE OBRA: sale de la vista que lo INFIERE, igual que el pool. El
+    // `estado_construccion` crudo de arriba deja la mitad sin declarar — con él, un
+    // depto cuyo edificio ya está entregado se precargaba en "no sé" y el broker tenía
+    // que corregirlo a mano. Los dos endpoints tienen que responder lo mismo del mismo
+    // aviso, o el formulario contradice a sus propios comparables.
+    let estado: 'P' | 'E' | '?' =
+      m.estado_construccion === 'preventa' || m.estado_construccion === 'pozo' ? 'P'
+      : m.estado_construccion === 'entrega_inmediata' ? 'E' : '?'
+    const { data: eo, error: eEstado } = await supabase
+      .from('v_estado_obra_inferido_shadow')
+      .select('estado_efectivo')
+      .eq('propiedad_id', p.id)
+      .limit(1)
+    if (eEstado) { console.error('[acm-buscar] estado:', eEstado.message); return no('error') }
+    const ef = (eo as unknown as { estado_efectivo: string }[] | null)?.[0]?.estado_efectivo
+    if (ef === 'preventa' || ef === 'pozo') estado = 'P'
+    else if (ef === 'entrega_inmediata' || ef === 'entregado') estado = 'E'
 
     res.setHeader('Cache-Control', 'public, max-age=600')
     return res.status(200).json({
       encontrado: true,
       id: m.id,
       edificio: (m.nombre_edificio || '').trim() || undefined,
-      dormitorios: m.dormitorios,
+      // sin dormitorios el campo queda vacío, no en cero: el formulario debe pedirlo
+      dormitorios: m.dormitorios ?? undefined,
       area: m.area_total_m2 != null ? Math.round(Number(m.area_total_m2)) : undefined,
       precio: m.precio_norm != null ? Math.round(Number(m.precio_norm)) : undefined,
       // "sin declarar" no es "no tiene": el formulario queda en "No sé", no en "No incluye"
       parqueo: m.parqueo_incluido === true || (m.estacionamientos ?? 0) > 0 ? 'i'
         : m.parqueo_incluido === false ? 'n' : 's',
-      estado: m.estado_construccion === 'preventa' || m.estado_construccion === 'pozo' ? 'P'
-        : m.estado_construccion === 'entrega_inmediata' ? 'E' : '?',
+      estado,
       piso: m.piso ?? null,
     })
   } catch (e: any) {

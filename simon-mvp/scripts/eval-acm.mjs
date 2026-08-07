@@ -201,6 +201,30 @@ if (!SOLO || SOLO === '1') {
   check(1, 'el pool llega completo, no a medias', flojos.length === 0,
     flojos.join(' · ') || Object.keys(MINIMOS).map((k) => `${k} ${cob[k]}%`).join(' · '));
 
+  // 1a bis · pegar la URL del aviso tiene que precargar LO MISMO que ese aviso muestra
+  //          como comparable. Son dos endpoints distintos leyendo la misma propiedad, y
+  //          ya se desincronizaron una vez: acm-buscar leía `estado_construccion` crudo
+  //          mientras el pool usaba la vista que lo infiere, así que un depto entregado
+  //          se precargaba en "no sé". El broker lo corregía a mano sin saber por qué.
+  const urlEntera = (u) =>
+    (u.charAt(0) === 'c' ? 'https://c21.com.bo/propiedad/' : 'https://remax.bo/propiedad/') + u.slice(1);
+  // Se pide el endpoint entero, no el `pool` de arriba: ese viene proyectado a cinco
+  // campos y no trae la URL. Filtrarlo daba una lista vacía y el check pasaba en verde
+  // sin haber comparado nada — que es la forma más cara de estar tranquilo.
+  const crudo = await fetch(`${BASE}/api/acm-pool`).then((x) => x.json()).catch(() => null);
+  const conUrl = (crudo?.comparables ?? []).filter((c) => c.u).slice(0, 12);
+  const discrepan = conUrl.length === 0 ? ['el pool no trajo ningún aviso con URL'] : [];
+  for (const c of conUrl) {
+    const b = await fetch(`${BASE}/api/acm-buscar?url=${encodeURIComponent(urlEntera(c.u))}`)
+      .then((x) => x.json()).catch(() => null);
+    if (!b?.encontrado) { discrepan.push(`${c.id} no lo encuentra`); continue; }
+    if (b.id !== c.id) discrepan.push(`${c.id} devuelve otro aviso (${b.id})`);
+    else if (b.estado !== c.est) discrepan.push(`${c.id} estado ${c.est}≠${b.estado}`);
+    else if (b.dormitorios !== c.d) discrepan.push(`${c.id} dorms ${c.d}≠${b.dormitorios}`);
+  }
+  check(1, `pegar la URL precarga lo mismo que dice el pool (${conUrl.length} avisos)`,
+    discrepan.length === 0, discrepan.slice(0, 3).join(' · ') || 'idénticos');
+
   // 1b · el rango del documento = el mismo cálculo hecho en SQL.
   //      Si esto da igual, portar el motor al servidor es mecánico. Si difiere, hay una
   //      definición ambigua escondida en algún lado.
