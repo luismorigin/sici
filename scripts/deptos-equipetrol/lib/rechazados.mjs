@@ -32,6 +32,21 @@
 // Lee también el v1 (array plano de ids) sin migración: los ids viejos siguen
 // filtrando a las props de prod, que es donde sí servían.
 
+// ── FETCH FALLIDO (7-ago-2026) ──────────────────────────────────────────────
+// El agujero que quedaba abierto: esta memoria guarda lo que el GATE rechazó, o
+// sea lo que se pudo leer y se juzgó. Un aviso que **nunca se pudo descargar**
+// no llega al gate, no se registra, y se re-intenta todas las noches.
+// Caso real: `57808` y `57806` (alquiler ZN) dieron 404 tres noches seguidas
+// (5, 6 y 7 de agosto), con 3 intentos rotando IP cada vez.
+//
+// 🔑 POR QUÉ NO SE SALTEAN DESDE LA PRIMERA VEZ: un fallo de fetch puede ser un
+// hipo (el portal se cayó, el proxy falló), y enterrar un aviso vivo por eso es
+// el modo de falla caro — no da error y nadie lo ve. Recién a la SEGUNDA noche
+// consecutiva se asume que el aviso está muerto. Y el TTL de 30 días lo reabre
+// igual, así que ni siquiera un muerto queda enterrado para siempre.
+export const UMBRAL_FETCH_FALLIDO = 2;
+export const RAZON_FETCH_FALLIDO = 'fetch_fallido';
+
 import { readFileSync, writeFileSync } from 'node:fs';
 
 export const TTL_DIAS = 30;
@@ -68,14 +83,21 @@ export function leerRechazados(file, { ttlDias = TTL_DIAS } = {}) {
   const entradas = Array.isArray(raw?.entradas) ? raw.entradas : [];
   const urls = new Set();
   let vencidas = 0;
+  let fetchFallidoEnGracia = 0;
   for (const e of entradas) {
     if (!e?.url) continue;
     if (diasDesde(e.ultima_vez) > ttlDias) { vencidas++; continue; }   // caducó → se re-evalúa
+    // Un fetch fallido NO saltea desde la primera vez: puede ser un hipo del
+    // portal. Se le da una noche de gracia antes de darlo por muerto.
+    if (e.razon === RAZON_FETCH_FALLIDO && (e.veces ?? 0) < UMBRAL_FETCH_FALLIDO) {
+      fetchFallidoEnGracia++;
+      continue;
+    }
     urls.add(e.url);
   }
   return {
     ids: new Set(entradas.map((e) => e?.id).filter((v) => v != null)),
-    urls, entradas, vencidas,
+    urls, entradas, vencidas, fetchFallidoEnGracia,
   };
 }
 
