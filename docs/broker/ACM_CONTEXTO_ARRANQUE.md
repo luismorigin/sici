@@ -1,7 +1,17 @@
 # ACM para brokers y clientes — contexto de arranque
 
-**Rama:** `worktree-acm-broker-cliente` · **Abierta:** 5-ago-2026 · **Estado:** relevamiento hecho, sin código nuevo todavía.
+**Rama:** `worktree-acm-broker-cliente` · **Abierta:** 5-ago-2026 · **Última:** 7-ago-2026
+**Estado:** prototipo funcional con **data real de anoche**, servido desde `simonbo.com/acm-b7k2.html`, con eval de 23 checks en verde. **No toca ninguna superficie de producción** — es una página suelta con `noindex` más dos API read-only nuevas.
 **Objetivo:** llevar el patrón del paquete B2B de desarrolladoras (ver `docs/analysis/README_MESA_INFORME.md`) a las otras dos audiencias: **brokers** y **clientes compradores/vendedores**.
+
+## 📦 Qué se puede hacer hoy y qué no
+
+| Se puede | No se puede todavía |
+|---|---|
+| Armar un ACM real de cualquier depto de Equipetrol (≤3 dorm) pegando la URL de su aviso o cargándolo a mano | Que el broker tenga **su panel** con sus ACM guardados — hoy cada uno vive en su link y nada los lista |
+| Ajustar el cohorte (radio 300/500/800 m, tolerancia de superficie), excluir comparables **con motivo** y firmar una recomendación | Saber **si el cliente lo abrió** — el registro de vistas está diseñado (copia el de shortlists) pero no construido |
+| Compartir un link que **congela** el documento: los comparables viajan adentro, así que el número no cambia solo | El **vencimiento a 60 días** que le fabrica al broker un motivo de re-contacto |
+| Abrir cada ficha en el feed de Simón desde el celular | Que la ficha **abra sola su bottom sheet** — requiere tocar `ventas.tsx`, y se dejó afuera a propósito |
 
 ---
 
@@ -56,13 +66,13 @@ Heredadas de `docs/analysis/AUDITORIA_ESTADISTICA_MESA_INFORME.md`, `docs/canoni
 
 **La observación de fondo:** el ACM son **dos productos en una pantalla**. El broker EDITA en privado; el cliente LEE un documento congelado. Mismo patrón que las shortlists (`/admin` arma → `/b/[hash]` lee), y conviene copiarlo tal cual, incluido el registro de vistas.
 
-| Estado | Quién | Qué pasa |
-|---|---|---|
-| **1 · Borrador** | broker | Pre-llenado desde el feed si la propiedad ya está publicada. El formulario en blanco es para lo **no publicado** — que es el caso de oro: la captación, cuando el dueño todavía está decidiendo con quién firma. |
-| **2 · Recomendación** | broker | Escribe **a qué precio saldría y por qué**. Sin esto el broker es un cartero que reenvía un reporte de Simón; con esto **el broker es el autor y Simón la evidencia**. |
-| **3 · Publicado** | sistema | Congela comparables, corte de data, exclusiones y recomendación → link `/acm/[hash]`. |
-| **4 · Compartido** | cliente | Link limpio con la marca del broker. Dos acciones: compartir y hablar. El broker ve que lo abrió. |
-| **5 · Vencido** | sistema | A ~60 días se marca solo y avisa al broker. Le fabrica un **motivo legítimo de re-contacto** — un ACM v2 es una excusa para llamar; "¿cómo venís pensando?" no lo es. |
+| Estado | Quién | Qué pasa | Al 7-ago |
+|---|---|---|---|
+| **1 · Borrador** | broker | Pre-llenado desde el feed si la propiedad ya está publicada. El formulario en blanco es para lo **no publicado** — que es el caso de oro: la captación, cuando el dueño todavía está decidiendo con quién firma. | ✅ y además **pegando la URL del aviso** |
+| **2 · Recomendación** | broker | Escribe **a qué precio saldría y por qué**. Sin esto el broker es un cartero que reenvía un reporte de Simón; con esto **el broker es el autor y Simón la evidencia**. | ✅ |
+| **3 · Publicado** | sistema | Congela comparables, corte de data, exclusiones y recomendación → link `/acm/[hash]`. | ✅ **sin tabla**: el documento entero viaja comprimido en el hash de la URL. Sirve para probar; para el panel del broker hará falta persistirlo |
+| **4 · Compartido** | cliente | Link limpio con la marca del broker. Dos acciones: compartir y hablar. El broker ve que lo abrió. | ⚠️ el link anda; **el aviso de apertura no existe** |
+| **5 · Vencido** | sistema | A ~60 días se marca solo y avisa al broker. Le fabrica un **motivo legítimo de re-contacto** — un ACM v2 es una excusa para llamar; "¿cómo venís pensando?" no lo es. | ❌ el documento muestra su fecha de corte, pero nada vence ni avisa |
 
 🔴 **Congelar no es un detalle técnico.** Si el link recalcula cada noche, el cliente abre a los diez días y el número cambió sin que nadie se lo dijera — el broker queda desautorizado por su propia herramienta. Un ACM es **un documento fechado**, no un tablero. Y es lo fiduciariamente correcto.
 
@@ -109,10 +119,13 @@ node simon-mvp/scripts/eval-acm.mjs
 
 | Pieza | Qué hace |
 |---|---|
-| `simon-mvp/src/pages/api/acm-pool.ts` | Sirve los comparables de Equipetrol (1-2 dorm) desde `v_mercado_venta_shadow`, con foto, aviso original y fecha de entrega. **Alcance declarado**: los 3+ dorm quedan afuera porque con 29 avisos en 21 edificios el informe casi nunca alcanzaría la muestra mínima. |
-| `docs/broker/acm-prototipo.html` | El documento. Pide el pool al abrir; si el servidor no está, sigue con su copia guardada **y lo dice en el sello**. |
-| `docs/broker/preparar-para-web.mjs` | Genera la copia servida: sin las fotos embebidas (1.231 KB → 139 KB) y con `noindex`. |
-| `simon-mvp/scripts/eval-acm.mjs` | El eval. 17 checks en 3 niveles. |
+| `simon-mvp/src/pages/api/acm-pool.ts` | Sirve los comparables de Equipetrol (**hasta 3 dorm**) desde `v_mercado_venta_shadow`, con foto, aviso original, fecha de entrega, amenidades y estado de obra con su origen. **Alcance declarado**: los 4+ dorm quedan afuera porque hay **uno solo** — no hay con qué compararlo. |
+| `simon-mvp/src/pages/api/acm-buscar.ts` | Resuelve una URL de C21/Remax → la propiedad, **por el código**, no por la URL (C21 reescribe el slug al editar el aviso). Cuando no la encuentra devuelve **cuál de los 8 motivos** fue, en castellano. |
+| `docs/broker/acm-prototipo.html` | El documento. Pide el pool al abrir; si el servidor no está, sigue con su copia guardada **y lo dice en el sello**. Archivo de trabajo: se edita este, nunca la copia servida. |
+| `docs/broker/preparar-para-web.mjs` | Genera la copia servida: sin las fotos embebidas (1.247 KB → 156 KB) y con `noindex`. **Correrlo después de cada cambio del HTML**, o el eval mide una versión vieja. |
+| `docs/broker/fotos-embebidas.py` | Solo para el archivo suelto (`file://`), donde las fotos del CDN no cargan. La copia servida no las necesita. Sus insumos `.txt` no se versionan: salen del pool. |
+| `docs/broker/poner-id-en-el-pool.mjs` | Migración de una sola vez, **ya aplicada**: metió el `id` en cada fila del pool embebido. Queda porque si algún día se regenera ese pool, hay que volver a correrla. |
+| `simon-mvp/scripts/eval-acm.mjs` | El eval. **23 checks** en 3 niveles. Necesita el servidor arriba. |
 
 🔴 **El enlace compartido lleva los comparables adentro, no solo los datos que cargó el
 broker.** Con pool vivo, guardar solo las entradas haría que el mismo link diera otro
@@ -131,8 +144,13 @@ Hay dos formas de recorrer el motor y **dan resultados muy distintos**:
 
 **Regla:** para verificar que nada rompe, grilla sintética. Para decir *"esto pasa X% de las veces"*, pool real — y decir cuál de los dos se usó.
 
-## ▶️ Próximo paso sugerido
+## ▶️ Próximo paso
 
-Elegir UNA audiencia (mi recomendación: **vendedor**, por el hueco + porque el motor ya responde su pregunta) y cerrar su mapa de decisiones antes de tocar código. Después: extraer el módulo común de cohorts/percentiles (paso 0), y recién ahí la vista.
+**El prototipo ya es presentable a un broker.** Lo que sigue no es más documento: es lo que hace falta para que un broker lo use solo, sin nosotros al lado.
+
+1. **Ponerlo delante de un broker** y mirar dónde se traba. Todo lo de abajo se decide mejor después de eso.
+2. **Persistir el ACM** (tabla + `/acm/[hash]`) — es la pieza que desbloquea las otras dos: el panel del broker con sus ACM, el registro de vistas y el vencimiento. Hoy el documento vive en el hash de la URL, que alcanza para probar y no para un producto.
+3. **Extraer el módulo común de cohorte/percentiles.** Sigue pendiente y ahora hay una copia más: el motor del prototipo. Son **seis** implementaciones del mismo cálculo con umbrales distintos (`ventas.tsx:3252`, `alquileres.tsx:1056`, `ShortlistCardChip.tsx`, los dos sheets, `superficies-data.ts`).
+4. **Que la ficha abra su bottom sheet.** Requiere una línea en `ventas.tsx` y quedó afuera a pedido explícito: **no tocar producción** en esta rama.
 
 **Piezas server-side limpias para reutilizar:** `pages/api/shortlist-market.ts` (cohort por zona+dorms sobre las vistas shadow, MIN_COHORT=5) y `lib/superficies-data.ts:fetchContextoVenta` (patrón SSG con paginado).

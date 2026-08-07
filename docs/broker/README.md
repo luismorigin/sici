@@ -6,6 +6,8 @@ Carpeta de trabajo para **Simon Broker**, el tier SaaS pago (Bs. 75-210/mes) sob
 
 | Archivo | Propósito |
 |---|---|
+| [ACM_CONTEXTO_ARRANQUE.md](ACM_CONTEXTO_ARRANQUE.md) | **📐 El ACM para broker y cliente vendedor** (7-ago-2026). Prototipo funcional con data real, servido aparte, sin tocar producción. Empezar por acá para cualquier trabajo del ACM. |
+| [DONDE_VIVE_CADA_DATO.md](DONDE_VIVE_CADA_DATO.md) | 🔴 **Leer antes de escribir una query del ACM.** Dónde vive cada dato y dónde ya se buscó mal: buscar en el lugar equivocado no da error, da un número creíble y falso. |
 | [PRD.md](PRD.md) | Product Requirements Document del MVP mínimo. Scope congelado, cronograma 3 semanas, decisiones tomadas. |
 | [BACKLOG.md](BACKLOG.md) | Ideas parqueadas para v2+. Cada entrada con rationale de por qué no entra al MVP. |
 | [SHORTLIST_PROTECTION_V1_PLAN.md](SHORTLIST_PROTECTION_V1_PLAN.md) | Plan + implementación realizada del v1 protección (caps, expiración, fingerprint, watermark, términos). Mergeado a main `037584b` el 25 Abr 2026. |

@@ -1,6 +1,6 @@
 // API read-only: el pool de comparables que consume el ACM (docs/broker/acm-prototipo.html).
 //
-// Devuelve los avisos de venta de Equipetrol de 1 y 2 dormitorios, con todo lo que el
+// Devuelve los avisos de venta de Equipetrol de hasta 3 dormitorios, con todo lo que el
 // documento necesita para cada uno: precio normalizado, superficie, antigüedad, estado
 // de obra, parqueo, amenidades, la URL de su aviso original, su foto y la fecha de
 // entrega declarada. Sin esto el prototipo trabaja con un pool congelado y le muestra
