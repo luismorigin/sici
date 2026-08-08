@@ -87,7 +87,7 @@ operación mal tipeada / basura estructural / etc.) · **multiproyecto** desviad
 > 📉 **Y es señal de mercado, no solo de higiene**: un slug reescrito = aviso editado, y en 3 de los 5
 > casos medidos el 4-ago **el precio había bajado** (Lofty Island −28%, Torre Ara −7%, Vertical Terra −11%).
 
-Del log del **audit** extraer: superficies 1/2/3/4/5/6 · veredictos (APROBAR / CONFIRMAR / CORREGIR /
+Del log del **audit** extraer: superficies 1/2/3/4/5/6/7 · veredictos (APROBAR / CONFIRMAR / CORREGIR /
 RECHAZAR / DEDUP / PM_NUEVO) · **SQL listo para aplicar** · bloqueos (PM_NUEVO que espera GPS del founder).
 
 > 🏗️ **Superficie 6 — el edificio se contradice sobre su estado de obra** (6-ago-2026). Nació de que el
@@ -100,6 +100,14 @@ RECHAZAR / DEDUP / PM_NUEVO) · **SQL listo para aplicar** · bloqueos (PM_NUEVO
 > son los que la regla NO toca: esos **sí o sí** esperan una decisión humana.
 > ⚠️ Si el log dice *"Superficie 6 sin memoria: la mig 315 no está aplicada"*, **subilo al parte**: el
 > audit no puede saltear los ya dictados y la lista se va a repetir entera.
+> 💸 **Superficie 7 — el mismo depto a dos precios que no pueden ser los dos ciertos** (8-ago-2026).
+> Mismo edificio + misma área + mismo captador, con más de **30%** de diferencia. Salió de Sky Eclipse:
+> un aviso a **$84.000 contra $165.948** de sus gemelos estuvo **5 semanas** tirando abajo la mediana de
+> Equipetrol Centro. **REPORTA, NO DECIDE** — no dice cuál precio es el bueno. Si aparece, subilo al
+> parte con el grupo completo: lo que hay que hacer es **leer los avisos** y decidir cuál está mal.
+> 🔑 El dedup NO puede cazar estos casos y no es un bug: **el precio es parte de su clave de grupo**,
+> así que dos avisos del mismo depto con precios distintos nunca se comparan.
+
 📌 Desde el 4-ago **la superficie 3 va a traer MENOS dedups**, y eso es esperado, no una regresión: la
 republicación por slug reescrito ahora se resuelve en la captura. Lo que queda ahí son apart-hoteles y
 republicaciones con códigos distintos.

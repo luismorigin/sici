@@ -634,10 +634,79 @@ async function main() {
     }
   }
 
+  // ── SUPERFICIE 7 — DOS AVISOS DEL MISMO DEPTO A PRECIOS INCOMPATIBLES (8-ago-2026) ──
+  // Origen: Sky Eclipse. La captadora Elizabeth Oconnor tenía 3 avisos del mismo depto
+  // (2 dorm, 101 m²) y uno estaba a $84.000 contra $165.948 de sus gemelos — la MITAD.
+  // Estuvo 5 semanas tirando abajo la mediana de Equipetrol Centro.
+  //
+  // 🔑 POR QUÉ ESTO Y NO "ARREGLAR EL DEDUP" (medido el 8-ago antes de escribir nada):
+  // El dedup NO está roto. Se midió qué pasaría si se agregara el captador como señal
+  // fuerte: marcaría como duplicados 5 grupos de UNIDADES REALES en pisos distintos
+  // (Community Alto Norte 1/2/11 · Las Dalias 1/5 · Macororó 15 13/15 · Le Blanc 4/5 ·
+  // Soul Parc 1/2) y reabriría los 3 clusters de EDIFICIO K1 que el founder ya juzgó
+  // como inventario real el 5-ago. En Sky Eclipse no había NINGUNA señal que discriminara
+  // (sin piso, mismo texto, misma área): cualquier umbral que cace ese caso rompe K1.
+  //
+  // Lo que sí era inequívoco no era la duplicación: era el PRECIO. Dos avisos del mismo
+  // edificio, misma área y mismo captador no pueden diferir 97%. Uno de los dos está mal.
+  //
+  // 🔴 REPORTA, NO DECIDE — igual que las superficies 5 y 6. No dice cuál precio es el
+  //    bueno; dice que los dos no pueden serlo a la vez.
+  //
+  // UMBRAL 30%: medido sobre los grupos legítimos de hoy (mismo pm+área+captador con
+  // precios distintos), la brecha máxima es 7% — variación normal entre pisos. Sky
+  // Eclipse era 97%. 30% deja pasar la variación real y caza el error de carga.
+  //
+  // Lee de `v_mercado_venta_shadow` a propósito: ahí el precio ya está NORMALIZADO
+  // (`precio_norm`). Comparar `precio_usd` crudo daría brechas falsas entre un aviso
+  // tagueado `bob` y uno en USD — el mismo error que este detector busca cazar.
+  const BRECHA_SOSPECHOSA_PCT = 30;
+  const sup7 = [];
+  {
+    let q = sb.from('v_mercado_venta_shadow')
+      .select('id,id_proyecto_master,nombre_edificio,zona,area_total_m2,precio_norm,precio_m2,url,datos_json')
+      .not('id_proyecto_master', 'is', null).not('area_total_m2', 'is', null);
+    if (ZONAS_FILTRO) q = q.in('zona', ZONAS_FILTRO);
+    const { data: mv, error: errMv } = await q;
+    if (errMv) {
+      console.log(`   ⚠️  Superficie 7 no pudo leer v_mercado_venta_shadow (${errMv.message}) — se declara, no se silencia.`);
+    } else {
+      const grupos = new Map();
+      for (const p of (mv || [])) {
+        const cap = p.datos_json?.agente?.nombre || null;
+        if (!cap || p.precio_norm == null) continue;
+        // Ya revisado por un humano → no vuelve (mismo mecanismo que distancia_revisada).
+        if (p.datos_json?.trazabilidad?.brecha_precio_revisada) continue;
+        const k = `${p.id_proyecto_master}|${Number(p.area_total_m2).toFixed(2)}|${cap}`;
+        if (!grupos.has(k)) grupos.set(k, []);
+        grupos.get(k).push({ ...p, captador: cap, precio: Number(p.precio_norm) });
+      }
+      for (const [, g] of grupos) {
+        if (g.length < 2) continue;
+        const min = Math.min(...g.map((x) => x.precio));
+        const max = Math.max(...g.map((x) => x.precio));
+        if (min <= 0) continue;
+        const brecha = Math.round((100 * (max - min)) / min);
+        if (brecha < BRECHA_SOSPECHOSA_PCT) continue;
+        sup7.push({
+          pm: g[0].id_proyecto_master, edificio: g[0].nombre_edificio, zona: g[0].zona,
+          area: Number(g[0].area_total_m2), captador: g[0].captador,
+          brecha_pct: brecha, n: g.length,
+          avisos: g.sort((a, b) => a.precio - b.precio).map((x) => ({
+            prop_id: x.id, precio_norm: Math.round(x.precio),
+            precio_m2: x.precio_m2 != null ? Math.round(Number(x.precio_m2)) : null, url: x.url,
+          })),
+        });
+      }
+      sup7.sort((a, b) => b.brecha_pct - a.brecha_pct);
+    }
+  }
+
   const file = join(OUT, `audit-matching-shadow-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, ops: OPS, total_filas: filas.length,
-    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, superficie_6_estado_obra_contradictorio: sup6.length, superficie_6_props_afectadas: sup6.reduce((a, c) => a + c.props_afectadas, 0), ya_confirmados_por_auditor: supConfirmadas.length },
+    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, superficie_6_estado_obra_contradictorio: sup6.length, superficie_6_props_afectadas: sup6.reduce((a, c) => a + c.props_afectadas, 0), superficie_7_brecha_precio: sup7.length, superficie_7_props_afectadas: sup7.reduce((a, c) => a + c.n, 0), ya_confirmados_por_auditor: supConfirmadas.length },
+    superficie_7_umbral_brecha_pct: BRECHA_SOSPECHOSA_PCT,
     superficie_5_umbral_metros: DISTANCIA_SOSPECHOSA_M,
     superficie_1: sup1, superficie_2: sup2,
     // Nombres YA juzgados como no-edificio (odónimo / familia ambigua) → no van al juez.
@@ -666,6 +735,10 @@ async function main() {
     // dictado (`proyectos_master.entrega_verificada`) o lo corrige. Sin el sello,
     // el edificio vuelve a esta lista todas las noches.
     superficie_6: sup6,
+    // SUPERFICIE 7 — dos avisos del MISMO depto (pm + área + captador) a precios que no
+    // pueden ser los dos ciertos. REPORTA, NO DECIDE: no dice cuál es el bueno. El rastro
+    // que corta la relectura es `datos_json.trazabilidad.brecha_precio_revisada`.
+    superficie_7: sup7,
     // Matches de superficie 2/4 que un juez YA confirmó (tag `datos_json.trazabilidad.confirmado_por`).
     // No vuelven al juez. Quedan acá para poder revocar una confirmación que hubiera salido mal.
     ya_confirmados_por_auditor: supConfirmadas.map((s) => ({
@@ -703,6 +776,19 @@ async function main() {
       console.log(`        la regla lo deja en: ${s.resuelto_por_regla || 'preventa (sin cambio) → necesita dictado'}`);
     }
     if (sup6.length > 12) console.log(`     … y ${sup6.length - 12} más (todos en el JSON)`);
+    console.log('');
+  }
+  if (sup7.length) {
+    const props7 = sup7.reduce((a, c) => a + c.n, 0);
+    console.log(`  💸 Superficie 7 (mismo depto, precios incompatibles >${BRECHA_SOSPECHOSA_PCT}%): ${sup7.length} grupos · ${props7} avisos`);
+    console.log(`     ⚠️  REPORTA, NO DECIDE: no dice cuál precio es el bueno, dice que los dos no`);
+    console.log(`         pueden serlo. Origen: Sky Eclipse, un aviso a la MITAD de sus gemelos`);
+    console.log(`         estuvo 5 semanas tirando abajo la mediana de su zona.`);
+    for (const s of sup7.slice(0, 10)) {
+      console.log(`     pm ${s.pm} "${s.edificio || '?'}" [${s.zona}] · ${s.area} m² · ${s.captador} · brecha ${s.brecha_pct}%`);
+      for (const a of s.avisos) console.log(`        ${a.prop_id}  $${a.precio_norm}${a.precio_m2 ? `  ($${a.precio_m2}/m²)` : ''}`);
+    }
+    if (sup7.length > 10) console.log(`     … y ${sup7.length - 10} más (todos en el JSON)`);
     console.log('');
   }
   console.log(`  Superficie 1 (sin match + con nombre → PM_NUEVO/fuzzy): ${sup1.length}`);
