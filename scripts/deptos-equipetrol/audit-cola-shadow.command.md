@@ -119,6 +119,12 @@ carga, eso lo cubre el otro comando, `/audit-deptos-shadow`, que sí re-fetchea 
    crudo daría brechas falsas entre un aviso tagueado `bob` y uno en USD — el mismo error que este
    detector busca cazar.
    **Rastro que corta la relectura:** `datos_json.trazabilidad.brecha_precio_revisada`.
+   📌 **SOLO VENTA, y es una decisión — no un olvido.** Las otras 6 superficies corren sobre las dos
+   operaciones; ésta lee `v_mercado_venta_shadow` porque el caso que la originó era de venta y no se
+   quiso ampliar el alcance sin medir. El mismo problema **puede existir en alquiler** (mismo depto,
+   mismo captador, precios incompatibles). Confirmado con el founder el 8-ago: queda así por ahora.
+   Si algún día se extiende: la gemela es `v_mercado_alquiler_shadow` con `precio_mensual` en vez de
+   `precio_norm`, y **hay que recalibrar el umbral** — 30% se midió sobre precios de venta.
 
 ## Flujo de ejecución (desde `scripts/deptos-equipetrol/`)
 
