@@ -94,6 +94,31 @@ carga, eso lo cubre el otro comando, `/audit-deptos-shadow`, que sí re-fetchea 
    **Rastro que corta la relectura:** `proyectos_master.entrega_verificada` (mig 315). Sin el dictado,
    los mismos 10 edificios vuelven todas las noches.
    📌 Al 6-ago: **10 edificios · 69 props** (8 internos + 2 cruzados), 4 de ellos en Equipetrol.
+   ✅ **Sellados los 10 el 7-ago** → la superficie dio **0** el 8-ago, en las dos zonas.
+7. **DOS AVISOS DEL MISMO DEPTO A PRECIOS INCOMPATIBLES** (8-ago-2026, umbral **30%**) — mismo
+   `id_proyecto_master` + misma **área** + mismo **captador**, con precios normalizados que difieren
+   más de 30%. 🔴 **REPORTA, NO DECIDE**: no dice cuál precio es el bueno, dice que **los dos no
+   pueden serlo**.
+   **Origen:** Sky Eclipse. La captadora Elizabeth Oconnor tenía 3 avisos del mismo depto (2 dorm,
+   101 m²) y uno estaba a **$84.000 contra $165.948** — la mitad. Estuvo **5 semanas** tirando abajo
+   la mediana de Equipetrol Centro, y el dedup no podía verlo porque **el precio es parte de la clave
+   de grupo**: dos avisos del mismo depto con precios distintos nunca se comparan entre sí.
+
+   🔑 **Por qué esto y NO "arreglar el dedup"** (medido antes de escribir el código): el dedup **no
+   está roto**. Agregar el captador como señal fuerte marcaría como duplicados **5 grupos de unidades
+   REALES en pisos distintos** (Community Alto Norte 1/2/11 · Las Dalias 1/5 · Macororó 15 13/15 ·
+   Le Blanc 4/5 · Soul Parc 1/2) y **reabriría los 3 clusters de EDIFICIO K1** ya juzgados como
+   inventario real el 5-ago. En Sky Eclipse **no había ninguna señal que discriminara** (sin piso,
+   mismo texto, misma área): cualquier umbral que cace ese caso rompe K1. Lo inequívoco no era la
+   duplicación, era el **precio**.
+
+   **Umbral 30%:** medido sobre los grupos legítimos de hoy, la brecha máxima es **7%** (variación
+   normal entre pisos); con umbral 5% aparecen 5 grupos, entre ellos Rhodium con 19% — 4 monoambientes
+   del mismo captador en pisos distintos, que NO son error. Sky Eclipse era **97%**.
+   ⚠️ Lee de **`v_mercado_venta_shadow`**, donde el precio ya está NORMALIZADO. Comparar `precio_usd`
+   crudo daría brechas falsas entre un aviso tagueado `bob` y uno en USD — el mismo error que este
+   detector busca cazar.
+   **Rastro que corta la relectura:** `datos_json.trazabilidad.brecha_precio_revisada`.
 
 ## Flujo de ejecución (desde `scripts/deptos-equipetrol/`)
 
