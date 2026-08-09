@@ -361,6 +361,13 @@ function construirFila(e, v, match) {
     piso: v.piso != null ? Number(v.piso) : (a.piso != null && /^\d+$/.test(String(a.piso)) ? Number(a.piso) : null),
     estacionamientos: estac,
     baulera: bauleraIncl,
+    // 🔴 9-ago-2026 — igual que su gemelo de venta: estos tres se escribían SOLO dentro de
+    // `datos_json` y las columnas homónimas quedaban NULL. Acá `amoblado` sí estaba bien (arriba,
+    // como columna) — por eso alquiler tenía 237 llenos contra 1 de venta, y la asimetría entre los
+    // dos cargadores escondió el bug. Las vistas, RPC, estudios y ACM leen COLUMNAS, no el JSON.
+    parqueo_precio_adicional: v.parqueo_precio_adicional_bob ?? null,
+    baulera_incluido: bauleraIncl,
+    baulera_precio_adicional: v.baulera_precio_adicional_bob ?? null,
     latitud: a.latitud, longitud: a.longitud, zona: e.zona, microzona: a.microzona,
     id_proyecto_master: match.pm, nombre_edificio: v.nombre_edificio_canonico || null,
     fecha_publicacion: a.fecha_publicacion, score_calidad_dato: a.score_calidad_dato,

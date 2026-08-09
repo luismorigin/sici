@@ -364,6 +364,30 @@ function construirFila(e, v, match) {
     es_multiproyecto: v.es_multiproyecto ?? a.es_multiproyecto ?? false,        // ← taguea multiproyecto (no rechaza)
     duplicado_de: a.duplicado_de ?? null,
     baulera: bauleraIncl, solo_tc_paralelo: a.solo_tc_paralelo ?? null, parqueo_incluido: parqueoIncl,
+    // 🔴 9-ago-2026 — ESTOS CUATRO SE ESCRIBÍAN **SOLO DENTRO DE `datos_json`** (ver abajo), y las
+    // columnas del mismo nombre quedaban NULL. El dato no se perdía: quedaba en un lugar que NADIE
+    // consulta. Medido en shadow: `parqueo_precio_adicional` 92 en el JSON / **0** en la columna ·
+    // `amoblado` 150 / **1** · `baulera_incluido` 253 / **0**.
+    // Las vistas de mercado, las RPC del feed, los estudios y el ACM leen COLUMNAS, no el JSON.
+    // Caso que lo destapó: Edificio Jana (8000714) publicaba el garaje a $10.500 aparte; el lector
+    // lo leyó bien y quedó invisible → el depto parecía $8.000 más barato que uno con parqueo
+    // incluido, cuando en realidad sale $2.500 más caro.
+    // 🔑 El gemelo de ALQUILER ya escribía `amoblado` como columna (línea ~352) — la asimetría entre
+    // los dos cargadores es lo que hizo que el bug pasara desapercibido en venta.
+    // Se AGREGAN a las columnas y se DEJAN también en `datos_json` (no se saca nada: puede haber
+    // consumidores del JSON, y quitarlo sería cambiar dos cosas a la vez).
+    // ⚠️ CONVERSIÓN OBLIGATORIA, no es un `?? null` como los otros: los DOS specs definen
+    //    `amoblado` distinto y la columna es TEXT.
+    //      · READER_SPEC (venta):    boolean — true si el texto dice AMOBLADO, null si calla.
+    //      · READER_SPEC_ALQUILER:   texto   — "si" | "no" | "semi" | null.
+    //    La columna guarda la escala de alquiler ('si' 212 · 'semi' 18 · 'no' 8). Sin este map,
+    //    venta escribiría la cadena 'true' y quedaría fuera de cualquier filtro por amoblado.
+    //    ('semi' no existe en el spec de venta → no se puede producir acá, y está bien: no se
+    //     inventa un matiz que el lector no juzgó.)
+    amoblado: v.amoblado === true ? 'si' : v.amoblado === false ? 'no' : null,
+    parqueo_precio_adicional: v.parqueo_precio_adicional_usd ?? null,
+    baulera_incluido: bauleraIncl,
+    baulera_precio_adicional: v.baulera_precio_adicional_usd ?? null,
     status: 'completado', es_activa: true, es_para_matching: true, scraper_version: SCRAPER_VERSION,
     datos_json: {
       agente: a.agente,
