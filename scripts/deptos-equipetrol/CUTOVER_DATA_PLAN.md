@@ -1,5 +1,26 @@
 # Plan de cutover de DATA — qué pasa con la historia cuando shadow se vuelve la base
 
+> # 🛑 DOCUMENTO SUPERADO — NO ES FUENTE DE VERDAD (desde el 10-ago-2026)
+>
+> **Fuente de verdad vigente: [`INVENTARIO_CUTOVER_2026-08-10.md`](INVENTARIO_CUTOVER_2026-08-10.md)**
+> (mapa verificado por superficie + plan vigente + riesgos medidos).
+>
+> Este archivo se conserva como **historia**: registra el análisis de julio y por qué se decidió cada
+> cosa. Pero su escenario ya no existe. Lo que asumía y hoy es falso:
+> - ❌ "n8n vivo, hay que apagarlo" → **el founder lo dio de baja a fines de julio (dejó de pagar
+>   Firecrawl y el servidor). Prod está congelada desde el 28-jul. No vuelve.**
+> - ❌ "ZN está en prod con la regla vieja" → **ZN ya está en el híbrido** (~380 venta + ~120 alquiler).
+> - ❌ "las shortlists en circulación se romperían" → **son un piloto congelado, sin usuarios** (10-ago).
+> - ❌ "hay que swappear `precio_normalizado()` en el cutover" → **no ahora**: va con el proyecto de casas.
+> - ❌ Su checklist de 7 ítems → **reemplazado** por el plan en dos tiempos del inventario.
+>
+> Lo que de acá SIGUE valiendo: el principio "crudo + tag adentro, normalizado afuera", la sección de
+> **Automatización** (Fase 0 vs fase completa), los **límites fiduciarios** y la advertencia de
+> **archivar, nunca borrar**.
+>
+> ⚠️ Si llegaste hasta acá desde otro doc (hay ~17 que lo enlazan), la referencia está vieja: leé el
+> inventario.
+
 > Reconocimiento 17-jul-2026 (deptos-venta Equipetrol). **El cutover del founder NO es actualizar
 > producción: es que `propiedades_v2_shadow` PASE A SER LA BASE** (auditada, sin parches) y la vieja
 > (`propiedades_v2` + n8n) se jubile. Este doc analiza qué pasa con la data histórica y los snapshots.
