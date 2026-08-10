@@ -12,7 +12,7 @@
 // Etapas (todas READ-ONLY):
 //   1. Discovery  → c21Listado + remaxListadoSC (tipo=departamento), red ancha de la zona
 //   2. Zona fina  → get_zona_by_gps por hit → SOLO las microzonas de la zona (canónico, no bbox)
-//   3. Diff vs BD → nuevas / existentes / desaparecidas (SELECT-only), **acotado a la zona**
+//   3. Diff vs SHADOW → nuevas / desaparecidas (SELECT-only), **acotado a la zona**
 //   4. Salida     → consola + output/discovery-deptos[-<zona>]-<ts>.json
 //
 // Etapas PENDIENTES (siguiente fase): detalle de las nuevas → MOAT (lector) →
@@ -148,16 +148,15 @@ log(`   → ${portal.length} deptos en las ${ZONA.zonas.length} microzonas (${po
 // El híbrido vive en SHADOW, no en prod. Por eso: (a) las NUEVAS excluyen lo ya cargado en
 // shadow (sin esto se reprocesan cada corrida); (b) las DESAPARECIDAS se miden contra SHADOW,
 // no contra prod (prod acumula stale + otras operaciones → 91% era ruido, medido 13-jul).
-log('3) Diff SHADOW-AWARE (prod clasifica nuevas/existentes; shadow filtra ya-cargadas y mide desaparecidas)…');
-const dbRows = [];
-for (let from = 0; ; from += 1000) {
-  const { data, error } = await sb.from('propiedades_v2')
-    .select('url, es_activa').ilike('tipo_propiedad_original', 'departamento')
-    .in('zona', [...ZONAS_EQ]).range(from, from + 999);
-  if (error) { console.error('   ERROR leyendo prod:', error.message); process.exit(1); }
-  dbRows.push(...data);
-  if (data.length < 1000) break;
-}
+log('3) Diff SHADOW-AWARE (shadow filtra ya-cargadas y mide desaparecidas)…');
+// 🔌 DESENGANCHADO DE PROD (10-ago-2026). Acá se leía `propiedades_v2` para informar cuánto del
+// portal coincidía con el inventario viejo. Era **puramente informativo** desde el 20-jul (prod
+// dejó de clasificar nuevas/existentes; ver el comentario de `nuevas` abajo) y nadie consumía ni
+// `existentes_urls` ni `resumen.prod` del JSON de salida — verificado en todo el repo.
+// Se retira porque el `if (error) process.exit(1)` de esa lectura **abortaba la captura entera**:
+// el día que `propiedades_v2` se renombre a archivo, las 4 routines nocturnas dejaban de capturar
+// y nos enterábamos por el log de la mañana. Una atadura a una tabla congelada desde el 28-jul
+// que podía frenar el pipeline vivo.
 // SHADOW (venta): lo que el híbrido YA cargó (existentes migradas + nuevas con id 8M)
 // 🔒 FILTRADO POR ZONA (28-jul-2026). Antes se leía TODO shadow sin filtrar, porque shadow
 // era ~100% Equipetrol y daba igual. Con una segunda zona adentro eso se vuelve destructivo:
@@ -188,7 +187,6 @@ const { data: proyRows, error: errProy } = await sb.from('proyectos_detectados')
 if (errProy) { console.error('   ERROR leyendo proyectos_detectados:', errProy.message); process.exit(1); }
 const proyUrls = new Set((proyRows || []).map((r) => r.url));
 
-const dbUrls = new Set(dbRows.map((r) => r.url));
 const shadowUrls = new Set(shadowRows.map((r) => r.url));
 const portalUrls = new Set(portal.map((p) => p.url));
 // NUEVAS = en el portal y NO en shadow (ni multiproyecto ya clasificado). SHADOW-RELATIVO: prod NO
@@ -237,16 +235,11 @@ if (reescritos) {
     log(`      cod ${nv.reemplaza_a.codigo_c21}: id ${nv.reemplaza_a.id} → nueva URL${cruzaZona ? `  ⚠️ cambió de zona (${nv.reemplaza_a.zona_vieja} → ${zonaDe.get(nv.url)}), revisar` : ''}`);
   }
 }
-// existentes-en-prod: informativo (no afecta la captura; prod ya no clasifica). Útil solo para ver
-// cuánto del portal coincide con el inventario viejo mientras n8n siga vivo.
-const existentes = portal.filter((p) => dbUrls.has(p.url));
 // DESAPARECIDAS = activas en SHADOW no vistas en el portal (lo del híbrido; NO la stale de prod)
 const desaparecidas = shadowRows.filter((r) => r.es_activa && !portalUrls.has(r.url));
-const dbActivas = dbRows.filter((r) => r.es_activa).length;
 const shadowActivas = shadowRows.filter((r) => r.es_activa).length;
-log(`   → shadow venta: ${shadowRows.length} (${shadowActivas} activas) · multiproyecto ya clasificados: ${proyUrls.size} · [info] prod: ${dbRows.length} (${dbActivas} activas)`);
+log(`   → shadow venta: ${shadowRows.length} (${shadowActivas} activas) · multiproyecto ya clasificados: ${proyUrls.size}`);
 log(`   → NUEVAS (portal, NO en shadow ni multiproyecto → se capturan): ${nuevas.length}`);
-log(`   → [info] del portal ya en prod (no afecta la captura): ${existentes.length}`);
 log(`   → desaparecidas (activas en SHADOW, no vistas → verificar): ${desaparecidas.length}\n`);
 
 // ---------- 4. SALIDA ----------
@@ -260,8 +253,8 @@ writeFileSync(outPath, JSON.stringify({
   zona: ZONA.id, zona_nombre: ZONA.nombre, microzonas: ZONA.zonas,
   resumen: {
     portal_bbox: portalBbox.length, portal_zona: portal.length,
-    prod: dbRows.length, prod_activas: dbActivas, shadow: shadowRows.length, shadow_activas: shadowActivas,
-    nuevas: nuevas.length, existentes: existentes.length, desaparecidas: desaparecidas.length,
+    shadow: shadowRows.length, shadow_activas: shadowActivas,
+    nuevas: nuevas.length, desaparecidas: desaparecidas.length,
     slug_reescrito_c21: reescritos,
     por_fuente: {
       c21: portal.filter((p) => p.fuente === 'century21').length,
@@ -269,13 +262,12 @@ writeFileSync(outPath, JSON.stringify({
     },
   },
   nuevas: nuevas.map((p) => ({ url: p.url, fuente: p.fuente, lat: p.lat, lon: p.lon, zona: zonaDe.get(p.url), precio_usd: p.precio_usd, dorms: p.dorms, fecha_alta: p.fecha_alta ?? null, ...(p.reemplaza_a ? { reemplaza_a: p.reemplaza_a } : {}) })),
-  existentes_urls: existentes.map((p) => p.url),
   desaparecidas: desaparecidas.map((r) => ({ id: r.id, url: r.url, zona: r.zona })),
 }, null, 2), 'utf8');
 
 log('='.repeat(64));
 log(`  DRY-RUN listo. NO se escribió nada a la BD.  ·  zona: ${ZONA.nombre}`);
 log(`  Portal: ${portal.length} (${ZONA.zonas.length} microzonas) · shadow venta activas (${ZONA.nombre}): ${shadowActivas}`);
-log(`  Nuevas (ni prod ni shadow): ${nuevas.length}${reescritos ? ` (${reescritos} son slug reescrito por C21 → reemplazan a una existente)` : ''} · Desaparecidas del híbrido a verificar: ${desaparecidas.length}`);
+log(`  Nuevas (no están en shadow): ${nuevas.length}${reescritos ? ` (${reescritos} son slug reescrito por C21 → reemplazan a una existente)` : ''} · Desaparecidas del híbrido a verificar: ${desaparecidas.length}`);
 log(`  💾 ${outPath}`);
 log(`  📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy — se descuenta de los GB)' : ' (IP directa, $0)'}\n`);

@@ -102,7 +102,21 @@ async function traerLote() {
   if (idsArg) { const { data, error } = await q.in('id', idsArg); if (error) throw error; return data; }
   q = q.in('zona', ZONAS_EQ).eq('status', 'completado').eq('es_activa', true)
     .not('datos_json_enrichment->>agente_telefono', 'is', null).order('id', { ascending: false }).limit(600);
-  const { data, error } = await q; if (error) throw error;
+  const { data, error } = await q;
+  // El `--prep` es el barrido DESDE PROD (el drenado del inventario viejo de n8n). El ciclo
+  // nocturno NO lo usa desde el 20-jul: captura solo NUEVAS contra el portal (shadow-relativo).
+  // Si `propiedades_v2` ya no existe (archivada en el cutover), este modo no tiene sentido —
+  // se dice explícito en vez de morir con un error de Postgres que no explica nada.
+  if (error) {
+    if (/relation .*propiedades_v2.* does not exist|schema cache/i.test(error.message || '')) {
+      throw new Error(
+        '`--prep` lee de `propiedades_v2` (la base vieja) y ya no está disponible.\n' +
+        '   El barrido desde prod se retiró: el inventario se captura del PORTAL con `--nuevas`.\n' +
+        '   Si necesitás una prop puntual del archivo, usá `--ids` contra `propiedades_v2_archivo`.'
+      );
+    }
+    throw error;
+  }
   // Excluir los ya cargados en shadow → los lotes sucesivos AVANZAN sobre deptos nuevos.
   const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('id');
   // + los multiproyecto YA detectados (van a proyectos_detectados, NO a shadow ni a rechazados) —

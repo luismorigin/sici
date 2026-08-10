@@ -135,17 +135,11 @@ log(`   → ${portal.length} deptos en las ${ZONA.zonas.length} microzonas (${po
 // ---------- 3. DIFF (SELECT-only, SOLO alquiler) — SHADOW-AWARE ----------
 // El híbrido vive en SHADOW: NUEVAS excluyen lo ya cargado en shadow (sin esto se reprocesan cada
 // corrida); DESAPARECIDAS se miden contra SHADOW, no contra prod (prod acumula stale → ruido).
-log('3) Diff SHADOW-AWARE alquiler (prod clasifica nuevas/existentes; shadow filtra ya-cargadas + mide desaparecidas)…');
-const dbRows = [];
-for (let from = 0; ; from += 1000) {
-  const { data, error } = await sb.from('propiedades_v2')
-    .select('url, es_activa').eq('tipo_operacion', 'alquiler')
-    .ilike('tipo_propiedad_original', 'departamento')
-    .in('zona', [...ZONAS_EQ]).range(from, from + 999);
-  if (error) { console.error('   ERROR leyendo prod:', error.message); process.exit(1); }
-  dbRows.push(...data);
-  if (data.length < 1000) break;
-}
+log('3) Diff SHADOW-AWARE alquiler (shadow filtra ya-cargadas + mide desaparecidas)…');
+// 🔌 DESENGANCHADO DE PROD (10-ago-2026) — gemelo del de venta y por el mismo motivo: la lectura
+// de `propiedades_v2` era informativa (prod dejó de clasificar el 20-jul) pero su
+// `if (error) process.exit(1)` **abortaba la captura entera**. Con la tabla vieja congelada desde
+// el 28-jul y a punto de archivarse, era una atadura que podía frenar el pipeline vivo.
 // SHADOW (alquiler): lo que el híbrido YA cargó (existentes migradas + nuevas con id 8M)
 // 🔒 FILTRADO POR ZONA (28-jul-2026) — gemelo del de venta y por el mismo motivo: las
 // `desaparecidas` son las que están en shadow y este crawl no vio, así que sin filtro el
@@ -176,7 +170,6 @@ const { data: proyRows, error: errProy } = await sb.from('proyectos_detectados')
 if (errProy) { console.error('   ERROR leyendo proyectos_detectados:', errProy.message); process.exit(1); }
 const proyUrls = new Set((proyRows || []).map((r) => r.url));
 
-const dbUrls = new Set(dbRows.map((r) => r.url));
 const shadowUrls = new Set(shadowRows.map((r) => r.url));
 const portalUrls = new Set(portal.map((p) => p.url));
 // NUEVAS = en el portal y NO en shadow (ni multiproyecto). SHADOW-RELATIVO: prod NO clasifica (mismo
@@ -213,13 +206,10 @@ if (reescritos) {
   }
 }
 
-const existentes = portal.filter((p) => dbUrls.has(p.url));  // informativo (prod ya no clasifica)
 const desaparecidas = shadowRows.filter((r) => r.es_activa && !portalUrls.has(r.url)); // activas en SHADOW
-const dbActivas = dbRows.filter((r) => r.es_activa).length;
 const shadowActivas = shadowRows.filter((r) => r.es_activa).length;
-log(`   → shadow alquiler: ${shadowRows.length} (${shadowActivas} activas) · multiproyecto ya clasificados: ${proyUrls.size} · [info] prod: ${dbRows.length} (${dbActivas} activas)`);
+log(`   → shadow alquiler: ${shadowRows.length} (${shadowActivas} activas) · multiproyecto ya clasificados: ${proyUrls.size}`);
 log(`   → NUEVAS (portal, NO en shadow ni multiproyecto → se capturan): ${nuevas.length}`);
-log(`   → [info] del portal ya en prod (no afecta la captura): ${existentes.length}`);
 log(`   → desaparecidas (activas en SHADOW, no vistas → verificar): ${desaparecidas.length}\n`);
 
 // ---------- 4. SALIDA ----------
@@ -231,8 +221,8 @@ writeFileSync(outPath, JSON.stringify({
   zona: ZONA.id, zona_nombre: ZONA.nombre, microzonas: ZONA.zonas,
   resumen: {
     portal_bbox: portalBbox.length, portal_zona: portal.length,
-    prod: dbRows.length, prod_activas: dbActivas, shadow: shadowRows.length, shadow_activas: shadowActivas,
-    nuevas: nuevas.length, existentes: existentes.length, desaparecidas: desaparecidas.length,
+    shadow: shadowRows.length, shadow_activas: shadowActivas,
+    nuevas: nuevas.length, desaparecidas: desaparecidas.length,
     por_fuente: {
       c21: portal.filter((p) => p.fuente === 'century21').length,
       remax: portal.filter((p) => p.fuente === 'remax').length,
@@ -240,13 +230,12 @@ writeFileSync(outPath, JSON.stringify({
   },
   // precio_raw + moneda = el CRUDO del listado (para el cargador --nuevas: alquiler NUNCA usa el precio_usd derivado)
   nuevas: nuevas.map((p) => ({ url: p.url, fuente: p.fuente, lat: p.lat, lon: p.lon, zona: zonaDe.get(p.url), precio_raw: p.precio_raw, moneda: p.moneda, precio_usd: p.precio_usd, dorms: p.dorms, fecha_alta: p.fecha_alta ?? null, ...(p.reemplaza_a ? { reemplaza_a: p.reemplaza_a } : {}) })),
-  existentes_urls: existentes.map((p) => p.url),
   desaparecidas: desaparecidas.map((r) => ({ id: r.id, url: r.url, zona: r.zona })),
 }, null, 2), 'utf8');
 
 log('='.repeat(64));
 log(`  DRY-RUN listo. NO se escribió nada a la BD.`);
 log(`  Portal: ${portal.length} (${ZONA.zonas.length} microzonas) · shadow alquiler activas (${ZONA.nombre}): ${shadowActivas}`);
-log(`  Nuevas (ni prod ni shadow): ${nuevas.length}${reescritos ? ` (${reescritos} son slug reescrito por C21 → reemplazan a una existente)` : ''} · Desaparecidas del híbrido a verificar: ${desaparecidas.length}`);
+log(`  Nuevas (no están en shadow): ${nuevas.length}${reescritos ? ` (${reescritos} son slug reescrito por C21 → reemplazan a una existente)` : ''} · Desaparecidas del híbrido a verificar: ${desaparecidas.length}`);
 log(`  💾 ${outPath}`);
 log(`  📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy — se descuenta de los GB)' : ' (IP directa, $0)'}\n`);

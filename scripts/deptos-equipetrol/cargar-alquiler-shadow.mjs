@@ -110,7 +110,20 @@ async function traerLote() {
   if (idsArg) { const { data, error } = await q.in('id', idsArg); if (error) throw error; return data; }
   q = q.in('zona', ZONAS_EQ).eq('status', 'completado').eq('es_activa', true)
     .order('id', { ascending: false }).limit(600);
-  const { data, error } = await q; if (error) throw error;
+  const { data, error } = await q;
+  // Gemelo del cargador de venta (10-ago-2026): `--prep` es el barrido DESDE PROD, que el ciclo
+  // nocturno no usa desde el 20-jul. Si la base vieja ya no está, se dice por qué en vez de morir
+  // con un error de Postgres.
+  if (error) {
+    if (/relation .*propiedades_v2.* does not exist|schema cache/i.test(error.message || '')) {
+      throw new Error(
+        '`--prep` lee de `propiedades_v2` (la base vieja) y ya no está disponible.\n' +
+        '   El barrido desde prod se retiró: el inventario se captura del PORTAL con `--nuevas`.\n' +
+        '   Si necesitás una prop puntual del archivo, usá `--ids` contra `propiedades_v2_archivo`.'
+      );
+    }
+    throw error;
+  }
   const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('id').eq('tipo_operacion', 'alquiler');
   const cargados = new Set([...(yaEn || []).map((r) => r.id), ...leerRechazados(REJ_FILE).ids]);
   const frescos = data.filter((d) => !cargados.has(d.id));
