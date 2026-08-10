@@ -226,6 +226,68 @@ viven los 33 matches de condominio, el crudo histórico y 22k filas de `precios_
 
 ⏸️ **Estado al 10-ago: sin decidir por el founder.** Nada de esto está aplicado.
 
+## 7-bis. TIEMPO 1 — goal, predicción y evals (listo para ejecutar)
+
+### Goal
+**Que el sistema declare por sí mismo quién todavía depende de la base vieja, y que ninguna pieza
+pueda leerla creyendo que es la buena.**
+**NO es el goal** (y no se toca): arreglar el admin, cambiar la fórmula de precios, unificar nombres,
+tocar casas. Todo eso viene después, con la lista en la mano.
+
+### Pre-requisitos — ✅ los dos cumplidos el 10-ago
+- **Paso 0** (routines sueltas de la base vieja), probado con las 4 capturas a mano + el
+  `verificar-shadow-alquiler`. Commit `45b6278`.
+- **mig 317** aplicada y verificada (escritura anónima cerrada).
+
+### Predicción — se firma ANTES de ejecutar
+Sin esto no hay eval, solo una racionalización a posteriori.
+
+| **SE ROMPE** (pide la tabla por su nombre) | **NO SE ROMPE** (llega por otro camino) |
+|---|---|
+| Admin de propiedades y de proyectos, `/admin/alquileres`, supervisor/matching | Feeds `/ventas` y `/alquileres` (RPC `_shadow`) |
+| `/admin/market`, `/admin/salud` | Home, `/sobre-simon`, `/whatsapp` |
+| Estudios de mercado (`estudio-mercado/src/db.ts`) | `/mercado/equipetrol/*` |
+| CMA del broker + creación de shortlists (`buscar_unidades_reales`) | Bot de WhatsApp (vistas `_shadow`, RPC DEFINER) |
+| Las 3 lecturas de `lib/supabase.ts` (2 muertas + `/landing-v2`) | ACM (`acm-pool`, `acm-buscar`) |
+| Las ~70 funciones SQL de n8n, **incluidas las 6 que el sitio usa** | **Las 5 routines** (paso 0, ya probado) |
+| `reconstruir_serie_precios_reexpresada` → se repunta en la misma operación | **`/ventas/casas`**: su vista queda pegada al archivo por OID |
+
+### Evals
+1. **🔴 Nada de cara al cliente se movió** *(el único que manda)*. Medida: feeds, home, mercado, bot,
+   ACM y shortlists devuelven **los mismos conteos** que la foto previa. No alcanza el HTTP 200: se
+   cuentan propiedades con precio, como se hizo con la mig 317.
+2. **Las routines siguen capturando.** Medida: correr las 4 capturas a mano después del renombrado y
+   comparar contra los números de hoy (Eq venta 516/15 · Eq alq 189/5 · ZN venta 475/15 · ZN alq 122/8).
+3. **Lo que se rompió coincide con lo predicho.** Es el eval del *entendimiento*, no del cambio:
+   - coincide → el mapa era correcto
+   - se rompió algo **no** predicho → **es el hallazgo que justifica el ejercicio**, no un fracaso
+   - **no** se rompió algo predicho → había menos dependencias de las que creíamos
+4. **Nadie llega a la vieja por defecto.** Todo acceso que quede es explícito y con el nombre `_archivo`.
+
+### Criterio de aborto
+Solo el **eval 1**. Si cae una superficie de cara al cliente → `ALTER TABLE ... RENAME` inverso en el
+momento y se investiga con calma. Los evals 2, 3 y 4 **no** justifican revertir: son información.
+
+### Qué queda al terminar
+La lista **verificada** (no leída) de todo lo que depende de la base vieja. Con eso, el trabajo
+intermedio deja de ser una estimación y pasa a ser una tarea acotada.
+
+## 7-ter. TIEMPO 2 — goal y condición de entrada (los pasos NO se escriben todavía)
+
+**Goal:** una sola base de propiedades, con el nombre obvio, y **ninguna fórmula vieja viva** que
+pueda leerla.
+
+**Por qué no se planifica ahora:** sus pasos dependen de lo que revele el tiempo 1. Escribirlos hoy
+sería planificar sobre una hipótesis — el error que este documento corrige (tres planes distintos el
+10-ago, cada uno apoyado en información sin verificar).
+
+**Condición de entrada — se arranca solo si se cumplen TODAS:**
+1. Cero referencias vivas al nombre `propiedades_v2` fuera de las que apunten explícitamente a `_archivo`.
+2. `buscar_unidades_reales` y `buscar_extras`: **apagadas o repunteadas al régimen nuevo** (§6a).
+3. Secuencia de id ligada a la tabla nueva y arrancada por encima de 9.000.000 (§6d).
+4. Admin apuntado a la base buena **y** cargadores respetando `campos_bloqueados` (§6c).
+5. Una semana de routines verdes después del tiempo 1.
+
 ## 8. Qué implica para el crecimiento (deptos ZN → casas/terrenos → ciudad)
 - **Una sola tabla discriminada por tipo y zona** ya es el patrón que funciona. La próxima vertical se
   construye **dentro** de la base principal con su propio spec de lectura, **no en otra tabla
