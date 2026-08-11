@@ -7,6 +7,12 @@ import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { normalizarPrecio } from '@/lib/precio-utils'
 import { ZONAS_ADMIN_FILTER, getZonaLabel } from '@/lib/zonas'
 
+// 🔴 La tabla VIVA. Gemela de la constante de `hooks/usePropertyEditor.ts` — este listado y el
+// editor tienen que apuntar SIEMPRE a la misma, o entrás a editar una propiedad que el listado
+// no muestra (o al revés). En el TIEMPO 2 del cutover vuelve a llamarse `propiedades_v2`: se
+// cambia en los dos lugares. Contexto: `scripts/deptos-equipetrol/INVENTARIO_CUTOVER_2026-08-10.md`.
+const TABLA_PROPIEDADES = 'propiedades_v2_shadow'
+
 // Supabase RPC/query results — no codegen, typed at usage boundaries
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseRow = Record<string, any>
@@ -301,7 +307,7 @@ export default function AdminPropiedades() {
         const ids = busquedaId.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n))
         if (ids.length > 0) {
           const { data: propsData, error: propsErr } = await supabase
-            .from('propiedades_v2')
+            .from(TABLA_PROPIEDADES)
             .select('id, nombre_edificio, zona, dormitorios, banos, precio_usd, precio_mensual_bob, precio_mensual_usd, tipo_operacion, area_total_m2, datos_json, url, fuente, campos_bloqueados, id_proyecto_master, fecha_publicacion, estado_construccion, estacionamientos, baulera, precio_usd_original, moneda_original, tipo_cambio_detectado, tipo_cambio_usado, piso, plan_pagos_desarrollador, acepta_permuta, solo_tc_paralelo, precio_negociable, descuento_contado_pct, parqueo_incluido, parqueo_precio_adicional, baulera_incluido, baulera_precio_adicional')
             .in('id', ids)
 
@@ -357,7 +363,7 @@ export default function AdminPropiedades() {
       // Path directo para alquileres sin proyecto (bypass RPC que usa INNER JOIN)
       if (tipoOperacion === 'alquiler' && soloHuerfanas) {
         let query = supabase
-          .from('propiedades_v2')
+          .from(TABLA_PROPIEDADES)
           .select('id, nombre_edificio, zona, microzona, dormitorios, banos, precio_usd, precio_mensual_usd, precio_mensual_bob, area_total_m2, datos_json, datos_json_enrichment, datos_json_discovery, url, fuente, campos_bloqueados, id_proyecto_master, fecha_publicacion, estado_construccion, estacionamientos, baulera, score_calidad_dato, latitud, longitud, es_multiproyecto, tipo_propiedad_original')
           .eq('tipo_operacion', 'alquiler')
           .eq('status', 'completado')
@@ -480,7 +486,7 @@ export default function AdminPropiedades() {
 
       if (ids.length > 0) {
         const { data: propiedadesData, error: propsError } = await supabase
-          .from('propiedades_v2')
+          .from(TABLA_PROPIEDADES)
           .select('id, campos_bloqueados, fuente, precio_usd_original, moneda_original, tipo_cambio_detectado, tipo_cambio_usado, id_proyecto_master, fecha_publicacion')
           .in('id', ids)
 

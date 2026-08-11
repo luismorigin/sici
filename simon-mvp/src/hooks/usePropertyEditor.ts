@@ -13,6 +13,21 @@ import {
   ESTADO_CONSTRUCCION, MOMENTOS_PAGO, CAMPOS_BLOQUEABLES,
 } from '@/config/propiedad-constants'
 
+/**
+ * 🔴 LA TABLA VIVA — un solo lugar, a propósito.
+ *
+ * Hasta el 11-ago-2026 este editor leía y escribía `propiedades_v2`, que desde el 21-jul es la
+ * base que NADIE consulta: el sitio, el bot y el ACM leen la del híbrido. O sea que corregir un
+ * precio, un GPS o poner un candado acá **no cambiaba nada** en simonbo.com, y sin dar ningún
+ * error. Con el TIEMPO 1 del cutover esa tabla pasó a llamarse `propiedades_v2_archivo` y el
+ * editor empezó a fallar — que es como se descubrió del todo.
+ *
+ * Va en una constante y no repetido en 8 llamadas porque en el TIEMPO 2 la tabla viva recupera
+ * el nombre `propiedades_v2`: ese día se cambia ACÁ, una línea, y no se busca por el archivo.
+ * Contexto: `scripts/deptos-equipetrol/INVENTARIO_CUTOVER_2026-08-10.md`.
+ */
+const TABLA_PROPIEDADES = 'propiedades_v2_shadow'
+
 const INITIAL_FORM: FormData = {
   tipo_operacion: 'venta',
   proyecto_nombre: '',
@@ -77,6 +92,11 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
 
   // TC Paralelo
   const [tcParaleloActual, setTcParaleloActual] = useState<number | null>(null)
+
+  // Zona REAL del GPS del formulario (la que dicen los polígonos, no la elegida en el selector).
+  // Se recalcula cuando el usuario mueve el GPS y la usa `validarFormulario` para avisar si el
+  // selector de microzona quedó apuntando a otra cosa. `null` = todavía sin consultar o sin GPS.
+  const [zonaRealDelGps, setZonaRealDelGps] = useState<string | null>(null)
 
   // Gallery
   const [fotos, setFotos] = useState<string[]>([])
@@ -177,7 +197,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
     setLoading(true)
     try {
       const [propResult, tcResult] = await Promise.all([
-        supabase.from('propiedades_v2').select('*').eq('id', id).single(),
+        supabase.from(TABLA_PROPIEDADES).select('*').eq('id', id).single(),
         supabase.from('config_global').select('valor').eq('clave', 'tipo_cambio_paralelo').single(),
       ])
 
@@ -333,6 +353,26 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
     fetchPropiedad()
     fetchHistorial()
   }
+
+  // Consulta la zona REAL del GPS que hay en el formulario, con debounce (el GPS se tipea).
+  // No toca el selector: solo alimenta el aviso de `validarFormulario`. Decidir por el usuario
+  // sería peor — el mismo criterio del audit nocturno: reportar, no desconectar.
+  useEffect(() => {
+    const lat = parseFloat(formData.latitud)
+    const lon = parseFloat(formData.longitud)
+    if (!supabase || !Number.isFinite(lat) || !Number.isFinite(lon) || lat === 0 || lon === 0) {
+      setZonaRealDelGps(null)
+      return
+    }
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await supabase!.rpc('get_zona_by_gps', { p_lat: lat, p_lon: lon })
+        const z = Array.isArray(data) ? (data[0]?.zona ?? null) : (data ?? null)
+        setZonaRealDelGps(typeof z === 'string' && z ? z : null)
+      } catch { setZonaRealDelGps(null) }
+    }, 600)
+    return () => clearTimeout(t)
+  }, [formData.latitud, formData.longitud])
 
   // ---- Auto-detect zona from project GPS ----
 
@@ -681,12 +721,20 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
       if (fechaEntrega < hoy) errors.push(`Fecha de entrega (${formData.fecha_entrega}) no puede ser anterior a hoy para preventa/construcción`)
     }
 
+    // GPS: se compara contra los POLÍGONOS reales (`get_zona_by_gps`), no contra un rectángulo.
+    // El chequeo anterior tenía el bounding box de Equipetrol hardcodeado: desde que el editor
+    // apunta a la base viva —que incluye Zona Norte— habría gritado "fuera de Equipetrol" en las
+    // ~380 props de ZN, todas las veces. Un aviso que siempre suena deja de leerse.
     const lat = parseFloat(formData.latitud) || 0
     const lon = parseFloat(formData.longitud) || 0
     if (lat !== 0 && lon !== 0) {
-      const B = { latMin: -17.775, latMax: -17.750, lonMin: -63.205, lonMax: -63.185 }
-      if (lat < B.latMin || lat > B.latMax || lon < B.lonMin || lon > B.lonMax) {
-        warnings.push(`GPS (${lat.toFixed(6)}, ${lon.toFixed(6)}) parece estar fuera de Equipetrol`)
+      const microzonaElegida = MICROZONA_ID_TO_DB[formData.microzona] || formData.microzona
+      if (zonaRealDelGps === null) {
+        warnings.push(`GPS (${lat.toFixed(6)}, ${lon.toFixed(6)}) cae fuera de todas las zonas conocidas — verificar que sea correcto`)
+      } else if (zonaRealDelGps !== microzonaElegida) {
+        // Avisa, NO corrige: el selector puede estar bien a propósito (el pin del portal
+        // suele ser del captador y no del edificio — ver la superficie 5 del audit).
+        warnings.push(`El GPS cae en "${zonaRealDelGps}" pero la microzona elegida es "${microzonaElegida}". Si moviste el GPS, revisá el selector.`)
       }
     }
 
@@ -856,7 +904,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
         }
       }
 
-      const { error: updateError } = await supabase.from('propiedades_v2').update(updateData).eq('id', id)
+      const { error: updateError } = await supabase.from(TABLA_PROPIEDADES).update(updateData).eq('id', id)
       if (updateError) throw new Error(updateError.message)
 
       setSuccess(true)
@@ -901,7 +949,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
         }
       }
       const { error } = await supabase
-        .from('propiedades_v2')
+        .from(TABLA_PROPIEDADES)
         .update({ campos_bloqueados: Object.keys(nuevosCandados).length > 0 ? nuevosCandados : null })
         .eq('id', id)
       if (error) throw error
@@ -924,7 +972,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
       const nuevosCandados = { ...originalData.campos_bloqueados }
       delete nuevosCandados[campo]
       const { error } = await supabase
-        .from('propiedades_v2')
+        .from(TABLA_PROPIEDADES)
         .update({ campos_bloqueados: Object.keys(nuevosCandados).length > 0 ? nuevosCandados : null })
         .eq('id', id)
       if (error) throw error
@@ -944,7 +992,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
     if (!supabase || !id || !originalData) return
     if (!confirm('¿Desbloquear todos los campos? Esto permitirá que el merge nocturno los sobrescriba.')) return
     try {
-      const { error } = await supabase.from('propiedades_v2').update({ campos_bloqueados: null }).eq('id', id)
+      const { error } = await supabase.from(TABLA_PROPIEDADES).update({ campos_bloqueados: null }).eq('id', id)
       if (error) throw error
       await supabase.from('propiedades_v2_historial').insert({
         propiedad_id: parseInt(id as string), usuario_tipo: 'admin', usuario_id: 'admin-panel',
@@ -978,7 +1026,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
       if (originalData?.campos_bloqueados) {
         const nuevosCandados = { ...originalData.campos_bloqueados }
         camposADesbloquear.forEach(campo => delete nuevosCandados[campo])
-        await supabase.from('propiedades_v2')
+        await supabase.from(TABLA_PROPIEDADES)
           .update({ campos_bloqueados: Object.keys(nuevosCandados).length > 0 ? nuevosCandados : null })
           .eq('id', id)
       }
@@ -1005,12 +1053,12 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
         if (detalle.amenidades_sincronizadas) camposABloquear.push('amenities')
         if (detalle.equipamiento_sincronizado) camposABloquear.push('equipamiento')
 
-        const { data: propActual } = await supabase.from('propiedades_v2').select('campos_bloqueados').eq('id', id).single()
+        const { data: propActual } = await supabase.from(TABLA_PROPIEDADES).select('campos_bloqueados').eq('id', id).single()
         const nuevosCandadosPost = { ...(propActual?.campos_bloqueados || {}) }
         camposABloquear.forEach(campo => {
           nuevosCandadosPost[campo] = { bloqueado: true, fecha: new Date().toISOString(), fuente: 'sync_proyecto_master' }
         })
-        await supabase.from('propiedades_v2').update({ campos_bloqueados: nuevosCandadosPost }).eq('id', id)
+        await supabase.from(TABLA_PROPIEDADES).update({ campos_bloqueados: nuevosCandadosPost }).eq('id', id)
       }
 
       await fetchPropiedad()

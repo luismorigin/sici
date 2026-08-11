@@ -27,8 +27,14 @@ export default function LockPanel({ camposBloqueados, originalData, formatFecha,
           🔓 Desbloquear todos
         </button>
       </div>
+      {/* El texto anterior decía "protegidos del merge nocturno". Ese merge era del pipeline n8n,
+          apagado el 28-jul-2026: prometía una protección que había cambiado de dueño. Hoy quien
+          podría pisar el valor es la RE-LECTURA del cron híbrido (la captura normal solo agrega
+          propiedades nuevas, no toca las existentes), y desde el 11-ago los cargadores respetan
+          el candado. Ver docs/backlog/ADMIN_ANALISIS_2026-08-11.md */}
       <p className="text-sm text-purple-600 mb-3">
-        Los campos bloqueados están protegidos del merge nocturno. Al desbloquear, el merge podrá sobrescribirlos.
+        Lo que bloquees queda protegido cuando el sistema vuelve a leer el anuncio: tu valor gana sobre
+        el del portal. Al desbloquear, la próxima lectura vuelve a mandar.
       </p>
       <div className="grid grid-cols-2 gap-2">
         {camposBloqueados.map(campo => {
