@@ -80,14 +80,64 @@ Se mide **antes** para poder afirmar que se rompió por el renombrado y no que y
 | `trg_separar_hitl_por_macrozona` | sobre `matching_sugerencias` (sin escrituras) | se deja; riesgo bajo |
 | `pg_cron` — 3 jobs activos | ninguno toca la tabla | ✅ no deberían verse afectados |
 
-## E) Veredicto (se completa después de ejecutar)
+## E) VEREDICTO — ejecutado el 11-ago-2026
+
+**SQL aplicado por el founder:** trigger del TC desactivado + `propiedades_v2` → `propiedades_v2_archivo`
++ `reconstruir_serie_precios_reexpresada` repunteada al archivo. Todo en una transacción.
 
 | Eval | Resultado |
 |---|---|
-| 1 · Superficies de cara al cliente idénticas | ⬜ |
-| 2 · Las 4 capturas corren | ⬜ |
-| 3 · Lo roto coincide con lo predicho | ⬜ |
-| 4 · Nadie llega a la vieja por defecto | ⬜ |
+| 1 · Superficies de cara al cliente idénticas | ✅ **PASA** |
+| 2 · Las 4 capturas corren | ✅ **PASA** |
+| 3 · Lo roto coincide con lo predicho | ✅ **PASA** |
+| 4 · Nadie llega a la vieja por defecto | ✅ **PASA** |
 
-**Lista de lo que se rompió y NO estaba predicho** (el hallazgo que justifica el ejercicio):
-_(vacío hasta ejecutar)_
+### Eval 1 — medido contra la foto previa, valor por valor
+
+| Superficie | Previo | Post | |
+|---|---|---|---|
+| Feed ventas (en vivo) | 354 | **354** | ✅ |
+| Feed alquileres (en vivo) | 182 | **182** | ✅ |
+| Las 6 páginas públicas | 200 · pesos anotados | **200 · pesos idénticos byte a byte** | ✅ |
+| Bot venta | 391 · 97.510 | **391 · 97.510** | ✅ |
+| Bot alquiler | 168 · 4.250 | **168 · 4.250** | ✅ |
+| Vistas prod `v_mercado_*` | 800 / 271 / 100 | **800 / 271 / 100** | ✅ |
+| Vistas shadow | 749 / 286 | **749 / 286** | ✅ |
+| Archivo / base nueva | 3.695 / 1.479 | **3.695 / 1.479** | ✅ |
+
+🔑 **`/ventas/casas` sobrevivió** — era el control de la teoría de que las vistas se ligan por **OID y
+no por nombre**. Media predicción se apoyaba en eso. Confirmada.
+
+### Eval 2 — las 4 capturas, corridas DESPUÉS del renombrado
+
+| Captura | Previo (en zona) | Post | Nuevas | Desaparecidas | |
+|---|---|---|---|---|---|
+| Venta Equipetrol | 518 | **525** | 8 | 30 | ✅ |
+| Alquiler Equipetrol | 188 | **189** | 0 | 23 | ✅ |
+| Venta Zona Norte | 472 | **463** | 9 | 36 | ✅ |
+| Alquiler Zona Norte | 123 | **122** | 4 | 8 | ✅ |
+
+Cero errores, cero abortos. Las diferencias son el movimiento del portal en ~5 h — lo que se
+compara es que **corran completas**, no que den el mismo número.
+🔑 Sin el **paso 0** las cuatro habrían abortado acá (`if (error) process.exit(1)` leyendo la tabla
+vieja) y el sistema habría pasado la noche sin capturar.
+
+### Eval 3 — se rompió lo predicho, y solo lo predicho
+
+| Pieza | Esperado | Observado |
+|---|---|---|
+| `buscar_unidades_reales` | error | ✅ `relation "propiedades_v2" does not exist` |
+| `buscar_extras` | error | ✅ mismo error |
+| Admin `/admin/propiedades` | error al abrir | ✅ mismo error (verificado por el founder en el navegador) |
+| Vistas de prod | siguen igual | ✅ intactas |
+| Trigger del TC | desactivado | ✅ `tgenabled = 'D'` |
+| Serie de precios | apunta al archivo | ✅ 1 mención al archivo + 1 a shadow |
+
+### 🎯 Lo que se rompió y NO estaba predicho
+
+**NINGUNO.**
+
+Es el resultado que el eval 3 contempla como "el mapa era correcto". Vale anotar por qué llegó a
+serlo: las 4 rondas de análisis, y sobre todo la ronda 4 —que usó `pg_depend` en vez de mi
+imaginación— más el **paso 0**, que sacó de encima la única dependencia que sí habría cortado algo
+vivo (los discoveries abortaban y las 4 capturas nocturnas no habrían corrido).

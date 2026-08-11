@@ -179,6 +179,13 @@ Descubierto el 10-ago al verificar, contra mi propia predicción de que "las rou
 - ✅ Verificado limpio: los 9 scripts de las routines (audit incluido) y las otras 5 RPC que invocan.
 - ✅ Probado con las 4 capturas corridas a mano **antes** de tocar ninguna tabla.
 
+> # ✅ TIEMPO 1 EJECUTADO — 11-ago-2026. Los 4 evals PASAN, cero hallazgos no predichos.
+> Veredicto completo con los números lado a lado: [`FOTO_PREVIA_TIEMPO1_2026-08-11.md`](FOTO_PREVIA_TIEMPO1_2026-08-11.md).
+> Feeds 354/182 idénticos · bot idéntico · las 6 páginas con el mismo peso byte a byte · las 4
+> capturas corrieron · se rompieron exactamente el admin, `buscar_unidades_reales` y `buscar_extras`.
+> **Lo que sigue es el trabajo intermedio** (§7, "Entre los dos tiempos"), ahora con una lista
+> declarada por el sistema y no estimada leyendo código.
+
 **TIEMPO 1 — `propiedades_v2` → `propiedades_v2_archivo`. Nada más.**
 
 > 📎 **En la MISMA operación va el repunte de la serie de precios** (no antes: `_archivo` todavía no
