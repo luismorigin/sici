@@ -252,6 +252,76 @@ Sin esto no hay eval, solo una racionalización a posteriori.
 | Las ~70 funciones SQL de n8n, **incluidas las 6 que el sitio usa** | **Las 5 routines** (paso 0, ya probado) |
 | `reconstruir_serie_precios_reexpresada` → se repunta en la misma operación | **`/ventas/casas`**: su vista queda pegada al archivo por OID |
 
+### 🆕 Ronda 3 de análisis (11-ago, 9 AM) — lo que la predicción NO tenía
+Verificado a pedido del founder ("quiero estar seguro de que tenés el análisis completo"). Apareció
+en los ángulos que **tocan la tabla desde afuera**, que es donde se me escapa siempre:
+
+- 🔴 **`fn_trigger_tc_actualizado` — trigger sobre `config_global`, NO sobre propiedades.** Al
+  actualizar el TC hace `UPDATE propiedades_v2 SET requiere_actualizacion_precio = TRUE`. Sin la
+  tabla, **falla el trigger y con él la actualización del tipo de cambio** — la pieza de la que
+  cuelga todo el sistema de precios. 🔑 **Es maquinaria MUERTA**: el flag lo leen 6 funciones del
+  régimen viejo de recálculo (`recalcular_precios_batch_nocturno` y compañía), apagado desde el
+  19-jun (lo reemplazó `precio_normalizado()` en vivo). Hay 796 filas marcadas que nadie procesa.
+  👉 **Decisión: DESACTIVAR el trigger en el TIEMPO 1** (`ALTER TABLE config_global DISABLE TRIGGER
+  trigger_tc_actualizado;`, reversible con ENABLE). Repuntarlo al archivo sería mantener vivo un
+  mecanismo muerto escribiendo en un archivo.
+- 🟠 **`v_amenities_proyecto`** (vista MATERIALIZADA) lee la tabla vieja. **Nadie la consulta** en
+  todo el código — es huérfana. Riesgo: si algo intenta refrescarla, falla.
+- 🟠 **`trg_separar_hitl_por_macrozona`** sobre `matching_sugerencias` (cola del régimen viejo, sin
+  escrituras desde que n8n se apagó). Riesgo bajo.
+- ✅ **`pg_cron`: 3 jobs activos, NINGUNO toca la tabla** — `advisor-snapshot-diario` (9:15),
+  `vigilar-bot-wa` (cada 3 min) y `parte-diario-bot` (1:00). Era el único ángulo que no podía ver yo
+  (`claude_readonly` no tiene permiso sobre el schema `cron`); lo verificó el founder.
+- ✅ Sin crons de Vercel · ningún otro repo del disco consulta la base (solo `lab-kapso`, ya mapeado).
+
+### 🗺️ Ronda 4 (11-ago) — MAPA DE ÁNGULOS: qué se revisó, no solo qué se encontró
+Las rondas 1-3 buscaron **lo que se me ocurría**, y por eso cada una encontró algo nuevo. Esta ronda
+usa el **catálogo de Postgres como fuente** (`pg_depend`), que enumera dependencias sin depender de
+mi imaginación, más un barrido de código sobre todo el repo.
+
+**Dentro de la base — 12 ángulos, todos cerrados:**
+
+| # | Ángulo | Resultado |
+|---|---|---|
+| 1 | Vistas normales | **14** (`pg_depend` — coinciden exactamente con las mapeadas a mano) |
+| 2 | Vistas materializadas | **2** · `v_amenities_proyecto` lee la vieja y es **huérfana** (0 consumidores) |
+| 3 | Funciones (`prosrc`) | ~70 · **6 las usa el sitio vivo** |
+| 4 | Triggers SOBRE la tabla | **5** (los 2 de zona, amenities, matching alquiler, sync sin-match) |
+| 5 | Triggers sobre OTRAS tablas que la nombran | **2** · 🔴 `trigger_tc_actualizado` (ver ronda 3) |
+| 6 | `pg_cron` | **3 jobs**, ninguno la toca ✅ |
+| 7 | **Foreign keys hacia la tabla** | **5** 🔴 ver abajo |
+| 8 | Reglas (RULES) | ninguna |
+| 9 | Políticas RLS | ninguna definida |
+| 10 | Publicaciones / realtime | ninguna |
+| 11 | Funciones y vistas en OTROS schemas | ninguna |
+| 12 | Secuencias, constraints, índices | siguen a la tabla al renombrar (por OID) |
+
+🔴 **Las 5 FK contradicen lo que este mismo documento afirmaba** ("ninguna tabla tiene FK a
+`propiedades_v2`"). Esa afirmación salió de `information_schema.constraint_column_usage`, que **no
+las mostró**; `pg_constraint` sí. **Lección: para dependencias, el catálogo (`pg_*`), nunca
+`information_schema`.** Las 5 (`matching_sugerencias`, `precios_historial`,
+`propiedades_v2_historial`, `propiedades_excluidas_export`, `sin_match_exportados`) apuntan a
+**tablas muertas**: la escritura más reciente de cualquiera es del **28-jul**. Quedan enganchadas al
+archivo, que es donde viven sus filas → **no bloquean el renombrado**. ⚠️ Sí importan para el trabajo
+intermedio: cuando el admin arreglado escriba historial de props de la base NUEVA, esa FK va a fallar.
+
+**Fuera de la base — 7 ángulos:**
+
+| # | Ángulo | Resultado |
+|---|---|---|
+| 13 | Frontend `simon-mvp` | **19 archivos** (12 en `pages`, 5 en `lib`, 2 en `hooks`) |
+| 14 | Bot `lab-kapso` | **no nombra la tabla** — solo vistas `_shadow` ✅ |
+| 15 | Scripts del repo | **23 archivos** · auditorías 18 · casas-zn 4 · estudios 3 · sonda 1 · llm 1 |
+| 16 | Los 4 scripts del híbrido que la nombran | 2 en modo `--prep` (el cron NO lo usa) + 2 manuales ✅ |
+| 17 | n8n | 28 workflows la escriben — **apagado desde el 28-jul** |
+| 18 | Crons de Vercel | ninguno ✅ |
+| 19 | Otros repos del disco | ninguno ✅ |
+| 20 | **Worktrees** | **2 activos** con copia del código. No corren solos, pero si se ejecuta un script desde ahí usa la tabla vieja |
+
+**Ningún hallazgo nuevo en esta ronda** más allá de las FK (que resultaron inofensivas para este
+paso). Los 3 riesgos reales siguen siendo los de la ronda 3: el trigger del TC, la materializada
+huérfana y el trigger de la cola vieja.
+
 ### Evals
 1. **🔴 Nada de cara al cliente se movió** *(el único que manda)*. Medida: feeds, home, mercado, bot,
    ACM y shortlists devuelven **los mismos conteos** que la foto previa. No alcanza el HTTP 200: se
