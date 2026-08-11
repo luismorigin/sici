@@ -162,49 +162,62 @@ export default function EditarPropiedad() {
                   })()}
                 </div>
 
-                {/* Price display */}
-                <div className={`mt-3 p-3 rounded-lg ${e.formData.tipo_precio === 'usd_paralelo' ? 'bg-green-50' : e.formData.tipo_precio === 'bob' ? 'bg-amber-50' : 'bg-blue-50'}`}>
+                {/* ── PRECIO: los DOS números, cada uno con su rol ───────────────────────────
+                    Arriba, grande, LO QUE VE EL CLIENTE en el feed — el número con el que uno
+                    piensa y el que aparece en simonbo.com. Abajo, de dónde sale: lo que publica
+                    el aviso y con qué TC se convierte.
+                    Antes acá se mostraba un solo número, convertido con el TC viejo (÷6.96), que
+                    NO coincidía con el del feed. Y guardar el crudo a secas tampoco servía: ver
+                    "595.000" sin contexto se lee como un dato mal cargado. */}
+                <div className={`mt-3 p-3 rounded-lg ${e.precioInfo.esBob ? 'bg-amber-50' : e.precioInfo.esTcViejo ? 'bg-orange-50' : 'bg-blue-50'}`}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-2xl font-bold text-slate-900">{e.formatPrecio(e.precioInfo.precio)}</p>
+                      {e.precioInfo.precioDelFeed === null ? (
+                        <p className="text-lg font-bold text-red-600">Sin TC del día — no se puede convertir</p>
+                      ) : (
+                        <p className="text-2xl font-bold text-slate-900">{e.formatPrecio(e.precioInfo.precioDelFeed)}</p>
+                      )}
                       <div className="flex items-center gap-2">
-                        <p className="text-sm text-slate-500">{e.precioM2 > 0 && `${e.formData.tipo_operacion === 'alquiler' ? 'Bs' : '$'}${e.precioM2}/m²`}</p>
+                        <p className="text-sm text-slate-500">
+                          así se ve en el feed
+                          {e.precioM2 > 0 && ` · ${e.formData.tipo_operacion === 'alquiler' ? 'Bs' : '$'}${e.precioM2}/m²`}
+                        </p>
                         {e.getPrecioAlerta().tipo && <span className={`text-xs px-2 py-0.5 rounded ${e.getPrecioAlerta().color}`}>{e.getPrecioAlerta().tipo === 'error' ? '⚠️ Revisar' : '⚠️'}</span>}
                       </div>
                     </div>
                     <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      e.formData.tipo_precio === 'usd_paralelo' ? 'bg-green-100 text-green-700' :
-                      e.formData.tipo_precio === 'bob' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                      e.precioInfo.esBob ? 'bg-amber-100 text-amber-700' :
+                      e.precioInfo.esTcViejo ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
                     }`}>
-                      {e.formData.tipo_precio === 'usd_paralelo' ? 'TC Paralelo' : e.formData.tipo_precio === 'bob' ? 'Bolivianos' : 'USD Oficial'}
+                      {e.precioInfo.esBob ? 'Publicado en Bs' : e.precioInfo.esTcViejo ? 'USD al TC viejo' : 'Publicado en USD'}
                     </div>
                   </div>
 
-                  {/* Normalization info */}
-                  {e.formData.tipo_precio !== 'usd_oficial' && parseFloat(e.formData.precio_publicado) > 0 && (
+                  {/* De dónde sale ese número — solo cuando hubo conversión */}
+                  {e.precioInfo.necesitaConversion && parseFloat(e.formData.precio_publicado) > 0 && (
                     <div className="mt-2 pt-2 border-t border-slate-200/50 text-xs">
-                      <div className={e.formData.tipo_precio === 'usd_paralelo' ? 'text-green-700' : 'text-amber-700'}>
-                        <span className="font-medium">{e.formData.tipo_precio === 'usd_paralelo' ? '✓ Normalizado desde USD paralelo' : '✓ Convertido desde Bolivianos'}</span>
-                        <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-                          <div className={`rounded p-2 ${e.formData.tipo_precio === 'usd_paralelo' ? 'bg-green-100' : 'bg-amber-100'}`}>
-                            <p className="text-[10px] opacity-75">{e.formData.tipo_precio === 'usd_paralelo' ? 'Billete' : 'Precio publicado'}</p>
-                            <p className="font-bold">{e.formData.tipo_precio === 'bob' ? 'Bs. ' : '$'}{Number(e.formData.precio_publicado).toLocaleString()}</p>
-                          </div>
-                          <div className={`rounded p-2 ${e.formData.tipo_precio === 'usd_paralelo' ? 'bg-green-100' : 'bg-amber-100'}`}>
-                            <p className="text-[10px] opacity-75">Fórmula</p>
-                            <p className="font-bold">{e.formData.tipo_precio === 'usd_paralelo' ? `× (${e.tcParaleloActual?.toFixed(2) || '10.5'} / 6.96)` : '÷ 6.96'}</p>
-                          </div>
-                          <div className={`rounded p-2 ${e.formData.tipo_precio === 'usd_paralelo' ? 'bg-green-200' : 'bg-amber-200'}`}>
-                            <p className="text-[10px] opacity-75">{e.formData.tipo_precio === 'usd_paralelo' ? 'En consultas' : 'Normalizado'}</p>
-                            <p className="font-bold">{e.formData.tipo_precio === 'usd_paralelo' ? e.formatPrecio(Math.round((parseFloat(e.formData.precio_publicado) || 0) * (e.tcParaleloActual || 10.5) / 6.96)) : e.formatPrecio(e.calcularPrecioNormalizado())}</p>
-                          </div>
+                      <div className="grid grid-cols-2 gap-2 text-center">
+                        <div className="rounded p-2 bg-white/60">
+                          <p className="text-[10px] opacity-75">El aviso publica</p>
+                          <p className="font-bold">{e.precioInfo.esBob ? 'Bs. ' : '$'}{Number(e.formData.precio_publicado).toLocaleString()}</p>
+                        </div>
+                        <div className="rounded p-2 bg-white/60">
+                          <p className="text-[10px] opacity-75">{e.precioInfo.esBob ? 'TC del día' : 'Anclado a 6,96 → TC del día'}</p>
+                          <p className="font-bold">
+                            {e.precioInfo.tcDelDia
+                              ? (e.precioInfo.esBob ? `÷ ${e.precioInfo.tcDelDia.toFixed(2)}` : `× 6,96 ÷ ${e.precioInfo.tcDelDia.toFixed(2)}`)
+                              : '— sin TC'}
+                          </p>
                         </div>
                       </div>
+                      <p className="mt-2 text-[10px] text-slate-500">
+                        Se guarda el precio del aviso, no la conversión. El feed convierte al leer, con el TC de ese día.
+                      </p>
                     </div>
                   )}
-                  {e.formData.tipo_precio === 'usd_oficial' && (
+                  {e.formData.tipo_precio === 'usd' && e.formData.tipo_operacion !== 'alquiler' && (
                     <div className="mt-2 pt-2 border-t border-slate-200/50 text-xs text-blue-600">
-                      <span className="font-medium">Publicado en USD oficial</span> (sin conversión)
+                      <span className="font-medium">El aviso ya publica en dólares</span> — no hay conversión
                     </div>
                   )}
                 </div>
@@ -404,10 +417,21 @@ export default function EditarPropiedad() {
             <section>
               <h2 className="text-lg font-semibold text-slate-900 mb-4">Precio y Área</h2>
               <div className="space-y-4">
+                {/* No es "tipo de precio": es EN QUÉ MONEDA está publicado el aviso. Esa etiqueta
+                    es lo que se guarda (`tipo_cambio_detectado`) y lo que el lector nocturno ya
+                    completa solo. Las opciones anteriores (USD Oficial / USD Paralelo / Bolivianos
+                    "TC 6.96") describían el régimen de DOS tipos de cambio, que murió cuando Bolivia
+                    los unificó. */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Tipo de precio publicado</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    ¿En qué moneda está publicado el aviso?
+                  </label>
                   <div className="flex gap-2">
-                    {([['usd_oficial', 'blue', 'USD Oficial', 'Sin conversión'], ['usd_paralelo', 'green', 'USD Paralelo', `TC ${e.tcParaleloActual?.toFixed(2) || '~10.5'}`], ['bob', 'amber', 'Bolivianos', 'TC 6.96']] as const).map(([val, color, label, sub]) => (
+                    {([
+                      ['usd', 'blue', 'Dólares', 'se usa tal cual'],
+                      ['bob', 'amber', 'Bolivianos', e.tcParaleloActual ? `÷ ${e.tcParaleloActual.toFixed(2)} al mostrar` : 'sin TC del día'],
+                      ['usd_tc_viejo', 'orange', 'USD al TC viejo', 'el aviso dice 6,96 / "TC 7"'],
+                    ] as const).map(([val, color, label, sub]) => (
                       <button key={val} type="button" onClick={() => e.updateField('tipo_precio', val)}
                         className={`flex-1 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-colors ${e.formData.tipo_precio === val ? `border-${color}-500 bg-${color}-50 text-${color}-700` : 'border-slate-300 text-slate-600 hover:border-slate-400'}`}>
                         <div className="text-center"><span className="block text-lg mb-1">{label}</span><span className="block text-xs opacity-75">{sub}</span></div>
@@ -424,21 +448,17 @@ export default function EditarPropiedad() {
                       placeholder={e.formData.tipo_precio === 'bob' ? 'Ej: 750000' : 'Ej: 99536'} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{e.formData.tipo_precio === 'usd_paralelo' ? 'Se guarda billete directo — normalización en SQL al consultar' : 'Precio normalizado (USD oficial)'}</label>
-                    <div className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-slate-50 text-slate-700 font-bold text-lg">{e.formData.tipo_precio === 'usd_paralelo' ? e.formatPrecio(Math.round((parseFloat(e.formData.precio_publicado) || 0) * (e.tcParaleloActual || 10.5) / 6.96)) : e.formatPrecio(e.calcularPrecioNormalizado())}</div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Así se ve en el feed</label>
+                    <div className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-slate-50 text-slate-700 font-bold text-lg">
+                      {e.precioInfo.precioDelFeed === null
+                        ? <span className="text-red-600 text-base">Falta el TC del día</span>
+                        : e.formatPrecio(e.precioInfo.precioDelFeed)}
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Solo lectura. Se guarda el precio del aviso; la conversión la hace el feed al leer.
+                    </p>
                   </div>
                 </div>
-
-                {e.formData.tipo_precio !== 'usd_oficial' && parseFloat(e.formData.precio_publicado) > 0 && (
-                  <div className={`p-3 rounded-lg text-sm ${e.formData.tipo_precio === 'usd_paralelo' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
-                    <div className="flex items-center gap-2 font-medium mb-2">{e.formData.tipo_precio === 'usd_paralelo' ? 'Precio en consultas de mercado (precio_normalizado SQL)' : 'Conversión Bs. → USD oficial'}</div>
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="bg-white/50 rounded p-2"><p className="text-xs opacity-75">{e.formData.tipo_precio === 'usd_paralelo' ? 'Billete' : 'Publicado'}</p><p className="font-bold">{e.formData.tipo_precio === 'bob' ? 'Bs. ' : '$'}{Number(e.formData.precio_publicado).toLocaleString()}</p></div>
-                      <div className="bg-white/50 rounded p-2"><p className="text-xs opacity-75">Fórmula</p><p className="font-bold text-xs">{e.formData.tipo_precio === 'usd_paralelo' ? `× (${e.tcParaleloActual?.toFixed(2) || '10.5'} / 6.96)` : '÷ 6.96'}</p></div>
-                      <div className="bg-white/80 rounded p-2"><p className="text-xs opacity-75">{e.formData.tipo_precio === 'usd_paralelo' ? 'En consultas' : 'Normalizado'}</p><p className="font-bold">{e.formData.tipo_precio === 'usd_paralelo' ? e.formatPrecio(Math.round((parseFloat(e.formData.precio_publicado) || 0) * (e.tcParaleloActual || 10.5) / 6.96)) : e.formatPrecio(e.calcularPrecioNormalizado())}</p></div>
-                    </div>
-                  </div>
-                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>

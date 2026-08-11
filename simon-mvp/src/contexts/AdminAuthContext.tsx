@@ -59,12 +59,21 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
     let cancelled = false
 
-    // TODO: REMOVER - bypass temporal para preview localhost
+    // Bypass de desarrollo: deja entrar al admin en localhost sin loguearse.
+    // 🔴 AHORA SOLO SI NO HAY SESIÓN REAL (11-ago-2026). Antes cortaba SIEMPRE en desarrollo, y eso
+    // dejaba la pantalla accesible pero **sin sesión de Supabase**: las consultas viajaban como
+    // visitante anónimo. Mientras el admin leía `propiedades_v2` no se notaba (anon tenía SELECT);
+    // desde que la base viva está cerrada al anónimo (mig 317) el editor devuelve
+    // `42501: permission denied` y parece un problema de permisos cuando en realidad es "no sos nadie".
+    // Con este cambio, si te logueás en local usás TU sesión y podés leer/escribir de verdad.
     if (process.env.NODE_ENV === 'development') {
-      setAdmin({ id: 'dev', email: 'dev@localhost', nombre: 'Dev Preview', rol: 'super_admin', activo: true })
-      setLoading(false)
-      verifiedRef.current = true
-      return
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (cancelled) return
+        if (session?.user?.email) return   // hay sesión real → sigue el flujo normal de abajo
+        setAdmin({ id: 'dev', email: 'dev@localhost', nombre: 'Dev Preview (sin sesión)', rol: 'super_admin', activo: true })
+        setLoading(false)
+        verifiedRef.current = true
+      })
     }
 
     async function verifyAdmin(email: string) {

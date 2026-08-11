@@ -293,7 +293,40 @@ convertido con una fórmula vieja y no deja distinguirlos.
 **Ningún precio ya guardado se toca.** Este paso es de **visualización y de guardado futuro**. Si al
 desplegar cambia el valor de una propiedad existente, algo se hizo mal.
 
-#### EVALS
+#### ✅ ESTADO — ejecutado el 11-ago (rama `feat/admin-idioma-del-feed`)
+
+| Eval | Resultado |
+|---|---|
+| 1 · Ninguna prop existente cambia de precio | ✅ la 1441 volvió a `595000` / `bob` intacta |
+| 2 · El admin muestra lo mismo que el feed | ✅ **$51.126** en pantalla, igual que simonbo.com (antes: $85.489) |
+| 3 · Guardar en Bs no infla | ✅ se guardó `596000`, no `85.632` |
+| 3-bis · Se entiende sin explicación | ✅ *"ahora sí funciona, veo $51.126"* |
+| 4 · Filtro por precio en el listado | ⬜ **NO hecho** — queda como mejora futura (ver abajo) |
+| 5 · Alquiler: una sola columna | ✅ en código escribe `precio_mensual_usd: null` explícito |
+
+**Bonus — el auto-candado funcionó**: al guardar, el editor trabó `precio_usd` solo, y los
+cargadores ya lo respetan (commit `82634b1`). Las dos mitades de la regla #1, juntas.
+
+#### 🔴 Hallazgo que apareció AL PROBAR (no estaba en la predicción)
+**El editor convertía "no sabemos" en "no", y lo trababa.** Al guardar cualquier cosa, los booleanos
+que en la BD son `NULL` entraban al form como `false` (su default), el diff los marcaba como cambio,
+se escribían **y el auto-candado los trababa**. Medido en la 1441: guardar solo el precio convirtió
+`baulera`, `acepta_permuta`, `precio_negociable` y `plan_pagos_desarrollador` — en el caso de baulera,
+**afirmando que no tiene** cuando nunca se supo. Lo contrario del `null` honesto del lector, y con
+candado encima.
+📌 **Explica parte del historial**: esos tres campos figuran con ~500 "ediciones" cada uno en las
+4.981 del admin (§2). Muchas no fueron ediciones: fue este efecto disparándose solo.
+**Arreglado**: se guarda una foto del formulario al cargar y solo se escribe/traba lo que el humano
+cambió de verdad. Probado en frío con los datos reales de la 1441: de **8 campos escritos y trabados
+a 2 escritos / 1 trabado**.
+
+#### Lo que quedó pendiente del paso 1
+**El filtro por precio en el listado.** No se hizo porque el listado sigue usando
+`buscar_unidades_reales` (rota) y hay que reescribir su carga antes — 1 a 2 horas, sobre la pantalla
+que más se usa. Decisión del founder: *"el filtro queda como nice to have en un futuro"*.
+⚠️ Mientras tanto, **al editor se entra por URL directa** (`/admin/propiedades/<id>`).
+
+#### EVALS (definidos antes de ejecutar)
 1. 🔴 **Ninguna prop existente cambia de precio por el deploy.** Medida: los `precio_usd` de las 8 de
    arriba, idénticos antes y después. *(El único que obliga a revertir.)*
 2. **El admin muestra lo mismo que el feed.** Medida: en las 8, el número de "así se ve en el feed"

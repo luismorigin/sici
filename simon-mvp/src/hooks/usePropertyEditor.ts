@@ -35,7 +35,7 @@ const INITIAL_FORM: FormData = {
   microzona: 'equipetrol_centro',
   piso: '',
   precio_publicado: '',
-  tipo_precio: 'usd_oficial',
+  tipo_precio: 'usd',
   area_m2: '',
   dormitorios: '2',
   banos: '2',
@@ -123,6 +123,8 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
 
   // Form
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM)
+  /** El formulario tal como quedó al CARGAR. Se compara contra esto para saber qué tocó el humano. */
+  const [formInicial, setFormInicial] = useState<FormData | null>(null)
 
   // ---- Effects ----
 
@@ -202,7 +204,25 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
       ])
 
       const { data, error: fetchError } = propResult
-      if (fetchError || !data) { setError('Propiedad no encontrada'); return }
+      if (fetchError || !data) {
+        // No todo error es "no existe". Desde la mig 317 (11-ago-2026) la base viva está cerrada
+        // para el usuario anónimo, así que **sin sesión** la consulta falla por PERMISOS — y
+        // decir "Propiedad no encontrada" manda a buscar el problema al lugar equivocado
+        // (¿se borró?, ¿está el id mal?) cuando lo único que falta es iniciar sesión.
+        const msg = (fetchError?.message || '').toLowerCase()
+        const esPermiso = fetchError?.code === '42501' || msg.includes('permission') || msg.includes('denied')
+        // Se adjunta el error técnico + SI HAY SESIÓN. Un 42501 puede significar dos cosas muy
+        // distintas —"no tenés sesión" o "tu rol no alcanza"— y sin este dato no se distinguen.
+        const { data: { session } } = await supabase.auth.getSession()
+        const quien = session
+          ? `sesión OK (${session.user?.email || 'sin email'}, rol ${session.user?.role || '?'})`
+          : '⚠️ SIN SESIÓN → la consulta viaja como visitante anónimo'
+        const detalle = fetchError ? ` [${fetchError.code || 's/código'}: ${fetchError.message}] · ${quien}` : ''
+        setError((esPermiso
+          ? 'Sin permiso para leer la propiedad.'
+          : 'Propiedad no encontrada') + detalle)
+        return
+      }
 
       if (tcResult.data?.valor) setTcParaleloActual(parseFloat(tcResult.data.valor))
 
@@ -247,26 +267,24 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
       const customEquipamiento = listaEquipamiento
         .filter((e: string) => !equipamientoLower.includes(e.toLowerCase()))
 
-      // Determine price type
-      let tipoPrecio: 'usd_oficial' | 'usd_paralelo' | 'bob' = 'usd_oficial'
-      let precioPublicado = data.precio_usd?.toString() || ''
-
-      if (data.tipo_operacion === 'alquiler') {
-        tipoPrecio = 'bob'
-        precioPublicado = data.precio_mensual_bob?.toString() || ''
-      } else if (data.moneda_original === 'USD') {
-        tipoPrecio = 'usd_oficial'
-        precioPublicado = data.precio_usd?.toString() || ''
-      } else if (data.tipo_cambio_detectado === 'paralelo') {
-        tipoPrecio = 'usd_paralelo'
-        precioPublicado = data.datos_json_enrichment?.precio_usd_original?.toString() || data.precio_usd?.toString() || ''
-      } else if (data.tipo_cambio_detectado === 'oficial') {
-        tipoPrecio = 'bob'
-        precioPublicado = data.precio_usd_original?.toString() || ''
-      } else {
-        tipoPrecio = 'usd_oficial'
-        precioPublicado = data.precio_usd?.toString() || ''
-      }
+      // ── EN QUÉ MONEDA ESTÁ PUBLICADO EL AVISO ────────────────────────────────
+      // Régimen nuevo (TC_NUEVO_DECISION.md): el CRUDO vive siempre en `precio_usd`
+      // (o `precio_mensual_bob` en alquiler) y el tag dice en qué moneda está. No hay
+      // nada que reconstruir ni que derivar: se lee el crudo y su etiqueta, y listo.
+      //
+      // La versión anterior hacía arqueología para adivinar el precio "original":
+      // leía `datos_json_enrichment.precio_usd_original`, un campo que la memoria
+      // `project_checkpoint_deptos_hibrido` marca como **NO confiable** (BOB crudo de
+      // Remax / USD×TC de C21), y distinguía `paralelo` vs `oficial`, dos tags de un
+      // régimen que murió cuando Bolivia unificó los tipos de cambio.
+      const tipoPrecio: 'usd' | 'bob' | 'usd_tc_viejo' =
+        data.tipo_operacion === 'alquiler' ? 'bob'
+        : data.tipo_cambio_detectado === 'bob' ? 'bob'
+        : data.tipo_cambio_detectado === 'oficial_viejo' ? 'usd_tc_viejo'
+        : 'usd'
+      const precioPublicado = (
+        data.tipo_operacion === 'alquiler' ? data.precio_mensual_bob : data.precio_usd
+      )?.toString() || ''
 
       // Microzona — match por id, valor BD (MICROZONA_ID_TO_DB) o label.
       // El valor BD es la fuente de verdad: villa_brigida y equipetrol_oeste tienen label != BD.
@@ -288,7 +306,13 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
         return 'sin_confirmar'
       }
 
-      setFormData({
+      // 📸 El formulario tal como queda al CARGAR. Guardarlo permite saber después qué tocó el
+      // humano de verdad: sin esto, un campo que en la BD es NULL entra al form como `false` (su
+      // default) y al guardar se detecta como "cambio", se escribe `false` y se TRABA con candado.
+      // Efecto medido en la prop 1441: guardar el precio convirtió baulera, acepta_permuta,
+      // precio_negociable y plan_pagos_desarrollador de "no sabemos" a "no", los cuatro trabados.
+      // Es lo contrario del `null` honesto del lector, y el candado lo volvía permanente.
+      const formCargado: FormData = {
         tipo_operacion: data.tipo_operacion || 'venta',
         proyecto_nombre: pmData?.nombre_oficial || data.nombre_edificio || '',
         desarrollador: '',
@@ -325,7 +349,9 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
         amenidades_custom: customAmenidades,
         equipamiento: standardEquipamiento,
         equipamiento_custom: customEquipamiento,
-      })
+      }
+      setFormData(formCargado)
+      setFormInicial(formCargado)
     } catch (err) {
       console.error('Error fetching propiedad:', err)
       setError('Error cargando propiedad')
@@ -402,10 +428,8 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
   const updateField = (field: keyof FormData, value: any) => {
     setFormData(prev => {
       const updated = { ...prev, [field]: value }
-      // Sync: tipo_precio usd_paralelo → solo_tc_paralelo true, y viceversa
-      if (field === 'tipo_precio') {
-        updated.solo_tc_paralelo = value === 'usd_paralelo'
-      }
+      // (Se retiró el sync `tipo_precio → solo_tc_paralelo`: ese flag distinguía "solo acepta
+      //  paralelo" cuando había DOS tipos de cambio. Con el TC unificado no distingue nada.)
       return updated
     })
     if (validationErrors.length > 0 || validationWarnings.length > 0) {
@@ -487,50 +511,68 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
     setFormData(prev => ({ ...prev, plan_pagos_cuotas: cuotasActualizadas, plan_pagos_texto: generarTextoPlanPagos(cuotasActualizadas) }))
   }
 
-  // ---- Price calculations ----
+  // ---- Precio ----
+  //
+  // 🔴 REGLA (11-ago-2026): el editor NO convierte. Guarda el CRUDO con su etiqueta de moneda,
+  // como hace el lector nocturno, y la base normaliza al LEER. Es el principio que rige en todo
+  // el resto del sistema: *crudo adentro, normalizado afuera*.
+  //
+  // Lo anterior hacía `precio / 6.96` para bolivianos — el TC oficial que Bolivia tuvo clavado
+  // durante años y que dejó de existir al unificarse con el paralelo. Con el TC real (11,64) eso
+  // guardaba **67% más caro**: Bs 595.000 entraban como $85.489 cuando valen $51.126. Y no era
+  // un caso raro: la brecha es la fórmula entera (11,638 / 6,96 = 1,672).
+  //
+  // Nota: `tcParaleloActual` sale de `config_global.tipo_cambio_paralelo`, el mismo valor que usa
+  // la BD. Si no cargó, se declara y NO se inventa un fallback — un TC inventado es justamente
+  // como empezó este problema.
 
-  const calcularPrecioNormalizado = () => {
-    const precioPublicado = parseFloat(formData.precio_publicado) || 0
-    const tcOficial = 6.96
-    const tcParalelo = tcParaleloActual || 10.5
+  const TC_MUERTO = 6.96   // constante histórica: solo para avisos anclados EXPLÍCITO a 6,96 / "TC 7"
 
-    if (formData.tipo_operacion === 'alquiler') return precioPublicado
+  /** Lo que se GUARDA: el número tal como lo publica el aviso, sin tocar. */
+  const precioCrudoAGuardar = () => parseFloat(formData.precio_publicado) || 0
 
-    switch (formData.tipo_precio) {
-      case 'usd_oficial': return precioPublicado
-      case 'usd_paralelo': return precioPublicado
-      case 'bob': return Math.round(precioPublicado / tcOficial)
-      default: return precioPublicado
-    }
+  /**
+   * Lo que VE EL CLIENTE en el feed. Réplica de `precio_normalizado_shadow` (mig 272 + 311).
+   * Es solo para mostrar: nunca se escribe en la base.
+   * `null` = no se puede calcular todavía (falta el TC del día) → la UI lo declara en vez de mentir.
+   */
+  const precioComoLoVeElCliente = (): number | null => {
+    const crudo = parseFloat(formData.precio_publicado) || 0
+    if (!crudo) return 0
+    if (formData.tipo_operacion === 'alquiler') return crudo   // alquiler se muestra en Bs, no se convierte
+    if (formData.tipo_precio === 'usd') return crudo           // ya está en dólares reales
+    if (!tcParaleloActual) return null                         // sin TC del día no hay conversión honesta
+    if (formData.tipo_precio === 'bob') return Math.round(crudo / tcParaleloActual)
+    return Math.round(crudo * TC_MUERTO / tcParaleloActual)    // 'usd_tc_viejo'
   }
 
-  const calcularPrecioDisplay = () => {
-    const precioPublicado = parseFloat(formData.precio_publicado) || 0
-    const tcOficial = 6.96
-    const tcParalelo = tcParaleloActual || 10.5
+  // ⚠️ NO reponer un alias `calcularPrecioNormalizado`: ese nombre, en el régimen nuevo, describe
+  // el precio del FEED — pero apuntaba al CRUDO. Con ese alias puesto, la validación comparaba
+  // Bs 595.000 ÷ 45 m² = "13.222 USD/m²" contra el techo de $4.000 y **bloqueaba el guardado**.
+  // Los dos números tienen nombre propio a propósito: `precioCrudoAGuardar` y `precioComoLoVeElCliente`.
+  const precioDelFeedONull = () => precioComoLoVeElCliente() ?? 0
 
-    if (formData.tipo_operacion === 'alquiler') return precioPublicado
-
-    switch (formData.tipo_precio) {
-      case 'usd_oficial': return precioPublicado
-      case 'usd_paralelo': return Math.round(precioPublicado * (tcParalelo / tcOficial))
-      case 'bob': return Math.round(precioPublicado / tcOficial)
-      default: return precioPublicado
-    }
-  }
-
+  /** Lo que la UI necesita para mostrar LOS DOS números: el del aviso y el del feed. */
   const getPrecioInfo = () => {
+    const crudo = precioCrudoAGuardar()
+    const delFeed = precioComoLoVeElCliente()
     return {
-      precio: calcularPrecioDisplay(),
-      precioPublicado: parseFloat(formData.precio_publicado) || 0,
-      esParalelo: formData.tipo_precio === 'usd_paralelo',
+      precio: delFeed ?? 0,
+      precioPublicado: crudo,
+      /** El número que ve el cliente. `null` = falta el TC del día → la UI lo declara, no inventa. */
+      precioDelFeed: delFeed,
+      /** ¿Hay que mostrar la traducción? Solo si el crudo NO está ya en dólares reales. */
+      necesitaConversion: formData.tipo_precio !== 'usd' && formData.tipo_operacion !== 'alquiler',
       esBob: formData.tipo_precio === 'bob',
+      esTcViejo: formData.tipo_precio === 'usd_tc_viejo',
       tipoPrecio: formData.tipo_precio,
+      /** El TC con el que la BD va a normalizar hoy. Se muestra para que el número sea auditable. */
+      tcDelDia: tcParaleloActual,
     }
   }
 
   const getPrecioAlerta = (): { tipo: 'error' | 'warning' | null; mensaje: string; color: string } => {
-    const precio = calcularPrecioDisplay()
+    const precio = precioDelFeedONull()
     const area = parseFloat(formData.area_m2) || 0
     if (precio <= 0 || area <= 0) return { tipo: null, mensaje: '', color: '' }
 
@@ -569,18 +611,22 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
       cambios.push({ campo: 'banos', anterior: originalData.banos, nuevo: parseFloat(formData.banos) })
     }
 
-    const precioNormalizadoNuevo = calcularPrecioNormalizado()
-    if (originalData.precio_usd !== precioNormalizadoNuevo) {
-      cambios.push({ campo: 'precio_usd', anterior: originalData.precio_usd, nuevo: precioNormalizadoNuevo })
+    // El diff compara CRUDO contra CRUDO (antes comparaba el convertido, así que un cambio de
+    // moneda se registraba como "cambió el precio" aunque el aviso dijera lo mismo).
+    const precioCrudoNuevo = precioCrudoAGuardar()
+    const precioCrudoAnterior = originalData.tipo_operacion === 'alquiler'
+      ? originalData.precio_mensual_bob : originalData.precio_usd
+    if (precioCrudoAnterior !== precioCrudoNuevo) {
+      cambios.push({ campo: 'precio_usd', anterior: precioCrudoAnterior, nuevo: precioCrudoNuevo })
     }
 
-    const tipoPrecioOriginal = originalData.moneda_original === 'USD'
-      ? 'usd_oficial'
-      : originalData.tipo_cambio_detectado === 'paralelo'
-        ? 'usd_paralelo'
-        : originalData.tipo_cambio_detectado === 'oficial' ? 'bob' : 'usd_oficial'
-    if (tipoPrecioOriginal !== formData.tipo_precio) {
-      cambios.push({ campo: 'tipo_precio', anterior: tipoPrecioOriginal, nuevo: formData.tipo_precio })
+    const monedaOriginal: 'usd' | 'bob' | 'usd_tc_viejo' =
+      originalData.tipo_operacion === 'alquiler' ? 'bob'
+      : originalData.tipo_cambio_detectado === 'bob' ? 'bob'
+      : originalData.tipo_cambio_detectado === 'oficial_viejo' ? 'usd_tc_viejo'
+      : 'usd'
+    if (monedaOriginal !== formData.tipo_precio) {
+      cambios.push({ campo: 'tipo_cambio_detectado', anterior: monedaOriginal, nuevo: formData.tipo_precio })
     }
 
     if (originalData.area_total_m2 !== parseFloat(formData.area_m2)) {
@@ -681,6 +727,26 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
       cambios.push({ campo: 'plan_pagos_texto', anterior: originalData.plan_pagos_texto ?? null, nuevo: textoNuevo })
     }
 
+    // 🔒 Filtro final: descartar los "cambios" de campos que el humano NO tocó.
+    // Los booleanos entran al form como `false` aunque en la BD sean NULL, así que el diff los
+    // marcaba como cambio → se escribían Y se trababan con candado. Comparando contra la foto
+    // inicial del formulario, un campo que quedó igual a como se cargó no es un cambio.
+    // (Sin esto, el auto-candado trababa 8 campos por cada guardado; medido en la prop 1441.)
+    if (formInicial) {
+      const equivale: Record<string, keyof FormData> = {
+        baulera: 'baulera',
+        acepta_permuta: 'acepta_permuta',
+        precio_negociable: 'precio_negociable',
+        plan_pagos_desarrollador: 'acepta_financiamiento',
+        solo_tc_paralelo: 'solo_tc_paralelo',
+        estado_construccion: 'estado_construccion',
+      }
+      return cambios.filter(c => {
+        const campoForm = equivale[c.campo]
+        if (!campoForm) return true
+        return formData[campoForm] !== formInicial[campoForm]
+      })
+    }
     return cambios
   }
 
@@ -690,7 +756,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
     const errors: string[] = []
     const warnings: string[] = []
 
-    const precio = calcularPrecioNormalizado()
+    const precio = precioDelFeedONull()   // el precio/m² se juzga contra el del FEED, no contra el crudo
     const area = parseFloat(formData.area_m2) || 0
     const precioM2 = area > 0 ? precio / area : 0
     const dormitorios = parseInt(formData.dormitorios) || 0
@@ -819,10 +885,12 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
       }
 
       const microzonaDb = MICROZONA_ID_TO_DB[formData.microzona] || formData.microzona
-      const precioPublicado = parseFloat(formData.precio_publicado) || 0
-      const precioNormalizado = calcularPrecioNormalizado()
-      const tcOficial = 6.96
-      const tcParalelo = tcParaleloActual || 10.5
+      // El CRUDO, sin convertir. La normalización la hace la BD al leer (ver §Precio arriba).
+      const precioCrudo = precioCrudoAGuardar()
+      // La etiqueta del crudo. Mapea 1:1 con lo que escribe el lector nocturno.
+      const tagMoneda = formData.tipo_precio === 'bob' ? 'bob'
+        : formData.tipo_precio === 'usd_tc_viejo' ? 'oficial_viejo'
+        : 'no_especificado'
 
       const updateData: Record<string, any> = {
         tipo_operacion: formData.tipo_operacion || null,
@@ -830,9 +898,13 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
         id_proyecto_master: selectedProyectoId,
         zona: microzonaDb,
         microzona: microzonaDb,
+        // 🔴 ALQUILER: UNA SOLA columna de precio. Poblar las dos es lo que el verificador
+        // nocturno controla que nunca pase ("anti-doble-normalización: DEBE SER 0"); el editor
+        // las escribía las dos y encima derivaba el dólar con el TC muerto.
+        // El display en USD lo calcula la RPC del feed al leer, no se guarda.
         ...(formData.tipo_operacion === 'alquiler'
-          ? { precio_mensual_bob: precioNormalizado, precio_mensual_usd: Math.round(precioNormalizado / 6.96 * 100) / 100 }
-          : { precio_usd: precioNormalizado, precio_usd_actualizado: null }),
+          ? { precio_mensual_bob: precioCrudo, precio_mensual_usd: null }
+          : { precio_usd: precioCrudo, precio_usd_actualizado: null, tipo_cambio_detectado: tagMoneda }),
         area_total_m2: formData.area_m2 ? parseFloat(formData.area_m2) : null,
         dormitorios: formData.dormitorios ? parseInt(formData.dormitorios) : null,
         banos: formData.banos ? parseFloat(formData.banos) : null,
@@ -862,35 +934,52 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
         fecha_actualizacion: ahora,
       }
 
+      // ── La metadata del precio, en el régimen nuevo ─────────────────────────
+      // El tag ya viaja en `updateData.tipo_cambio_detectado` (arriba). Acá solo queda la moneda
+      // del aviso y LIMPIAR lo que era andamiaje de la conversión vieja:
+      //  · `tipo_cambio_usado` / `tipo_cambio_paralelo_usado` → guardaban con qué TC se convirtió.
+      //    Ya no se convierte al guardar, así que no hay nada que registrar.
+      //  · `depende_de_tc` → distinguía "este precio se mueve con el TC". Con el crudo + tag, eso
+      //    lo dice el tag mismo (`bob` depende, `no_especificado` no).
+      //  · `precio_usd_original` → 🔴 NO se escribe: la memoria `project_checkpoint_deptos_hibrido`
+      //    lo marca como NO CONFIABLE (BOB crudo de Remax / USD×TC de C21). Escribirlo sería
+      //    propagar un dato que ya sabemos que miente.
+      updateData.moneda_original = formData.tipo_precio === 'bob' ? 'BOB' : 'USD'
+      updateData.tipo_cambio_usado = null
+      updateData.tipo_cambio_paralelo_usado = null
+      updateData.depende_de_tc = formData.tipo_precio !== 'usd'
       switch (formData.tipo_precio) {
-        case 'usd_oficial':
-          updateData.moneda_original = 'USD'
-          updateData.precio_usd_original = precioPublicado
-          updateData.tipo_cambio_detectado = null
-          updateData.tipo_cambio_usado = null
-          updateData.depende_de_tc = false
-          break
-        case 'usd_paralelo':
-          updateData.moneda_original = 'BOB'
-          updateData.precio_usd_original = precioPublicado
-          updateData.tipo_cambio_detectado = 'paralelo'
-          updateData.tipo_cambio_usado = tcOficial
-          updateData.tipo_cambio_paralelo_usado = tcParalelo
-          updateData.depende_de_tc = true
-          updateData.datos_json_enrichment = {
-            ...originalData.datos_json_enrichment,
-            precio_usd_original: precioPublicado,
-            tipo_cambio_paralelo_usado: tcParalelo,
-            precio_fue_normalizado: true,
-          }
-          break
+        case 'usd':
         case 'bob':
-          updateData.moneda_original = 'BOB'
-          updateData.precio_usd_original = precioPublicado
-          updateData.tipo_cambio_detectado = 'oficial'
-          updateData.tipo_cambio_usado = tcOficial
-          updateData.depende_de_tc = false
+        case 'usd_tc_viejo':
           break
+      }
+
+      // ── 🔴 NO ESCRIBIR LO QUE EL HUMANO NO TOCÓ ──────────────────────────────
+      // El formulario carga los booleanos con un default (`false`) aunque en la BD sean NULL.
+      // Sin este filtro, guardar CUALQUIER cosa escribía `false` en todos ellos y el auto-candado
+      // los trababa: "no sabemos" pasaba a "no", protegido y permanente.
+      // Medido en la 1441 (11-ago): guardar solo el precio convirtió baulera, acepta_permuta,
+      // precio_negociable y plan_pagos_desarrollador. Para `baulera` eso es afirmar que la
+      // propiedad NO tiene baulera cuando nunca se supo — lo contrario del `null` honesto del
+      // lector, y encima trabado.
+      // 📌 Esto explica parte del historial: `acepta_permuta`, `precio_negociable` y
+      // `plan_pagos_desarrollador` figuran con ~500 "ediciones" cada uno. Muchas no fueron
+      // ediciones: fue este efecto disparándose solo.
+      if (formInicial) {
+        const soloSiElHumanoLoToco: Array<[keyof FormData, string]> = [
+          ['baulera', 'baulera'],
+          ['acepta_permuta', 'acepta_permuta'],
+          ['precio_negociable', 'precio_negociable'],
+          ['acepta_financiamiento', 'plan_pagos_desarrollador'],
+          ['solo_tc_paralelo', 'solo_tc_paralelo'],
+          ['estado_construccion', 'estado_construccion'],
+          ['parqueo_opcion', 'parqueo_incluido'],
+          ['baulera_opcion', 'baulera_incluido'],
+        ]
+        for (const [campoForm, columna] of soloSiElHumanoLoToco) {
+          if (formData[campoForm] === formInicial[campoForm]) delete updateData[columna]
+        }
       }
 
       // Auto-candado TC: proteger edición manual del merge nocturno
@@ -1076,7 +1165,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
   const esPreventa = ['preventa', 'en_construccion', 'en_planos'].includes(formData.estado_construccion)
   const precioInfo = getPrecioInfo()
   const precioM2 = formData.precio_publicado && formData.area_m2
-    ? Math.round(calcularPrecioDisplay() / parseFloat(formData.area_m2))
+    ? Math.round(precioDelFeedONull() / parseFloat(formData.area_m2))
     : 0
   const nombreEdificio = proyectoMaster?.nombre_oficial || formData.proyecto_nombre || 'Sin nombre'
   const camposBloqueados = getCamposBloqueadosInfo()
@@ -1111,7 +1200,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
     toggleAmenidad, agregarAmenidadCustom, eliminarAmenidadCustom,
     toggleEquipamiento, agregarEquipamientoCustom, eliminarEquipamientoCustom,
     agregarCuota, eliminarCuota, actualizarCuota,
-    calcularPrecioNormalizado, getPrecioAlerta, formatPrecio, formatFecha, getDormitoriosLabel,
+    precioCrudoAGuardar, precioComoLoVeElCliente, getPrecioAlerta, formatPrecio, formatFecha, getDormitoriosLabel,
     estaCampoBloqueado, toggleBloqueo, desbloquearCampo, desbloquearTodos,
     sincronizarDesdeProyecto,
 

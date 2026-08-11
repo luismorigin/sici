@@ -18,7 +18,16 @@ export interface FormData {
   microzona: string
   piso: string
   precio_publicado: string
-  tipo_precio: 'usd_oficial' | 'usd_paralelo' | 'bob'
+  /**
+   * EN QUÉ MONEDA ESTÁ PUBLICADO EL AVISO — no "tipo de precio".
+   * Es la etiqueta del dato crudo, y mapea 1:1 con `tipo_cambio_detectado` de la BD:
+   *   'usd'          → el aviso publica en dólares            → tag `no_especificado` (se usa directo)
+   *   'bob'          → el aviso publica en bolivianos          → tag `bob` (se divide por el TC del día)
+   *   'usd_tc_viejo' → el aviso ancla explícito a 6,96 / "TC 7" → tag `oficial_viejo`
+   * Los valores anteriores ('usd_oficial' | 'usd_paralelo') eran del régimen de DOS tipos de cambio,
+   * que murió cuando Bolivia unificó el oficial con el paralelo. Ver TC_NUEVO_DECISION.md.
+   */
+  tipo_precio: 'usd' | 'bob' | 'usd_tc_viejo'
   area_m2: string
   dormitorios: string
   banos: string
