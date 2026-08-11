@@ -65,9 +65,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // amenidades (cola larga + "lo que la hace especial") y equipamiento poblado.
     const rpcName = shadow ? 'buscar_unidades_alquiler_shadow' : 'buscar_unidades_alquiler'
 
-    // Build RPC params — clamp limite to 200 max (185 active inventory)
+    // Build RPC params — el tope TIENE que superar el inventario activo DE ESTE FEED, con margen:
+    // acá no se pagina (la firma acepta `offset` pero nadie lo pasa; no hay "cargar más"), así que
+    // lo que no entra no existe para el usuario.
+    // 🔴 Medido el 11-ago-2026: el feed devolvía **182** con un clamp de **200** — a 18 propiedades
+    // de empezar a cortar en silencio. El clamp venía de cuando había 185 activos. No se subió por
+    // un corte existente sino para que el próximo mes no lo haya.
+    // Verificar POR FEED, no contra el total de la RPC (que mezcla Equipetrol y Zona Norte):
+    //   curl -s -X POST localhost:3000/api/alquileres -d '{"shadow":true,"filtros":{}}' | ...
+    // ⚠️ Este clamp NO alcanza solo: `pages/alquileres.tsx` pide `limite` explícito en sus 3
+    // llamadas — los dos números se mueven JUNTOS o el feed sigue cortado.
     const rpcFiltros: Record<string, any> = {
-      limite: Math.min(filtros.limite || 200, 200),
+      limite: Math.min(filtros.limite || 600, 600),
       solo_con_fotos: filtros.solo_con_fotos ?? true,
     }
 

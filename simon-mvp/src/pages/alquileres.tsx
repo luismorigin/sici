@@ -713,13 +713,15 @@ export default function AlquileresPage({
     setLoading(true)
     setLoadError(false)
     try {
-      // Single fetch — 185 properties, ~80KB gzipped, ~250ms total
-      const { data, total } = await fetchFromAPI({ ...f, limite: 200 })
+      // Single fetch, sin paginación → el `limite` es el techo REAL de lo que ve el usuario.
+      // Debe ir por encima del inventario activo con margen y moverse junto al clamp de
+      // `pages/api/alquileres.ts` (11-ago-2026: el feed devolvía 182 con tope 200 — a 18 de cortar).
+      const { data, total } = await fetchFromAPI({ ...f, limite: 600 })
       if (gen !== fetchGenRef.current) { setLoading(false); return 0 }
       if (data.length === 0 && retry) {
         await new Promise(r => setTimeout(r, 1500))
         if (gen !== fetchGenRef.current) { setLoading(false); return 0 }
-        const r2 = await fetchFromAPI({ ...f, limite: 200 })
+        const r2 = await fetchFromAPI({ ...f, limite: 600 })
         if (gen !== fetchGenRef.current) { setLoading(false); return 0 }
         setProperties(r2.data)
         setLoading(false)
@@ -3366,7 +3368,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
     if (previewRef.current) clearTimeout(previewRef.current)
     previewRef.current = setTimeout(async () => {
       try {
-        const { data } = await fetchFromAPI({ ...buildFilters(), limite: 200 })
+        const { data } = await fetchFromAPI({ ...buildFilters(), limite: 600 })
         setPreviewCount(data.length)
       } catch { /* best effort */ }
     }, 400)

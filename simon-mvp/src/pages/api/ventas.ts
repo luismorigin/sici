@@ -123,7 +123,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Build RPC params
     const rpcFiltros: Record<string, any> = {
-      limite: 500, // All active props (~297), no artificial limit
+      // 🔴 Este número TIENE que superar el inventario activo DE CADA FEED, con margen: acá no se
+      // pagina (no hay offset ni "cargar más"), así que lo que no entra simplemente no existe para
+      // el usuario — y una lista cortada se ve igual que una completa.
+      // ⚠️ Este endpoint lo comparten VARIOS feeds vía `zonas_permitidas` (Equipetrol y Zona Norte),
+      // así que el tope tiene que cubrir al más grande, no al total de la tabla.
+      // Medido el 11-ago-2026 (ninguno estaba cortado, pero alquiler venía a 18 de estarlo):
+      //   Equipetrol venta 354 · ZN venta ~368 · el tope anterior era 500.
+      // Verificar por feed (NO contra el total de la RPC sin `zonas_permitidas`, que mezcla ambas):
+      //   curl -s -X POST localhost:3000/api/ventas -d '{"shadow":true,"filtros":{}}' | ...
+      // Costo: ~1.249 kB por respuesta con 354 filas. Deuda de fondo: paginar.
+      limite: 1200,
       solo_con_fotos: filtros.solo_con_fotos ?? true,
     }
 
@@ -170,7 +180,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (spotlightId && typeof spotlightId === 'number' && !data.find((d: any) => d.id === spotlightId)) {
       try {
         const spotResult = await supabase.rpc(rpcName, {
-          p_filtros: { limite: 500, solo_con_fotos: false, zonas_permitidas: ZONAS_EQUIPETROL_DB }
+          p_filtros: { limite: 1200, solo_con_fotos: false, zonas_permitidas: ZONAS_EQUIPETROL_DB }
         })
         const found = spotResult.data?.find((d: any) => d.id === spotlightId)
         spotlight = found ? mapRow(found) : null
