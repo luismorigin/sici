@@ -320,6 +320,30 @@ candado encima.
 cambió de verdad. Probado en frío con los datos reales de la 1441: de **8 campos escritos y trabados
 a 2 escritos / 1 trabado**.
 
+#### 🔍 Hallazgo de CALIDAD DE DATOS que destapó el listado (11-ago)
+Al filtrar por "precio sospechoso" aparecían props con **$0/m²**. La pantalla mentía (mostraba `0`
+donde no hay dato, y se alarmaba por ese cero — ya corregido: dice *"sin área cargada"*). Pero al
+mirar por qué faltaba el área apareció un patrón que **no es de la pantalla sino del pipeline**:
+
+| Fuente / operación | Sin área |
+|---|---|
+| **Remax ALQUILER** | **22,9%** (22 de 96) — *1 de cada 4* |
+| Remax venta | 5,1% (15 de 294) |
+| Century21 | **0,1%** (1 de 999) |
+
+🔴 **Es un problema VIVO**: 4 de las capturadas recientemente (id ≥ 8000600) también entraron sin área.
+🔑 **Mecanismo**: el área de Remax viene del **discovery (search API)**, no del detalle —
+`lib/detalle-deptos.mjs` lo dice explícito: *"El área NO se saca del detalle (Remax no la trae ahí)"*.
+Si el buscador no la devuelve para un aviso, **no hay segunda oportunidad**. Verificado además que
+**tampoco está en el texto** de la descripción (8 casos revisados, ninguno la menciona).
+⚠️ No se pudo comprobar contra el portal (el fetch directo a remax.bo falla sin el proxy del
+pipeline). **Esa es la pregunta que cierra el tema: ¿el aviso muestra la superficie y no la estamos
+leyendo, o el captador no la cargó?** Según la respuesta es un bug del discovery o un dato faltante
+en origen.
+📌 **Por qué importa**: el área es el denominador de la métrica central ($/m²). Una prop sin área no
+entra en ninguna mediana, no se puede comparar y en el feed aparece incompleta.
+👉 **Va al backlog de calidad de datos, no al del admin** — el admin solo lo hizo visible.
+
 #### Lo que quedó pendiente del paso 1
 **El filtro por precio en el listado.** No se hizo porque el listado sigue usando
 `buscar_unidades_reales` (rota) y hay que reescribir su carga antes — 1 a 2 horas, sobre la pantalla

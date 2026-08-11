@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { normalizarPrecio } from '@/lib/precio-utils'
+import { precioDelFeed } from '@/lib/precio-utils'
 import { ZONAS_ADMIN_FILTER, getZonaLabel } from '@/lib/zonas'
 
 // 🔴 La tabla VIVA. Gemela de la constante de `hooks/usePropertyEditor.ts` — este listado y el
@@ -74,6 +74,8 @@ interface PropiedadConCandados extends Propiedad {
   fuente?: string
   id_proyecto_master?: number | null
   fecha_publicacion?: string | null
+  /** Por qué esta propiedad NO aparece en simonbo.com. `null` = sí aparece. */
+  motivo_fuera_del_feed?: string | null
   // Campos de normalización
   precio_usd_original?: number | null
   moneda_original?: string | null
@@ -135,6 +137,9 @@ export default function AdminPropiedades() {
   const [busqueda, setBusqueda] = useState('')
   const [busquedaId, setBusquedaId] = useState('')
   const [limite, setLimite] = useState(saved?.limite ?? 50)
+  // Filtro por PRECIO (sobre el número del feed) — no existía; era el punto 3 del paso 1.
+  const [precioMin, setPrecioMin] = useState(saved?.precioMin ?? 0)
+  const [precioMax, setPrecioMax] = useState(saved?.precioMax ?? 0)
   const [soloConCandados, setSoloConCandados] = useState(saved?.soloConCandados ?? false)
   const [soloPreciosSospechosos, setSoloPreciosSospechosos] = useState(saved?.soloPreciosSospechosos ?? false)
   const [soloHuerfanas, setSoloHuerfanas] = useState(saved?.soloHuerfanas ?? false)
@@ -148,7 +153,7 @@ export default function AdminPropiedades() {
       tipoOperacion, zonas, dormitorios, limite,
       soloConCandados, soloPreciosSospechosos, soloHuerfanas, ordenarPor, maxDias, filtroEstado
     }))
-  }, [tipoOperacion, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, ordenarPor, maxDias, filtroEstado])
+  }, [tipoOperacion, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, ordenarPor, maxDias, filtroEstado, precioMin, precioMax])
 
   // Helper: ciclar ordenamiento (off → desc → asc → off)
   const ciclarOrden = (campo: string) => {
@@ -194,13 +199,13 @@ export default function AdminPropiedades() {
     return () => {
       router.events.off('routeChangeComplete', handleRouteChange)
     }
-  }, [authLoading, router.events, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion, maxDias, filtroEstado])
+  }, [authLoading, router.events, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion, maxDias, filtroEstado, precioMin, precioMax])
 
   // Fetch inicial y cuando cambian filtros (no incluir busquedaId - solo busca on Enter/click)
   useEffect(() => {
     if (authLoading || !admin) return
     fetchPropiedades()
-  }, [authLoading, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion, maxDias, filtroEstado])
+  }, [authLoading, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion, maxDias, filtroEstado, precioMin, precioMax])
 
   // Cargar lista de proyectos para autocompletado
   useEffect(() => {
@@ -331,7 +336,8 @@ export default function AdminPropiedades() {
             const fotosUrls = p.datos_json?.contenido?.fotos_urls || []
             const esAlquiler = p.tipo_operacion === 'alquiler'
             const precioRaw = esAlquiler ? (Number(p.precio_mensual_usd) || 0) : (p.precio_usd || 0)
-            const precioDisplay = esAlquiler ? precioRaw : normalizarPrecio(precioRaw, p.tipo_cambio_detectado, tcPar)
+            // Mismo número que el feed (búsqueda por id): ver lib/precio-utils.
+            const precioDisplay = esAlquiler ? precioRaw : (precioDelFeed(precioRaw, p.tipo_cambio_detectado, tcPar) ?? 0)
             return {
               ...p,
               proyecto: proj?.nombre_oficial || p.nombre_edificio || 'Sin nombre',
@@ -441,86 +447,100 @@ export default function AdminPropiedades() {
         return
       }
 
-      // Construir filtros para buscar_unidades_reales
-      // Si hay filtros client-side activos, traer más datos del RPC para no perder resultados
+      // ── CONSULTA DIRECTA A LA TABLA (11-ago-2026) ────────────────────────────
+      // Antes esto llamaba a `buscar_unidades_reales` / `buscar_unidades_alquiler`, las RPC del
+      // FEED. Dos problemas: (1) quedaron sin tabla con el cutover y tiraban "relation
+      // propiedades_v2 does not exist"; (2) —más importante— **el feed y el admin quieren cosas
+      // opuestas**. El feed muestra lo presentable: hace INNER JOIN con `proyectos_master`, así
+      // que **esconde las 182 props sin edificio identificado**… que son justo las que hay que
+      // revisar. Repuntar la RPC habría dado un listado que funciona, con un número creíble, y
+      // sin las propiedades que importan.
+      // El admin consulta la tabla y filtra él. Ve todo: lo sin matchear, lo excluido, lo raro.
       const tieneFiltroCl = filtroEstado || maxDias > 0 || zonas.length > 1
-      const filtros: Record<string, string | number | boolean> = {
-        limite: tieneFiltroCl ? Math.max(limite, 200) : limite,
-        incluir_outliers: true,
-        incluir_multiproyecto: true,
-        incluir_datos_viejos: true,
-        tipo_operacion: tipoOperacion
-      }
+      const tope = tieneFiltroCl ? Math.max(limite, 500) : Math.max(limite, 200)
 
-      if (zonas.length === 1) {
-        filtros.zona = zonas[0]
-      }
-      if (dormitorios && dormitorios !== 'todos') {
-        filtros.dormitorios = parseInt(dormitorios)
-      }
-      // Búsqueda por texto (broker o proyecto)
-      if (busqueda && tipoBusqueda === 'broker') {
-        // Para broker buscamos en asesor_nombre (se filtra después en frontend)
-      } else if (tipoBusqueda === 'proyecto' && proyectoSeleccionadoId) {
-        // Proyecto específico seleccionado: buscar por nombre exacto en RPC
-        const proyectoSeleccionado = proyectosList.find(p => p.id === proyectoSeleccionadoId)
-        if (proyectoSeleccionado) {
-          filtros.proyecto = proyectoSeleccionado.nombre
-        }
+      let q = supabase
+        .from(TABLA_PROPIEDADES)
+        .select('id, zona, microzona, dormitorios, banos, area_total_m2, precio_usd, ' +
+          'precio_mensual_bob, precio_mensual_usd, tipo_cambio_detectado, moneda_original, ' +
+          'nombre_edificio, id_proyecto_master, estado_construccion, fecha_publicacion, ' +
+          'campos_bloqueados, fuente, url, status, es_activa, datos_json, ' +
+          'latitud, longitud, estacionamientos, baulera, piso, score_calidad_dato')
+        .eq('tipo_operacion', tipoOperacion)
+        .is('duplicado_de', null)
+        .order('fecha_publicacion', { ascending: false, nullsFirst: false })
+        .limit(tope)
+
+      if (zonas.length === 1) q = q.eq('zona', zonas[0])
+      if (dormitorios && dormitorios !== 'todos') q = q.eq('dormitorios', parseInt(dormitorios))
+      if (tipoBusqueda === 'proyecto' && proyectoSeleccionadoId) {
+        q = q.eq('id_proyecto_master', proyectoSeleccionadoId)
       } else if (busqueda && tipoBusqueda === 'proyecto') {
-        // Búsqueda por texto libre en nombre proyecto
-        filtros.proyecto = busqueda
+        q = q.ilike('nombre_edificio', `%${busqueda}%`)
       }
 
-      // Llamar al RPC correcto según tipo de operación
-      const rpcName = tipoOperacion === 'alquiler' ? 'buscar_unidades_alquiler' : 'buscar_unidades_reales'
-      const { data: unidades, error: rpcError } = await supabase
-        .rpc(rpcName, { p_filtros: filtros })
+      const { data: filas, error: qError } = await q
+      if (qError) throw new Error(qError.message)
 
-      if (rpcError) {
-        throw new Error(rpcError.message)
-      }
+      // Nombre del edificio desde el catálogo ya cargado (la RPC lo traía por JOIN).
+      const nombrePorPm = new Map(proyectosList.map(p => [p.id, p.nombre]))
 
-      // Si necesitamos info de candados, hacemos otra consulta
-      const ids = (unidades || []).map((u: SupabaseRow) => u.id)
+      const ids = (filas || []).map((u: SupabaseRow) => u.id)
 
       if (ids.length > 0) {
-        const { data: propiedadesData, error: propsError } = await supabase
-          .from(TABLA_PROPIEDADES)
-          .select('id, campos_bloqueados, fuente, precio_usd_original, moneda_original, tipo_cambio_detectado, tipo_cambio_usado, id_proyecto_master, fecha_publicacion')
-          .in('id', ids)
-
-        if (propsError) {
-          console.error('Error obteniendo candados:', propsError)
-        }
-
-        // Combinar datos
-        const candadosMap = new Map(
-          (propiedadesData || []).map((p: SupabaseRow) => [p.id, p])
-        )
-
-        let resultado = (unidades || []).map((u: SupabaseRow) => {
-          const extra = candadosMap.get(u.id)
-          // Para alquileres, usar precio_mensual_usd como precio_usd para display unificado
+        let resultado: PropiedadConCandados[] = (filas || []).map((u: SupabaseRow) => {
+          // 🔴 El MISMO número que ve el cliente. Con `precioDelFeed`, no con una fórmula propia:
+          // el admin y el feed tienen que decir lo mismo o no se puede buscar acá lo que se vio allá.
+          // ⚠️ En alquiler el crudo vive en UNA de las dos columnas, según la moneda del aviso:
+          // 28 avisos publican en USD () y no tienen el valor en Bs. Leer solo
+          // `precio_mensual_bob` los mostraba en **0** — y con el filtro de precio activo
+          // desaparecían del listado sin que nada avisara.
           const precioUsd = tipoOperacion === 'alquiler'
-            ? (u.precio_mensual_usd ? Number(u.precio_mensual_usd) : 0)
-            : (u.precio_usd || 0)
+            ? (Number(u.precio_mensual_bob) || Number(u.precio_mensual_usd) || 0)
+            : (precioDelFeed(u.precio_usd, u.tipo_cambio_detectado, tcParalelo) ?? 0)
+
+          const area = Number(u.area_total_m2) || 0
+          const fotos: string[] = u.datos_json?.contenido?.fotos_urls || []
+          const dias = u.fecha_publicacion
+            ? Math.floor((Date.now() - new Date(u.fecha_publicacion).getTime()) / 86400000)
+            : null
           return {
             ...u,
-            proyecto: u.nombre_proyecto || u.nombre_edificio || 'Sin nombre',
+            proyecto: nombrePorPm.get(u.id_proyecto_master) || u.nombre_edificio || 'Sin nombre',
+            area_m2: area,
             precio_usd: precioUsd,
-            precio_m2: u.area_m2 > 0 ? Math.round(precioUsd / Number(u.area_m2)) : 0,
+            precio_m2: area > 0 ? Math.round(precioUsd / area) : 0,
             precio_mensual_bob: u.precio_mensual_bob ? Number(u.precio_mensual_bob) : null,
-            campos_bloqueados: extra?.campos_bloqueados || {},
-            fuente: extra?.fuente || u.fuente || '',
-            id_proyecto_master: extra?.id_proyecto_master ?? null,
-            fecha_publicacion: extra?.fecha_publicacion ?? null,
-            precio_usd_original: extra?.precio_usd_original,
-            moneda_original: extra?.moneda_original,
-            tipo_cambio_detectado: extra?.tipo_cambio_detectado,
-            tipo_cambio_usado: extra?.tipo_cambio_usado,
-          }
+            dias_en_mercado: dias,
+            campos_bloqueados: u.campos_bloqueados || {},
+            fuente: u.fuente || '',
+            id_proyecto_master: u.id_proyecto_master ?? null,
+            fecha_publicacion: u.fecha_publicacion ?? null,
+            // Derivados que la tabla no trae listos y la UI espera (foto, contacto, score).
+            // Sin esto la lista carga pero sale sin miniaturas: la foto vive dentro de datos_json.
+            fotos_urls: fotos,
+            cantidad_fotos: fotos.length,
+            asesor_nombre: u.datos_json?.agente?.nombre ?? null,
+            asesor_wsp: u.datos_json?.agente?.telefono ?? null,
+            asesor_inmobiliaria: u.datos_json?.agente?.oficina_nombre ?? null,
+            score_calidad: u.score_calidad_dato || 0,
+            // POR QUÉ no está en el feed. El admin ve TODO —esa es su razón de ser— pero sin
+            // decir por qué una propiedad no llega al sitio, "ver todo" es solo ruido.
+            // Medido el 11-ago sobre venta: 161 fuera por baja/incompleta y 98 por no tener
+            // edificio identificado. Son las dos únicas causas reales hoy (ninguna queda afuera
+            // por precio ni por multiproyecto).
+            motivo_fuera_del_feed:
+              !u.es_activa ? "dada de baja"
+              : String(u.status) !== "completado" ? `estado: ${u.status}`
+              : !u.id_proyecto_master ? "sin edificio identificado"
+              : null,
+          } as PropiedadConCandados
         })
+
+        // Filtro por PRECIO — el que faltaba. Se aplica sobre el número del feed, que es el
+        // que uno tiene en la cabeza y el que se ve en simonbo.com.
+        if (precioMin > 0) resultado = resultado.filter((p: PropiedadConCandados) => (p.precio_usd ?? 0) >= precioMin)
+        if (precioMax > 0) resultado = resultado.filter((p: PropiedadConCandados) => (p.precio_usd ?? 0) <= precioMax)
 
         // Filtrar por zonas (client-side cuando hay más de 1 zona seleccionada)
         if (zonas.length > 1) {
@@ -632,6 +652,11 @@ export default function AdminPropiedades() {
 
   // Detectar precio sospechoso basado en precio/m²
   const getPrecioAlerta = (precioM2: number): { tipo: 'error' | 'warning' | null; mensaje: string } => {
+    // 🔴 SIN ÁREA no hay precio/m². 38 props no la tienen (16 venta + 22 alquiler) y con `0`
+    // caían en "muy bajo": la pantalla decía "$0/m² muy bajo" como si valieran cero, cuando lo
+    // que pasa es que **no se sabe cuánto miden**. Mismo error que arreglamos en el editor:
+    // convertir "no sabemos" en un número, y encima alarmar por él.
+    if (!precioM2 || precioM2 <= 0) return { tipo: null, mensaje: '' }
     if (precioM2 < 800) {
       return { tipo: 'error', mensaje: `$${precioM2}/m² muy bajo` }
     }
@@ -1084,6 +1109,38 @@ export default function AdminPropiedades() {
 
               <span className="text-slate-300 mx-1">|</span>
 
+              {/* Filtro por PRECIO — filtra por el número del FEED (el que se ve en simonbo.com),
+                  no por el crudo del aviso. Es el que uno tiene en la cabeza. */}
+              <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">
+                {tipoOperacion === 'alquiler' ? 'Precio Bs:' : 'Precio US$:'}
+              </span>
+              <input
+                type="number"
+                value={precioMin || ''}
+                onChange={(e) => setPrecioMin(parseInt(e.target.value) || 0)}
+                placeholder="desde"
+                className="w-24 px-2 py-1 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+              />
+              <span className="text-slate-400 text-xs">–</span>
+              <input
+                type="number"
+                value={precioMax || ''}
+                onChange={(e) => setPrecioMax(parseInt(e.target.value) || 0)}
+                placeholder="hasta"
+                className="w-24 px-2 py-1 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+              />
+              {(precioMin > 0 || precioMax > 0) && (
+                <button
+                  type="button"
+                  onClick={() => { setPrecioMin(0); setPrecioMax(0) }}
+                  className="text-xs text-slate-500 hover:text-slate-700 underline"
+                >
+                  limpiar
+                </button>
+              )}
+
+              <span className="text-slate-300 mx-1">|</span>
+
               <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">Estado:</span>
               {[
                 { value: '', label: 'Todos' },
@@ -1288,9 +1345,23 @@ export default function AdminPropiedades() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold text-slate-900">{prop.proyecto}</h3>
                             {getFuenteBadge(prop.fuente)}
-                            {!prop.id_proyecto_master && (
-                              <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded">
-                                Sin proyecto
+                            {/* Este listado muestra TODO —también lo que el sitio no publica—, así
+                                que cada propiedad dice si llega al feed y, si no llega, por qué.
+                                Sin esto, "ver todo" es ruido: no se distingue lo que hay que
+                                revisar de lo que está bien y simplemente no se publica. */}
+                            {prop.motivo_fuera_del_feed ? (
+                              <span
+                                className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded"
+                                title="No aparece en simonbo.com"
+                              >
+                                Fuera del feed · {prop.motivo_fuera_del_feed}
+                              </span>
+                            ) : (
+                              <span
+                                className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded"
+                                title="Visible en simonbo.com"
+                              >
+                                En el feed
                               </span>
                             )}
                             <span className="text-xs text-slate-400">ID: {prop.id}</span>
@@ -1332,7 +1403,10 @@ export default function AdminPropiedades() {
                             <>
                               <p className="font-bold text-lg text-slate-900">{formatPrecio(prop.precio_usd)}</p>
                               <div className="flex items-center justify-end gap-2">
-                                <p className="text-sm text-slate-500">${prop.precio_m2}/m²</p>
+                                {/* Sin área no se inventa un $/m²: se declara que falta el dato. */}
+                                <p className="text-sm text-slate-500">
+                                  {prop.precio_m2 > 0 ? `$${prop.precio_m2}/m²` : 'sin área cargada'}
+                                </p>
                                 {getPrecioAlerta(prop.precio_m2).tipo === 'error' && (
                                   <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded" title={getPrecioAlerta(prop.precio_m2).mensaje}>
                                     ⚠️ {getPrecioAlerta(prop.precio_m2).mensaje}
@@ -1365,7 +1439,9 @@ export default function AdminPropiedades() {
                       {/* Características */}
                       <div className="flex items-center gap-4 mt-3 text-sm">
                         <span className="text-slate-700">
-                          <strong>{prop.area_m2}</strong>m²
+                          {prop.area_m2 > 0
+                            ? <><strong>{prop.area_m2}</strong>m²</>
+                            : <span className="text-amber-600">sin m² —</span>}
                         </span>
                         <span className="text-slate-700">
                           {prop.dormitorios === 0 ? (
