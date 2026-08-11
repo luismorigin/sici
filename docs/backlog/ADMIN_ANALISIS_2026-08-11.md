@@ -233,17 +233,83 @@ El admin no necesita arreglarse. Necesita **hablar el idioma del feed** y abrir 
 > Estado al 11-ago: el paso 0 (candados en los cargadores) ya está en `main`, commit `82634b1`.
 
 ### PASO 1 — Que el admin hable el idioma del feed  ⬅️ *desbloquea todo lo demás*
-**Goal:** que el número que muestra el admin sea **el mismo** que ve el cliente, y que se pueda llegar
-a una propiedad por lo que se ve en el feed.
-- Sacar la conversión de precio del editor: guardar **crudo + tag**, como el lector nocturno, y mostrar
-  el normalizado del feed. Elimina el `/6.96` y el doble poblado de columnas en alquiler (§3).
-- Mostrar `tipo_cambio_detectado` como dato (aporte 2 de §9).
-- **Filtro por precio en el listado** — hoy no existe (aporte 3).
+
+**GOAL (una frase):** que el número que el admin **muestra y guarda** sea exactamente el que ve el
+cliente en el feed.
+
+**NO es el goal** (y no se toca en este paso): rediseñar pantallas, la bandeja del audit, market,
+proyectos. Solo el idioma del precio y poder llegar a una propiedad por lo que se ve en el feed.
+
+#### 📸 Línea de base — medida el 11-ago, ANTES de tocar nada
+La foto previa del cutover no sirve acá: medía feeds, bot y páginas públicas. El admin no estaba.
+Estas son las props de referencia (todas `tipo_cambio_detectado='bob'`, el caso que rompe):
+
+| id | crudo guardado (Bs) | **el feed muestra** | **el admin mostraría/guardaría** | brecha |
+|---|---:|---:|---:|---:|
+| 1441 | 595.000 | **$51.126** | $85.489 | **+67%** |
+| 1903 | 670.000 | **$57.570** | $96.264 | +67% |
+| 1926 | 660.000 | **$56.711** | $94.828 | +67% |
+| 1937 | 820.000 | **$70.459** | $117.816 | +67% |
+| 1976 | 805.000 | **$69.170** | $115.661 | +67% |
+| 2082 | 432.140 | **$37.132** | $62.089 | +67% |
+| 2123 | 504.000 | **$43.306** | $72.414 | +67% |
+| 2126 | 515.000 | **$44.252** | $73.994 | +67% |
+
+La brecha es **constante y estructural**: `11,638 / 6,96 = 1,672`. No es un bug de una prop, es la
+fórmula.
+
+#### Qué cambia
+
+🔴 **No es "mostrar el crudo": es mostrar los DOS y guardar solo el crudo.**
+Corrección del founder al borrador de este plan: *"cuando yo como admin vea el precio crudo voy a
+decir que esto está mal"*. Y tiene razón — abrir una propiedad y ver **595.000** se lee como un dato
+cargado mal, porque ese no es "el precio", es el número del aviso en otra moneda. Tal como estaba
+escrito, el paso arreglaba el dato y **rompía la lectura**.
+
+La pantalla muestra dos cosas, cada una con su rol explícito:
+
+| | |
+|---|---|
+| **Lo que dice el aviso** — *editable* | Precio publicado: `595.000` en `Bolivianos` |
+| **Lo que ve el cliente** — *solo lectura, debajo* | Así se ve en el feed: **$51.126** · TC del día: 11,64 |
+
+Así el número que se edita es el del aviso, con su traducción al lado. Si los dos no cuadran, se nota
+al instante.
+🎁 **Y da algo que hoy no existe:** cuando el audit avisa *"este depto está a $84.000 y sus gemelos a
+$165.000"* (superficie 7), se puede ver de un vistazo si el problema es **el precio** o es **la
+etiqueta de moneda** — la causa más común de esos casos. Hoy el admin muestra un solo número
+convertido con una fórmula vieja y no deja distinguirlos.
+
+- **La conversión NUNCA se escribe**: aparece en pantalla como referencia y nada más. Se elimina el
+  `/6.96` y el doble poblado de columnas en alquiler (§3).
+- **El selector deja de llamarse "tipo de precio"** y pasa a ser lo que en realidad es: *en qué moneda
+  está publicado el aviso*. Eso es lo que se guarda como etiqueta (`tipo_cambio_detectado`) y lo que
+  el lector nocturno ya viene completando solo (aporte 2 de §9).
+- **Filtro por precio en el listado** — hoy no existe (aporte 3). Filtra por el **normalizado**, que es
+  el número con el que uno piensa y el que se ve en el feed.
 - Listado y editor contra la base viva (ya hecho en la rama; se libera al desplegar este paso).
 
-**Evals:** el precio de una prop en el admin == el del feed para 5 props tomadas al azar · guardar un
-precio en Bs no infla nada · buscar por rango de precio devuelve lo mismo que el feed con ese filtro.
-**Recién con esto aprobado se puede DESPLEGAR el admin** (hoy bloqueado, §3).
+#### Qué NO cambia — y hay que poder demostrarlo
+**Ningún precio ya guardado se toca.** Este paso es de **visualización y de guardado futuro**. Si al
+desplegar cambia el valor de una propiedad existente, algo se hizo mal.
+
+#### EVALS
+1. 🔴 **Ninguna prop existente cambia de precio por el deploy.** Medida: los `precio_usd` de las 8 de
+   arriba, idénticos antes y después. *(El único que obliga a revertir.)*
+2. **El admin muestra lo mismo que el feed.** Medida: en las 8, el número de "así se ve en el feed"
+   == la columna "el feed muestra" de la tabla de arriba.
+3. **Guardar en Bs no infla.** Medida: editar la 1441 sin cambiar el precio y volver a leer → sigue
+   `595000` con tag `bob`, no `85489`.
+3-bis. **Se entiende sin explicación.** Medida cualitativa, la única del set: el founder abre la 1441
+   y **no duda** de si el dato está bien cargado. Si duda, la pantalla falla aunque los números estén
+   correctos — que es exactamente lo que este plan casi rompe.
+4. **Se puede llegar por precio.** Medida: filtrar $50.000–$60.000 en el admin devuelve el mismo
+   conjunto que el feed con ese filtro.
+5. **Alquiler: una sola columna.** Medida: guardar un alquiler y verificar que no quedan pobladas
+   `precio_mensual_bob` y `precio_mensual_usd` a la vez (lo que el verificador controla cada noche).
+
+**Aborto:** solo por el eval 1. Los otros son información.
+**Recién con el eval 1 y el 3 en verde se puede DESPLEGAR el admin** (hoy bloqueado, §3).
 
 ### PASO 2 — Devolver lo que se rompió y completar el catálogo
 - **`market` y `market-alquileres` → serie shadow** (§8): vuelven a funcionar y ganan 25 métricas +
