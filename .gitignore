@@ -31,6 +31,9 @@ scripts/llm-enrichment/output/
 # Deptos Equipetrol (híbrido) — artefactos de corridas
 scripts/deptos-equipetrol/output/
 
+# BSUID — el SQL generado lleva teléfonos (PII), no va al repo
+scripts/kapso-bsuid/output/
+
 # Logs
 *.log
 

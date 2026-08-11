@@ -19,11 +19,24 @@
 //   · Puede venir en lote (`X-Webhook-Batch: true`) → aceptar array
 //
 // Requiere la env var KAPSO_WEBHOOK_SECRET (el mismo valor configurado en Kapso).
+//
+// 🆕 BSUID (mig 318): Meta está sacando el teléfono del payload — quien adopta un
+// username obtiene privacidad de número y `wa_id`/`from` desaparecen. Mientras
+// Meta siga mandando los DOS identificadores, cada evento que entra guarda también
+// el BSUID: es la única ventana para construir el mapeo teléfono↔BSUID, y se
+// cierra por cliente, sin fecha de corte. Quién es quién se resuelve en
+// lib/kapso-identidad.ts. Briefing: lab-kapso/BRIEFING_SICI_BSUID.md (D31).
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
-import { normalizePhone } from '@/lib/phone'
+import {
+  clavesDiagnostico,
+  extraerEventos,
+  normalizarEvento,
+  type EventoKapso,
+  type MensajeNormalizado,
+} from '@/lib/kapso-identidad'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -52,78 +65,86 @@ function firmaValida(raw: Buffer, firma: string): boolean {
   return crypto.timingSafeEqual(a, b)
 }
 
-interface EventoKapso {
-  message?: {
-    id?: string
-    timestamp?: string
-    type?: string
-    text?: { body?: string }
-    kapso?: { direction?: string; content?: string }
-  }
-  conversation?: {
-    id?: string
-    phone_number?: string
-    kapso?: { contact_name?: string }
-  }
-}
-
-interface MensajeNormalizado {
-  telefono: string
-  nombre: string | null
-  direccion: 'in' | 'out'
-  texto: string | null
-  tipo: string | null
-  kapso_message_id: string
-  kapso_conversation_id: string | null
-  enviado_at: string
+/**
+ * Deja constancia de los eventos que llegan SIN el identificador nuevo de Meta.
+ *
+ * 🔴 Existe por una duda concreta: está verificado que la API de Kapso expone
+ * `business_scoped_user_id`, pero el ejemplo oficial del payload v2 de webhook no
+ * lo lista — y SICI solo ve el webhook. Si no viniera, la columna quedaría en NULL
+ * en cada evento y el backfill "andaría" sin guardar nada. Este log dice qué claves
+ * trajo el payload de verdad; el termómetro en números es `v_bsuid_cobertura`.
+ * No imprime valores: nada de PII en los logs.
+ */
+function avisarSiFaltaBsuid(eventos: EventoKapso[], mensajes: MensajeNormalizado[]) {
+  const sinBsuid = mensajes.filter(m => !m.bsuid).length
+  if (sinBsuid === 0) return
+  console.warn(
+    `[kapso/webhook] ${sinBsuid}/${mensajes.length} evento(s) sin BSUID — ` +
+    `claves recibidas: ${eventos.slice(0, 1).map(clavesDiagnostico).join('')}`
+  )
 }
 
 /**
- * Saca la lista de eventos del body, en cualquiera de las formas en que Kapso lo manda.
+ * ¿El error es "esa columna/tabla todavía no existe"?
  *
- * ⚠️ Con buffering activado el lote NO viene como array plano: viene envuelto en
- *     { type, batch: true, data: [ ...eventos... ], batch_info }
- * (doc oficial: docs.kapso.ai → Webhooks overview §1). Asumir un array plano hace
- * que el envelope se trate como UN evento, no encuentre `message.id`, y el lote
- * entero se descarte devolviendo 200 — o sea, se pierden mensajes en silencio y
- * Kapso ni siquiera reintenta porque recibió el 200.
- *
- * Se aceptan las tres formas por robustez: envelope, array plano y evento suelto.
+ * 🔴 Las migraciones de SICI las aplica el humano a mano, así que el deploy puede
+ * llegar ANTES que la mig 318. Sin esta distinción, el ingest entero devolvería 500
+ * hasta que alguien aplique el SQL: Kapso reintenta 3 veces y después abandona
+ * → se perderían mensajes por el mismo agujero que estamos tapando.
+ * Con esto, el webhook sigue guardando lo de siempre y avisa que falta la migración.
  */
-function extraerEventos(payload: unknown): EventoKapso[] {
-  if (Array.isArray(payload)) return payload as EventoKapso[]
-  if (payload && typeof payload === 'object') {
-    const p = payload as { batch?: boolean; data?: unknown }
-    if (Array.isArray(p.data)) return p.data as EventoKapso[]
-    return [payload as EventoKapso]
-  }
-  return []
+function esColumnaInexistente(e: unknown): boolean {
+  const err = e as { code?: string; message?: string }
+  return err?.code === 'PGRST204' || err?.code === '42703' || err?.code === '42P01' ||
+    /does not exist|schema cache/i.test(err?.message ?? '')
 }
 
-function normalizarEvento(ev: EventoKapso): MensajeNormalizado | null {
-  const wamid = ev?.message?.id
-  const crudo = ev?.conversation?.phone_number
-  if (!wamid || !crudo) return null
+// El tipo del cliente sale de una llamada real: `ReturnType<typeof createClient>` a
+// secas infiere un schema `never` y no deja escribir nada (mismo patrón que
+// lib/simon-contactos.ts).
+const crearSb = () => createClient(supabaseUrl as string, supabaseServiceKey as string)
+type Supa = ReturnType<typeof crearSb>
 
-  const telefono = normalizePhone(crudo)
-  // Solo Bolivia: un número de otro país es ruido o una prueba de Kapso.
-  if (!telefono) return null
+/**
+ * Guarda TODOS los identificadores que Meta le fue dando a una persona, no solo el
+ * último.
+ *
+ * 🔴 El BSUID cambia: en los datos del propio founder el mismo número tiene tres,
+ * y el tercero aparece el 28-jul-2026, el día de la reconexión de coexistencia
+ * (lab-kapso D30). Si solo guardáramos el vigente, un evento que llegue con el
+ * anterior no encontraría a nadie y crearía un contacto duplicado — que es
+ * exactamente lo que el briefing manda evitar.
+ *
+ * No rompe el ingest si falla: un mensaje guardado sin su alias se puede
+ * reconstruir después desde la API de Kapso; un mensaje perdido, no.
+ */
+async function guardarAlias(
+  sb: Supa,
+  porTelefono: Map<string, MensajeNormalizado>,
+  contactoIds: Map<string, string>,
+  ahora: string,
+) {
+  const filas = [...porTelefono.entries()]
+    .filter(([tel, m]) => m.bsuid && contactoIds.has(tel))
+    .map(([tel, m]) => ({
+      contacto_id: contactoIds.get(tel) as string,
+      meta_portfolio_id: m.portfolioId,
+      business_scoped_user_id: m.bsuid as string,
+      phone_number_id: m.phoneNumberId,
+      origen: 'webhook',
+      ultimo_visto_at: ahora,
+    }))
+  if (!filas.length) return
 
-  // El timestamp de WhatsApp viene en segundos como string.
-  const ts = Number(ev?.message?.timestamp)
-  const enviado_at = Number.isFinite(ts) && ts > 0
-    ? new Date(ts * 1000).toISOString()
-    : new Date().toISOString()
-
-  return {
-    telefono,
-    nombre: ev?.conversation?.kapso?.contact_name?.slice(0, 120) || null,
-    direccion: ev?.message?.kapso?.direction === 'outbound' ? 'out' : 'in',
-    texto: (ev?.message?.text?.body ?? ev?.message?.kapso?.content ?? null)?.slice(0, 4000) ?? null,
-    tipo: ev?.message?.type?.slice(0, 40) || null,
-    kapso_message_id: String(wamid).slice(0, 200),
-    kapso_conversation_id: ev?.conversation?.id?.slice(0, 200) || null,
-    enviado_at,
+  try {
+    // `primero_visto_at` no viaja en el payload a propósito: PostgREST solo pisa
+    // las columnas que le mandás, así que la primera vez que se vio se conserva.
+    const { error } = await sb
+      .from('simon_contacto_bsuids')
+      .upsert(filas, { onConflict: 'meta_portfolio_id,business_scoped_user_id' })
+    if (error) throw error
+  } catch (e) {
+    console.warn('[kapso/webhook] no se pudo guardar el alias de BSUID:', e)
   }
 }
 
@@ -168,35 +189,76 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const eventos = extraerEventos(payload)
 
   const mensajes = eventos.map(normalizarEvento).filter((m): m is MensajeNormalizado => m !== null)
+  avisarSiFaltaBsuid(eventos, mensajes)
   if (mensajes.length === 0) return res.status(200).json({ ok: true, guardados: 0 })
 
-  const sb = createClient(supabaseUrl, supabaseServiceKey)
+  const sb = crearSb()
   let guardados = 0
+  let sinMigracion = false
 
   try {
+    const ahora = new Date().toISOString()
+
     // Un upsert de contactos por teléfono distinto (suelen ser 1-2 por lote).
+    // Los identificadores se toman del PRIMER evento del lote que los traiga: en un
+    // lote mezclado (entrante + saliente) puede que solo uno tenga el BSUID, y
+    // quedarse con el primer evento a secas lo perdería.
     const porTelefono = new Map<string, MensajeNormalizado>()
-    for (const m of mensajes) if (!porTelefono.has(m.telefono)) porTelefono.set(m.telefono, m)
+    for (const m of mensajes) {
+      if (!m.telefono) continue
+      const previo = porTelefono.get(m.telefono)
+      if (!previo) { porTelefono.set(m.telefono, { ...m }); continue }
+      previo.nombre ??= m.nombre
+      previo.bsuid ??= m.bsuid
+      previo.parentBsuid ??= m.parentBsuid
+      previo.username ??= m.username
+      previo.phoneNumberId ??= m.phoneNumberId
+    }
 
     const contactoIds = new Map<string, string>()
     for (const [telefono, m] of porTelefono) {
-      // `nombre` solo se pisa si Kapso trae uno: un evento sin nombre no debe
-      // borrar el que ya teníamos.
-      const fila: Record<string, unknown> = { telefono, updated_at: new Date().toISOString() }
+      // Ningún campo se pisa con vacío: un evento sin nombre (o sin BSUID) no debe
+      // borrar el que ya teníamos. Por eso se arma la fila campo por campo.
+      const fila: Record<string, unknown> = { telefono, updated_at: ahora }
       if (m.nombre) fila.nombre = m.nombre
-      const { data, error } = await sb
+      if (m.bsuid) {
+        // El par (portfolio, bsuid) viaja junto SIEMPRE: un BSUID sin su portfolio
+        // no identifica a nadie — el mismo string puede ser otra persona en otro
+        // portfolio (lab-kapso D30).
+        fila.business_scoped_user_id = m.bsuid
+        fila.meta_portfolio_id = m.portfolioId
+        fila.bsuid_visto_at = ahora
+      }
+      if (m.parentBsuid) fila.parent_business_scoped_user_id = m.parentBsuid
+      if (m.username) fila.username = m.username
+      if (m.phoneNumberId) fila.phone_number_id = m.phoneNumberId
+
+      let { data, error } = await sb
         .from('simon_contactos')
         .upsert(fila, { onConflict: 'telefono' })
         .select('id')
         .single()
+
+      if (error && esColumnaInexistente(error)) {
+        // Deploy adelantado a la migración: se guarda lo de siempre y se avisa.
+        console.warn('[kapso/webhook] mig 318 sin aplicar — guardando sin BSUID')
+        sinMigracion = true
+        const minima: Record<string, unknown> = { telefono, updated_at: ahora }
+        if (m.nombre) minima.nombre = m.nombre
+        ;({ data, error } = await sb
+          .from('simon_contactos')
+          .upsert(minima, { onConflict: 'telefono' })
+          .select('id')
+          .single())
+      }
       if (error) throw error
       if (data?.id) contactoIds.set(telefono, data.id as string)
     }
 
     const filas = mensajes
-      .filter(m => contactoIds.has(m.telefono))
+      .filter(m => m.telefono && contactoIds.has(m.telefono))
       .map(m => ({
-        contacto_id: contactoIds.get(m.telefono),
+        contacto_id: contactoIds.get(m.telefono as string),
         telefono: m.telefono,
         direccion: m.direccion,
         texto: m.texto,
@@ -204,6 +266,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         kapso_message_id: m.kapso_message_id,
         kapso_conversation_id: m.kapso_conversation_id,
         enviado_at: m.enviado_at,
+        ...(sinMigracion ? {} : { business_scoped_user_id: m.bsuid }),
       }))
 
     if (filas.length) {
@@ -215,6 +278,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (error) throw error
       guardados = filas.length
     }
+
+    // El historial de identificadores. Va al final y en su propio try: es
+    // información valiosa, pero NO vale perder el mensaje por ella.
+    if (!sinMigracion) await guardarAlias(sb, porTelefono, contactoIds, ahora)
   } catch (e) {
     // 500 hace que Kapso reintente — correcto para un fallo transitorio de BD.
     console.error('[kapso/webhook] error guardando:', e)
