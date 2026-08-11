@@ -542,16 +542,42 @@ async function apply(file) {
 
   // Proteger fecha_publicacion: LEAST(existente en shadow, nueva) → nunca la pisa hacia adelante
   // (anti re-scrape y anti-bump del broker). El híbrido la canda, no confía en que nadie la toque.
+  //
+  // 🔒 Y RESPETAR `campos_bloqueados` (11-ago-2026, regla #1 "Manual > Automatic").
+  // El upsert es por `id`: en la nocturna normal solo entran NUEVAS, así que inserta y no pisa
+  // nada. Pero al RE-PROCESAR una prop existente (`--ids`, relectura, barrido) sobrescribía TODAS
+  // las columnas — incluidas las que un humano había corregido y trabado. O sea: el candado
+  // fallaba exactamente en el caso para el que se puso. El audit y el cron de casas ya lo
+  // respetaban; los cargadores de deptos no.
+  // 🔑 Solo cuenta el candado en formato OBJETO con `bloqueado === true`: un string no protege
+  // (memoria `feedback_candado_formato_objeto`) y hay candados corruptos con claves numéricas.
   let protegidas = 0;
+  const candadosRespetados = [];
   if (filas.length) {
-    const { data: prev } = await sb.from('propiedades_v2_shadow').select('id,fecha_publicacion').in('id', filas.map((f) => f.id));
-    const prevById = new Map((prev || []).map((r) => [r.id, r.fecha_publicacion]));
+    const { data: prev } = await sb.from('propiedades_v2_shadow')
+      .select('id,fecha_publicacion,campos_bloqueados').in('id', filas.map((f) => f.id));
+    const prevById = new Map((prev || []).map((r) => [r.id, r]));
     for (const f of filas) {
       const ex = prevById.get(f.id);
-      const min = fechaMin(ex, f.fecha_publicacion);
-      if (ex && min !== fechaDia(f.fecha_publicacion)) protegidas++;
+      const min = fechaMin(ex?.fecha_publicacion, f.fecha_publicacion);
+      if (ex?.fecha_publicacion && min !== fechaDia(f.fecha_publicacion)) protegidas++;
       f.fecha_publicacion = min;
+
+      const cb = ex?.campos_bloqueados;
+      if (cb && typeof cb === 'object' && !Array.isArray(cb)) {
+        for (const [campo, info] of Object.entries(cb)) {
+          if (info && typeof info === 'object' && info.bloqueado === true && campo in f) {
+            delete f[campo];   // el valor humano se queda como está
+            candadosRespetados.push({ id: f.id, campo });
+          }
+        }
+      }
     }
+  }
+  if (candadosRespetados.length) {
+    const porCampo = candadosRespetados.reduce((a, c) => { a[c.campo] = (a[c.campo] || 0) + 1; return a; }, {});
+    console.log(`   🔒 candados respetados: ${candadosRespetados.length} en ${new Set(candadosRespetados.map((c) => c.id)).size} props — ` +
+      Object.entries(porCampo).map(([k, v]) => `${k}×${v}`).join(' · '));
   }
   // Upsert RESILIENTE (fila-por-fila): una fila que viole un constraint NO tira el lote entero
   // (ej. multiproyecto sin rangos → check_multiproperty_completo_v2). Se reporta, no se aborta.

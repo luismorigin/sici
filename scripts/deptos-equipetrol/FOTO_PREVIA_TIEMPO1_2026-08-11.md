@@ -135,7 +135,22 @@ vieja) y el sistema habría pasado la noche sin capturar.
 
 ### 🎯 Lo que se rompió y NO estaba predicho
 
-**NINGUNO.**
+**UNO — y apareció recién al arrancar el trabajo intermedio, no en la verificación.**
+
+🔴 **`/b/[hash]` (shortlists públicas) — DEGRADACIÓN SILENCIOSA.**
+La predicción las daba como "no se rompen". **Cargan** (las 3 probadas: 200 con contenido), pero
+`pages/b/[hash].tsx:524` y `:610` consultan `propiedades_v2` **directo** para traer el precio crudo
+(`precio_mensual_bob` / `precio_usd`). Esa consulta ahora falla, Supabase devuelve `{data:null,error}`
+sin lanzar, y el código hace `(rawRes.data || [])` → sigue de largo con el mapa vacío.
+**Consecuencia:** `rawActual` queda `null` para todas las props → **el chip de cambio de precio deja
+de mostrarse** ("bajó/subió desde que armaste la shortlist"). Impacto hoy: **cero** (piloto
+congelado, sin usuarios). Va al trabajo intermedio.
+
+🔑 **Por qué se escapó, que es lo que importa:** el eval 1 probó las **páginas de listado**, no una
+shortlist real con su hash. Una superficie que **degrada sin romperse** no la detecta un chequeo de
+HTTP 200 ni un conteo de propiedades — hay que mirar la función que se perdió.
+👉 **Para el TIEMPO 2: la foto previa tiene que incluir una shortlist real y el dato que la degrada,
+no solo el código de respuesta.**
 
 Es el resultado que el eval 3 contempla como "el mapa era correcto". Vale anotar por qué llegó a
 serlo: las 4 rondas de análisis, y sobre todo la ronda 4 —que usó `pg_depend` en vez de mi

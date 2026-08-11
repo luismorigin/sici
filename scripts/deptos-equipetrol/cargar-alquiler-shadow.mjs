@@ -474,16 +474,37 @@ async function apply(file) {
   }
 
   // Proteger fecha_publicacion (LEAST) — nunca hacia adelante
+  // 🔒 + respetar `campos_bloqueados` (11-ago-2026). Gemelo del cargador de venta y por el mismo
+  // motivo: el upsert por `id` solo inserta en la nocturna (entran NUEVAS), pero al RE-PROCESAR una
+  // prop existente pisaba las columnas que un humano había corregido y trabado — el candado fallaba
+  // justo en el caso para el que se puso. Solo vale el formato OBJETO con `bloqueado === true`.
   let protegidas = 0;
+  const candadosRespetados = [];
   if (filas.length) {
-    const { data: prev } = await sb.from('propiedades_v2_shadow').select('id,fecha_publicacion').in('id', filas.map((f) => f.id));
-    const prevById = new Map((prev || []).map((r) => [r.id, r.fecha_publicacion]));
+    const { data: prev } = await sb.from('propiedades_v2_shadow')
+      .select('id,fecha_publicacion,campos_bloqueados').in('id', filas.map((f) => f.id));
+    const prevById = new Map((prev || []).map((r) => [r.id, r]));
     for (const f of filas) {
       const ex = prevById.get(f.id);
-      const min = fechaMin(ex, f.fecha_publicacion);
-      if (ex && min !== fechaDia(f.fecha_publicacion)) protegidas++;
+      const min = fechaMin(ex?.fecha_publicacion, f.fecha_publicacion);
+      if (ex?.fecha_publicacion && min !== fechaDia(f.fecha_publicacion)) protegidas++;
       f.fecha_publicacion = min;
+
+      const cb = ex?.campos_bloqueados;
+      if (cb && typeof cb === 'object' && !Array.isArray(cb)) {
+        for (const [campo, info] of Object.entries(cb)) {
+          if (info && typeof info === 'object' && info.bloqueado === true && campo in f) {
+            delete f[campo];
+            candadosRespetados.push({ id: f.id, campo });
+          }
+        }
+      }
     }
+  }
+  if (candadosRespetados.length) {
+    const porCampo = candadosRespetados.reduce((a, c) => { a[c.campo] = (a[c.campo] || 0) + 1; return a; }, {});
+    console.log(`   🔒 candados respetados: ${candadosRespetados.length} en ${new Set(candadosRespetados.map((c) => c.id)).size} props — ` +
+      Object.entries(porCampo).map(([k, v]) => `${k}×${v}`).join(' · '));
   }
   const fallidas = [];
   for (const f of filas) {
