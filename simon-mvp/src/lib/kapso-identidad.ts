@@ -189,21 +189,40 @@ export function clavesDiagnostico(ev: EventoKapso): string {
   return `conversation[${k(ev?.conversation)}] message[${k(ev?.message)}]`
 }
 
+/** Por qué un evento no se pudo procesar. Se guarda con el evento crudo. */
+export type MotivoDescarte = 'sin_wamid' | 'sin_identidad' | 'fuera_de_bolivia'
+
+export type ResultadoEvento =
+  | { ok: true; mensaje: MensajeNormalizado }
+  | { ok: false; motivo: MotivoDescarte }
+
 /**
- * Evento de Kapso → fila lista para guardar. `null` = no se puede procesar.
+ * Evento de Kapso → fila lista para guardar, o el motivo por el que no.
  *
- * PASO 1 (mig 318): la identidad SIGUE SIENDO el teléfono y un evento sin teléfono
- * boliviano se sigue descartando. Lo único que cambia es que ahora, cuando el
- * teléfono viene, también se guarda el BSUID — que es lo urgente, porque hoy Meta
- * manda los dos y esa ventana se cierra por cliente, sin fecha de corte.
- * El paso 2 (mig 319) es el que mueve la identidad al BSUID.
+ * 🔴 EL CAMBIO DE LA MIG 319: antes esto era `if (!wamid || !telefono) return null`
+ * y un evento sin teléfono se perdía sin log, sin error y sin posibilidad de
+ * recuperarlo (Meta no reenvía). Ahora alcanza con **una** identidad: el BSUID o el
+ * teléfono. El motivo se devuelve para que el que llama lo guarde crudo en vez de
+ * tirarlo.
+ *
+ * ⚠️ El filtro "solo Bolivia" cambió de fuente, no de intención. Antes el país
+ * salía del teléfono, y sin teléfono no hay país que mirar. Regla nueva: si hay
+ * teléfono, manda el teléfono (evidencia más fuerte); si no hay, manda el ISO que
+ * trae el propio BSUID (`BO.`). Un número de otro país sigue siendo ruido o una
+ * prueba de Kapso.
  */
-export function normalizarEvento(ev: EventoKapso): MensajeNormalizado | null {
+export function normalizarEvento(ev: EventoKapso): ResultadoEvento {
   const wamid = ev?.message?.id
-  if (!wamid) return null
+  if (!wamid) return { ok: false, motivo: 'sin_wamid' }
 
   const id = extraerIdentidad(ev)
-  if (!id.telefono) return null
+  if (!id.telefono && !id.bsuid) {
+    return { ok: false, motivo: id.telefonoCrudo ? 'fuera_de_bolivia' : 'sin_identidad' }
+  }
+  // Vino un teléfono y no es boliviano: no lo salva tener BSUID.
+  if (!id.telefono && id.telefonoCrudo) return { ok: false, motivo: 'fuera_de_bolivia' }
+  // Sin teléfono, el país lo dice el BSUID.
+  if (!id.telefono && id.paisBsuid !== 'BO') return { ok: false, motivo: 'fuera_de_bolivia' }
 
   // El timestamp de WhatsApp viene en segundos como string.
   const ts = Number(ev?.message?.timestamp)
@@ -212,18 +231,58 @@ export function normalizarEvento(ev: EventoKapso): MensajeNormalizado | null {
     : new Date().toISOString()
 
   return {
-    telefono: id.telefono,
-    nombre: texto(ev?.conversation?.kapso?.contact_name, 120),
-    direccion: direccionDe(ev),
-    texto: texto(ev?.message?.text?.body ?? ev?.message?.kapso?.content, 4000),
-    tipo: texto(ev?.message?.type, 40),
-    kapso_message_id: String(wamid).slice(0, 200),
-    kapso_conversation_id: texto(ev?.conversation?.id, 200),
-    enviado_at,
-    bsuid: id.bsuid,
-    parentBsuid: id.parentBsuid,
-    username: id.username,
-    phoneNumberId: id.phoneNumberId,
-    portfolioId: id.portfolioId,
+    ok: true,
+    mensaje: {
+      telefono: id.telefono,
+      nombre: texto(ev?.conversation?.kapso?.contact_name, 120),
+      direccion: direccionDe(ev),
+      texto: texto(ev?.message?.text?.body ?? ev?.message?.kapso?.content, 4000),
+      tipo: texto(ev?.message?.type, 40),
+      kapso_message_id: String(wamid).slice(0, 200),
+      kapso_conversation_id: texto(ev?.conversation?.id, 200),
+      enviado_at,
+      bsuid: id.bsuid,
+      parentBsuid: id.parentBsuid,
+      username: id.username,
+      phoneNumberId: id.phoneNumberId,
+      portfolioId: id.portfolioId,
+    },
   }
+}
+
+/**
+ * La clave con la que se agrupan los eventos de UNA MISMA persona dentro de un lote.
+ * BSUID primero, teléfono después — el mismo orden que usa la BD para resolver la
+ * identidad. Al revés, en la ventana en que Meta manda los dos, dos eventos de la
+ * misma persona podrían agruparse por caminos distintos.
+ */
+export function claveIdentidad(m: MensajeNormalizado): string {
+  return m.bsuid ? `b:${m.portfolioId}:${m.bsuid}` : `t:${m.telefono}`
+}
+
+/**
+ * ¿Es un aviso de Meta de que el BSUID de alguien CAMBIÓ (`user_id_update`)?
+ *
+ * ⚠️ La forma exacta de este evento NO está verificada contra un payload real —
+ * todavía no llegó ninguno. Por eso se detecta por la FORMA (hay un identificador
+ * "anterior" y uno "nuevo") y no por un nombre de campo puntual, y por eso lo que
+ * no se reconoce se guarda crudo en vez de descartarse. Cuando llegue el primero,
+ * el payload va a estar en `simon_eventos_sin_procesar` para ajustarlo.
+ */
+export function detectarCambioDeBsuid(ev: unknown): { anterior: string | null; nuevo: string } | null {
+  if (!ev || typeof ev !== 'object') return null
+  let anterior: string | null = null
+  let nuevo: string | null = null
+
+  const recorrer = (o: unknown) => {
+    if (!o || typeof o !== 'object') return
+    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+      if (/^(previous|old|former)_/.test(k) && /user_id$/.test(k)) anterior ??= limpiarBsuid(v)
+      else if (/^(new|current|updated)_/.test(k) && /user_id$/.test(k)) nuevo ??= limpiarBsuid(v)
+      if (v && typeof v === 'object') recorrer(v)
+    }
+  }
+  recorrer(ev)
+
+  return nuevo ? { anterior, nuevo } : null
 }

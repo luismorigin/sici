@@ -102,6 +102,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           shortlist_id = sl.id
         }
 
+        // ⚠️ LÍMITE (mig 319): esta es la única llave disponible acá — la shortlist
+        // guarda el teléfono que la persona ESCRIBIÓ en el chat, y desde que Meta da
+        // privacidad de número un contacto puede no tener ninguno. En ese caso el
+        // clic se registra igual (la métrica del negocio no se pierde), pero queda
+        // sin dueño: `contacto_id` en NULL. Se cierra cuando la shortlist guarde el
+        // contacto_id — capa 3 de CRM_CLIENTES_B2C_PLAN.md.
         const tel = sl.cliente_telefono ? normalizePhone(sl.cliente_telefono) : null
         if (tel) {
           const { data: c } = await supabase

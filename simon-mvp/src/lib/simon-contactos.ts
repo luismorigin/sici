@@ -20,7 +20,11 @@ const sb = () => createClient(
  * Documentado en CRM_CLIENTES_B2C_PLAN.md §2.2. Las filas NUEVAS ya se guardan
  * normalizadas, pero las viejas siguen sucias → hay que buscar las 3.
  */
-export function variantesTelefono(normalizado: string): string[] {
+export function variantesTelefono(normalizado: string | null): string[] {
+  // Desde la mig 319 un contacto puede no tener teléfono nunca (Meta lo sacó del
+  // payload; ver kapso-identidad.ts). Sin este guard, el `.exec(null)` lo convertía
+  // en el string "null" y se terminaba consultando `.in('cliente_telefono',[null])`.
+  if (!normalizado) return []
   const m = /^\+591([67]\d{7})$/.exec(normalizado)
   if (!m) return [normalizado]
   const local = m[1]
@@ -29,7 +33,8 @@ export function variantesTelefono(normalizado: string): string[] {
 
 export interface ContactoResumen {
   id: string
-  telefono: string
+  /** `null` desde la mig 319: quien adoptó un username de WhatsApp no manda número. */
+  telefono: string | null
   nombre: string | null
   estado: string
   notas: string | null
@@ -47,6 +52,14 @@ export interface ContactoResumen {
   total_wa_clicks: number
   ultimo_wa_click_at: string | null
   dias_sin_actividad: number | null
+  // Identidad nueva (mig 319)
+  username: string | null
+  business_scoped_user_id: string | null
+  /** Cuántos identificadores le dio Meta. >1 = se lo cambió alguna vez. */
+  total_bsuids: number
+  sin_telefono: boolean
+  /** Con qué nombrarlo en pantalla: teléfono → @username → BSUID. Nunca vacío. */
+  identificador: string
 }
 
 export interface MensajeCRM {
@@ -95,8 +108,15 @@ export async function listContactos(opts: { search?: string | null; limit?: numb
     .order('ultimo_mensaje_at', { ascending: false, nullsFirst: false })
     .limit(opts.limit ?? 200)
 
+  // Se busca también por username y BSUID: un contacto sin teléfono no se puede
+  // encontrar por número, y era el único campo que se miraba.
   const s = opts.search?.trim()
-  if (s) q = q.or(`telefono.ilike.%${s}%,nombre.ilike.%${s}%`)
+  if (s) {
+    q = q.or(
+      `telefono.ilike.%${s}%,nombre.ilike.%${s}%,` +
+      `username.ilike.%${s}%,business_scoped_user_id.ilike.%${s}%`
+    )
+  }
 
   const { data, error } = await q
   if (error) throw error
@@ -155,13 +175,27 @@ export async function getContactoDetalle(id: string) {
   // así que el mismo número vive en 3 formatos (+59176…, 59176…, 76…). Un .eq() sobre
   // el normalizado encontraba SOLO las nuevas (bug: el detalle mostraba "SELECCIONES (1)"
   // mientras la lista contaba 21, porque la vista sí normaliza). Se buscan las 3 variantes.
-  const { data: slRaw, error: eS } = await client
-    .from('broker_shortlists')
-    .select('id, hash, cliente_nombre, created_at, view_count, status')
-    .eq('broker_slug', 'simon-asistente')
-    .in('cliente_telefono', variantesTelefono((contacto as ContactoResumen).telefono))
-    .order('created_at', { ascending: false })
-  if (eS) throw eS
+  //
+  // 🔴 LÍMITE DECLARADO (mig 319): el teléfono es la ÚNICA llave que hay contra las
+  // shortlists, y un contacto sin número no cruza. No es un descuido: la shortlist
+  // guarda el teléfono que la persona ESCRIBIÓ en el chat, no el del remitente —
+  // son dos caminos distintos, y por eso el bot le sigue armando la selección aunque
+  // el CRM no lo reconozca. Cerrarlo de verdad es que la shortlist guarde el
+  // contacto_id (capa 3 del plan). Mientras tanto, la UI lo DECLARA en vez de
+  // mostrar cero como si no hubiera nada.
+  const variantes = variantesTelefono((contacto as ContactoResumen).telefono)
+  const slRaw = variantes.length
+    ? await (async () => {
+        const { data, error } = await client
+          .from('broker_shortlists')
+          .select('id, hash, cliente_nombre, created_at, view_count, status')
+          .eq('broker_slug', 'simon-asistente')
+          .in('cliente_telefono', variantes)
+          .order('created_at', { ascending: false })
+        if (error) throw error
+        return data
+      })()
+    : []
 
   const shortlists = await enriquecerShortlists(client, slRaw ?? [])
 

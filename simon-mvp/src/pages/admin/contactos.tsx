@@ -17,7 +17,8 @@ const ESTADOS = ['nuevo', 'activo', 'contacto', 'cerrado', 'descartado'] as cons
 
 interface ContactoResumen {
   id: string
-  telefono: string
+  /** `null` desde la mig 319: Meta le da privacidad de número a quien usa username. */
+  telefono: string | null
   nombre: string | null
   estado: string
   notas: string | null
@@ -35,6 +36,13 @@ interface ContactoResumen {
   total_wa_clicks: number
   ultimo_wa_click_at: string | null
   dias_sin_actividad: number | null
+  // Identidad nueva (mig 319)
+  username: string | null
+  business_scoped_user_id: string | null
+  total_bsuids: number
+  sin_telefono: boolean
+  /** Teléfono → @username → BSUID. Nunca vacío: sin esto la fila quedaba en blanco. */
+  identificador: string
 }
 
 interface MensajeCRM {
@@ -220,7 +228,12 @@ export default function AdminContactos() {
                   <tr key={c.id} onClick={() => abrirDetalle(c.id)}>
                     <td>
                       <div className="cc-name">{c.nombre || 'Sin nombre'}</div>
-                      <div className="cc-muted cc-sm">{c.telefono}</div>
+                      {/* `identificador` nunca viene vacío: sin teléfono muestra el
+                          username o el BSUID. Antes acá quedaba un hueco. */}
+                      <div className="cc-muted cc-sm">
+                        {c.identificador}
+                        {c.sin_telefono && <span className="cc-nonum"> sin número</span>}
+                      </div>
                     </td>
                     <td className="cc-prev">{c.ultimo_texto_in || '—'}</td>
                     <td>{c.total_mensajes} <span className="cc-muted cc-sm">({c.mensajes_in}/{c.mensajes_out})</span></td>
@@ -255,15 +268,34 @@ export default function AdminContactos() {
                   <header className="cc-dhead">
                     <div>
                       <h2>{detalle.contacto.nombre || 'Sin nombre'}</h2>
-                      <p className="cc-muted cc-sm">{detalle.contacto.telefono}</p>
+                      <p className="cc-muted cc-sm">{detalle.contacto.identificador}</p>
+                      {detalle.contacto.sin_telefono && (
+                        // Se DECLARA por qué no hay número y qué consecuencia tiene,
+                        // en vez de mostrar contadores en cero como si no hubiera nada.
+                        <p className="cc-warn cc-sm">
+                          Sin número: adoptó un username de WhatsApp y Meta ya no lo manda.
+                          Se le puede responder desde la conversación, pero sus selecciones
+                          no se pueden cruzar (esas se guardan por teléfono).
+                        </p>
+                      )}
+                      {detalle.contacto.total_bsuids > 1 && (
+                        <p className="cc-muted cc-sm">
+                          Meta le cambió el identificador {detalle.contacto.total_bsuids - 1} vez
+                          {detalle.contacto.total_bsuids > 2 ? 'es' : ''} — se guardan todos.
+                        </p>
+                      )}
                     </div>
                     <button className="cc-x" onClick={() => setDetalle(null)} aria-label="Cerrar">×</button>
                   </header>
 
                   <div className="cc-drow">
-                    <a className="cc-btn cc-btn-wa"
-                       href={buildWhatsAppURL(detalle.contacto.telefono, '')}
-                       target="_blank" rel="noopener noreferrer">Abrir WhatsApp</a>
+                    {/* Sin número no hay link de WhatsApp que armar: el botón se
+                        esconde en vez de generar uno roto. */}
+                    {detalle.contacto.telefono && (
+                      <a className="cc-btn cc-btn-wa"
+                         href={buildWhatsAppURL(detalle.contacto.telefono, '')}
+                         target="_blank" rel="noopener noreferrer">Abrir WhatsApp</a>
+                    )}
                     <select
                       className="cc-select"
                       value={detalle.contacto.estado}
@@ -392,6 +424,9 @@ export default function AdminContactos() {
         .cc-slmeta { font-size: 12px; margin-top: 3px; }
         .cc-hot { color: #3A6A48; font-weight: 500; }
         .cc-fav { color: #B4472F; font-weight: 500; }
+        /* Identidad sin teléfono (mig 319) */
+        .cc-nonum { color: #B4472F; }
+        .cc-warn { color: #B4472F; max-width: 42ch; margin-top: 4px; }
         .cc-props { list-style: none; margin: 8px 0 0; padding: 0; border-top: 1px solid #F0ECE2; }
         .cc-prop { display: grid; grid-template-columns: 14px 1fr; gap: 2px 6px; padding: 6px 0 5px; border-bottom: 1px solid #F7F4EC; font-size: 12px; }
         .cc-prop:last-child { border-bottom: none; }
