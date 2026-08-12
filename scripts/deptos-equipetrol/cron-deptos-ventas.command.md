@@ -40,6 +40,31 @@ inventario que rota. Las **nuevas** (en el portal, aún no en prod) quedan para 
 
 > Primera vez en una máquina nueva: `cd scripts/deptos-equipetrol && npm install`.
 
+### 0. Refrescar el tipo de cambio paralelo (PRIMERO, antes de leer nada)
+```
+node capturar-tc-binance.mjs --apply
+```
+Trae el TC de Binance P2P (promedio de los 5 primeros SELL) y actualiza `config_global`, dejando la
+fila en `tc_binance_historial`. **Va primero porque el clasificador de la captura de esta noche lo
+usa**: `clasificarTCporRatio()` decide si el precio de un aviso está en dólares o en bolivianos
+comparando contra el paralelo vivo, con 6% de tolerancia. Hasta hoy las 4 capturas nocturnas **leían**
+el TC y ninguna lo **refrescaba** — quedó congelado 16 días (27-jul → 12-ago) y llegó a 0,95% de
+brecha. Un falso positivo de `paralelo` es "el bug histórico que infló 368 deptos".
+
+🔴 **UN FALLO ACÁ NO FRENA EL CRON.** El script sale con `exit 1` en cinco situaciones (Binance no
+responde, TC fuera del rango 8–15, salto mayor al 10%, doble corrida del día). **Todas son
+correctas** —son guardarraíles, no errores— y en todas la razón queda escrita en
+`razon_no_aplicado`. Si este paso falla: **anotalo en el log del paso 7 y seguí con el paso 1**. La
+captura de la noche vale mucho más que el TC del día, y con el valor viejo el clasificador sigue
+acertando por semanas (la brecha crece lento: 16 días = 0,95%, el umbral es 6%).
+
+⚠️ Solo va en ESTE cron, que es el primero de la noche (01:17). Los otros tres (alquiler Eq y los dos
+de ZN) heredan el valor fresco y **no deben repetirlo**: el script se niega a correr dos veces el
+mismo día salvo `--force`, así que repetirlo solo generaría ruido de error.
+
+Detalle: `docs/arquitectura/TC_BINANCE_DIAGNOSTICO_2026-08-11.md` · plan y foto previa en
+`TC_BINANCE_PLAN_2026-08-12.md`.
+
 ### 1. Discovery + diff (read-only, no escribe)
 ```
 node discovery-deptos.mjs
@@ -187,6 +212,11 @@ amoblado/equipado. Alternativa gratis sin browser: comparar por SQL `buscar_unid
 Reportá al usuario: cuántos escritos/rechazados/retenidos, las correcciones notables vs n8n (precio
 corrupto cazado, TC re-clasificado, match recuperado), y **la cola de excepciones** (PM_NUEVO a crear,
 ambiguos, sin-match). Registrá una línea en `output/cron-deptos-ventas-log.md` (fecha + números).
+
+📌 **El log DEBE declarar el tipo de cambio del paso 0**, en una línea: el valor aplicado y la
+variación, o **por qué no se aplicó** si falló. Sin eso, un TC congelado vuelve a ser invisible — que
+es exactamente cómo pasó desapercibido 16 días. Ejemplos:
+`TC: 11,528 (−0,95%)` · `TC: NO aplicado — Binance no respondió, sigue 11,528 (2 días)`.
 
 **Y mandá el aviso a Slack** — el cron corre de noche sin nadie mirando; sin esto el founder queda ciego
 (y n8n, que hoy sí avisa, se va a apagar):
