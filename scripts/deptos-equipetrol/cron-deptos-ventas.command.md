@@ -208,6 +208,28 @@ Verificá con **Playwright** (mejor que el preview Chrome headless para este fee
 nuevo (paralelo a valor de cara, `oficial_viejo` descontado, `bob` live), equipamiento canónico + extra,
 amoblado/equipado. Alternativa gratis sin browser: comparar por SQL `buscar_unidades_simple_shadow` vs prod.
 
+### 6b. ¿El bot puede consultar el mercado? (prueba diaria, $0)
+```
+node probar-bot.mjs --slack
+```
+Corre las **3 RPC que usa el bot** (`resumen_mercado`, `buscar_propiedades`, `buscar_similares`) en
+los 5 casos que importan, **con la clave anon — la misma que usa Kapso**.
+
+🔑 **La llave es la decisión de diseño, no un detalle.** Las dos causas del incidente de 19 días
+fueron permisos de `anon` (mig 315 sin GRANT, mig 317 con REVOKE). Con `service_role` esta prueba
+habría dado **verde los 19 días con el bot muerto**. Probar con la llave equivocada es peor que no
+probar: da falsa tranquilidad.
+
+Falla si: HTTP ≠ 200 · la RPC devuelve error · **responde 200 pero sin datos** · o tarda más de 3 s
+(el corte de Supabase). Avisa en amarillo por encima de 2 s: ahí se está comiendo el margen, que es
+como `buscar_similares` llegó a 4,06 s sin que nadie lo viera.
+
+Va acá, después de la captura, porque una migración aplicada durante el día puede haber roto los
+permisos sin que nadie lo note — el bot **no avisa cuando no puede consultar**: deriva a un asesor y
+se queda callado. Correr a mano en cualquier momento: `node probar-bot.mjs` (sin `--slack`).
+
+**Si falla, va al log y al Slack de la noche.** No aborta el cron: la captura ya terminó.
+
 ### 7. Reportar + log + **avisar por Slack**
 Reportá al usuario: cuántos escritos/rechazados/retenidos, las correcciones notables vs n8n (precio
 corrupto cazado, TC re-clasificado, match recuperado), y **la cola de excepciones** (PM_NUEVO a crear,
