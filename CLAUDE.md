@@ -19,6 +19,21 @@
 node scripts/deptos-equipetrol/reconstruir-serie-precios.mjs
 ```
 Re-corre el backfill de `market_price_reexpresado` (migs 287-289) para que la **curva histórica de `/mercado` avance** junto con el resto. **Es lo ÚNICO de las páginas de mercado que NO se actualiza solo**: los KPIs, yields, cortes y rotación salen de vistas vivas (ISR 6h), pero la serie histórica es un backfill manual a propósito (es historia, no dato del día). Si no se corre, la curva se queda mostrando hasta el último mes reconstruido mientras los indicadores de arriba avanzan. Idempotente, ~10s, sin riesgo. Detalle: memoria `project_serie_precios_reexpresada`.
+> ⚠️ Desde el TIEMPO 1, `reconstruir_serie_precios_reexpresada()` apunta a `propiedades_v2_archivo`
+> **a propósito**: los 6,5 meses de historia viven ahí. No repuntarla a la base viva.
+
+### 💱 El TC ya NO es tarea manual (12-ago-2026)
+`config_global.tipo_cambio_paralelo` se refresca solo: es el **paso 0** de `/cron-deptos-ventas`
+(01:17, el primero de la noche), y los otros 3 crons heredan el valor fresco.
+🔑 **Va primero porque el clasificador de la captura lo usa**: `clasificarTCporRatio()` decide si el
+precio de un aviso está en USD o en Bs comparando contra el paralelo vivo, con 6% de tolerancia.
+Hasta el 12-ago las 4 capturas **leían** el TC y ninguna lo **refrescaba** — quedó congelado 16 días
+(27-jul→12-ago, brecha 0,95%) y nadie se enteró. Un falso positivo de `paralelo` es *"el bug
+histórico que infló 368 deptos"*.
+**Un fallo del TC NO frena la captura**: el script sale con `exit 1` en 5 situaciones y las 5 son
+guardarraíles correctos (Binance caído, TC fuera de 8–15, salto >10%, doble corrida) — se anota en el
+log y se sigue. A mano: `node scripts/deptos-equipetrol/capturar-tc-binance.mjs` (dry-run) o
+`--apply`. Plan y foto previa: `docs/arquitectura/TC_BINANCE_PLAN_2026-08-12.md`.
 
 ## MCP Servers
 
@@ -36,14 +51,14 @@ Workflows n8n usan env vars para secrets (NO hardcodear): `SLACK_WEBHOOK_SICI=..
 
 1. **Manual > Automatic** — `campos_bloqueados` SIEMPRE se respetan
 2. **Discovery > Enrichment** — para campos físicos (area, dorms, GPS)
-3. **propiedades_v2** — ÚNICA tabla activa. `propiedades` es LEGACY
+3. 🔴 **La tabla viva es `propiedades_v2_shadow`. `propiedades_v2` YA NO EXISTE** — el TIEMPO 1 del cutover (11-ago-2026) la renombró a `propiedades_v2_archivo`, y **no quedó vista de compatibilidad**: cualquier query a `propiedades_v2` falla con `42P01`. El archivo se conserva (33 matches de condominio, crudo histórico, 22k filas de `precios_historial`) pero **está congelado desde el 28-jul**. `propiedades` a secas es LEGACY de 2025. Ver `scripts/deptos-equipetrol/INVENTARIO_66_FUNCIONES_2026-08-11.md`
 4. **SQL > Regex** — potenciar matching en BD, no extractores
 5. **Human-in-the-Loop** — HITL migrado a Admin Dashboard (ya no Google Sheets)
 6. **Alquiler aislado** — pipeline alquiler usa funciones PROPIAS (`_alquiler`), NUNCA modificar funciones de venta
 7. **pg_get_functiondef() SIEMPRE** — antes de modificar cualquier función SQL, exportar la versión de producción. NUNCA confiar en archivos de migración locales.
 8. **Filtros de calidad en estudios** — al consultar props para informes: `duplicado_de IS NULL`, `tipo_propiedad_original NOT IN ('baulera','parqueo','garaje','deposito')`, `(es_multiproyecto = false OR es_multiproyecto IS NULL)` (columna directa, NO `llm_output`), `area_total_m2 >= 20`, `<=300d` venta (730 preventa) / `<=150d` alquiler. Detalle: `docs/reports/FILTROS_CALIDAD_MERCADO.md`
 9. **Auditorías de datos** — filtrar primero por los mismos criterios de mercado (`duplicado_de IS NULL`, `status='completado'`). Props que no pasan esos filtros NO son anomalías — ya están excluidas.
-10. **Queries de mercado ad-hoc** — SIEMPRE `v_mercado_venta` / `v_mercado_alquiler`. NUNCA filtros canónicos a mano contra `propiedades_v2`. Exponen `precio_m2`, `precio_norm`, `dias_en_mercado` (venta), `precio_mensual` (alquiler). Alquiler: `precio_mensual_bob` (fuente de verdad, display Bs) → `precio_mensual` USD derivado por TC oficial salvo `solo_tc_paralelo=true`; NO es la normalización de venta. Vistas filtran ≤150d (inventario estancado → `propiedades_v2` directo). **NUNCA `precio_usd`.** Detalle TC: `docs/arquitectura/TIPO_CAMBIO_SICI.md`
+10. **Queries de mercado ad-hoc** — 🔴 **SIEMPRE las vistas `_shadow`: `v_mercado_venta_shadow` / `v_mercado_alquiler_shadow`.** Las gemelas sin sufijo (`v_mercado_venta`, `v_mercado_alquiler`, `v_mercado_casas`) **quedaron pegadas a `propiedades_v2_archivo`** cuando el TIEMPO 1 renombró la tabla — las vistas se ligan por OID, no por nombre. **No dan error: sirven la foto congelada del 27-jul.** Es el bug que dejó el resumen de mercado de ZN mostrando datos viejos hasta el 12-ago. (Excepción: `v_mercado_casas` apunta bien, porque las 116 casas viven en el archivo.) NUNCA filtros canónicos a mano contra la tabla. Exponen `precio_m2`, `precio_norm`, `dias_en_mercado` (venta), `precio_mensual` (alquiler). Alquiler: `precio_mensual_bob` (fuente de verdad, display Bs) → `precio_mensual` USD derivado por TC oficial salvo `solo_tc_paralelo=true`; NO es la normalización de venta. Vistas filtran ≤150d (inventario estancado → `propiedades_v2` directo). **NUNCA `precio_usd`.** Detalle TC: `docs/arquitectura/TIPO_CAMBIO_SICI.md`
 11. **Días en mercado (venta)** — NUNCA `fecha_discovery` (se pisa con `NOW()` cada noche). Usar `dias_en_mercado` de la vista o `fecha_publicacion` directo (`fecha_creacion` proxy solo si pub NULL).
 12. **Series de mercado — TRES tablas distintas, declarar SIEMPRE cuál se usa:**
     - `market_absorption_snapshots` (**prod**, régimen TC viejo, la escribe n8n 9:00): `filter_version` v1 rota · v2 filtro 300d · v3 limpia desde 14-abr. ⚠️ Sus **precios están ~45% por encima** de lo que muestra la app hoy, y la **v3 anterior a junio está inflada** por los bugs de monoambientes (21-may) y flag paralelo (23-jun). Sus **conteos** (absorción/inventario) sí son válidos y son la única historia larga.
@@ -53,6 +68,19 @@ Workflows n8n usan env vars para secrets (NO hardcodear): `SLACK_WEBHOOK_SICI=..
     - `market_price_reexpresado` (**ESTIMACIÓN**, migs 287-289): 6,5 meses de precios recalculados prop-por-prop al régimen nuevo, en USD **y Bs** + el TC de cada fecha. Error de método ~7%, declarado. Sirve para la **forma de la curva**, no para el nivel exacto de una fecha. Backfill manual (ver §Tarea operativa recurrente).
     - Al presentar: declarar tabla y versión · absorbida ≠ vendida · NUNCA "meses de inventario" como predicción · **NUNCA un % de variación de precio sin decir la moneda** (en USD y en Bs dan cosas muy distintas: el dólar se movió). Detalle: `docs/canonical/ABSORCION_LIMITACIONES.md`
 13. **Seguridad Supabase / RLS** — antes de API routes con Supabase, RLS, DROP, o views/RPC: leer `docs/canonical/SEGURIDAD_SUPABASE.md`. Claves: service_role server-side (nunca anon/`NEXT_PUBLIC_`), rename `_trash_*` antes de DROP, grep+`pg_depend` antes de RLS, views sin `SECURITY DEFINER`. Migraciones que crean tablas/RPC/views en `public` usan `sql/migrations/_template.sql` (GRANT explícitos, obligatorio desde 30-oct por cambio Data API). 🔴 **Y REVOKE primero (lección mig 283→284):** toda tabla nueva en `public` nace con `anon`/`authenticated` en **ALL** por los *default privileges* del schema — los GRANT **suman, no revocan**. Sin `REVOKE ALL ... FROM anon, authenticated` (tabla **y** secuencia del BIGSERIAL) una tabla interna queda escribible desde el browser. Verificar siempre con `SELECT relacl FROM pg_class WHERE relname='...'`.
+    🔴 **Y AL REVÉS — cerrar una tabla rompe lo que la lee POR DENTRO (lecciones 306 · 315 · 317):**
+    las **vistas** corren con permisos del dueño (cerrar la tabla no las afecta), pero una **RPC
+    `SECURITY INVOKER` lee con los permisos de quien llama**. `anon` puede *ejecutarla* y la función
+    falla *adentro* con `42501`. Pasó **dos veces con la misma vista** y costó caro:
+    · la **315** recreó `v_estado_obra_inferido_shadow` sin GRANT para `anon` y la **317** revocó
+      `propiedades_v2_shadow` → **19 días de bot caído**, arreglado con la **320** (las 3 RPC del bot
+      a `SECURITY DEFINER SET search_path = public`);
+    · la misma 317 dejó **la primera pintura de los 4 feeds vacía** — el SSG usaba la clave pública y
+      caía al fallback, que apunta a la tabla archivada. Fix: `lib/supabase-server.ts` (service_role,
+      import dinámico DENTRO de `getStaticProps`).
+    👉 **Antes de un REVOKE, listar las RPC `prosecdef = false` que leen esa tabla**, no solo las
+    vistas. Y el arreglo **no** es devolver el GRANT —eso deja la trampa armada para la próxima
+    migración—: es DEFINER, o la llave de servidor del lado donde no se expone.
 14. **Brokers — dos tablas distintas, NUNCA confundir** (ninguna FK entre ellas):
     - `brokers` (legacy B2B captación, no se usa hoy) — admin `/admin/brokers`
     - `simon_brokers` (MVP, mig 231) — `/broker/[slug]` arman shortlists, admin `/admin/simon-brokers`, lib `lib/simon-brokers.ts`
@@ -84,7 +112,8 @@ Conteos: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`. Descripció
 
 ## Sistema de precios — Definiciones
 
-> ⚠️ **Pre-cutover conviven DOS regímenes.** Lo de abajo describe el de **PROD** (`precio_normalizado()`, paralelo ×tc/6.96). El entorno **shadow** usa el régimen **TC-nuevo** (`precio_normalizado_shadow`, mig 272 — sin el ×1.47; ver `scripts/deptos-equipetrol/TC_NUEVO_DECISION.md`). **🚀 Desde el 21-jul-2026 (lanzamiento TC nuevo, PRs #27/#28) TODA la app pública de Equipetrol lee SHADOW**: feeds `/ventas`+`/alquileres` (default; `?shadow=0` = escape a prod), landing/home, `/mercado/*` (gráfico de precio histórico "en construcción"), shortlists `/b/[hash]` (display + snapshots de precio) y el **bot WhatsApp** (3 RPCs repointeadas). Los precios públicos son del régimen nuevo (~31% menores en venta; alquiler Bs igual). **Las funciones/vistas de PROD siguen en régimen viejo** (ZN ya pasó al híbrido el 30-jul → régimen nuevo; n8n está apagado desde el 28-jul). 🔴 **Esas funciones viejas son inofensivas SOLO porque leen una tabla congelada** — `buscar_unidades_reales` y `buscar_extras` calculan con `precio_normalizado()` y las usan el CMA del broker y la creación de shortlists: si `propiedades_v2` pasara a ser la base buena, inflarían ~47% sin dar error. Es el motivo del plan en dos tiempos: `scripts/deptos-equipetrol/INVENTARIO_CUTOVER_2026-08-10.md` §6-7. Detalle: `scripts/deptos-equipetrol/LANZAMIENTO_TC_NUEVO.md`.
+> ⚠️ **Pre-cutover conviven DOS regímenes.** Lo de abajo describe el de **PROD** (`precio_normalizado()`, paralelo ×tc/6.96). El entorno **shadow** usa el régimen **TC-nuevo** (`precio_normalizado_shadow`, mig 272 — sin el ×1.47; ver `scripts/deptos-equipetrol/TC_NUEVO_DECISION.md`). **🚀 Desde el 21-jul-2026 (lanzamiento TC nuevo, PRs #27/#28) TODA la app pública de Equipetrol lee SHADOW**: feeds `/ventas`+`/alquileres` (default; `?shadow=0` = escape a prod), landing/home, `/mercado/*` (gráfico de precio histórico "en construcción"), shortlists `/b/[hash]` (display + snapshots de precio) y el **bot WhatsApp**.
+> 🔴 **LAS 3 RPC DEL BOT SON `resumen_mercado`, `buscar_propiedades` y `buscar_similares`** — verificado en el código real del workflow (`lab-kapso/workflows/simon/workflow.js`), no en la documentación. **NO son las del sitio** (`buscar_unidades_simple_shadow` y compañía). Confundirlas costó **19 días de bot caído** (24-jul→12-ago): la mig 317 se justificó diciendo *"las 3 RPC del bot son SECURITY DEFINER"* —cierto de las tres que nombra— sin notar que el bot usa otras. **No se afirmó sin verificar: se verificó el objeto equivocado.** Migs 320 (DEFINER + search_path), 321 y 325 (timeout). Memoria `project_bot_caido_tres_semanas`. Los precios públicos son del régimen nuevo (~31% menores en venta; alquiler Bs igual). **Las funciones/vistas de PROD siguen en régimen viejo** (ZN ya pasó al híbrido el 30-jul → régimen nuevo; n8n está apagado desde el 28-jul). 🔴 **Esas funciones viejas son inofensivas SOLO porque leen una tabla congelada** — `buscar_unidades_reales` y `buscar_extras` calculan con `precio_normalizado()` y las usan el CMA del broker y la creación de shortlists: si `propiedades_v2` pasara a ser la base buena, inflarían ~47% sin dar error. Es el motivo del plan en dos tiempos: `scripts/deptos-equipetrol/INVENTARIO_CUTOVER_2026-08-10.md` §6-7. Detalle: `scripts/deptos-equipetrol/LANZAMIENTO_TC_NUEVO.md`.
 
 - `precio_usd`: paralelo = USD **billete** (lo que pide el vendedor en físico). Resto = USD directo del listing.
 - `tipo_cambio_detectado`: `paralelo`/`oficial`/`no_especificado` (regex desc; merge v2.5.0 upgrade LLM solo `no_especificado`→específico).
@@ -306,12 +335,18 @@ Flujo prod (desde switch 7-jul): `simonbo.com (/) = Home` → buscador natural o
 
 ## Estado Actual
 
-Ver `/admin/salud` (métricas en tiempo real: matching rates, workflow health, contadores) y `docs/backlog/` (pendientes).
+`docs/backlog/` (pendientes). ⚠️ **`/admin/salud` NO sirve de termómetro**: sus 3 fuentes están mudas
+desde el 28-jul (`propiedades_v2`, `auditoria_snapshots`, `workflow_executions`).
 
 ```sql
-SELECT status, fuente, COUNT(*) FROM propiedades_v2 GROUP BY 1,2; -- Estado general
+-- 🔴 La tabla viva es `propiedades_v2_shadow` (regla #3). `propiedades_v2` ya no existe.
+SELECT status, fuente, COUNT(*) FROM propiedades_v2_shadow GROUP BY 1,2;  -- Estado general
 SELECT COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL) as matched,
-       COUNT(*) FILTER (WHERE status='completado') as total FROM propiedades_v2; -- Matching
+       COUNT(*) FILTER (WHERE status='completado')            as total
+  FROM propiedades_v2_shadow;                                             -- Matching
+-- Lo que sirve el feed (ya con los filtros canónicos aplicados):
+SELECT COUNT(*) FROM v_mercado_venta_shadow;      -- venta
+SELECT COUNT(*) FROM v_mercado_alquiler_shadow;   -- alquiler
 ```
 
 ## Repo Legacy
