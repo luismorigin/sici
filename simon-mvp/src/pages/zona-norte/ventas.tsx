@@ -150,7 +150,12 @@ async function fetchFromAPI(
   filtros: FiltrosVentaSimple,
   spotlightId?: number
 ): Promise<{ data: UnidadVenta[]; total: number; spotlight?: UnidadVenta | null }> {
-  const shadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
+  // 11-ago-2026: el default era OPT-IN (`==='1'`) porque ZN todavía no tenía data en
+  // shadow. Entró al híbrido el 30-jul y el default no se dio vuelta: durante 12 días el
+  // feed sirvió la foto congelada de prod, y con el TIEMPO 1 del cutover (tabla archivada)
+  // pasó a devolver HTTP 500 → "No se pudo cargar". Ahora igual que /ventas: base viva por
+  // defecto, `?shadow=0` como escape.
+  const shadow = typeof window === 'undefined' || new URLSearchParams(window.location.search).get('shadow') !== '0'
   const res = await fetch('/api/ventas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -3476,9 +3481,15 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
   let initialProperties: UnidadVenta[] = []
   try {
     if (!supabase) throw new Error('Supabase not configured')
-    const { data: rows } = await supabase.rpc('buscar_unidades_simple', {
+    // Shadow-first: la RPC vieja lee `propiedades_v2`, que ya no existe → devolvía 0 filas
+    // y el título de la página quedaba en "0 Departamentos en Venta en Zona Norte".
+    const { rpcShadowFirst } = await import('@/lib/rpc-shadow')
+    const { data: rows, error: rpcError } = await rpcShadowFirst(supabase, 'buscar_unidades_simple', {
       p_filtros: { limite: 500, solo_con_fotos: true, orden: 'recientes', zonas_permitidas: getMicrozonasZN() }
     })
+    // El error se MIRA: sin esto, una RPC que falla deja `rows` en null y la página
+    // aparece vacía sin una línea en ningún log — el modo de falla que este fix corrige.
+    if (rpcError) throw rpcError
     if (rows) {
       initialProperties = rows.map((p: any) => ({
         id: p.id,

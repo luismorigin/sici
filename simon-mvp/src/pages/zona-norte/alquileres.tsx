@@ -183,7 +183,9 @@ async function fetchFromAPI(filtros: FiltrosAlquiler & { offset?: number }, spot
   try {
     const body: Record<string, any> = { filtros }
     if (spotlightId) body.spotlightId = spotlightId
-    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1') body.shadow = true
+    // Ver la nota en zona-norte/ventas.tsx: el default opt-in caducó cuando ZN entró al
+    // híbrido (30-jul) y dejó el feed vacío tras el TIEMPO 1. Base viva por defecto.
+    body.shadow = typeof window === 'undefined' || new URLSearchParams(window.location.search).get('shadow') !== '0'
     const res = await fetch('/api/alquileres', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3854,7 +3856,8 @@ function AlquileresHead({ seo, brokerSlug = null, publicShareHash = null }: {
 export const getStaticProps: GetStaticProps<{ seo: AlquileresSEO; initialProperties: UnidadAlquiler[] }> = async () => {
   const [data, initialProperties] = await Promise.all([
     fetchMercadoAlquilerData(),
-    buscarUnidadesAlquiler({ orden: 'recientes', limite: 8, solo_con_fotos: true, zonas_permitidas: getMicrozonasZN() }).catch(() => [] as UnidadAlquiler[]),
+    // `shadow: true` — su default es prod y la RPC vieja lee una tabla que ya no existe.
+    buscarUnidadesAlquiler({ orden: 'recientes', limite: 8, solo_con_fotos: true, zonas_permitidas: getMicrozonasZN() }, { shadow: true }).catch(() => [] as UnidadAlquiler[]),
   ])
   return {
     props: {

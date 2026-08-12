@@ -103,9 +103,13 @@ export async function fetchMercadoAlquilerDataZN(): Promise<MercadoAlquilerData>
     // → crece con todo el inventario de alquiler. Ver lib/supabase-paginado.ts.
     const rawProps = await fetchAllRows<any>(
       supabase
-        .from('v_mercado_alquiler')
+        // 🔴 Vista SHADOW: `v_mercado_alquiler` quedó pegada a `propiedades_v2_archivo`
+        // cuando el TIEMPO 1 renombró la tabla (las vistas se ligan por OID, no por nombre)
+        // → servía la foto congelada del 27-jul sin dar error. La gemela `_shadow` tiene las
+        // mismas columnas (verificado) y lee la base viva.
+        .from('v_mercado_alquiler_shadow')
         .select('precio_mensual_bob, precio_mensual_usd, area_total_m2, dormitorios, zona, id_proyecto_master, es_multiproyecto, tipo_propiedad_original'),
-      'mercado alquiler ZN: v_mercado_alquiler',
+      'mercado alquiler ZN: v_mercado_alquiler_shadow',
     )
 
     if (!rawProps || rawProps.length === 0) {
@@ -195,8 +199,11 @@ export async function fetchMercadoAlquilerDataZN(): Promise<MercadoAlquilerData>
       // PAGINADO: trae la vista ENTERA (el filtro por zona se hace abajo en JS).
       // 801 filas al 2-ago-2026 contra el corte de 1.000 de PostgREST, que es silencioso.
       const ventaProps = await fetchAllRows<{ zona: string; precio_m2: number }>(
-        supabase.from('v_mercado_venta').select('zona, precio_m2'),
-        'yield ZN: v_mercado_venta',
+        // Vista SHADOW por el mismo motivo que arriba. Además el yield cruza renta contra
+        // venta: con una punta congelada al 27-jul y la otra viva, el cociente no significa
+        // nada — las dos tienen que salir del mismo régimen.
+        supabase.from('v_mercado_venta_shadow').select('zona, precio_m2'),
+        'yield ZN: v_mercado_venta_shadow',
       )
 
       if (ventaProps && ventaProps.length > 0) {
