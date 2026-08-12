@@ -123,6 +123,51 @@ sin área no entra en ninguna mediana ni se puede comparar.
 
 ---
 
+# 🌿 Mapa de ramas — qué hay sin integrar (12-ago-2026)
+
+> Escrito al ordenar las ramas. **Nada de esto está en `main` ni pusheado.** Cada línea existe
+> únicamente en la máquina del founder.
+> 🔴 **Antes de crear una migración nueva, mirá la tabla de números de abajo.** El 12-ago aparecieron
+> **dos migraciones 317 y tres 318**, escritas por sesiones que no se veían entre sí. Ya están
+> repartidas; el próximo número libre es el **325**.
+
+| Rama | Qué es | Commits | Estado |
+|---|---|---:|---|
+| `fix/bot-rpc-security-definer` | migs **320+321**: el bot volvió a consultar el mercado | 3 | 🔴 **las 2 migs YA están APLICADAS en la base, el código no está en main** |
+| `fix/ssg-feeds-primera-pintura` | los 4 feeds servían el HTML sin propiedades | 3 | listo, falta desplegar |
+| `fix/zona-norte-lee-base-viva` | ZN estaba caído (contenida en la anterior) | 2 | listo, falta desplegar |
+| `worktree-fix-bsuid-crm-contactos` | migs **318+319**: la identidad del CRM deja de ser el teléfono | 2 | completo, **sin aplicar**. Tiene worktree |
+| `worktree-fix+tc-binance-captura` | mig **322** + capturador del TC de Binance | 1 | completo, **sin aplicar**. Tiene worktree |
+| `worktree-feat+multiproyectos-feed-shadow` | migs **323+324**: los folletos de preventa dejan de ser invisibles | 8 | ⏸️ **en pausa a propósito** — ver abajo |
+
+### 🔢 Los números de migración, repartidos
+`318-319` CRM/BSUID · `320-321` bot ✅ aplicadas · `322` TC Binance · `323-324` proyectos preventa.
+**Próximo libre: 325.**
+
+### ⏸️ Proyectos de preventa — pausado, NO perdido
+`worktree-feat+multiproyectos-feed-shadow` · último commit 9-ago · **2.343 líneas en 16 archivos**.
+
+**Qué hace:** los avisos que publican un **proyecto entero** (folletos de preventa) hoy los aparta el
+cargador a `proyectos_detectados` y **no se ven en ningún lado**. Esta rama los saca a la luz:
+pestaña `/ventas/proyectos`, sheet con los avisos, lector de folletos y una pantalla de admin para
+curarlos.
+
+**Por qué no se descarta** (medido el 12-ago): la tabla tiene **225 avisos** acumulados desde el
+10-jul, **+8 esta semana** (el último, hoy), **105 ya curados a mano** y **120 esperando**. El
+sistema junta material para esto todas las noches y nadie lo mira.
+
+**Por qué está en pausa:** aplicarla es *una jornada de trabajo dedicada* — decisión del founder,
+12-ago. No es urgente.
+
+**Ya se hizo lo peligroso:** sus migraciones se renumeraron a **323/324** (commit `88f7d9d`). Traía
+una **317 propia que chocaba con la 317 de seguridad ya aplicada** — dos cosas distintas con el mismo
+número: quien aplicara "la 317" sin mirar, aplicaba la otra. Esa bomba está desarmada.
+
+**Cuando se retome:** renumeración ✅ hecha · falta revisar las 2.343 líneas (nadie las mira desde el
+9-ago, y esta semana se vio lo que pasa al tocar vistas compartidas) · aplicar 323 y 324 · desplegar.
+
+---
+
 ## Estado al 11-ago-2026, para ubicarse
 
 | Frente | Estado |
