@@ -131,18 +131,27 @@ sin área no entra en ninguna mediana ni se puede comparar.
 > **dos migraciones 317 y tres 318**, escritas por sesiones que no se veían entre sí. Ya están
 > repartidas; el próximo número libre es el **325**.
 
-| Rama | Qué es | Commits | Estado |
-|---|---|---:|---|
-| `fix/bot-rpc-security-definer` | migs **320+321**: el bot volvió a consultar el mercado | 3 | 🔴 **las 2 migs YA están APLICADAS en la base, el código no está en main** |
-| `fix/ssg-feeds-primera-pintura` | los 4 feeds servían el HTML sin propiedades | 3 | listo, falta desplegar |
-| `fix/zona-norte-lee-base-viva` | ZN estaba caído (contenida en la anterior) | 2 | listo, falta desplegar |
-| `worktree-fix-bsuid-crm-contactos` | migs **318+319**: la identidad del CRM deja de ser el teléfono | 2 | completo, **sin aplicar**. Tiene worktree |
-| `worktree-fix+tc-binance-captura` | mig **322** + capturador del TC de Binance | 1 | completo, **sin aplicar**. Tiene worktree |
-| `worktree-feat+multiproyectos-feed-shadow` | migs **323+324**: los folletos de preventa dejan de ser invisibles | 8 | ⏸️ **en pausa a propósito** — ver abajo |
+> ✅ **ACTUALIZADO AL CIERRE DEL 12-AGO: todo se mergeó, desplegó y pusheó**, menos preventa.
+> Main está en GitHub, el working tree limpio, y la base y el repo dicen lo mismo.
+
+| Rama | Qué es | Estado |
+|---|---|---|
+| `fix/bot-rpc-security-definer` | migs **320+321** | ✅ en main · aplicadas · **bot verificado respondiendo** |
+| `fix/ssg-feeds-primera-pintura` (incluye `fix/zona-norte-lee-base-viva`) | los 4 feeds + ZN caído | ✅ en main · **desplegado y verificado en producción** |
+| `worktree-fix-bsuid-crm-contactos` | migs **318**+319 · identidad del CRM | ✅ en main y desplegado · **la 318 aplicada + backfill 3/3**. 🔴 **La 319 NO** — ver abajo |
+| `worktree-fix+tc-binance-captura` | mig **322** + capturador del TC | ✅ en main · aplicada · **el TC se refresca solo** (paso 0 del cron) |
+| `worktree-feat+multiproyectos-feed-shadow` | migs **323+324** · folletos de preventa | ⏸️ **ÚNICA fuera de main, a propósito** — ver abajo |
 
 ### 🔢 Los números de migración, repartidos
-`318-319` CRM/BSUID · `320-321` bot ✅ aplicadas · `322` TC Binance · `323-324` proyectos preventa.
-**Próximo libre: 325.**
+`318-319` CRM/BSUID (**la 319 sin aplicar**) · `320-321` bot ✅ · `322` TC ✅ · `323-324` preventa
+(sin aplicar) · `325` `buscar_similares` ✅. **Próximo libre: 326.**
+
+### 🔴 Lo único pendiente con riesgo: la mig 319
+Es la que hace que la identidad del CRM **deje de ser el teléfono**. NO es "cuando quieras":
+tiene un **gate de 5 chequeos** en su encabezado, su **rollback es limitado** (volver a `NOT NULL`
+solo se puede si todavía no entró ningún contacto sin teléfono) y **toca la alarma del bot**
+(`simon_bot_incidentes.telefono` + `vigilar_bot_whatsapp()`). El código actual la tolera sin aplicar:
+vuelve al camino por teléfono y lo dice por log. Detalle: memoria `project_crm_identidad_bsuid`.
 
 ### ⏸️ Proyectos de preventa — pausado, NO perdido
 `worktree-feat+multiproyectos-feed-shadow` · último commit 9-ago · **2.343 líneas en 16 archivos**.
@@ -165,6 +174,27 @@ número: quien aplicara "la 317" sin mirar, aplicaba la otra. Esa bomba está de
 
 **Cuando se retome:** renumeración ✅ hecha · falta revisar las 2.343 líneas (nadie las mira desde el
 9-ago, y esta semana se vio lo que pasa al tocar vistas compartidas) · aplicar 323 y 324 · desplegar.
+
+---
+
+## Estado al cierre del 12-ago-2026
+
+| Frente | Estado |
+|---|---|
+| Bot de WhatsApp | ✅ **responde** — migs 320+321+325, y ya hay **prueba diaria** (paso 6b del cron) |
+| Zona Norte | ✅ **volvió** — 365 en venta, 103 en alquiler |
+| Primera pintura de los 4 feeds | ✅ el HTML trae propiedades (24/8/24/8, antes 0) |
+| CRM / BSUID | 🟡 paso 1 hecho y desplegado · **la 319 pendiente, con gate** |
+| Tipo de cambio | ✅ al día (11,528) y **se refresca solo** cada noche |
+| Ramas y worktrees | ✅ ordenados — 6 ramas viejas borradas, 115 MB liberados, **dos 317 y tres 318** repartidas |
+| CLAUDE.md | ✅ corregido: decía 4 cosas que ya eran falsas (reglas #3 y #10 incluidas) |
+| Proyectos de preventa | ⏸️ en pausa, registrado arriba |
+| Prueba diaria del bot | ✅ hecha — ⚠️ corre **1 vez al día**; si se rompe a las 10 AM, se sabe a la 1 AM |
+
+🔑 **La lección del día**: aparecieron **tres diagnósticos seguros y equivocados** — dos externos y
+uno mío. Los tres tenían el síntoma bien y el mecanismo mal, y los tres se resolvieron igual:
+**midiendo antes de aplicar**. El caso testigo: "resolver el TC una sola vez" habría dado 7,5% de
+mejora sobre un problema que necesitaba 237×.
 
 ---
 
