@@ -150,7 +150,12 @@ async function fetchFromAPI(
   filtros: FiltrosVentaSimple,
   spotlightId?: number
 ): Promise<{ data: UnidadVenta[]; total: number; spotlight?: UnidadVenta | null }> {
-  const shadow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '1'
+  // 11-ago-2026: el default era OPT-IN (`==='1'`) porque ZN todavía no tenía data en
+  // shadow. Entró al híbrido el 30-jul y el default no se dio vuelta: durante 12 días el
+  // feed sirvió la foto congelada de prod, y con el TIEMPO 1 del cutover (tabla archivada)
+  // pasó a devolver HTTP 500 → "No se pudo cargar". Ahora igual que /ventas: base viva por
+  // defecto, `?shadow=0` como escape.
+  const shadow = typeof window === 'undefined' || new URLSearchParams(window.location.search).get('shadow') !== '0'
   const res = await fetch('/api/ventas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -3469,16 +3474,29 @@ function VentasHead({ seo, brokerSlug = null, publicShareHash = null }: {
 
 // ===== getStaticProps — SEO data + initial properties =====
 export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties: UnidadVenta[] }> = async () => {
-  const { supabase } = await import('@/lib/supabase')
+  // Cliente de SERVIDOR — ver la nota en pages/ventas.tsx y
+  // docs/backlog/SSG_FEEDS_PRIMERA_PINTURA_2026-08-11.md.
+  const { getServerSupabase } = await import('@/lib/supabase-server')
+  const supabase = getServerSupabase()
   const data = await fetchMercadoData()
 
   // Fetch initial properties (default filters: recientes, solo_con_fotos)
   let initialProperties: UnidadVenta[] = []
   try {
     if (!supabase) throw new Error('Supabase not configured')
-    const { data: rows } = await supabase.rpc('buscar_unidades_simple', {
-      p_filtros: { limite: 500, solo_con_fotos: true, orden: 'recientes', zonas_permitidas: getMicrozonasZN() }
+    // Shadow-first: la RPC vieja lee `propiedades_v2`, que ya no existe → devolvía 0 filas
+    // y el título de la página quedaba en "0 Departamentos en Venta en Zona Norte".
+    const { rpcShadowFirst } = await import('@/lib/rpc-shadow')
+    // `limite: 24` — solo el primer viewport, igual que /ventas. Estaba en 500 y era
+    // inofensivo mientras el SSG devolvía 0; al arreglarlo, el HTML pasó a pesar **918 KB**
+    // (medido), que es justo lo que /ventas resolvió bajando a 24: con el payload completo
+    // el __NEXT_DATA__ hunde LCP/TTI en mobile. El resto lo trae el cliente al hacer idle.
+    const { data: rows, error: rpcError } = await rpcShadowFirst(supabase, 'buscar_unidades_simple', {
+      p_filtros: { limite: 24, solo_con_fotos: true, orden: 'recientes', zonas_permitidas: getMicrozonasZN() }
     })
+    // El error se MIRA: sin esto, una RPC que falla deja `rows` en null y la página
+    // aparece vacía sin una línea en ningún log — el modo de falla que este fix corrige.
+    if (rpcError) throw rpcError
     if (rows) {
       initialProperties = rows.map((p: any) => ({
         id: p.id,

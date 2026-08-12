@@ -5,7 +5,6 @@
 // la serie de absorción es Equipetrol-only (snapshot 'global') → no aplica a ZN.
 import { supabase } from './supabase'
 import { fetchAllRows } from './supabase-paginado'
-import { normalizarPrecio } from './precio-utils'
 import { getMicrozonasZN, displayZona } from './zonas'
 
 // --- Types ---
@@ -76,39 +75,19 @@ const FALLBACK_DATA: MercadoData = {
 
 // --- Data fetching ---
 
-interface RawProp {
-  precio_usd: number
+/**
+ * Fila de `v_mercado_venta_shadow`. La vista ya trae el precio normalizado al régimen
+ * nuevo y aplica los filtros de calidad — ver la nota en `fetchMercadoDataZN`.
+ * (Reemplaza al `applyQualityFilters` que replicaba esos filtros en JS sobre la tabla
+ * cruda: duplicaba la regla en dos lugares y no podía normalizar bien el precio.)
+ */
+interface VistaProp {
+  precio_norm: number | null
+  precio_m2: number | null
   area_total_m2: number
-  tipo_cambio_detectado: string | null
   dormitorios: number | null
   zona: string | null
-  estado_construccion: string | null
-  fecha_publicacion: string | null
-  fecha_discovery: string | null
-  es_multiproyecto: boolean | null
   tipo_propiedad_original: string | null
-}
-
-function applyQualityFilters(props: RawProp[]): RawProp[] {
-  const now = new Date()
-  // Excluye no-deptos: además de los accesorios, casa/terreno/lote (en ZN hay
-  // 315 casas cargadas con zona ZN → sin esto se cuelan en el conteo de deptos).
-  const excludeTypes = ['baulera', 'parqueo', 'garaje', 'deposito', 'casa', 'terreno', 'lote']
-  const microzonasZN = getMicrozonasZN()
-
-  return props.filter(p => {
-    if (!p.zona || !microzonasZN.includes(p.zona)) return false
-    if (p.precio_usd <= 0 || p.area_total_m2 < 20) return false
-    if (p.es_multiproyecto === true) return false
-    if (p.tipo_propiedad_original && excludeTypes.includes(p.tipo_propiedad_original)) return false
-
-    // Days on market filter
-    const refDate = p.fecha_publicacion || p.fecha_discovery
-    if (!refDate) return false
-    const days = Math.floor((now.getTime() - new Date(refDate).getTime()) / 86400000)
-    const isPreVenta = ['en_construccion', 'en_pozo'].includes(p.estado_construccion || '')
-    return days <= (isPreVenta ? 730 : 300)
-  })
 }
 
 export async function fetchMercadoDataZN(): Promise<MercadoData> {
@@ -116,40 +95,42 @@ export async function fetchMercadoDataZN(): Promise<MercadoData> {
     if (!supabase) throw new Error('Supabase not initialized')
     const microzonasZN = getMicrozonasZN()
 
-    // Fetch TC paralelo
-    const { data: tcData } = await supabase
-      .from('config_global')
-      .select('valor')
-      .eq('clave', 'tipo_cambio_paralelo')
-      .single()
-    const tcPar = parseFloat(tcData?.valor) || 0
-
-    // Fetch all qualifying properties in one query (microzonas ZN)
-    // PAGINADO (ver lib/supabase-paginado.ts): 550 filas hoy, pero lee `propiedades_v2`
-    // directo —la tabla más grande— y PostgREST corta en 1.000 sin error.
-    const rawProps = await fetchAllRows<any>(
+    // 🔴 Se lee la VISTA, no la tabla. Dos motivos, los dos aprendidos a los golpes:
+    //  1. PERMISOS: la mig 317 le sacó a `anon` el SELECT sobre `propiedades_v2_shadow`
+    //     (la clave pública, que viaja en el browser, podía escribirla). Apuntar a la tabla
+    //     devuelve `42501 permission denied`. Las vistas corren con permisos del dueño.
+    //  2. PRECIO: la vista ya trae `precio_norm` y `precio_m2` calculados con
+    //     `precio_normalizado_shadow` — el régimen NUEVO. Normalizar en JS acá era el
+    //     camino corto al ~47% de error, porque este archivo importaba la fórmula VIEJA.
+    //
+    // Y aplica exactamente los mismos filtros de calidad que el `applyQualityFilters` que
+    // reemplaza —es_activa, status, duplicado_de, tipos excluidos, área ≥ 20, 300 d / 730 d
+    // en preventa—, más `zona_efectiva` (mig 316) para la zona resuelta. Verificado contra
+    // la definición de la vista, no asumido.
+    // PAGINADO (ver lib/supabase-paginado.ts): PostgREST corta en 1.000 sin avisar.
+    const rawProps = await fetchAllRows<VistaProp>(
       supabase
-        .from('propiedades_v2')
-        .select('precio_usd, area_total_m2, tipo_cambio_detectado, dormitorios, zona, estado_construccion, fecha_publicacion, fecha_discovery, es_multiproyecto, tipo_propiedad_original')
-        .eq('tipo_operacion', 'venta')
-        .in('status', ['completado', 'actualizado'])
-        .is('duplicado_de', null)
-        .gte('area_total_m2', 20)
-        .gt('precio_usd', 0)
+        .from('v_mercado_venta_shadow')
+        .select('precio_norm, precio_m2, area_total_m2, dormitorios, zona, tipo_propiedad_original')
         .in('zona', microzonasZN),
-      'mercado venta ZN: propiedades_v2',
+      'mercado venta ZN: v_mercado_venta_shadow',
     )
 
     if (!rawProps || rawProps.length === 0) throw new Error('No properties found')
 
-    const props = applyQualityFilters(rawProps as RawProp[])
-    if (props.length === 0) throw new Error('No properties after filtering')
+    // Lo único que la vista NO excluye y el filtro viejo sí: `lote`.
+    // Y una propiedad sin precio utilizable se DESCARTA, no entra como 0 — un 0 acá
+    // hundiría la mediana en silencio.
+    const enriched = rawProps
+      .filter(p => p.tipo_propiedad_original !== 'lote')
+      .map(p => ({
+        ...p,
+        precioNorm: Number(p.precio_norm) || 0,
+        precioM2: Number(p.precio_m2) || 0,
+      }))
+      .filter(p => p.precioNorm > 0 && p.precioM2 > 0)
 
-    // Normalize prices
-    const enriched = props.map(p => {
-      const precioNorm = normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar)
-      return { ...p, precioNorm, precioM2: precioNorm / p.area_total_m2 }
-    })
+    if (enriched.length === 0) throw new Error('No properties after filtering')
 
     // --- KPIs ---
     const allPreciosM2 = enriched.map(p => p.precioM2).sort((a, b) => a - b)

@@ -5912,7 +5912,12 @@ function VentasHead({ seo, brokerSlug = null, publicShareHash = null }: {
 
 // ===== getStaticProps — SEO data + initial properties =====
 export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties: UnidadVenta[] }> = async () => {
-  const { supabase } = await import('@/lib/supabase')
+  // 🔴 Cliente de SERVIDOR, no el público. Con la clave pública las RPC `_shadow` fallan
+  // (42501: no puede leer la tabla desde la mig 317), el helper cae a la RPC vieja —que
+  // apunta a la tabla archivada— y esta página se servía SIN propiedades.
+  // Ver docs/backlog/SSG_FEEDS_PRIMERA_PINTURA_2026-08-11.md.
+  const { getServerSupabase } = await import('@/lib/supabase-server')
+  const supabase = getServerSupabase()
   const data = await fetchMercadoData()
 
   // Fetch initial properties (default filters: recientes, solo_con_fotos)
@@ -5924,9 +5929,11 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
     // props completas el __NEXT_DATA__ pesaba ~800KB y hundía LCP/TTI mobile.
     // Lanzamiento TC nuevo: shadow-first con fallback prod (cutover-safe).
     const { rpcShadowFirst } = await import('@/lib/rpc-shadow')
-    const { data: rows } = await rpcShadowFirst(supabase, 'buscar_unidades_simple', {
+    const { data: rows, error: rpcError } = await rpcShadowFirst(supabase, 'buscar_unidades_simple', {
       p_filtros: { limite: 24, solo_con_fotos: true, orden: 'recientes', zonas_permitidas: ZONAS_EQUIPETROL_DB }
     })
+    // El error se MIRA. Ignorarlo fue lo que dejó esta página vacía 2 semanas sin un log.
+    if (rpcError) throw rpcError
     if (rows) {
       initialProperties = rows.map((p: any) => ({
         id: p.id,
