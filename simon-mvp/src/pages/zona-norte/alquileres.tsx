@@ -3854,10 +3854,15 @@ function AlquileresHead({ seo, brokerSlug = null, publicShareHash = null }: {
 
 // ===== getStaticProps — SEO data + first 8 properties for LCP =====
 export const getStaticProps: GetStaticProps<{ seo: AlquileresSEO; initialProperties: UnidadAlquiler[] }> = async () => {
+  // `shadow: true` + cliente de SERVIDOR — ver la nota en pages/alquileres.tsx.
+  const { getServerSupabase } = await import('@/lib/supabase-server')
+  const serverDb = getServerSupabase()
   const [data, initialProperties] = await Promise.all([
     fetchMercadoAlquilerData(),
-    // `shadow: true` — su default es prod y la RPC vieja lee una tabla que ya no existe.
-    buscarUnidadesAlquiler({ orden: 'recientes', limite: 8, solo_con_fotos: true, zonas_permitidas: getMicrozonasZN() }, { shadow: true }).catch(() => [] as UnidadAlquiler[]),
+    buscarUnidadesAlquiler(
+      { orden: 'recientes', limite: 8, solo_con_fotos: true, zonas_permitidas: getMicrozonasZN() },
+      { shadow: true, client: serverDb ?? undefined },
+    ).catch(() => [] as UnidadAlquiler[]),
   ])
   return {
     props: {

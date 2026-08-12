@@ -5314,11 +5314,17 @@ function AlquileresHead({ seo, brokerSlug = null, publicShareHash = null }: {
 
 // ===== getStaticProps — SEO data + first 8 properties for LCP =====
 export const getStaticProps: GetStaticProps<{ seo: AlquileresSEO; initialProperties: UnidadAlquiler[] }> = async () => {
+  // Cliente de SERVIDOR: pedía `shadow: true` y aun así servía 0 propiedades, porque la
+  // clave pública no puede leer la tabla desde la mig 317 y la RPC fallaba adentro.
+  // Ver docs/backlog/SSG_FEEDS_PRIMERA_PINTURA_2026-08-11.md.
+  const { getServerSupabase } = await import('@/lib/supabase-server')
+  const serverDb = getServerSupabase()
   const [data, initialProperties] = await Promise.all([
     fetchMercadoAlquilerData(),
-    // Lanzamiento TC nuevo: el SSG del feed Equipetrol lee shadow (con fallback
-    // prod cutover-safe). ZN sigue en prod (no tiene data en shadow).
-    buscarUnidadesAlquiler({ orden: 'recientes', limite: 8, solo_con_fotos: true, zonas_permitidas: ZONAS_EQUIPETROL_DB }, { shadow: true }).catch(() => [] as UnidadAlquiler[]),
+    buscarUnidadesAlquiler(
+      { orden: 'recientes', limite: 8, solo_con_fotos: true, zonas_permitidas: ZONAS_EQUIPETROL_DB },
+      { shadow: true, client: serverDb ?? undefined },
+    ).catch(() => [] as UnidadAlquiler[]),
   ])
   return {
     props: {

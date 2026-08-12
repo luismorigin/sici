@@ -3474,7 +3474,10 @@ function VentasHead({ seo, brokerSlug = null, publicShareHash = null }: {
 
 // ===== getStaticProps — SEO data + initial properties =====
 export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties: UnidadVenta[] }> = async () => {
-  const { supabase } = await import('@/lib/supabase')
+  // Cliente de SERVIDOR — ver la nota en pages/ventas.tsx y
+  // docs/backlog/SSG_FEEDS_PRIMERA_PINTURA_2026-08-11.md.
+  const { getServerSupabase } = await import('@/lib/supabase-server')
+  const supabase = getServerSupabase()
   const data = await fetchMercadoData()
 
   // Fetch initial properties (default filters: recientes, solo_con_fotos)
@@ -3484,8 +3487,12 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
     // Shadow-first: la RPC vieja lee `propiedades_v2`, que ya no existe → devolvía 0 filas
     // y el título de la página quedaba en "0 Departamentos en Venta en Zona Norte".
     const { rpcShadowFirst } = await import('@/lib/rpc-shadow')
+    // `limite: 24` — solo el primer viewport, igual que /ventas. Estaba en 500 y era
+    // inofensivo mientras el SSG devolvía 0; al arreglarlo, el HTML pasó a pesar **918 KB**
+    // (medido), que es justo lo que /ventas resolvió bajando a 24: con el payload completo
+    // el __NEXT_DATA__ hunde LCP/TTI en mobile. El resto lo trae el cliente al hacer idle.
     const { data: rows, error: rpcError } = await rpcShadowFirst(supabase, 'buscar_unidades_simple', {
-      p_filtros: { limite: 500, solo_con_fotos: true, orden: 'recientes', zonas_permitidas: getMicrozonasZN() }
+      p_filtros: { limite: 24, solo_con_fotos: true, orden: 'recientes', zonas_permitidas: getMicrozonasZN() }
     })
     // El error se MIRA: sin esto, una RPC que falla deja `rows` en null y la página
     // aparece vacía sin una línea en ningún log — el modo de falla que este fix corrige.

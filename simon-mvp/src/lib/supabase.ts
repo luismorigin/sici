@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { innegociablesToAmenidades } from '@/config/amenidades-mercado'
 import { normalizarPrecio } from './precio-utils'
 import { rpcShadowFirst } from './rpc-shadow'
@@ -541,12 +541,16 @@ export interface FiltrosAlquiler {
 
 export async function buscarUnidadesAlquiler(
   filtros: FiltrosAlquiler,
-  // Lanzamiento TC nuevo: el feed Equipetrol pide shadow (precios/split del
-  // reader híbrido) con fallback prod cutover-safe. Default prod: ZN NO tiene
-  // data en shadow y debe seguir leyendo la RPC vieja.
-  opts?: { shadow?: boolean }
+  // `shadow`: pide las RPC del reader híbrido (precios del régimen nuevo).
+  // `client`: cliente alternativo. Lo usa el SSG para pasar el de SERVIDOR —
+  //   con la clave pública las RPC `_shadow` fallan por permisos (mig 317) y la
+  //   página se arma vacía. Ver docs/backlog/SSG_FEEDS_PRIMERA_PINTURA_2026-08-11.md.
+  //   🔴 SOLO desde getStaticProps/getServerSideProps: nunca pasar un cliente con
+  //   service_role desde un componente.
+  opts?: { shadow?: boolean; client?: SupabaseClient }
 ): Promise<UnidadAlquiler[]> {
-  if (!supabase) {
+  const db = opts?.client ?? supabase
+  if (!db) {
     console.warn('Supabase no configurado')
     return []
   }
@@ -575,8 +579,8 @@ export async function buscarUnidadesAlquiler(
     }
 
     const { data, error } = opts?.shadow
-      ? await rpcShadowFirst(supabase, 'buscar_unidades_alquiler', { p_filtros: rpcFiltros })
-      : await supabase.rpc('buscar_unidades_alquiler', { p_filtros: rpcFiltros })
+      ? await rpcShadowFirst(db, 'buscar_unidades_alquiler', { p_filtros: rpcFiltros })
+      : await db.rpc('buscar_unidades_alquiler', { p_filtros: rpcFiltros })
 
     if (error) {
       console.error('Error en RPC buscar_unidades_alquiler:', error)
