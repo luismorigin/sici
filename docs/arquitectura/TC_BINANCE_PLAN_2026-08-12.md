@@ -1,5 +1,17 @@
 # Descongelar el TC — plan en 3 pasos con foto previa
 
+> ✅ **EJECUTADO el 12-ago-2026. Este documento es HISTORIA: describe el estado ANTES de aplicarlo.**
+> Cuando dice "congelado hace 16 días", habla del 12 de agosto, no de hoy.
+> **Estado vivo (verificado el 14-ago):** `config_global.tipo_cambio_paralelo` se refresca solo cada
+> noche como paso 0 de `/cron-deptos-ventas`, escrito por `binance_p2p_hibrido`. Tres noches
+> seguidas (12, 13 y 14 de agosto), las tres con `aplicado_a_config = true` y sin que ningún
+> guardarraíl tuviera que frenar. Para ver el estado del día, no leer este doc:
+> ```sql
+> SELECT valor, fecha_actualizacion, actualizado_por FROM config_global WHERE clave='tipo_cambio_paralelo';
+> SELECT timestamp, tc_sell, aplicado_a_config, raw_response->>'dias_congelado' FROM tc_binance_historial ORDER BY 1 DESC LIMIT 5;
+> ```
+> El sistema en régimen se describe en `TIPO_CAMBIO_SICI.md` §11.
+
 > 12-ago-2026. El diagnóstico está en `TC_BINANCE_DIAGNOSTICO_2026-08-11.md`; esto es **cómo
 > aplicarlo sin romper la superficie de al lado** — que es exactamente lo que faltó en las migs
 > 315/316/317 esta semana.

@@ -18,13 +18,13 @@ Gestión automática de tipos de cambio (oficial/paralelo) con recálculo de pre
 | Tipo | Nombre | Propósito |
 |------|--------|-----------|
 | Tabla | `auditoria_tipo_cambio` | Historial de cambios TC |
-| Función | `actualizar_tipo_cambio()` | Actualiza TC + marca propiedades |
+| Función | `actualizar_tipo_cambio()` | Actualiza TC + marca propiedades — 🔴 **NO USAR: falla desde el 11-ago-2026** (nombra `propiedades_v2`, que ya no existe → `42P01` que aborta también el UPDATE de `config_global`) |
 | Función | `recalcular_precio_propiedad()` | Recalcula precio individual |
 | Función | `recalcular_precios_batch_nocturno()` | Job batch (cron 7:05 AM, **DESAGENDADO 19-jun**) |
 | Función | `ver_historial_tc()` | Consulta auditoría |
 | Función | `obtener_propiedades_tc_pendiente()` | Lista pendientes |
 | Función | `obtener_tc_actuales()` | Retorna TCs + spread |
-| Trigger | `trigger_tc_actualizado` | Auto-marca al cambiar TC |
+| Trigger | `trigger_tc_actualizado` | Auto-marca al cambiar TC — 🔴 **DESACTIVADO** (`tgenabled='D'`) desde el TIEMPO 1 del cutover, a propósito. Si se reactiva, el TC deja de escribirse |
 
 ---
 
@@ -33,7 +33,9 @@ Gestión automática de tipos de cambio (oficial/paralelo) con recálculo de pre
 | Clave | Valor |
 |-------|-------|
 | `tipo_cambio_oficial` | 6.96 |
-| `tipo_cambio_paralelo` | (dato dinámico — consultar `config_global WHERE clave='tipo_cambio_paralelo' AND activo`; binance_p2p lo actualiza a diario. NO hardcodear) |
+| `tipo_cambio_paralelo` | (dato dinámico — consultar `config_global WHERE clave='tipo_cambio_paralelo' AND activo`. NO hardcodear) |
+
+> **Quién lo escribe (desde el 12-ago-2026):** `scripts/deptos-equipetrol/capturar-tc-binance.mjs`, paso 0 de `/cron-deptos-ventas`, con `actualizado_por = 'binance_p2p_hibrido'`. El workflow n8n que lo hacía antes murió el 27-jul. Historial vivo: `tc_binance_historial` (NO `auditoria_tipo_cambio`, que depende del trigger desactivado). Detalle: `docs/arquitectura/TIPO_CAMBIO_SICI.md` §11.2.
 
 > Nota: las claves MAYÚSCULAS fósiles (`TIPO_CAMBIO_OFICIAL`/`TIPO_CAMBIO_PARALELO`) fueron **borradas** de `config_global` el 19-jun-2026. Solo existen las minúsculas activas.
 

@@ -17,7 +17,7 @@
 | Framework reporte público baseline (`scripts/estudio-mercado/src/baseline/`, nuevo) | `propiedades_v2` directo | `obtener_tc_actuales()` — Binance P2P vivo | Aplica 300/730/150 (paridad con feed) | Canónicos, aislados del framework de clientes |
 
 **Dos divergencias son intencionales:**
-- TC source: estudios por cliente usa `config_global` (actualizable manualmente); reporte público usa Binance P2P vivo (auditable). Ambos tienen justificación.
+- TC source: estudios por cliente usa `config_global`; reporte público usa Binance P2P vivo (auditable). Ambos tienen justificación. ⚠️ **Desde el 12-ago-2026 esta divergencia casi desapareció:** `config_global` ya no es un valor manual — lo refresca de Binance el paso 0 del cron nocturno, así que las dos fuentes miran el mismo mercado con hasta 24 h de desfase, no semanas.
 - Filtro antigüedad: estudios por cliente ve corpus completo (desarrolladores pagantes evalúan su posición incluyendo inventario estancado); reporte público aplica filtros (paridad con lo que el lector ve en simonbo.com).
 
 **Una divergencia es bug:** `/mercado/equipetrol` y `/admin/market` tienen lógica replicada que puede desincronizarse silenciosamente de las vistas canónicas tras migraciones futuras.
@@ -26,7 +26,7 @@
 
 1. **Filtros reimplementados pueden divergir de la vista.** `applyQualityFilters()` en `mercado-data.ts` replica los filtros de `v_mercado_venta`. Si la vista cambia (ej: migración 207 acortó alquileres a 150 días), la landing no se entera automáticamente.
 
-2. **Dos fuentes distintas de TC paralelo.** Landing usa `config_global` (valor manual en admin), reporte usa `obtener_tc_actuales()` (Binance P2P nocturno). Si `config_global` no se actualiza tras un pico del paralelo, el mismo depto muestra dos precios normalizados distintos en dos páginas del mismo sitio.
+2. **Dos fuentes distintas de TC paralelo.** Landing usa `config_global`, reporte usa `obtener_tc_actuales()` (Binance P2P nocturno). Si `config_global` no se actualiza tras un pico del paralelo, el mismo depto muestra dos precios normalizados distintos en dos páginas del mismo sitio. ✅ **Mitigado el 12-ago-2026:** `config_global` dejó de ser un valor cargado a mano en el admin y se refresca solo cada noche desde Binance (paso 0 de `/cron-deptos-ventas`, `binance_p2p_hibrido`). El riesgo pasó de "puede quedar semanas atrás" a "hasta 24 h de desfase". No cierra el ítem —siguen siendo dos caminos— pero baja su prioridad.
 
 3. **FALLBACK_DATA hardcodeado.** `lib/mercado-data.ts` líneas 70-94 tienen datos estáticos del **9 de marzo 2026**. Si Supabase falla durante build SSR, la landing sirve esos números sin advertencia. Data de 6+ semanas atrás publicada como actual.
 

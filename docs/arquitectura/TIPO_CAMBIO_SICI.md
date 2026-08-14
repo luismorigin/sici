@@ -1,7 +1,7 @@
 # Tipo de Cambio en SICI — Documento Autoritativo
 
 **Fecha:** 10 de marzo de 2026
-**Ultima actualizacion:** 10 de marzo de 2026 (post-fix dashboard double-normalization)
+**Ultima actualizacion:** 14 de agosto de 2026 (§11 reescrita: el escritor del TC ya no es n8n)
 **Status:** Documento de referencia para entender el sistema de TC y precios en SICI
 **Actualizar este documento** antes de modificar cualquier extractor, merge o funcion de precio.
 
@@ -507,17 +507,44 @@ SELECT valor FROM config_global WHERE clave = 'tipo_cambio_paralelo'
 | id | clave | valor | activo | actualizado_por |
 |----|-------|-------|--------|-----------------|
 | 3 | `tipo_cambio_oficial` | 6.96 | true | seed_data |
-| 4 | `tipo_cambio_paralelo` | **dato dinámico — NO hardcodear; consultar la fila viva** | true | binance_p2p (diario) |
+| 4 | `tipo_cambio_paralelo` | **dato dinámico — NO hardcodear; consultar la fila viva** | true | `binance_p2p_hibrido` (diario) |
 | 7 | `umbral_discrepancia_tc` | 0.05 | true | seed_data |
 
-El `tipo_cambio_paralelo` lo actualiza `binance_p2p` a diario — para el valor vigente: `SELECT valor FROM config_global WHERE clave='tipo_cambio_paralelo' AND activo`. **Las claves MAYÚSCULAS fósiles (ids 1 y 2) — desactivadas por la migración 174 (7-mar) — fueron BORRADAS el 19-jun-2026.** Ya no existen.
+El `tipo_cambio_paralelo` lo actualiza `binance_p2p_hibrido` a diario — para el valor vigente: `SELECT valor FROM config_global WHERE clave='tipo_cambio_paralelo' AND activo`. **Las claves MAYÚSCULAS fósiles (ids 1 y 2) — desactivadas por la migración 174 (7-mar) — fueron BORRADAS el 19-jun-2026.** Ya no existen.
 
 > **Paralelo en ALQUILER (19-jun-2026) — NO es la normalización de venta.** El merge de alquiler sigue **sin** TC paralelo y NO usa `precio_normalizado()` (esa función es solo de venta). Lo que cambió es la **vista** `v_mercado_alquiler`, que deriva `precio_mensual = ROUND(precio_mensual_bob / CASE WHEN solo_tc_paralelo THEN <tc_paralelo vivo> ELSE 6.96 END, 2)`: por defecto divide por el oficial (6.96), salvo los alquileres marcados `solo_tc_paralelo=true` (cotizados en USD billete al paralelo, ej. prop 1970) que dividen por el paralelo para que el USD del feed no se infle. Es un cálculo de display en la vista, no normalización canónica. El tag `solo_tc_paralelo` se setea manualmente por ahora (a futuro, el LLM de enrichment de alquiler podría detectarlo).
 
-### 11.2 Workflow n8n: tc_dinamico_binance
+### 11.2 Quién escribe el TC — HOY (y quién lo escribía antes)
+
+> 🔴 **El escritor cambió el 12-ago-2026. Lo de abajo (§11.2b) es historia, no el sistema vivo.**
+
+**Hoy:** `scripts/deptos-equipetrol/capturar-tc-binance.mjs`, corriendo como **paso 0 de
+`/cron-deptos-ventas`** (01:17, la primera de las 4 capturas de la noche). Los otros 3 crons heredan
+el valor fresco. Escribe `tc_binance_historial` **siempre** y `config_global` solo si pasa los
+guardarraíles; un fallo del TC **no frena la captura**.
+
+🔑 **Va primero porque el clasificador de la captura lo usa:** `clasificarTCporRatio()` decide si el
+precio de un aviso está en USD o en Bs comparándolo contra el paralelo vivo, con 6% de tolerancia.
+
+⚠️ **NO pasa por `actualizar_tipo_cambio()` (§11.3), a propósito:** esa función hace `UPDATE
+propiedades_v2`, tabla que dejó de existir en el TIEMPO 1 del cutover (11-ago) — llamarla abortaría
+el UPDATE entero. El script escribe `config_global` directo.
+
+**Por qué murió el anterior:** el workflow n8n `SICI - TC Dinamico Binance v1.1` se apagó con el
+servidor n8n a fines de julio. Su última corrida fue el **27-jul**, el mismo día que el último
+snapshot de absorción — un solo apagón, no dos fallas. Nadie se enteró durante **16 días**: las 4
+capturas *leían* el TC y ninguna lo *escribía*. Diagnóstico: `TC_BINANCE_DIAGNOSTICO_2026-08-11.md`;
+plan aplicado: `TC_BINANCE_PLAN_2026-08-12.md`.
+
+**A mano:** `node scripts/deptos-equipetrol/capturar-tc-binance.mjs` (dry-run) o `--apply`.
+
+### 11.2b Workflow n8n: tc_dinamico_binance `[MUERTO desde el 27-jul-2026]`
+
+> Se conserva porque **el método de cálculo sigue siendo el mismo** en el script nuevo (promedio de
+> los 5 mejores SELL, mismos guardarraíles). Lo que ya no existe es el orquestador.
 
 **Archivo:** `n8n/workflows/modulo_2/tc_dinamico_binance.json`
-**Schedule:** Diario a las **00:00 AM** (UTC) — se ejecuta ANTES del pipeline de discovery (1:00 AM).
+**Schedule:** Diario a las **00:00 AM** (UTC) — se ejecutaba ANTES del pipeline de discovery (1:00 AM).
 
 **Flujo:**
 
@@ -561,7 +588,13 @@ Body: { page: 1, rows: 10, asset: "USDT", fiat: "BOB", tradeType: "SELL"|"BUY" }
 - `tc_buy` = promedio de los 5 mejores precios BUY (lo que un vendedor recibe por USDT)
 - **`tc_paralelo = tc_sell`** — se usa el precio SELL porque refleja el costo real de comprar dolares
 
-### 11.3 Funcion actualizar_tipo_cambio()
+### 11.3 Funcion actualizar_tipo_cambio() `[YA NO SE USA]`
+
+> 🔴 **Existe en la base pero ningún camino vivo la llama, y llamarla hoy FALLA:** su paso 6 hace
+> `UPDATE propiedades_v2`, tabla renombrada a `propiedades_v2_archivo` en el TIEMPO 1 del cutover
+> (11-ago-2026). El error (`42P01`) abortaría también el UPDATE de `config_global` del paso 5, o sea
+> **el TC no se escribiría**. Por eso `capturar-tc-binance.mjs` escribe `config_global` directo.
+> Se documenta para que nadie la "reactive" pensando que es el camino canónico.
 
 **Archivo:** `sql/functions/tc_dinamico/modulo_tipo_cambio_dinamico.sql`
 **Firma:** `actualizar_tipo_cambio(p_tipo, p_nuevo_valor, p_ejecutado_por, p_notas)`
@@ -588,14 +621,29 @@ Body: { page: 1, rows: 10, asset: "USDT", fiat: "BOB", tradeType: "SELL"|"BUY" }
 }
 ```
 
-### 11.4 Trigger automatico en config_global
+### 11.4 Triggers en config_global — los dos están inertes
 
-**Funcion:** `fn_trigger_tc_actualizado()` — AFTER UPDATE ON config_global
+**`trigger_tc_actualizado`** → `fn_trigger_tc_actualizado()`, AFTER UPDATE ON config_global.
+🔴 **DESACTIVADO (`tgenabled = 'D'`) desde el TIEMPO 1 del cutover, a propósito.** Nombra
+`propiedades_v2`: si estuviera activo, cada refresco del TC abortaría con `42P01` y el TC no se
+escribiría. Decisión y alternativas descartadas en `INVENTARIO_CUTOVER_2026-08-10.md` §ronda 3.
+Verificar antes de tocar nada:
 
-Cuando cambia el valor de `tipo_cambio_paralelo` en config_global:
-1. Marca todas las propiedades con `depende_de_tc = TRUE` y `tipo_cambio_detectado` correspondiente
-2. Les pone `requiere_actualizacion_precio = TRUE`
-3. Inserta registro de auditoria
+```sql
+SELECT tgname, tgenabled FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+WHERE c.relname = 'config_global' AND NOT t.tgisinternal;   -- trigger_tc_actualizado debe dar 'D'
+```
+
+Lo que hacía cuando estaba vivo: marcaba las props con `depende_de_tc = TRUE` como
+`requiere_actualizacion_precio = TRUE` e insertaba en `auditoria_tipo_cambio`. 👉 Por eso
+**`auditoria_tipo_cambio` no tiene filas desde el 27-jul y eso NO es un síntoma**: el historial vivo
+del TC es `tc_binance_historial`, que lo escribe el capturador.
+
+**`trigger_actualizar_precios_cuando_cambia_tc`** → `marcar_propiedades_para_actualizacion()`.
+Figura ACTIVO pero **no hace nada**: compara `NEW.clave` contra `'TIPO_CAMBIO_PARALELO'` y
+`'TIPO_CAMBIO_OFICIAL'` en MAYÚSCULAS, y esas claves fósiles fueron borradas el 19-jun-2026 (§11.1).
+⚠️ Es una bomba dormida: apunta a `propiedades` (el legacy de 2025). Si alguien recreara una clave en
+mayúsculas, dispararía sobre la tabla equivocada.
 
 ### 11.5 Guardias y umbrales
 
