@@ -30,8 +30,22 @@ Fórmula vieja (`precio_normalizado`, la del ×1,47) **y** llamador vivo:
 | Función | Quién la llama | Qué pasaría |
 |---|---|---|
 | **`buscar_unidades_simple`** | `pages/ventas.tsx`, `pages/api/ventas.ts`, `pages/b/[hash].tsx`, `pages/zona-norte/ventas.tsx`, `api/broker/shortlists/[id].ts` | precios inflados en el **feed público** |
-| **`buscar_unidades_reales`** | `admin/propiedades`, `api/broker/generate-cma.ts`, `lib/supabase.ts` (+3 funciones internas) | CMA del broker y admin |
+| **`buscar_unidades_reales`** | ~~`api/broker/generate-cma.ts`~~ · `admin/propiedades` · `lib/supabase.ts` → **funnel premium dormido** | admin (ver ✅ abajo) |
 | **`analisis_mercado_fiduciario`** | `lib/supabase.ts` | análisis de mercado |
+
+> ✅ **`buscar_unidades_reales` bajó de categoría el 14-ago-2026.** Sus tres llamadores, uno por uno:
+> · **CMA del broker** → **apagado** (`api/broker/generate-cma.ts` devuelve 410; lo reemplaza el ACM
+>   del PR #71, que lee `v_mercado_venta_shadow`). Llevaba 3 días roto —`42P01` tragado en silencio,
+>   informes con cero comparables, crédito descontado igual— y nadie lo reportó: `broker_cma_uso`
+>   tiene **0 filas** en toda su historia.
+> · **`lib/supabase.ts` → `buscarUnidadesReales()`** → solo la usan `resultados-v2.tsx` y
+>   `FilterBarPremium.tsx`, o sea el **funnel premium, dormido por decisión de producto**. No es
+>   trabajo: es decidir si se apaga.
+> · **`/admin/propiedades`** → único llamador vivo real, y ya entra por los pasos 2-3 del admin.
+>
+> 👉 **Ya no bloquea el TIEMPO 2 por sí sola.** No hay que repuntarla al régimen nuevo: hay que
+> apagarla cuando el admin termine de mudarse. Detalle y corrección del párrafo que la listaba como
+> bloqueante: `INVENTARIO_CUTOVER_2026-08-10.md` §6a.
 
 ### 🔴 El hallazgo que más pesa: `rpcShadowFirst` NO es cutover-safe
 

@@ -133,10 +133,26 @@ anterior de este mismo capítulo (un plan de 4 etapas con alias, ya descartado):
 🔴 **(a) La fórmula vieja empezaría a leer datos nuevos.** `buscar_unidades_reales` y `buscar_extras`
 leen `FROM propiedades_v2` y calculan con `precio_normalizado()` (la que infla ~47%). Hoy son
 **inofensivas porque leen una tabla congelada**. Si `propiedades_v2` pasa a ser la base buena, se
-despiertan sobre datos vivos: precios inflados en la **creación de shortlists**
-(`api/broker/shortlists/index.ts`) y en el **CMA del broker** (`api/broker/generate-cma.ts`).
-**No da error: da un número creíble y falso.**
+despiertan sobre datos vivos. **No da error: da un número creíble y falso.**
 🔑 Lo que hoy separa a las dos fórmulas **es el nombre de la tabla, no otra cosa.**
+
+> ✅ **CORRECCIÓN (14-ago-2026) — el riesgo se achicó a casi nada, y dos de los tres consumidores
+> que este párrafo nombraba estaban MAL.** Se verificó consumidor por consumidor, leyendo el código:
+>
+> | Lo que decía | Lo verificado el 14-ago |
+> |---|---|
+> | La **creación de shortlists** usa `buscar_unidades_reales` | **Falso.** Solo la nombra en un comentario para explicar que su contrato es distinto. Sus snapshots salen de `v_mercado_venta_shadow` con fallback, mudados el 21-jul con el lanzamiento del TC nuevo (`api/broker/shortlists/index.ts:165-182`). |
+> | El **CMA del broker** la usa | Cierto, pero **el CMA v1 se apagó el 14-ago** (`api/broker/generate-cma.ts` → 410). Lo reemplaza el ACM (PR #71), que lee `v_mercado_venta_shadow`. Y llevaba 3 días roto sin que nadie lo notara: `buscar_unidades_reales` ya corta con `42P01` y el endpoint se lo tragaba, generando informes con **cero comparables** y cobrando el crédito igual. `broker_cma_uso`: **0 filas en toda su historia.** |
+> | `buscar_extras` es un problema | **Ya estaba resuelto:** tiene gemela `buscar_extras_shadow` (SECURITY DEFINER) y el código la prefiere vía `rpcShadowFirst`. |
+>
+> 👉 **Consecuencia para el TIEMPO 2:** no hay nada que "repuntar al régimen nuevo". Lo que queda
+> colgando de `buscar_unidades_reales` es el **funnel premium**, que está dormido por decisión de
+> producto (`resultados-v2`, `FilterBarPremium`), y **`/admin/propiedades`**, que ya entra por los
+> pasos 2-3 del admin. La condición de entrada 2 pasa de "repuntar dos funciones" a **"apagar una y
+> decidir el funnel"**.
+> 🔑 **La lección del método, no del dato:** el párrafo de arriba nombraba tres consumidores y dos
+> eran falsos. Se escribió leyendo un grep, no el código de cada llamador — el grep encuentra el
+> nombre de la función también donde solo está *mencionada en un comentario*.
 
 🔴 **(b) "Las ~70 funciones de n8n están muertas" era falso.** Al menos **6 las usa el sitio vivo**
 (`buscar_unidades_reales`, `buscar_extras`, `analisis_mercado_fiduciario`, `calcular_confianza_datos`,
@@ -254,7 +270,7 @@ Sin esto no hay eval, solo una racionalización a posteriori.
 | Admin de propiedades y de proyectos, `/admin/alquileres`, supervisor/matching | Feeds `/ventas` y `/alquileres` (RPC `_shadow`) |
 | `/admin/market`, `/admin/salud` | Home, `/sobre-simon`, `/whatsapp` |
 | Estudios de mercado (`estudio-mercado/src/db.ts`) | `/mercado/equipetrol/*` |
-| CMA del broker + creación de shortlists (`buscar_unidades_reales`) | Bot de WhatsApp (vistas `_shadow`, RPC DEFINER) |
+| ~~CMA del broker + creación de shortlists~~ (`buscar_unidades_reales`) → **corregido el 14-ago, ver §6a: las shortlists NUNCA la usaron y el CMA v1 quedó apagado** | Bot de WhatsApp (vistas `_shadow`, RPC DEFINER) |
 | Las 3 lecturas de `lib/supabase.ts` (2 muertas + `/landing-v2`) | ACM (`acm-pool`, `acm-buscar`) |
 | Las ~70 funciones SQL de n8n, **incluidas las 6 que el sitio usa** | **Las 5 routines** (paso 0, ya probado) |
 | `reconstruir_serie_precios_reexpresada` → se repunta en la misma operación | **`/ventas/casas`**: su vista queda pegada al archivo por OID |
@@ -360,7 +376,10 @@ sería planificar sobre una hipótesis — el error que este documento corrige (
 
 **Condición de entrada — se arranca solo si se cumplen TODAS:**
 1. Cero referencias vivas al nombre `propiedades_v2` fuera de las que apunten explícitamente a `_archivo`.
-2. `buscar_unidades_reales` y `buscar_extras`: **apagadas o repunteadas al régimen nuevo** (§6a).
+2. ~~`buscar_unidades_reales` y `buscar_extras`: **apagadas o repunteadas al régimen nuevo**~~ (§6a).
+   ✅ **Casi cumplida al 14-ago:** `buscar_extras` ya tenía gemela shadow, las shortlists nunca la
+   usaron y el CMA v1 se apagó. Queda solo **decidir el funnel premium dormido** (`resultados-v2`,
+   `FilterBarPremium`) y que el admin termine sus pasos 2-3 — o sea, se solapa con la condición 4.
 3. Secuencia de id ligada a la tabla nueva y arrancada por encima de 9.000.000 (§6d).
 4. Admin apuntado a la base buena **y** cargadores respetando `campos_bloqueados` (§6c).
 5. Una semana de routines verdes después del tiempo 1.

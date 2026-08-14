@@ -630,18 +630,11 @@ export default function BrokerDashboard() {
                           >
                             📄 PDF
                           </button>
-                          <button
-                            onClick={() => handleGenerateCMA(prop.id, prop.codigo)}
-                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                              stats.cma_creditos > 0
-                                ? 'text-purple-600 hover:bg-purple-50'
-                                : 'text-slate-400 cursor-not-allowed'
-                            }`}
-                            title={stats.cma_creditos > 0 ? 'Generar Análisis de Mercado' : 'Sin créditos CMA'}
-                            disabled={stats.cma_creditos <= 0}
-                          >
-                            📊 CMA
-                          </button>
+                          {/* ⛔ Botón "📊 CMA" retirado el 14-ago-2026 — el CMA v1 fue
+                              reemplazado por el ACM (PR #71). El endpoint devuelve 410;
+                              el porqué está en `api/broker/generate-cma.ts`. El handler
+                              `handleGenerateCMA` y su modal quedan intactos a propósito:
+                              revertir = reponer este botón, nada más. */}
                           <button
                             onClick={() => handleDelete(prop.id, prop.codigo)}
                             className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
