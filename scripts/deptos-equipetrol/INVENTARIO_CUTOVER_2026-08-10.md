@@ -365,6 +365,40 @@ sería planificar sobre una hipótesis — el error que este documento corrige (
 4. Admin apuntado a la base buena **y** cargadores respetando `campos_bloqueados` (§6c).
 5. Una semana de routines verdes después del tiempo 1.
 
+### 7-ter.b — Trabajo que el TIEMPO 2 tiene que incluir (lista abierta)
+
+No son condición de entrada: no bloquean el arranque. Son cosas que **hoy están dormidas porque la
+tabla no existe, y que el rename despierta**. Si el TIEMPO 2 se hace sin tocarlas, el sistema queda
+peor que antes del rename, no mejor.
+
+**(a) `actualizar_tipo_cambio()` — borrar o repuntar. Añadido el 14-ago-2026.**
+Está en el grupo 2 de `INVENTARIO_66_FUNCIONES_2026-08-11.md`, pero con una particularidad que la
+saca del montón: su paso 6 hace `UPDATE propiedades_v2`. **Hoy eso la vuelve inofensiva por accidente**
+(falla con `42P01` y nadie la llama; `capturar-tc-binance.mjs` la esquiva a propósito y escribe
+`config_global` directo). **Después del rename deja de fallar** y vuelve a marcar propiedades vivas
+con `requiere_actualizacion_precio` según las reglas del régimen viejo, sin avisar.
+🔑 Es el patrón del grupo 1 disfrazado de grupo 2: *no molesta porque está rota; el TIEMPO 2 la arregla.*
+
+**(b) Los dos triggers de `config_global` — decidir uno por uno. Añadido el 14-ago-2026.**
+- `trigger_tc_actualizado` (`fn_trigger_tc_actualizado`): **desactivado** (`tgenabled='D'`) por el
+  TIEMPO 1. Al renombrar la tabla **no se reactiva solo**, pero queda como objeto muerto apuntando a
+  la base buena. Se borra con las 66. 🔴 **Y si alguien lo reactivara, el TC dejaría de escribirse**
+  (aborta el `UPDATE` de `config_global` en la misma transacción). Consecuencia ya visible hoy:
+  `auditoria_tipo_cambio` no recibe filas desde el 27-jul — es efecto del trigger apagado, **no un
+  síntoma**. El historial vivo del TC es `tc_binance_historial`.
+- `trigger_actualizar_precios_cuando_cambia_tc` (`marcar_propiedades_para_actualizacion`): figura
+  **ACTIVO** y hoy no hace nada, porque compara `NEW.clave` contra `'TIPO_CAMBIO_PARALELO'` /
+  `'TIPO_CAMBIO_OFICIAL'` en MAYÚSCULAS y esas claves se borraron el 19-jun-2026. Escribe sobre
+  `propiedades`, el legacy de 2025 — o sea que el rename **no lo toca**. Es una bomba dormida con una
+  sola espoleta: que alguien recree una clave en mayúsculas.
+
+👉 **Verificación obligatoria antes y después del rename** (no alcanza con `pg_trigger` a secas —
+preguntar si el objeto existe no es preguntar si está encendido):
+```sql
+SELECT tgname, tgenabled FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+WHERE c.relname = 'config_global' AND NOT t.tgisinternal;
+```
+
 ## 8. Qué implica para el crecimiento (deptos ZN → casas/terrenos → ciudad)
 - **Una sola tabla discriminada por tipo y zona** ya es el patrón que funciona. La próxima vertical se
   construye **dentro** de la base principal con su propio spec de lectura, **no en otra tabla

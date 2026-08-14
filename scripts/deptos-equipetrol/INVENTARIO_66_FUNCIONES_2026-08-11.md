@@ -73,6 +73,16 @@ n8n está apagado desde el 28-jul, pero **estas funciones no saben eso**. Si alg
 webhook olvidado, alguien reviviendo un workflow, una llamada manual— escriben en la base buena con
 las reglas del régimen viejo.
 
+> 🔴 **`actualizar_tipo_cambio` merece su propia línea (agregado el 14-ago):** es la única del grupo
+> que, si alguien la llama **hoy**, **rompe algo que hoy funciona**. Su paso 6 hace `UPDATE
+> propiedades_v2` → `42P01` → y como el `UPDATE config_global` del paso 5 va en la misma transacción,
+> **el TC no se escribe**. Por eso `capturar-tc-binance.mjs` la esquiva y escribe `config_global`
+> directo (comentario en su cabecera, líneas 27-29).
+> **Y después del TIEMPO 2 es peor, no mejor:** con la tabla renombrada deja de fallar y vuelve a
+> marcar propiedades vivas con las reglas viejas, en silencio. Es el mismo patrón que el grupo 1.
+> 👉 Se borra con el grupo, pero **verificar antes que ningún camino la llame** — el capturador del TC
+> es el único que la nombra, y solo para explicar por qué NO la usa.
+
 ---
 
 ## Grupo 3 — Las del admin (13)
