@@ -1,6 +1,70 @@
 # Backlog Calidad de Datos — SICI
 
-> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 9 Mar 2026.
+> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 13 Ago 2026.
+
+## 🔴 Avisos SIN ÁREA — el feed los oculta en silencio, y el filtro no hace lo que cree (13 Ago 2026)
+
+**Son dos problemas encadenados.** El primero es de captura; el segundo, de cómo el feed reacciona
+a ese hueco. Se pueden atacar por separado, pero la decisión del segundo depende de la respuesta
+al primero.
+
+### Problema A — el dato no llega
+
+| Fuente / operación | Sin área |
+|---|---|
+| **Remax ALQUILER** | **22,9%** (22 de 96) — *1 de cada 4* |
+| Remax venta | 5,1% (15 de 294) |
+| Century21 | **0,1%** (1 de 999) |
+
+**Mecanismo (verificado):** el área de Remax viene del **discovery** (search API), **no del detalle**
+— `lib/detalle-deptos.mjs` lo dice explícito: *"El área NO se saca del detalle (Remax no la trae
+ahí)"*. Si el buscador no la devuelve para un aviso, **no hay segunda oportunidad**. Verificado
+además que **tampoco está en el texto** de la descripción (8 casos revisados).
+
+🔴 **LA PREGUNTA QUE CIERRA EL TEMA, todavía sin responder:** *¿el aviso en remax.bo muestra la
+superficie?* Si la muestra → es un **bug del discovery** y el arreglo es leer el dato. Si no la
+muestra → es **dato faltante en origen** y no hay nada que arreglar del lado nuestro; ahí recién
+tiene sentido decidir el Problema B.
+⚠️ El 11-ago no se pudo comprobar porque el fetch directo a remax.bo fallaba. **Desde el 13-ago
+Remax responde normal (HTTP 200 en 1,9 s sin proxy)** → la pregunta ahora SE PUEDE responder.
+Ver memoria `project_remax_cayo_noche_12ago`.
+
+📌 **Y no es solo Remax.** El 13-ago apareció el primer caso claro en **C21**: la prop `8000826`
+(Condominio Confort, ZN) entró con `area_total_m2 = NULL`. Está bien matcheada, con precio y
+fotos — y aun así **nunca va a aparecer en el feed**, por el Problema B.
+
+### Problema B — el filtro `area_total_m2 >= 20` dejó de hacer lo que fue diseñado para hacer
+
+Medido el 13-ago sobre el inventario vivo (ya con los filtros canónicos aplicados):
+
+| | Venta | Alquiler |
+|---|---:|---:|
+| **Sin área (`NULL`)** | **13** | **19** |
+| Área real < 20 m² | **0** | **1** |
+
+**De las 33 propiedades que ese filtro oculta, 32 son "no sabemos" y 1 sola es realmente chica.**
+
+🔑 El filtro se puso para dejar afuera **bauleras y parqueos por tamaño** — pero eso **ya lo hace el
+filtro de TIPO** (`baulera`/`parqueo`/`garaje`/`deposito`). Hoy el de área atrapa otra cosa.
+🔑 Y la causa técnica es el patrón que apareció cinco veces el 11-ago: **en SQL `NULL >= 20` es
+FALSE**, así que *"no sabemos la superficie"* se trata igual que *"mide 4 m²"*.
+
+**Las tres opciones, y por qué la tercera:**
+1. **Ocultarlas (hoy).** Coherente —sin área no hay $/m², no entran en medianas, el chip de rango no
+   se calcula— pero **se ocultan en silencio**: el feed dice 359 y hay 372.
+2. **Mostrarlas como si nada.** No: una card sin superficie al lado de otras con $/m² se lee como un
+   error del sitio.
+3. ✅ **Mostrarlas DECLARANDO** — *"superficie no informada"*, sin $/m², y **excluidas de las
+   medianas**. Es lo que el sistema ya hace con el estado de obra (*"sin confirmar"* en vez de
+   inventar) y con el carrusel del mapa (*"las 30 más cercanas"* en vez de truncar callado).
+   **El sistema declara lo que no sabe en todos lados menos acá.**
+
+⚠️ **NO es un cambio chico:** ese filtro vive en las vistas de mercado, que alimentan el feed, los
+snapshots, las medianas, los yields y el bot. Tocar una vista compartida sin mirar la superficie de
+al lado es exactamente lo que costó caro con las migs 315/316/317 (ver la regla #13 del CLAUDE.md).
+Si se hace, va con foto previa y evals por superficie.
+
+**Orden sugerido:** responder A (una lectura del portal) → recién entonces decidir B.
 
 ## Monoambientes catalogados como "1 dormitorio" — RESUELTO (22 May 2026)
 
