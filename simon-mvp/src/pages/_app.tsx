@@ -56,7 +56,9 @@ const dmSans = DM_Sans({
 const ANIMATED_ROUTES = ['/filtros', '/formulario', '/form', '/results', '/resultsV2', '/contact', '/summary', '/formV2']
 
 // Rutas premium que usan Cormorant/Manrope (no necesitan Inter/Outfit)
-const PREMIUM_ROUTES = ['/', '/landing-v2', '/filtros-v2', '/formulario-v2', '/resultados-v2', '/alquileres', '/condado-vi', '/home', '/sobre-simon', '/whatsapp']
+// `/filtros-v2`, `/formulario-v2` y `/resultados-v2` salieron el 14-ago-2026 (funnel
+// premium apagado; las rutas redirigen a /ventas). `/landing-v2` se queda: sigue viva.
+const PREMIUM_ROUTES = ['/', '/landing-v2', '/alquileres', '/condado-vi', '/home', '/sobre-simon', '/whatsapp']
 
 const GA_ID = 'G-Q8CRRJD6SL'
 

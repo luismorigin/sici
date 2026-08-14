@@ -377,9 +377,10 @@ sería planificar sobre una hipótesis — el error que este documento corrige (
 **Condición de entrada — se arranca solo si se cumplen TODAS:**
 1. Cero referencias vivas al nombre `propiedades_v2` fuera de las que apunten explícitamente a `_archivo`.
 2. ~~`buscar_unidades_reales` y `buscar_extras`: **apagadas o repunteadas al régimen nuevo**~~ (§6a).
-   ✅ **Casi cumplida al 14-ago:** `buscar_extras` ya tenía gemela shadow, las shortlists nunca la
-   usaron y el CMA v1 se apagó. Queda solo **decidir el funnel premium dormido** (`resultados-v2`,
-   `FilterBarPremium`) y que el admin termine sus pasos 2-3 — o sea, se solapa con la condición 4.
+   ✅ **CUMPLIDA salvo el admin, al 14-ago:** `buscar_extras` ya tenía gemela shadow · las shortlists
+   nunca la usaron · el **CMA v1 se apagó** (410) · el **funnel premium se borró** (rutas → `/ventas`).
+   **`buscar_unidades_reales` queda con UN llamador: `/admin/propiedades`** → esta condición se
+   absorbe en la 4 y deja de ser un frente propio.
 3. Secuencia de id ligada a la tabla nueva y arrancada por encima de 9.000.000 (§6d).
 4. Admin apuntado a la base buena **y** cargadores respetando `campos_bloqueados` (§6c).
 5. Una semana de routines verdes después del tiempo 1.

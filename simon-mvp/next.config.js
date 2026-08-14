@@ -21,18 +21,32 @@ const nextConfig = {
   poweredByHeader: false,
   async redirects() {
     return [
-      { source: '/filtros', destination: '/filtros-v2', permanent: true },
-      { source: '/form', destination: '/formulario-v2', permanent: true },
-      { source: '/formV2', destination: '/formulario-v2', permanent: true },
-      { source: '/results', destination: '/resultados-v2', permanent: true },
-      { source: '/resultsV2', destination: '/resultados-v2', permanent: true },
-      { source: '/resultados', destination: '/resultados-v2', permanent: true },
-      { source: '/summary', destination: '/filtros-v2', permanent: true },
-      { source: '/contact', destination: '/filtros-v2', permanent: true },
+      // ⛔ Funnel premium APAGADO el 14-ago-2026 (`/filtros-v2`, `/formulario-v2`,
+      // `/resultados-v2` borradas). Estaba dormido hacía meses — el producto es el feed —
+      // y era el último consumidor no-admin de `buscar_unidades_reales()`, la RPC del
+      // régimen viejo que bloqueaba el TIEMPO 2 del cutover.
+      //
+      // 🔑 Los redirects viejos NO se borran, se REAPUNTAN a `/ventas`. Son URLs de
+      // campañas, marcadores y SEO histórico: borrarlos las convierte en 404, y un 404
+      // pierde al visitante en vez de llevarlo al producto vivo. La cadena de dos saltos
+      // (/form → /formulario-v2 → /ventas) se aplana a uno solo a propósito.
+      { source: '/filtros', destination: '/ventas', permanent: true },
+      { source: '/form', destination: '/ventas', permanent: true },
+      { source: '/formV2', destination: '/ventas', permanent: true },
+      { source: '/results', destination: '/ventas', permanent: true },
+      { source: '/resultsV2', destination: '/ventas', permanent: true },
+      { source: '/resultados', destination: '/ventas', permanent: true },
+      { source: '/summary', destination: '/ventas', permanent: true },
+      { source: '/contact', destination: '/ventas', permanent: true },
       { source: '/pro', destination: '/', permanent: true },
-      { source: '/formulario-vivienda', destination: '/formulario-v2', permanent: true },
-      { source: '/formulario-inversion-plusvalia', destination: '/formulario-v2', permanent: true },
-      { source: '/formulario-inversion-renta', destination: '/formulario-v2', permanent: true },
+      { source: '/formulario-vivienda', destination: '/ventas', permanent: true },
+      { source: '/formulario-inversion-plusvalia', destination: '/ventas', permanent: true },
+      { source: '/formulario-inversion-renta', destination: '/ventas', permanent: true },
+      // Las 3 rutas del funnel en sí. `/landing-v2` NO entra acá: sigue viva y accesible
+      // directo (es una landing, no parte del funnel) y no enlazaba a ninguna de estas.
+      { source: '/filtros-v2', destination: '/ventas', permanent: true },
+      { source: '/formulario-v2', destination: '/ventas', permanent: true },
+      { source: '/resultados-v2', destination: '/ventas', permanent: true },
       // Switch home (7-jul): la home vive en `/`. /home canonicaliza a `/`
       // para no tener contenido duplicado (misma página en dos URLs).
       { source: '/home', destination: '/', permanent: true },

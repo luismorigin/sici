@@ -38,13 +38,18 @@ Fórmula vieja (`precio_normalizado`, la del ×1,47) **y** llamador vivo:
 >   del PR #71, que lee `v_mercado_venta_shadow`). Llevaba 3 días roto —`42P01` tragado en silencio,
 >   informes con cero comparables, crédito descontado igual— y nadie lo reportó: `broker_cma_uso`
 >   tiene **0 filas** en toda su historia.
-> · **`lib/supabase.ts` → `buscarUnidadesReales()`** → solo la usan `resultados-v2.tsx` y
->   `FilterBarPremium.tsx`, o sea el **funnel premium, dormido por decisión de producto**. No es
->   trabajo: es decidir si se apaga.
-> · **`/admin/propiedades`** → único llamador vivo real, y ya entra por los pasos 2-3 del admin.
+> · **`lib/supabase.ts` → `buscarUnidadesReales()`** → **apagada el mismo día**: el funnel premium
+>   (`/filtros-v2`, `/formulario-v2`, `/resultados-v2`) se borró y sus rutas redirigen a `/ventas`.
+>   Con él cayeron **4 funciones muertas** del archivo: `buscarUnidadesReales`, `buscarUnidadesBroker`,
+>   `buscarUnidadesUnificadas` y `construirAnalisisDesdeBusqueda`.
+>   🔑 **A la última la delató el typecheck, no el grep**: su único llamador era interno al archivo,
+>   así que `grep` sobre `src/` daba cero — la misma trampa que este documento persigue, en su
+>   versión "cero resultados no es cero llamadores".
+> · **`/admin/propiedades`** → **ahora es el ÚNICO llamador en todo el repo** (verificado por grep:
+>   el resto de las apariciones son comentarios). Ya entra por los pasos 2-3 del admin.
 >
-> 👉 **Ya no bloquea el TIEMPO 2 por sí sola.** No hay que repuntarla al régimen nuevo: hay que
-> apagarla cuando el admin termine de mudarse. Detalle y corrección del párrafo que la listaba como
+> 👉 **Ya no bloquea el TIEMPO 2 por sí sola, ni es un frente propio.** No hay que repuntarla al
+> régimen nuevo: muere con la mudanza del admin. Corrección del párrafo que la listaba como
 > bloqueante: `INVENTARIO_CUTOVER_2026-08-10.md` §6a.
 
 ### 🔴 El hallazgo que más pesa: `rpcShadowFirst` NO es cutover-safe

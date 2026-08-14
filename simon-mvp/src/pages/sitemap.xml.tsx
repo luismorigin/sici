@@ -13,7 +13,9 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
     { loc: '/mercado/equipetrol/alquileres', changefreq: 'daily', priority: '0.9' },
     { loc: '/ventas', changefreq: 'daily', priority: '0.8' },
     { loc: '/alquileres', changefreq: 'daily', priority: '0.8' },
-    { loc: '/filtros-v2', changefreq: 'weekly', priority: '0.6' },
+    // `/filtros-v2` retirado el 14-ago-2026 con el apagado del funnel premium: la ruta
+    // ahora redirige a /ventas, y ofrecerle a Google una URL que redirige es pedirle que
+    // gaste rastreo en un salto.
   ]
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
