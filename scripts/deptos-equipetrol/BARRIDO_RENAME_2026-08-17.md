@@ -165,9 +165,27 @@ vuelve una pieza extra que hay que limpiar después. El movimiento honesto es:
 
 Los 12 puntos del frontend pasan por **dos constantes** (`TABLA_PROPIEDADES` en `usePropertyEditor.ts`
 y en `admin/propiedades/index.tsx`), así que ahí son 2 ediciones. Los **38 de los scripts no tienen
-constante central**: cada archivo repite el literal. 👉 **Conviene crear esa constante ANTES del
-rename** (en `scripts/deptos-equipetrol/lib/`) — es trabajo que se puede hacer hoy, sin riesgo, y
-convierte el paso 3 del rename en una sola línea.
+constante central**: cada archivo repite el literal.
+
+> 🔴 **CORREGIDO el mismo día — acá decía "conviene crear esa constante ANTES del rename, sin
+> riesgo". Es falso, y el análisis de riesgos lo desmintió.** Se escribió por inercia ("centralizar
+> es buena práctica") sin mirar las condiciones de estos archivos en particular:
+> - **Los scripts no tienen ninguna red de seguridad**: `package.json` de la raíz con `scripts: {}`
+>   — sin tests, sin lint — y los `.mjs` no llevan tipos. Un import mal puesto **no lo atrapa nada**;
+>   aparece cuando corre, a la 1:17 AM.
+> - **Son el camino crítico nocturno**: los 2 cargadores, los 2 verificadores, los 2 discovery.
+> - 🔑 **Y el argumento decisivo: centralizar no elimina el riesgo, lo MUEVE al peor momento.** El día
+>   del rename hay foto previa, evals, el founder mirando y un `RENAME` inverso a mano. Una noche
+>   cualquiera no hay nadie. Preparar lo difícil antes es correcto **cuando la preparación es más
+>   segura que el momento del cambio**; acá es al revés.
+> - Y el beneficio que compra es chico: reemplazar 38 literales es mecánico y **se verifica en un
+>   segundo** (`grep -c` tiene que dar 0).
+>
+> 👉 **Decisión: NO centralizar antes del rename.** Se reemplazan los 38 el día del rename, bajo
+> supervisión. Si se quiere la constante por mantenibilidad, va **después**, fuera del camino crítico
+> del cutover. (Verificado de paso: **solo 1 rama modificó scripts** —2 archivos—, así que el riesgo
+> de conflictos era nulo; una primera medición que daba 13 ramas estaba mal hecha, contaba también lo
+> que avanzó `main`.)
 
 ## ✅ Un falso positivo, dicho para que no se repita
 
@@ -186,9 +204,37 @@ de reportarlo.
 2. **Los triggers ausentes explican la condición 4** y confirman que no se resuelve sola.
 3. **B2 baja de prioridad**: es riesgo dormido, no activo, y muere con el retiro del supervisor.
 4. 🔴 **(doble check) El rename toca 53 puntos de código además de las 7 funciones**, y el atajo
-   probablemente no salve a los cargadores por el `ON CONFLICT`. **Centralizar el nombre en una
-   constante de `scripts/deptos-equipetrol/lib/` es trabajo de hoy, sin riesgo**, y reduce el paso
-   más grande del rename a una línea.
+   probablemente no salve a los cargadores por el `ON CONFLICT`.
+5. **Centralizar el nombre NO se hace antes** (ver el recuadro rojo de §doble check): movería el
+   riesgo del día supervisado a una noche sin nadie mirando, y lo que compra es un reemplazo de un
+   minuto.
+
+---
+
+# Veredicto de riesgo de los dos arreglos previos (verificado, 17-ago)
+
+El founder preguntó si son de bajo riesgo **antes** de que se hicieran. Se midió en vez de afirmarlo:
+
+## Arreglo 1 — quitarle el fallback a `rpcShadowFirst` · **bajo riesgo, verificado**
+
+- El helper recibe **exactamente 3 bases** en todo el repo: `buscar_unidades_simple` (3 llamadas),
+  `buscar_unidades_alquiler` (2), `buscar_extras` (2). No hay una cuarta escondida.
+- Las 3 tienen gemela `_shadow` **que funciona** (652 / 288 / 20 filas, ejecutadas).
+- Las 3 viejas **fallan** con `42P01` (ejecutadas una por una).
+👉 Hoy el fallback no salva nada: cambia *"falla y después falla"* por *"falla"*. Lo que cambia es
+**mañana**, y para bien: el error se ve en vez de convertirse en precios inflados.
+
+## Arreglo 2 — borrar las 6 funciones de precio · **bajo riesgo CON UNA CONDICIÓN**
+
+- `pg_depend`: **cero** dependencias reales. Ningún índice, constraint, default ni vista materializada
+  las usa (consultado el catálogo, no por texto).
+- Las 6 tienen fuente en `sql/` → parece reversible.
+- 🔴 **PERO la regla 7 del proyecto dice que los archivos locales no son confiables**: *"pg_get_functiondef()
+  SIEMPRE — nunca confiar en archivos de migración locales"*. Que el `.sql` exista **no prueba que sea
+  igual a lo que corre**. Varias tienen 3 migraciones encima (`buscar_unidades_simple` → 219 y 227).
+- 👉 **Condición de ejecución: el paso 1 del arreglo 2 es exportar `pg_get_functiondef()` de las 6 y
+  guardarlo** junto al script de borrado. Sin ese export el borrado NO es reversible, por más que el
+  repo tenga un archivo con el mismo nombre.
 
 ## 🔑 La lección del método, que es lo que más vale de este documento
 
