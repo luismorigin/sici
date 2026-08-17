@@ -55,6 +55,32 @@ Todos los números de §1, §2 y §3 deben quedar **idénticos**.
 **Si algo se mueve, se revierte.** No hay resultado "aceptable con matices": la predicción es que
 nada cambia.
 
+## 5-bis. ✅ ENSAYO EN VACÍO (dry-run) — idea del founder, corrido y PASA
+
+*"¿no podés hacer un dry run o un test previo de esto?"* — Sí: el DDL en Postgres es
+**transaccional**, así que se ejecutó el movimiento completo, se verificó por dentro y se deshizo con
+`ROLLBACK`. Sin dejar rastro.
+
+Y lo más valioso: **dentro de la transacción se probó que las funciones siguen encontrando el nombre
+a través del atajo**, que era justo lo que había que confirmar.
+
+| Chequeo | Esperado | Obtenido |
+|---|---|---|
+| la tabla se llama | `propiedades_v2=TABLA` + `propiedades_v2_shadow=vista` | ✅ exacto |
+| el atajo acepta escritura | `YES / insertable=YES` | ✅ |
+| filas por la tabla vs por el atajo | 1590 vs 1590 | ✅ |
+| **la RPC del feed a través del atajo** | 652 | ✅ **652** — idéntico a §3 |
+| la RPC del bot | responde | ✅ |
+
+**Post-rollback verificado:** `propiedades_v2_shadow` volvió a ser TABLA, no quedó ninguna vista, y
+los 15 índices y 2 secuencias siguen en su lugar.
+
+⚠️ **Lo que el ensayo NO cubre** (y por eso no reemplaza a la verificación posterior): la escritura
+del cargador real y el comportamiento del sitio. Viven en otras conexiones y **no ven una transacción
+sin confirmar**.
+ℹ️ Nota cosmética: los índices conservan sus nombres (`propiedades_v2_shadow_*_idx`) después del
+rename. No afecta nada; solo queda feo hasta la limpieza.
+
 ## 6. El SQL
 
 ```sql
