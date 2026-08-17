@@ -159,8 +159,13 @@ despiertan sobre datos vivos. **No da error: da un número creíble y falso.**
 `inferir_datos_proyecto`, `procesar_decision_sin_match`) — admin de propiedades y proyectos, CMA y
 shortlists. Desactivarlas en bloque rompía el admin.
 
-🟠 **(c) El renombrado NO arregla los candados.** Verificado: `campos_bloqueados` aparece **0 veces**
-en `cargar-deptos-shadow.mjs` y `cargar-alquiler-shadow.mjs` (solo lo mira el audit). Aunque el admin
+🟠 **(c) El renombrado NO arregla los candados.** ~~Verificado: `campos_bloqueados` aparece **0 veces**
+en `cargar-deptos-shadow.mjs` y `cargar-alquiler-shadow.mjs` (solo lo mira el audit).~~
+> ✅ **RESUELTO al día siguiente (11-ago), medido el 17-ago.** Aparece **3 veces en cada cargador**:
+> leen los candados existentes y hacen `delete f[campo]` antes del upsert. Esta línea es un buen
+> recordatorio de que **una verificación tiene fecha de vencimiento** — se escribió el 10-ago, dejó
+> de ser cierta el 11, y siguió citándose como estado actual durante una semana. Detalle en la
+> condición de entrada 4 (§7-ter). Aunque el admin
 escriba donde el sitio lee, **el cron de esa noche le pisa la corrección**. El arreglo del admin son
 DOS cosas, no una.
 
@@ -412,7 +417,29 @@ sería planificar sobre una hipótesis — el error que este documento corrige (
    rename no toca ninguna de las dos (una no pertenece a ninguna tabla; la otra sigue a la suya por
    OID y su `DEFAULT` se guarda como OID, no como texto).
    👉 **No hay trabajo pendiente acá.** Detalle: `BARRIDO_RENAME_2026-08-17.md` §secuencia de ids.
-4. Admin apuntado a la base buena **y** cargadores respetando `campos_bloqueados` (§6c).
+4. ~~Admin apuntado a la base buena **y** cargadores respetando `campos_bloqueados`~~ (§6c).
+   ✅ **CUMPLIDA EN LO ESENCIAL — medida el 17-ago-2026.** Las dos mitades:
+   · **Admin** → el paso 1 lo apuntó a `propiedades_v2_shadow` (listado + editor).
+   · **Cargadores** → 🔴 **este documento decía "`campos_bloqueados` aparece 0 veces". Eso quedó
+     viejo al día siguiente**: el **11-ago** se implementó en los dos (`cargar-deptos-shadow.mjs:546`
+     y `cargar-alquiler-shadow.mjs:477`). Leen los candados de la fila existente, y **solo cuentan el
+     formato OBJETO con `bloqueado === true`** —la lección de `feedback_candado_formato_objeto`— y
+     hacen `delete f[campo]` antes del upsert, así que el valor humano no se pisa. Lo reportan en el log.
+   ⚠️ **Pero nunca se ejercitó**: no hay una sola línea *"candados respetados"* en los logs de las
+   routines, y es esperable — la nocturna solo inserta NUEVAS, que no tienen candados. La protección
+   actúa al **re-procesar** (`--ids`, relectura, barrido). 👉 Falta un **test controlado**, no más código.
+   ✅ **Los otros 4 escritores no miran los candados, y hoy no hacen daño** (verificado campo por
+   campo): los 2 verificadores escriben `status/es_activa=false` y el **único** candado sobre
+   `es_activa` (prop 8000566, Plaza Libertad) existe justamente para que **no se reactive** — el
+   verificador escribe el mismo valor que el candado quiere preservar. `refrescar-fotos` y
+   `reparar-portadas` escriben `datos_json`, y no hay ningún candado sobre esa columna.
+   ✅ **El trigger del archivo NO hay que replicarlo.** `proteger_amenities_candados` solo dispara en
+   la transición `status 'actualizado'→'completado'`, que es **del merge de n8n**: el híbrido escribe
+   `completado` directo. Está atado al régimen viejo. La solución correcta para el híbrido es la que
+   ya se hizo: proteger en el escritor.
+   🔑 **Lo que queda es estructural, no bloqueante:** la protección vive **en cada escritor, no en la
+   base**. Cada escritor nuevo nace sin ella — pasó con los 4. Si se quiere robustez de verdad, va un
+   trigger **genérico** sobre la tabla viva (no el viejo). Es mejora, no condición de entrada.
 5. Una semana de routines verdes después del tiempo 1.
 
 ### 7-ter.b — Trabajo que el TIEMPO 2 tiene que incluir (~~lista abierta~~ → **cerrada el 17-ago**)
