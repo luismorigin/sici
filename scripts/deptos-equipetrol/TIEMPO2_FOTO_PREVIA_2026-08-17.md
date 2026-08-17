@@ -19,6 +19,24 @@
 >
 > **Pendiente:** la limpieza (6 funciones · 53 puntos de código · 6 skills) y recién después sacar el
 > atajo. Ver `docs/RETOMAR.md` §"LA LIMPIEZA POSTERIOR".
+>
+> ### 🔍 Revisión visual del founder — un hallazgo, y NO es del rename
+> Al mirar los feeds noté dos cosas y se verificaron las dos:
+> 1. **Los conteos coinciden exacto.** `/ventas` muestra **351** y la RPC del feed filtrada a
+>    Equipetrol devuelve **351**; `/alquileres` muestra **182** y la base tiene **182**. (El "380" de
+>    la foto previa venía del `<title>`, que se regenera cada 6 h y era del build anterior.)
+>    **Y los precios están sanos**: $2.455/m², $1.486/m², mediana **$1.677/m²**. Si algo hubiera
+>    tomado la fórmula vieja estarían ~47% arriba.
+> 2. **`/zona-norte/ventas` se ve distinto** — grid con sidebar en vez de lista con mapa. Es
+>    preexistente: `splitDesktop` aparece **21 veces en `ventas.tsx` y 0 en `zona-norte/ventas.tsx`**.
+>    Ese feed nunca recibió el rediseño de julio.
+> 🐛 **Y de ahí salió un bug real, ajeno al cutover: el feed ZN muestra 24 de 301 propiedades.**
+> El API responde perfecto (`POST /api/ventas` con las 13 microzonas ZN → `total: 301`, status 200,
+> leyendo la tabla renombrada); el DOM tiene exactamente 24 tarjetas. La página no aplica el fetch
+> diferido que sí funciona en `/ventas`.
+> 🔑 **Cómo se sabe que no es del rename:** los dos feeds usan el mismo mecanismo (24 en el SSG + el
+> resto por fetch). Si fuera del rename, `/ventas` también estaría en 24 — y muestra 351.
+> Está en dark launch (`noindex`), así que no hay nadie afectado. Flagueado como tarea aparte.
 
 > Medido **antes** de ejecutar, contra **producción** (`simonbo.com`) y la base. Es contra estos
 > números que se compara después. Mismo método que el TIEMPO 1.
