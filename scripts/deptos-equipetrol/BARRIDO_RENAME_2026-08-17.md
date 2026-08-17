@@ -108,6 +108,76 @@ Verificado por `tgenabled`.
 **`v_mercado_casas`, que sirve el feed vivo `/ventas/casas`**. Para el archivo la fórmula vieja es la
 **correcta**: esos datos son del régimen viejo. Se borran sus consumidores rotos, no ella.
 
+---
+
+# 🔴 DOBLE CHECK (17-ago, mismo día) — al barrido le faltaba un eje entero: EL CÓDIGO
+
+> Pedido del founder: *"dale un doble check al nuevo documento con visión amplia y metiéndote en el
+> código"*. Tenía razón otra vez: **todo lo de arriba mira la BASE DE DATOS**. Ninguna de sus
+> consultas toca el repositorio. Y el código nombra la tabla tanto como las funciones.
+
+## Los números
+
+**53 puntos de código consultan `propiedades_v2_shadow` por nombre, en 20 archivos.**
+(Contando solo `.from(...)` real; hay ~13 menciones más que son comentarios y no rompen nada.)
+
+| Dónde | Puntos | Qué se cae con el rename |
+|---|---:|---|
+| `cargar-deptos-shadow.mjs` · `cargar-alquiler-shadow.mjs` | 7 + 7 | 🔴 **los dos cargadores nocturnos** |
+| `verificador-deptos.mjs` · `verificador-alquiler.mjs` | 4 + 4 | los dos verificadores |
+| `auditar-matching-shadow.mjs` · `auditar-shadow.mjs` | 3 + 1 | las auditorías |
+| `discovery-deptos.mjs` · `discovery-alquiler.mjs` | 1 + 1 | el discovery de ambas operaciones |
+| `usePropertyEditor.ts` | 8 | el editor del admin (vía constante `TABLA_PROPIEDADES`) |
+| `admin/propiedades/index.tsx` | 4 | el listado del admin (misma constante) |
+| `acm-buscar.ts` · `simon-contactos.ts` · `mercado-shadow-data.ts` | 1 c/u | el ACM · el CRM · la data de mercado |
+| 6 utilitarios (`refrescar-fotos`, `chequear-portadas`, `derivar-pet-friendly`…) | 1-2 c/u | mantenimiento |
+
+👉 **El rename no rompe 7 cosas: rompe 7 funciones SQL + 53 puntos de código.** Las 4 capturas
+nocturnas, los verificadores, las auditorías, el editor del admin, el ACM y el CRM.
+
+## 🔴 Y esto invalida la solución que el barrido daba por buena
+
+Arriba se dice que el **atajo** (dejar el nombre viejo apuntando a la tabla renombrada) cubre las 7
+funciones. Para leer, sí. **Para los cargadores, no**, y el motivo es concreto:
+
+```js
+await sb.from('propiedades_v2_shadow').upsert(f, { onConflict: 'id' })
+```
+
+Los dos cargadores escriben con **UPSERT**, que en SQL es `INSERT ... ON CONFLICT (id) DO UPDATE`.
+`ON CONFLICT` necesita un **índice único real** para resolver el conflicto, y **una vista no tiene
+índices**. Si el atajo es una vista, la captura de esa noche falla al escribir.
+
+⚠️ **Declarado como pendiente de prueba, no como hecho:** esto es comportamiento conocido de
+Postgres, pero **no se probó en esta base** (el acceso desde acá es de solo lectura). Dado cómo viene
+el día, corresponde probarlo antes de confiar: crear la vista en una tabla de juguete e intentar el
+upsert. Si funcionara, el atajo vuelve a ser suficiente y el plan se simplifica.
+
+## Lo que se desprende
+
+Si hay que tocar el código igual —y hay que tocarlo—, **el atajo pierde casi todo su valor**: se
+vuelve una pieza extra que hay que limpiar después. El movimiento honesto es:
+
+1. `ALTER TABLE ... RENAME` de la tabla.
+2. **Recrear las 7 funciones** apuntando al nombre nuevo (mismo script).
+3. **Buscar y reemplazar los 53 puntos de código** + desplegar.
+4. Correr las 4 capturas a mano y mirar la línea de base de `FOTO_PREVIA_ARREGLOS_2026-08-17.md`.
+
+Los 12 puntos del frontend pasan por **dos constantes** (`TABLA_PROPIEDADES` en `usePropertyEditor.ts`
+y en `admin/propiedades/index.tsx`), así que ahí son 2 ediciones. Los **38 de los scripts no tienen
+constante central**: cada archivo repite el literal. 👉 **Conviene crear esa constante ANTES del
+rename** (en `scripts/deptos-equipetrol/lib/`) — es trabajo que se puede hacer hoy, sin riesgo, y
+convierte el paso 3 del rename en una sola línea.
+
+## ✅ Un falso positivo, dicho para que no se repita
+
+`cargar-deptos-shadow.mjs:98` consulta `propiedades_v2` —la tabla muerta— y **no es un bug**: es el
+modo `--prep`, retirado el 20-jul, y el código **detecta el error y explica por qué** en vez de morir
+con un mensaje de Postgres. El ciclo nocturno usa `--nuevas`. Se verificó leyendo el contexto antes
+de reportarlo.
+
+---
+
 ## Lo que este barrido cambia del plan
 
 1. **El atajo del rename pasa de "buena idea" a lista concreta**: tiene que cubrir 7 funciones, y
@@ -115,3 +185,21 @@ Verificado por `tgenabled`.
    ellas, el rename tumba la captura de esa noche y el bot.
 2. **Los triggers ausentes explican la condición 4** y confirman que no se resuelve sola.
 3. **B2 baja de prioridad**: es riesgo dormido, no activo, y muere con el retiro del supervisor.
+4. 🔴 **(doble check) El rename toca 53 puntos de código además de las 7 funciones**, y el atajo
+   probablemente no salve a los cargadores por el `ON CONFLICT`. **Centralizar el nombre en una
+   constante de `scripts/deptos-equipetrol/lib/` es trabajo de hoy, sin riesgo**, y reduce el paso
+   más grande del rename a una línea.
+
+## 🔑 La lección del método, que es lo que más vale de este documento
+
+El barrido original recorrió el catálogo de Postgres de punta a punta y **se sintió completo**. No lo
+era: cubría **un eje de dos**. La pregunta *"¿qué le pasa a cada pieza el día del rename?"* se
+respondió solo para las piezas que viven **en la base**, porque la herramienta que se usó —el
+catálogo— solo conoce esas.
+
+👉 **Un barrido hereda el punto ciego de su herramienta.** Antes de declarar cerrado el siguiente,
+preguntar: *¿qué clase de objeto NO puede ver el instrumento que estoy usando?* Acá la respuesta era
+"todo el repositorio", y eran 53 puntos.
+Es la tercera vez en el día que el mismo patrón muerde: el grep que no ve llamadores internos, el
+patrón que confunde `precio_normalizado` con `precio_normalizado_shadow`, y ahora el catálogo que no
+ve el código.
