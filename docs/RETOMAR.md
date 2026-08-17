@@ -57,62 +57,82 @@ Empezá diciéndome qué entendiste del estado actual antes de proponer nada.
 Retomamos el TIEMPO 2 del cutover: darle el nombre `propiedades_v2` a la tabla
 viva, que hoy se sigue llamando propiedades_v2_shadow.
 
+🟢 ESTADO AL 17-ago-2026: **NINGUNA condición de entrada bloquea el TIEMPO 2.**
+Se verificaron las 5 una por una, midiendo. No hay requisitos previos pendientes:
+lo que queda es el trabajo del propio día.
+
 Leé primero:
 0. scripts/deptos-equipetrol/BARRIDO_RENAME_2026-08-17.md — 🔴 EMPEZÁ ACÁ. Cada
-   pieza de la base clasificada por lo que le pasa el día del rename. Tiene la
-   lista cerrada de las 7 funciones VIVAS que el rename ROMPE (los dos feeds, el
-   bot, la captura nocturna) y el dato de que la base viva no tiene triggers.
-   Los inventarios de abajo clasifican lo ROTO y por eso no ven esas 7.
-1. scripts/deptos-equipetrol/INVENTARIO_CUTOVER_2026-08-10.md — fuente única.
-   §7-ter tiene el goal y las 5 CONDICIONES DE ENTRADA.
-2. scripts/deptos-equipetrol/FOTO_PREVIA_TIEMPO1_2026-08-11.md — cómo se hizo el
+   pieza —de la base Y del código— clasificada por lo que le pasa el día del
+   rename. Tiene la lista cerrada de las 6 funciones VIVAS que el rename ROMPE,
+   los 53 puntos de código, y el veredicto de riesgo de cada arreglo.
+1. scripts/deptos-equipetrol/FOTO_PREVIA_ARREGLOS_2026-08-17.md — la línea de
+   base MEDIDA (feeds, shortlist real, RPC, bot). Es contra esto que se compara.
+2. scripts/deptos-equipetrol/INVENTARIO_CUTOVER_2026-08-10.md — §7-ter tiene el
+   goal y las 5 condiciones, cada una con su veredicto del 17-ago.
+3. scripts/deptos-equipetrol/FOTO_PREVIA_TIEMPO1_2026-08-11.md — cómo se hizo el
    tiempo 1 y su veredicto.
-3. Las memorias project_cutover_shadow_es_la_base y project_admin_cambio_de_trabajo.
 
-🔴 LO PRIMERO: verificá una por una las 5 condiciones de entrada y decime cuáles
-se cumplen HOY. Si alguna no se cumple, NO se ejecuta: se resuelve esa primero.
+── LAS 5 CONDICIONES, CERRADAS ──────────────────────────────────────────────
+1. "Cero referencias al nombre viejo" → REDACTADA DE MÁS. Su espíritu es que
+   ninguna FÓRMULA VIEJA DE PRECIO despierte; de las 14 referencias, UNA sola
+   calculaba precio y ya cayó. Las otras 13 son de matching/proyectos: están
+   rotas y el rename las arregla, que es lo que se quiere.
+2. Funciones de precio apagadas → ✅ CUMPLIDA. `buscar_unidades_reales` no tiene
+   un solo llamador en `src/` (CMA v1 apagado · funnel premium borrado ·
+   autocompletado del admin mudado a la tabla). Se borra en la limpieza.
+3. Secuencia de ids → ✅ CUMPLIDA Y MEDIDA. Son DOS secuencias con rangos
+   separados: la del cargador arranca en 8.000.001, el DEFAULT en 9.000.000, el
+   id más alto es 8.000.924 → 999.076 de margen, décadas. Cero filas usaron el
+   default. Y el rename no toca ninguna de las dos.
+4. Admin + candados → ✅ CUMPLIDA. Los dos cargadores respetan
+   `campos_bloqueados` desde el 11-ago, y el TEST del 17-ago dio 172/172 candados
+   en formato válido, cero corruptos.
+5. Semana de routines verdes → se satisface corriendo las 4 capturas A MANO ese
+   día (es lo que la condición quería probar, y es el eval 2 del propio plan).
+   Los rojos son por la laptop que se duerme, no por el pipeline.
 
-✅ La condición 2 YA SE CUMPLIÓ (17-ago-2026). Hasta esa fecha este prompt decía
-que era "la más importante" porque `buscar_unidades_reales` y `buscar_extras`
-inflarían ~47% "en la creación de shortlists y en el CMA del broker". Eso quedó
-FALSO en los tres puntos, y conviene saber por qué antes de confiar en el resto:
-  · las shortlists NUNCA usaron esa función (solo la nombran en un comentario);
-  · `buscar_extras` ya tenía gemela `_shadow` desde antes;
-  · el CMA v1 se apagó el 14-ago (410; lo reemplaza el ACM del PR #71) y el
-    funnel premium se borró el mismo día.
-Hoy `buscar_unidades_reales` no tiene un solo llamador en `src/` — se borra en la
-limpieza del TIEMPO 2 y no hay que repuntar nada.
-🔑 El párrafo viejo se había escrito leyendo un grep en vez del código de cada
-llamador. Un grep encuentra el nombre de una función también donde solo está
-MENCIONADA en un comentario, y no la encuentra donde el llamador es interno al
-mismo archivo. Las dos cosas pasaron.
+── EL TRABAJO DEL DÍA ───────────────────────────────────────────────────────
+- ALTER TABLE ... RENAME (segundos, reversible con el inverso).
+- El ATAJO con el nombre viejo, para que no se caiga nada mientras se despliega.
+  🔴 PENDIENTE DE PROBAR: los cargadores escriben con upsert({onConflict:'id'}),
+  y ON CONFLICT necesita un índice único real, que una VISTA no tiene. Probarlo
+  en una tabla de juguete ANTES. Si no sirve, hay que recrear las 6 funciones.
+- Recrear/repuntar las 6 funciones que nombran `propiedades_v2_shadow`.
+- Reemplazar los 53 puntos de código (20 archivos) + desplegar. Verificar con
+  grep que queda 0. NO centralizar antes: mueve el riesgo a una noche sin nadie
+  mirando (ver el recuadro rojo del barrido).
+- Correr las 4 capturas a mano y comparar contra la línea de base.
+- Hacerlo A LA MAÑANA: deja ~15 h de colchón antes de que corra el cron.
 
-⚠️ Y ojo con la condición 1 ("cero referencias vivas al nombre `propiedades_v2`"):
-está redactada de más. Su espíritu es que ninguna FÓRMULA VIEJA DE PRECIO despierte
-sobre datos buenos — y de las 14 referencias que quedan, **una sola calculaba
-precio, y ya cayó**. Las otras 13 son de matching y de proyectos: hoy están rotas y
-**el rename las arregla, que es lo que se quiere**. Tomar la condición 1 al pie de
-la letra manda a tocar 13 funciones para nada. Ver `docs/backlog/ADMIN_ANALISIS_2026-08-11.md` §13.
+── OPCIONAL, NO BLOQUEA ─────────────────────────────────────────────────────
+- Arreglo 2: borrar las 6 funciones de precio. Bajó de prioridad cuando se quitó
+  el fallback del helper (17-ago) — ya nada las invoca solo. CONDICIÓN: exportar
+  `pg_get_functiondef()` de las 6 ANTES de borrar; que exista el .sql en el repo
+  NO prueba que sea igual a lo que corre (regla 7).
+- Las 25 funciones del n8n muerto que despertarían escribiendo: riesgo dormido
+  (nadie las llama), mueren con el retiro de /admin/supervisor.
+- Un trigger genérico de candados sobre la tabla viva: hoy la protección vive en
+  cada escritor, y cada escritor nuevo nace sin ella. Mejora, no requisito.
 
-Después, y solo después:
-- Foto previa MEDIDA, como la del tiempo 1 (feeds, bot, ACM, páginas, y esta vez
-  TAMBIÉN una shortlist real con su hash: en el tiempo 1 se me escapó que
-  /b/[hash] degradaba en silencio porque probé páginas de listado, no una
-  shortlist).
-- Predicción firmada ANTES: qué se rompe y qué no.
-- Evals con criterio de aborto.
-- El SQL, para que lo ejecute el founder (mi acceso a la BD es de solo lectura).
+── LO QUE APRENDIMOS Y NO HAY QUE REPETIR ───────────────────────────────────
+🔑 Un barrido hereda el punto ciego de SU HERRAMIENTA. El catálogo de Postgres no
+   ve el repo (faltaron 53 puntos de código); un grep no ve llamadores internos
+   al mismo archivo; un patrón sin límite de palabra confunde `precio_normalizado`
+   con `precio_normalizado_shadow` y la TABLA con la SECUENCIA que se llama
+   parecido. Las tres mordieron el 17-ago. Antes de cerrar un barrido: ¿qué clase
+   de objeto NO puede ver el instrumento que estoy usando?
+🔑 Un barrido que "se siente completo" es la alarma, no la llegada.
+🔑 Una verificación tiene fecha de vencimiento: la §6c decía "verificado: los
+   cargadores no respetan candados" y dejó de ser cierta 24 h después, pero se
+   siguió citando una semana.
+🔑 Las VISTAS sobreviven al rename (se ligan por OID); las FUNCIONES no
+   (resuelven el nombre al ejecutarse). Comprobado en el TIEMPO 1.
+🔑 La base viva NO tiene triggers: los 5 quedaron pegados al archivo. El rename
+   no los mueve, y no hay que replicarlos (el de candados está atado al merge de
+   n8n, que ya no corre).
 
-Otras cosas que hay que resolver en el mismo movimiento:
-- La secuencia de ids de la tabla viva (hoy arranca en 9.000.000; el cargador
-  asigna a mano desde 8.000.000 — que no se crucen).
-- Las ~70 funciones del pipeline n8n muerto: al renombrar pasan a apuntar a la
-  base buena. Un senior no las deja vivas ahí.
-- `reconstruir_serie_precios_reexpresada` ya quedó apuntada al archivo en el
-  tiempo 1: verificar que siga así.
-
-Empezá por las 5 condiciones y decime el veredicto de cada una antes de proponer
-nada.
+Antes de proponer nada: releé el barrido y decime si algo cambió desde el 17-ago.
 ```
 
 ---
@@ -229,7 +249,9 @@ mejora sobre un problema que necesitaba 237×.
 | Candados (regla #1) | ✅ los cargadores los respetan al re-procesar |
 | Admin PASO 1 (hablar el idioma del feed) | ✅ en main, 6 evals en verde |
 | Admin PASOS 2 y 3 | ⬜ pendientes — ver arriba |
-| Cutover TIEMPO 2 | ⬜ pendiente, con 5 condiciones de entrada |
+| Cutover TIEMPO 2 | 🟢 **desbloqueado (17-ago)** — las 5 condiciones cerradas o descartadas. Queda solo el trabajo del día: rename + atajo + 6 funciones + 53 puntos de código + capturas a mano |
+| Arreglo del fallback ciego (`rpcShadowFirst`) | ✅ **17-ago, en prod** — ante una falla devuelve el error en vez de caer a la RPC vieja, que después del rename habría servido precios ~47% inflados sin avisar |
+| CMA v1 · funnel premium | ✅ **apagados el 14-ago** — el CMA generaba informes sin comparables y cobraba el crédito; el funnel llevaba meses dormido |
 | Remax sin área | ⬜ abierto, con la pregunta ya formulada |
 | Topes de los feeds | ✅ subidos antes de que cortaran |
 
