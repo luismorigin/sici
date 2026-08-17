@@ -37,13 +37,25 @@ que ese nombre no exista, las 7 fallan:
 | `buscar_unidades_alquiler_shadow` | **el feed de alquileres** |
 | `buscar_extras_shadow` | los extras de ambos feeds |
 | `buscar_similares` | 🔴 **el bot de WhatsApp** (una de sus 3 RPC) |
-| `reservar_ids_shadow` | **la captura nocturna** (el cargador pide ids acá) |
+| ~~`reservar_ids_shadow`~~ | ❌ **FALSO POSITIVO — ver abajo. NO se rompe.** |
 | `snapshot_absorcion_mercado_shadow` | el snapshot del cron (paso 5c) |
 | `reconstruir_serie_precios_reexpresada` | la serie histórica de `/mercado` |
 
-👉 **Sin protección, el rename tumba los dos feeds, el bot y la captura de esa noche.** Es
-exactamente lo que el plan previene con el atajo (*"el renombrado va con alias"*, §"vistas vs
-funciones"). Este barrido aporta **la lista cerrada de qué tiene que cubrir ese atajo.**
+> 🔴 **CORREGIDO — son 6, no 7 (17-ago, mismo día).** `reservar_ids_shadow` **no nombra la tabla**:
+> nombra la **secuencia** `propiedades_v2_shadow_id_reservado_seq`, que el rename no toca. Mi patrón
+> buscaba `propiedades_v2_shadow` y matcheaba también ese nombre más largo.
+> 👉 **La reserva de ids de la captura nocturna sobrevive al rename.** Y por lo tanto **es falso que
+> el rename "tumbe la captura de esa noche" por esta función** — la captura se rompe por otra vía,
+> los 53 puntos de código de los cargadores (§doble check).
+> 🔑 Es **exactamente el mismo error** que ya había cometido con `precio_normalizado` vs
+> `precio_normalizado_shadow`, y con la regla del punto ciego ya escrita horas antes. La regla no
+> alcanza si no se aplica: **cuando el nombre de un objeto es prefijo del nombre de otro, un patrón
+> sin límite de palabra los confunde.** Acá el fix es `~ '\mpropiedades_v2_shadow\M'` (con `\M`,
+> porque `_` cuenta como carácter de palabra y corta el match).
+
+👉 **Sin protección, el rename tumba los dos feeds y el bot.** Es exactamente lo que el plan previene
+con el atajo (*"el renombrado va con alias"*, §"vistas vs funciones"). Este barrido aporta **la lista
+cerrada de qué tiene que cubrir ese atajo.**
 
 ✅ **Las 4 vistas `_shadow` NO se rompen.** `v_mercado_venta_shadow`, `v_mercado_alquiler_shadow`,
 `v_estado_obra_inferido_shadow` y `v_zona_efectiva_shadow` se ligan a la tabla **por OID, no por
@@ -101,6 +113,32 @@ cutover — pero tampoco esperar que aparezcan.
 
 ✅ `fn_trigger_tc_actualizado` (el que el inventario marcó en su ronda 3) está **deshabilitado**.
 Verificado por `tgenabled`.
+
+## ✅ La secuencia de ids (condición de entrada 3) — MEDIDA, y NO es un problema
+
+Estaba en el plan como condición de entrada y se venía arrastrando sin cerrar. Cerrada el 17-ago:
+
+**Hay dos secuencias, con rangos separados a propósito:**
+
+| Secuencia | Arranca en | Quién la usa | ¿La toca el rename? |
+|---|---:|---|---|
+| `propiedades_v2_shadow_id_reservado_seq` | **8.000.001** | `reservar_ids_shadow()` → el cargador nocturno | **No.** No pertenece a ninguna tabla y su nombre no cambia |
+| `propiedades_v2_shadow_id_seq` | **9.000.000** | el `DEFAULT` de la columna `id` | **No.** Pertenece a la tabla (la sigue por OID) y el default se guarda como OID, no como texto |
+
+**El estado real de la tabla (1.590 filas):**
+
+- id más alto: **8.000.924** → **margen hasta el cruce: 999.076 ids**. A ritmo de captura real
+  (~40-50 props/noche entre las 4 corridas) son **décadas**.
+- **0 filas usaron la secuencia default** (ninguna con id ≥ 9.000.000): todos los inserts traen id
+  explícito, del rango reservado.
+- 551 filas en el rango reservado · 1.039 con id bajo (las que vinieron del drenaje de prod y
+  conservan su id original).
+
+👉 **Veredicto: la condición 3 ya está cumplida.** La secuencia está ligada a la tabla viva, arranca
+por encima de 9.000.000, y los dos rangos no se cruzan ni de lejos. **No hay trabajo pendiente acá, y
+el rename no introduce ningún riesgo de id.**
+⚠️ Lo único que sigue vigente es lo de siempre: **NUNCA renumerar los ids 8000xxx** — hay FK de
+shortlists apuntando a ellos.
 
 ## 🚫 Lo que NO se toca
 

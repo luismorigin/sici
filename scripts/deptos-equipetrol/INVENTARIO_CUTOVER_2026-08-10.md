@@ -404,7 +404,14 @@ sería planificar sobre una hipótesis — el error que este documento corrige (
    último llamador, el autocompletado de asesores de `/admin/propiedades`, **pasó a consultar la
    tabla**. Verificado por grep: **`buscar_unidades_reales` no tiene un solo llamador en `src/`** y
    se puede borrar en la limpieza del TIEMPO 2.
-3. Secuencia de id ligada a la tabla nueva y arrancada por encima de 9.000.000 (§6d).
+3. ~~Secuencia de id ligada a la tabla nueva y arrancada por encima de 9.000.000~~ (§6d).
+   ✅ **CUMPLIDA — medida el 17-ago-2026.** `propiedades_v2_shadow_id_seq` **ya** pertenece a la tabla
+   viva y **ya** arranca en 9.000.000. Los ids del cargador salen de otra secuencia
+   (`..._id_reservado_seq`, desde 8.000.001) y el id más alto de la tabla es **8.000.924**: quedan
+   **999.076** de margen, décadas al ritmo real. **Cero filas** usaron la secuencia default. Y el
+   rename no toca ninguna de las dos (una no pertenece a ninguna tabla; la otra sigue a la suya por
+   OID y su `DEFAULT` se guarda como OID, no como texto).
+   👉 **No hay trabajo pendiente acá.** Detalle: `BARRIDO_RENAME_2026-08-17.md` §secuencia de ids.
 4. Admin apuntado a la base buena **y** cargadores respetando `campos_bloqueados` (§6c).
 5. Una semana de routines verdes después del tiempo 1.
 
