@@ -3,6 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
+import { fetchAllRows } from '@/lib/supabase-paginado'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { precioDelFeed } from '@/lib/precio-utils'
 import { ZONAS_ADMIN_FILTER, getZonaLabel } from '@/lib/zonas'
@@ -228,39 +229,50 @@ export default function AdminPropiedades() {
     fetchProyectos()
   }, [])
 
-  // Cargar lista de brokers para autocompletado
+  // ── AUTOCOMPLETADO DE ASESORES — consulta directa a la tabla (17-ago-2026) ──────────────
+  // Antes llamaba a `buscar_unidades_reales`, la RPC del FEED (régimen viejo). Estaba roto por
+  // partida doble, y las dos veces en silencio:
+  //   (1) desde el TIEMPO 1 del cutover la RPC se quedó sin tabla → falla con 42P01, y el
+  //       `if (!error && data)` simplemente no hacía nada: el desplegable quedaba vacío sin un
+  //       solo aviso en pantalla;
+  //   (2) aun cuando la RPC funcionaba, acá se leía `p.asesor_nombre` y ella devuelve
+  //       `agente_nombre` → llegaba `undefined` y el `if` descartaba TODAS las filas.
+  //   👉 O sea que el autocompletado no andaba ni antes ni después de romperse la tabla.
+  //
+  // Ahora consulta la tabla, igual que el listado. El dato del captador NO tiene columna propia:
+  // vive en `datos_json->agente` con las claves `nombre` / `telefono` / `oficina_nombre`
+  // (verificado contra el catálogo, no supuesto). Es la misma fuente que usa el mapeo del
+  // listado, así que el desplegable y el filtro no pueden volver a decir cosas distintas.
+  //
+  // 🔑 Va con `fetchAllRows`: son ~1.590 filas y un `select()` sin paginar corta en 1.000 sin dar
+  // error. La versión vieja además pedía `limite: 500`, así que incluso funcionando habría
+  // contado sobre un tercio del inventario.
+  //
+  // Sigue a `tipoOperacion` a propósito: la RPC vieja era solo de venta, así que mirando
+  // alquileres el desplegable ofrecía asesores de venta.
   useEffect(() => {
     const fetchBrokers = async () => {
       if (!supabase) return
-      // Query para obtener brokers únicos con cantidad de propiedades
-      const { data, error } = await supabase
-        .rpc('buscar_unidades_reales', {
-          p_filtros: {
-            limite: 500,
-            incluir_outliers: true,
-            incluir_multiproyecto: true,
-            incluir_datos_viejos: true
-          }
-        })
+      try {
+        const filas = await fetchAllRows<{ nombre: string | null; oficina: string | null }>(
+          supabase
+            .from(TABLA_PROPIEDADES)
+            .select('nombre:datos_json->agente->>nombre, oficina:datos_json->agente->>oficina_nombre')
+            .eq('tipo_operacion', tipoOperacion),
+          'admin/propiedades:asesores',
+        )
 
-      if (!error && data) {
-        // Agrupar por asesor_nombre y contar
         const brokersMap = new Map<string, { inmobiliaria: string | null, cantidad: number }>()
-        data.forEach((p: SupabaseRow) => {
-          if (p.asesor_nombre) {
-            const existing = brokersMap.get(p.asesor_nombre)
-            if (existing) {
-              existing.cantidad++
-            } else {
-              brokersMap.set(p.asesor_nombre, {
-                inmobiliaria: p.asesor_inmobiliaria || null,
-                cantidad: 1
-              })
-            }
+        for (const fila of filas) {
+          if (!fila.nombre) continue
+          const existing = brokersMap.get(fila.nombre)
+          if (existing) {
+            existing.cantidad++
+          } else {
+            brokersMap.set(fila.nombre, { inmobiliaria: fila.oficina || null, cantidad: 1 })
           }
-        })
+        }
 
-        // Convertir a array y ordenar por cantidad
         const brokers: BrokerOption[] = Array.from(brokersMap.entries())
           .map(([nombre, info]) => ({
             nombre,
@@ -270,10 +282,14 @@ export default function AdminPropiedades() {
           .sort((a, b) => b.cantidad - a.cantidad)
 
         setBrokersList(brokers)
+      } catch (err) {
+        // Que falle el desplegable no puede tumbar la pantalla; pero que se vea en consola.
+        console.error('No se pudo cargar la lista de asesores:', err)
+        setBrokersList([])
       }
     }
     fetchBrokers()
-  }, [])
+  }, [tipoOperacion])
 
   // Cerrar sugerencias al hacer click afuera
   useEffect(() => {
@@ -348,8 +364,12 @@ export default function AdminPropiedades() {
               area_m2: p.area_total_m2,
               score_calidad: 0,
               asesor_nombre: p.datos_json?.agente?.nombre || null,
-              asesor_wsp: p.datos_json?.agente?.whatsapp || null,
-              asesor_inmobiliaria: p.datos_json?.agente?.inmobiliaria || null,
+              // Las claves reales de `datos_json->agente` son `nombre` / `telefono` /
+              // `oficina_nombre` (catálogo, 17-ago). Acá decía `whatsapp` e `inmobiliaria`:
+              // dos claves que no existen → este camino mostraba el asesor sin teléfono ni
+              // inmobiliaria, mientras los otros dos mapeos del mismo archivo sí los traían.
+              asesor_wsp: p.datos_json?.agente?.telefono || null,
+              asesor_inmobiliaria: p.datos_json?.agente?.oficina_nombre || null,
               fotos_urls: fotosUrls,
               cantidad_fotos: fotosUrls.length,
               amenities_confirmados: null,

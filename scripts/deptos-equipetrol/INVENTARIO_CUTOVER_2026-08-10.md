@@ -377,10 +377,11 @@ sería planificar sobre una hipótesis — el error que este documento corrige (
 **Condición de entrada — se arranca solo si se cumplen TODAS:**
 1. Cero referencias vivas al nombre `propiedades_v2` fuera de las que apunten explícitamente a `_archivo`.
 2. ~~`buscar_unidades_reales` y `buscar_extras`: **apagadas o repunteadas al régimen nuevo**~~ (§6a).
-   ✅ **CUMPLIDA salvo el admin, al 14-ago:** `buscar_extras` ya tenía gemela shadow · las shortlists
-   nunca la usaron · el **CMA v1 se apagó** (410) · el **funnel premium se borró** (rutas → `/ventas`).
-   **`buscar_unidades_reales` queda con UN llamador: `/admin/propiedades`** → esta condición se
-   absorbe en la 4 y deja de ser un frente propio.
+   ✅ **CUMPLIDA — 17-ago-2026.** `buscar_extras` ya tenía gemela shadow · las shortlists nunca la
+   usaron · el **CMA v1 se apagó** (410) · el **funnel premium se borró** (rutas → `/ventas`) · y el
+   último llamador, el autocompletado de asesores de `/admin/propiedades`, **pasó a consultar la
+   tabla**. Verificado por grep: **`buscar_unidades_reales` no tiene un solo llamador en `src/`** y
+   se puede borrar en la limpieza del TIEMPO 2.
 3. Secuencia de id ligada a la tabla nueva y arrancada por encima de 9.000.000 (§6d).
 4. Admin apuntado a la base buena **y** cargadores respetando `campos_bloqueados` (§6c).
 5. Una semana de routines verdes después del tiempo 1.

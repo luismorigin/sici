@@ -505,6 +505,36 @@ Lo que quedó colgando es **un solo `useEffect` que puebla el autocompletado de 
 👉 **Con eso, `buscar_unidades_reales` se queda sin un solo llamador en el repo y se puede borrar.**
 Es la condición de entrada 2 del TIEMPO 2, completa.
 
+### ✅ HECHO el 17-ago-2026
+
+El `useEffect` ahora consulta la tabla con `fetchAllRows`. **Verificado: no queda un solo llamador de
+`buscar_unidades_reales` en `src/`** (grep de `.rpc(`), typecheck en 0.
+
+Tres cosas que aparecieron al hacerlo, y que valen más que el cambio:
+
+1. 🔑 **El autocompletado no funcionaba ni antes de romperse la tabla.** Leía `p.asesor_nombre` y la
+   RPC devuelve **`agente_nombre`** → todas las filas caían en el `if` y el desplegable quedaba
+   vacío. Es el **tercer** campo fantasma del mismo día (los otros dos, en el CMA v1). El patrón:
+   *el código pide un campo con un nombre razonable que el proveedor nunca devolvió, y como JS da
+   `undefined` en vez de error, la pantalla degrada a vacío en silencio.*
+2. **El dato del captador no tiene columna**: vive en `datos_json->agente` con las claves
+   `nombre` / `telefono` / `oficina_nombre` — verificado contra `pg_attribute`, no supuesto. En el
+   mismo archivo había un mapeo que pedía `whatsapp` e `inmobiliaria`, dos claves inexistentes;
+   corregido de paso.
+3. **Venta tiene 1.067 filas: pasa el corte de 1.000 de PostgREST.** Medido contra la API real —sin
+   paginar devuelve exactamente 1.000, y la página siguiente trae las 67 que faltaban—. Por eso va
+   con `fetchAllRows`. La versión vieja pedía `limite: 500`: aun funcionando, habría contado sobre
+   la mitad.
+
+⚠️ **Lo que NO se pudo verificar:** la pantalla logueada. El admin exige sesión y no se manejan sus
+credenciales acá. Sí se verificó **la consulta exacta contra la API REST real**, que es lo que corre
+en el navegador, y devuelve `{nombre, oficina}` poblados.
+
+🔐 **Hallazgo lateral, va aparte:** `anon` no puede leer `propiedades_v2_shadow` (mig 317) pero
+**`authenticated` conserva `arwdDxtm` — permisos completos, incluido DELETE**, y la tabla no tiene
+RLS. El admin funciona *gracias a eso*. Es la otra mitad del agujero que cerró la 317. No se toca acá
+porque revocar SELECT rompe el admin entero: necesita su propia migración.
+
 ## 13.4 GRUPO C — retirar (el rename no las toca)
 
 Las **6 pantallas de `/admin/supervisor`** (2.721 líneas) están rotas por una causa distinta: su cola
