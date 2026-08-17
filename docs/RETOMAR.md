@@ -106,6 +106,14 @@ Leé primero:
 - Reemplazar los 53 puntos de código (20 archivos) + desplegar. Verificar con
   grep que queda 0. NO centralizar antes: mueve el riesgo a una noche sin nadie
   mirando (ver el recuadro rojo del barrido).
+  ✅ REVISADOS uno por uno el 17-ago: es MECÁNICO, sin casos raros. Tres grupos:
+  41 × `from('propiedades_v2_shadow')` (reemplazo directo) · 12 × `from(TABLA_PROPIEDADES)`
+  (no se tocan: se cambian las 2 declaraciones de la constante, en
+  `usePropertyEditor.ts` y `admin/propiedades/index.tsx`) · 1 `console.log` con el
+  patrón del UPDATE, cosmético. Total: **44 ediciones del mismo tipo**.
+  Y se verificó que **los audits NO generan archivos .sql**: no hay un solo
+  `writeFileSync` con SQL: los `.sql` de `output/` se escriben a mano en cada
+  sesión. Así que no hay SQL autogenerado que quede apuntando al nombre viejo.
 - Correr las 4 capturas a mano y comparar contra la línea de base.
 - Hacerlo A LA MAÑANA: deja ~15 h de colchón antes de que corra el cron.
 
