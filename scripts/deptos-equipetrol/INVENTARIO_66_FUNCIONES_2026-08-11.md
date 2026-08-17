@@ -23,6 +23,13 @@ lógica vieja**. No hay paso intermedio y no hay aviso.
 
 ---
 
+> 🔴 **LEER ANTES: `BARRIDO_RENAME_2026-08-17.md`.** Los 3 grupos de este documento clasifican las
+> funciones **rotas**, y por eso les falta la categoría más peligrosa: **las 7 que están VIVAS hoy y
+> que el rename ROMPE** (los dos feeds, el bot, la captura nocturna, el snapshot y la serie). No
+> aparecen acá porque no leen `propiedades_v2` — leen `propiedades_v2_shadow`, que es justo el nombre
+> que el TIEMPO 2 hace desaparecer.
+> 👉 Este inventario sigue siendo válido en lo que cubre; **no es completo para planificar el rename.**
+
 ## Grupo 1 — 🔴 Las que mienten (~~3~~ **2 al 17-ago**). Sin resolver esto, el TIEMPO 2 no se hace.
 
 Fórmula vieja (`precio_normalizado`, la del ×1,47) **y** llamador vivo:

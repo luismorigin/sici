@@ -408,7 +408,18 @@ sería planificar sobre una hipótesis — el error que este documento corrige (
 4. Admin apuntado a la base buena **y** cargadores respetando `campos_bloqueados` (§6c).
 5. Una semana de routines verdes después del tiempo 1.
 
-### 7-ter.b — Trabajo que el TIEMPO 2 tiene que incluir (lista abierta)
+### 7-ter.b — Trabajo que el TIEMPO 2 tiene que incluir (~~lista abierta~~ → **cerrada el 17-ago**)
+
+> ✅ **`BARRIDO_RENAME_2026-08-17.md` cerró esta lista.** Se recorrieron las 74 funciones que tocan
+> la tabla, las 17 vistas y los 33 triggers, y cada pieza quedó clasificada por lo que le pasa el día
+> del rename. Dos cosas que esta sección no tenía y son las que más pesan:
+> - 🔴 **7 funciones VIVAS que el rename rompe** — entre ellas `reservar_ids_shadow` (**la captura
+>   nocturna**) y `buscar_similares` (**el bot**). Sin cubrirlas, el rename tumba los dos feeds, el
+>   bot y la captura de esa noche. Es la lista que tiene que cubrir el atajo.
+> - 🔴 **La base viva no tiene ningún trigger**; los 5 quedaron en el archivo. Eso **explica la
+>   condición de entrada 4**: la protección de candados vivía en `tr_proteger_amenities_merge`, que
+>   `propiedades_v2_shadow` nunca heredó. El rename no los mueve: no hay que hacer nada por ellos,
+>   pero tampoco esperar que aparezcan.
 
 No son condición de entrada: no bloquean el arranque. Son cosas que **hoy están dormidas porque la
 tabla no existe, y que el rename despierta**. Si el TIEMPO 2 se hace sin tocarlas, el sistema queda

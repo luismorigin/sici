@@ -58,6 +58,11 @@ Retomamos el TIEMPO 2 del cutover: darle el nombre `propiedades_v2` a la tabla
 viva, que hoy se sigue llamando propiedades_v2_shadow.
 
 Leé primero:
+0. scripts/deptos-equipetrol/BARRIDO_RENAME_2026-08-17.md — 🔴 EMPEZÁ ACÁ. Cada
+   pieza de la base clasificada por lo que le pasa el día del rename. Tiene la
+   lista cerrada de las 7 funciones VIVAS que el rename ROMPE (los dos feeds, el
+   bot, la captura nocturna) y el dato de que la base viva no tiene triggers.
+   Los inventarios de abajo clasifican lo ROTO y por eso no ven esas 7.
 1. scripts/deptos-equipetrol/INVENTARIO_CUTOVER_2026-08-10.md — fuente única.
    §7-ter tiene el goal y las 5 CONDICIONES DE ENTRADA.
 2. scripts/deptos-equipetrol/FOTO_PREVIA_TIEMPO1_2026-08-11.md — cómo se hizo el
