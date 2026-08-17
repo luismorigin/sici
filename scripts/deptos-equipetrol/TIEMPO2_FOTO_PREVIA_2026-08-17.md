@@ -20,6 +20,20 @@
 > **Pendiente:** la limpieza (6 funciones · 53 puntos de código · 6 skills) y recién después sacar el
 > atajo. Ver `docs/RETOMAR.md` §"LA LIMPIEZA POSTERIOR".
 >
+> ### 🤖 EL BOT RESPONDIÓ — el eval que faltaba, cerrado
+> El founder le escribió por WhatsApp *"hola quiero alquilar"* y **contestó con datos del mercado**
+> leyendo la tabla renombrada. Era **la única verificación que no se podía hacer desde acá**, y la
+> que más pesaba: el bot ya estuvo **19 días caído** sin que nadie lo notara (migs 315/317 → 320).
+> 👉 **TIEMPO 2 confirmado de punta a punta.**
+>
+> 🐛 De paso salió un bug **preexistente**: el bot informó **168** alquileres y hay **182**. No es
+> caché ni función vieja —`resumen_mercado('alquiler')` ejecutada en vivo devuelve 168, con las sumas
+> por zona y por amoblado cerrando—. Son **14 alquileres publicados en USD**: la **RPC del feed
+> convierte** USD→Bs al vuelo (Stratto Up → Bs 5.644) pero **la vista que usa el bot deja
+> `precio_mensual_bob` en NULL**, y el filtro `>= 1000` los descarta. Consecuencia: el bot declaró un
+> rango *"2.600 a 20.000 Bs"* cuando hay uno de $2.000/mes (~Bs 23.000), y una mediana sobre 168.
+> El rename no toca ninguna de las dos fórmulas. Flagueado aparte.
+>
 > ### 🔍 Revisión visual del founder — un hallazgo, y NO es del rename
 > Al mirar los feeds noté dos cosas y se verificaron las dos:
 > 1. **Los conteos coinciden exacto.** `/ventas` muestra **351** y la RPC del feed filtrada a
