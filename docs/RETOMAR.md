@@ -51,7 +51,30 @@ Empezá diciéndome qué entendiste del estado actual antes de proponer nada.
 
 ---
 
-## 2. TIEMPO 2 del cutover (renombrar la tabla viva)
+## 2. ✅ TIEMPO 2 DEL CUTOVER — EJECUTADO EL 17-ago-2026
+
+> **La tabla viva se llama `propiedades_v2`.** Se cumplió la predicción firmada: no se movió un solo
+> número. Verificado en tres capas —base, lectura en producción (incluido el ACM sin caché y una
+> shortlist dinámica) y **escritura real con el cargador**— y confirmado end-to-end porque **el bot
+> respondió por WhatsApp**. Detalle: `scripts/deptos-equipetrol/TIEMPO2_FOTO_PREVIA_2026-08-17.md`.
+>
+> ### 🔜 Lo inmediato al volver
+> 1. **`/revisar-routines`** — es el eval final: confirma que las 4 capturas nocturnas escribieron
+>    bien a través del atajo. Si corrieron normal, el cutover queda cerrado del todo.
+> 2. **Probarle al bot en un chat NUEVO** (el hilo viejo arrastra contexto): *"alquileres de 2
+>    dormitorios"*. Tras la **mig 326** debe informar **182** y techo **Bs 23.040**, no 168/20.000.
+> 3. **La limpieza** (abajo) — sin apuro, el atajo sostiene todo.
+>
+> ### 🐛 Dos bugs encontrados el 17-ago, ninguno del cutover (flagueados aparte)
+> - **El feed ZN muestra 24 de 301.** El API devuelve las 301 bien; la página no aplica el fetch
+>   diferido que sí funciona en `/ventas`. Está en dark launch → **riesgo cero hoy**, bloqueante el
+>   día que se lance ZN.
+> - ~~El bot informaba 168 alquileres de 182~~ → **ARREGLADO, mig 326.** Los 14 publicados en USD
+>   quedaban afuera porque la vista no los convierte a Bs y la RPC del feed sí.
+>
+> El prompt de abajo queda como **registro de cómo se planificó**.
+
+## 2-bis. El plan tal como se armó (histórico)
 
 ```
 Retomamos el TIEMPO 2 del cutover: darle el nombre `propiedades_v2` a la tabla
