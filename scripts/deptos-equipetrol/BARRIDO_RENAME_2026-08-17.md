@@ -313,6 +313,21 @@ skills quedaron afuera por la extensión.**
 | `audit-deptos-shadow.command.md` · `cron-deptos-alquiler.command.md` | 3 c/u |
 | `cron-deptos-ventas-zn.command.md` · `revisar-routines.command.md` | 1 c/u |
 
+**De las 17, solo 3 son SQL de verdad** (clasificadas una por una el 17-ago):
+
+| Mención | Tipo |
+|---|---|
+| `audit-cola-shadow:184` → `UPDATE propiedades_v2_shadow SET id_proyecto_master=…` | 🔴 **SQL** |
+| `audit-cola-shadow:210` → `UPDATE propiedades_v2_shadow SET duplicado_de=…` | 🔴 **SQL** |
+| `audit-deptos-shadow:104` → `UPDATE propiedades_v2_shadow` (correcciones de drift) | 🔴 **SQL** |
+| Las otras **14** | texto explicativo (*"muta SOLO `propiedades_v2_shadow`"*, *"prod intacto"*, *"para cotejar un número usá las tablas shadow"*) — no rompen, quedan diciendo un nombre viejo |
+
+✅ **Punto de partida limpio:** `node scripts/verificar-skills.mjs` da **15 al día · 0
+desincronizadas** (17-ago). Y ojo con la ubicación: las que CORREN están en
+**`sici/.claude/commands/`** (16 archivos, dentro del proyecto), **no** en `~/.claude/commands/` —
+ahí hay otras 4 que no son estas.
+No mencionan la tabla —y por eso no entran— `cron-deptos-alquiler-zn` ni `cron-casas`.
+
 ⚠️ **Y son DOS pasos, no uno.** La skill que CORRE vive en `.claude/commands/` (gitignored) y se
 copia **a mano** desde `scripts/deptos-equipetrol/*.command.md`. Cambiar solo el repo deja corriendo
 la versión vieja —el bug del 31-jul, que tuvo una skill dos días desactualizada auditando de menos—.

@@ -117,7 +117,34 @@ Leé primero:
 - Correr las 4 capturas a mano y comparar contra la línea de base.
 - Hacerlo A LA MAÑANA: deja ~15 h de colchón antes de que corra el cron.
 
-── OPCIONAL, NO BLOQUEA ─────────────────────────────────────────────────────
+── LA LIMPIEZA POSTERIOR (para poder sacar el atajo) ────────────────────────
+Nada de esto bloquea el día del rename: con el atajo puesto todo sigue andando.
+Pero el atajo NO se saca hasta que las tres cosas estén hechas, o algo se cae.
+Son TRES frentes, y la lista está cerrada:
+
+1. **Las 6 funciones** que nombran `propiedades_v2_shadow`: recrearlas con el
+   nombre nuevo. `buscar_unidades_simple_shadow` · `buscar_unidades_alquiler_shadow`
+   · `buscar_extras_shadow` · `buscar_similares` (el bot) ·
+   `snapshot_absorcion_mercado_shadow` · `reconstruir_serie_precios_reexpresada`.
+   EVAL: los 2 feeds, una shortlist real y el bot responden.
+
+2. **Los 53 puntos de código** (20 archivos): 41 literales + 2 declaraciones de
+   `TABLA_PROPIEDADES` + 1 `console.log`. Mecánico, revisado uno por uno.
+   EVAL: `grep -c` da 0 · tsc 0 · build ok · la línea de base sin moverse.
+
+3. **Las 6 SKILLS** (17 menciones) — el eje que el founder señaló y que el
+   barrido no había visto (buscaba .ts/.tsx/.mjs, y son .md):
+   `audit-cola-shadow` (5, **2 son SQL**) · `cron-deptos-ventas` (4) ·
+   `audit-deptos-shadow` (3, **1 es SQL**) · `cron-deptos-alquiler` (3) ·
+   `cron-deptos-ventas-zn` (1) · `revisar-routines` (1).
+   ⚠️ SON DOS PASOS: editar en `scripts/deptos-equipetrol/*.command.md` **y copiar**
+   a `sici/.claude/commands/` (gitignored). Cambiar solo el repo deja corriendo la
+   vieja — el bug del 31-jul.
+   EVAL: `node scripts/verificar-skills.mjs` → "15 al día · 0 desincronizadas".
+
+Recién con los tres: DROP de la vista del atajo + volver a correr los evals.
+
+── OTRO TRABAJO, ESE SÍ OPCIONAL ────────────────────────────────────────────
 - Arreglo 2: borrar las 6 funciones de precio. Bajó de prioridad cuando se quitó
   el fallback del helper (17-ago) — ya nada las invoca solo. CONDICIÓN: exportar
   `pg_get_functiondef()` de las 6 ANTES de borrar; que exista el .sql en el repo
