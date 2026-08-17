@@ -94,10 +94,14 @@ Leé primero:
 
 ── EL TRABAJO DEL DÍA ───────────────────────────────────────────────────────
 - ALTER TABLE ... RENAME (segundos, reversible con el inverso).
-- El ATAJO con el nombre viejo, para que no se caiga nada mientras se despliega.
-  🔴 PENDIENTE DE PROBAR: los cargadores escriben con upsert({onConflict:'id'}),
-  y ON CONFLICT necesita un índice único real, que una VISTA no tiene. Probarlo
-  en una tabla de juguete ANTES. Si no sirve, hay que recrear las 6 funciones.
+- El ATAJO con el nombre viejo (una vista `SELECT *` sobre la tabla renombrada).
+  ✅ PROBADO el 17-ago en una tabla de juguete, por la misma vía que usa el
+  cargador (API REST) y con un conflicto REAL: el upsert funciona a través de la
+  vista y escribe en la tabla base. La predicción contraria era falsa — las
+  vistas auto-actualizables propagan la escritura con las constraints de la tabla.
+  👉 Con el atajo puesto, la VENTANA DE CAÍDA ES CERO: feeds, bot, shortlists y
+  cargadores siguen andando sin tocar una línea de código. Los 53 puntos se
+  despliegan con calma, incluso otro día, y recién después se saca el atajo.
 - Recrear/repuntar las 6 funciones que nombran `propiedades_v2_shadow`.
 - Reemplazar los 53 puntos de código (20 archivos) + desplegar. Verificar con
   grep que queda 0. NO centralizar antes: mueve el riesgo a una noche sin nadie

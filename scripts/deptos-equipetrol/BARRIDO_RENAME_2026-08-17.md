@@ -186,10 +186,34 @@ Los dos cargadores escriben con **UPSERT**, que en SQL es `INSERT ... ON CONFLIC
 `ON CONFLICT` necesita un **índice único real** para resolver el conflicto, y **una vista no tiene
 índices**. Si el atajo es una vista, la captura de esa noche falla al escribir.
 
-⚠️ **Declarado como pendiente de prueba, no como hecho:** esto es comportamiento conocido de
-Postgres, pero **no se probó en esta base** (el acceso desde acá es de solo lectura). Dado cómo viene
-el día, corresponde probarlo antes de confiar: crear la vista en una tabla de juguete e intentar el
-upsert. Si funcionara, el atajo vuelve a ser suficiente y el plan se simplifica.
+> ## ✅ PROBADO EL 17-ago — Y ERA FALSO. El atajo SÍ funciona.
+>
+> Se creó una tabla de juguete con una vista `SELECT *` encima —igual a como sería el atajo— y se
+> intentó la escritura **por la misma vía que usa el cargador** (la API REST con
+> `Prefer: resolution=merge-duplicates`), no por SQL a mano. Las dos pruebas:
+>
+> | Caso | Contra la tabla | Contra la VISTA |
+> |---|---|---|
+> | insert de una fila nueva | ✅ | ✅ |
+> | **upsert sobre un id que YA existe** (el conflicto real) | ✅ | **✅ pisó el valor** |
+>
+> Confirmado con un `SELECT` a la tabla base: la fila quedó escrita ahí, con el valor nuevo.
+>
+> 🔑 **Por qué me equivoqué, que es lo aprendible:** el razonamiento *"ON CONFLICT exige un índice
+> único y una vista no tiene"* es cierto en abstracto, pero **no aplica a las vistas
+> auto-actualizables**: Postgres propaga la escritura a la tabla base, con sus constraints. La
+> conclusión era plausible, estaba bien construida, y era falsa. **Estuvo bien declararla como
+> "pendiente de prueba" en vez de como hecho** — y bien haberla probado por el camino real (API) y
+> no por SQL, y con un conflicto de verdad: **la primera prueba usó un id inexistente y no ejercitó
+> el `ON CONFLICT`; parecía la prueba y no lo era.**
+>
+> ### Lo que esto cambia del plan del rename
+> - **La ventana de caída es CERO.** Con el atajo puesto, los feeds, el bot, las shortlists **y los
+>   cargadores** siguen funcionando sin tocar una línea de código.
+> - **Los 53 puntos de código dejan de ser urgentes.** Se pueden desplegar con calma —incluso otro
+>   día— y recién después se saca el atajo. Deja de haber carrera contra el cron de la 1 AM.
+> - Refuerza la decisión de **no centralizar antes**: el motivo que quedaba (que el reemplazo fuera
+>   urgente esa noche) ya no existe.
 
 ## Lo que se desprende
 
