@@ -23,14 +23,14 @@ lógica vieja**. No hay paso intermedio y no hay aviso.
 
 ---
 
-## Grupo 1 — 🔴 Las que mienten (3). Sin resolver esto, el TIEMPO 2 no se hace.
+## Grupo 1 — 🔴 Las que mienten (~~3~~ **2 al 17-ago**). Sin resolver esto, el TIEMPO 2 no se hace.
 
 Fórmula vieja (`precio_normalizado`, la del ×1,47) **y** llamador vivo:
 
 | Función | Quién la llama | Qué pasaría |
 |---|---|---|
 | **`buscar_unidades_simple`** | `pages/ventas.tsx`, `pages/api/ventas.ts`, `pages/b/[hash].tsx`, `pages/zona-norte/ventas.tsx`, `api/broker/shortlists/[id].ts` | precios inflados en el **feed público** |
-| **`buscar_unidades_reales`** | ~~`api/broker/generate-cma.ts`~~ · `admin/propiedades` · `lib/supabase.ts` → **funnel premium dormido** | admin (ver ✅ abajo) |
+| ~~**`buscar_unidades_reales`**~~ | **SIN LLAMADORES desde el 17-ago** — cayeron los tres: ~~CMA v1~~ (410) · ~~funnel premium~~ (borrado) · ~~autocompletado del admin~~ (consulta la tabla) | **Ya no miente: se borra** (ver ✅ abajo) |
 | **`analisis_mercado_fiduciario`** | `lib/supabase.ts` | análisis de mercado |
 
 > ✅ **`buscar_unidades_reales` bajó de categoría el 14-ago-2026.** Sus tres llamadores, uno por uno:
@@ -45,8 +45,15 @@ Fórmula vieja (`precio_normalizado`, la del ×1,47) **y** llamador vivo:
 >   🔑 **A la última la delató el typecheck, no el grep**: su único llamador era interno al archivo,
 >   así que `grep` sobre `src/` daba cero — la misma trampa que este documento persigue, en su
 >   versión "cero resultados no es cero llamadores".
-> · **`/admin/propiedades`** → **ahora es el ÚNICO llamador en todo el repo** (verificado por grep:
->   el resto de las apariciones son comentarios). Ya entra por los pasos 2-3 del admin.
+> · **`/admin/propiedades`** → **cerrado el 17-ago.** Era el último, y resultó ser un solo `useEffect`
+>   que poblaba el desplegable de asesores; el listado ya consultaba la tabla desde el paso 1. Ahora
+>   también él la consulta.
+>   🔑 **Y no funcionaba ni antes de romperse la tabla**: leía `p.asesor_nombre` y la RPC devuelve
+>   `agente_nombre` → descartaba todas las filas y el desplegable quedaba vacío. **Tercer campo
+>   fantasma del mismo día** (los otros dos, en el CMA v1): el código pide un nombre razonable que el
+>   proveedor nunca devolvió, JS contesta `undefined` en vez de fallar, y la pantalla degrada a vacío.
+>
+> ✅ **Verificado por grep el 17-ago: `buscar_unidades_reales` no tiene un solo llamador en `src/`.**
 >
 > 👉 **Ya no bloquea el TIEMPO 2 por sí sola, ni es un frente propio.** No hay que repuntarla al
 > régimen nuevo: muere con la mudanza del admin. Corrección del párrafo que la listaba como

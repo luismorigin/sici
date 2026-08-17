@@ -66,11 +66,28 @@ Leé primero:
 
 🔴 LO PRIMERO: verificá una por una las 5 condiciones de entrada y decime cuáles
 se cumplen HOY. Si alguna no se cumple, NO se ejecuta: se resuelve esa primero.
-La más importante: `buscar_unidades_reales` y `buscar_extras` siguen calculando
-con la fórmula vieja y leen `propiedades_v2` POR NOMBRE. El día que la tabla viva
-tome ese nombre, se despiertan sobre datos buenos con la cuenta vieja e inflan
-~47% en la creación de shortlists y en el CMA del broker. No da error: da un
-número creíble y falso.
+
+✅ La condición 2 YA SE CUMPLIÓ (17-ago-2026). Hasta esa fecha este prompt decía
+que era "la más importante" porque `buscar_unidades_reales` y `buscar_extras`
+inflarían ~47% "en la creación de shortlists y en el CMA del broker". Eso quedó
+FALSO en los tres puntos, y conviene saber por qué antes de confiar en el resto:
+  · las shortlists NUNCA usaron esa función (solo la nombran en un comentario);
+  · `buscar_extras` ya tenía gemela `_shadow` desde antes;
+  · el CMA v1 se apagó el 14-ago (410; lo reemplaza el ACM del PR #71) y el
+    funnel premium se borró el mismo día.
+Hoy `buscar_unidades_reales` no tiene un solo llamador en `src/` — se borra en la
+limpieza del TIEMPO 2 y no hay que repuntar nada.
+🔑 El párrafo viejo se había escrito leyendo un grep en vez del código de cada
+llamador. Un grep encuentra el nombre de una función también donde solo está
+MENCIONADA en un comentario, y no la encuentra donde el llamador es interno al
+mismo archivo. Las dos cosas pasaron.
+
+⚠️ Y ojo con la condición 1 ("cero referencias vivas al nombre `propiedades_v2`"):
+está redactada de más. Su espíritu es que ninguna FÓRMULA VIEJA DE PRECIO despierte
+sobre datos buenos — y de las 14 referencias que quedan, **una sola calculaba
+precio, y ya cayó**. Las otras 13 son de matching y de proyectos: hoy están rotas y
+**el rename las arregla, que es lo que se quiere**. Tomar la condición 1 al pie de
+la letra manda a tocar 13 funciones para nada. Ver `docs/backlog/ADMIN_ANALISIS_2026-08-11.md` §13.
 
 Después, y solo después:
 - Foto previa MEDIDA, como la del tiempo 1 (feeds, bot, ACM, páginas, y esta vez

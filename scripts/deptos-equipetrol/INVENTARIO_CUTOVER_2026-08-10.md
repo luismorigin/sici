@@ -234,10 +234,18 @@ el admin, los estudios, el feed `/ventas/casas`, `/admin/market`, supervisor, y 
 que alguien las adivine leyendo código (que ya falló: se escaparon el bot, los ids y los candados).
 Se hace un día laborable, con tiempo para mirar. Reversible con un `ALTER TABLE ... RENAME` inverso.
 
-**Entre los dos tiempos — arreglar lo que gritó:**
-apagar o repuntar `buscar_unidades_reales` y `buscar_extras` · conservar las otras 4 funciones vivas ·
-apuntar el admin a la base buena · **hacer que los cargadores respeten `campos_bloqueados`** (§6c) ·
-apagar el feed de casas · dejar los estudios para su reescritura (§3.2).
+**Entre los dos tiempos — arreglar lo que gritó** *(estado al 17-ago-2026)*:
+- ✅ ~~apagar o repuntar `buscar_unidades_reales` y `buscar_extras`~~ — **apagadas**: `buscar_extras`
+  ya tenía gemela shadow; la otra se quedó sin llamadores (CMA v1 → 410 · funnel premium borrado ·
+  autocompletado del admin mudado a la tabla). Se borra en la limpieza del TIEMPO 2.
+- ✅ ~~apuntar el admin a la base buena~~ — el **paso 1** lo hizo (listado + editor sobre
+  `propiedades_v2_shadow`). ⚠️ Pendiente lo que NO era del admin sino del rename: `useProjectEditor`,
+  `/admin/alquileres`, `/admin/market-alquileres` y `/admin/proyectos` siguen leyendo el nombre
+  viejo **a propósito** (grupo A de `ADMIN_ANALISIS` §13.2 — el rename los arregla).
+- ⬜ conservar las otras 4 funciones vivas.
+- ⬜ **hacer que los cargadores respeten `campos_bloqueados`** (§6c) — 🔴 **sigue siendo el pendiente
+  real**, y es condición de entrada 4.
+- ⬜ apagar el feed de casas · ⬜ dejar los estudios para su reescritura (§3.2).
 
 **TIEMPO 2 — `propiedades_v2_shadow` → `propiedades_v2`** (+ la secuencia de §6d).
 Cuando ya nadie usa el nombre viejo, dárselo a la base buena **no tiene riesgo**: no queda ninguna
@@ -375,7 +383,21 @@ sería planificar sobre una hipótesis — el error que este documento corrige (
 10-ago, cada uno apoyado en información sin verificar).
 
 **Condición de entrada — se arranca solo si se cumplen TODAS:**
-1. Cero referencias vivas al nombre `propiedades_v2` fuera de las que apunten explícitamente a `_archivo`.
+1. ~~Cero referencias vivas al nombre `propiedades_v2` fuera de las que apunten explícitamente a `_archivo`.~~
+   🔴 **REDACTADA DE MÁS — corregida el 17-ago-2026.** Tal cual estaba escrita, esta condición
+   **contradice** el plan del admin (`docs/backlog/ADMIN_ANALISIS_2026-08-11.md` §13.2), que dice
+   explícitamente *no tocar* esas referencias. Y el plan tiene razón:
+   **el espíritu de la condición es que ninguna FÓRMULA VIEJA DE PRECIO despierte sobre datos
+   buenos**, no que el string `propiedades_v2` no aparezca. Medido: de las **14 funciones del admin**
+   que hoy leen ese nombre, **una sola calculaba precio** (`buscar_unidades_reales`) — y ya cayó. Las
+   otras 13 son de matching y de proyectos: están rotas hoy y **el rename las devuelve a la vida
+   bien, que es justamente lo que se busca.**
+   👉 **Redacción correcta:** *cero referencias vivas al nombre `propiedades_v2` **que calculen con
+   la fórmula vieja de precio** (`precio_normalizado()`) o que escriban sobre la tabla con reglas del
+   régimen viejo.* Con ese criterio la condición **se cumple** salvo por lo que enumera §7-ter.b
+   (`actualizar_tipo_cambio` y compañía), que es trabajo del propio TIEMPO 2, no de su entrada.
+   🔑 Vale como aviso general: una condición de entrada escrita como *"cero apariciones de X"* es
+   fácil de verificar y fácil de cumplir mal. La que sirve nombra **el daño**, no el string.
 2. ~~`buscar_unidades_reales` y `buscar_extras`: **apagadas o repunteadas al régimen nuevo**~~ (§6a).
    ✅ **CUMPLIDA — 17-ago-2026.** `buscar_extras` ya tenía gemela shadow · las shortlists nunca la
    usaron · el **CMA v1 se apagó** (410) · el **funnel premium se borró** (rutas → `/ventas`) · y el
