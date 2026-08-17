@@ -298,6 +298,39 @@ El founder preguntó si son de bajo riesgo **antes** de que se hicieran. Se midi
   guardarlo** junto al script de borrado. Sin ese export el borrado NO es reversible, por más que el
   repo tenga un archivo con el mismo nombre.
 
+## 🔴 TERCER EJE, señalado por el founder — LAS SKILLS (17-ago)
+
+*"¿no deberían cambiarse las skills que están en las routines y probarlas también?"* — Sí. Y era
+**otro punto ciego del mismo tipo**: el barrido buscó en `.ts`, `.tsx` y `.mjs`. **Los `.md` de las
+skills quedaron afuera por la extensión.**
+
+**6 archivos de skills nombran la tabla, 17 menciones:**
+
+| Skill | Menciones |
+|---|---:|
+| `audit-cola-shadow.command.md` | 5 |
+| `cron-deptos-ventas.command.md` | 4 |
+| `audit-deptos-shadow.command.md` · `cron-deptos-alquiler.command.md` | 3 c/u |
+| `cron-deptos-ventas-zn.command.md` · `revisar-routines.command.md` | 1 c/u |
+
+⚠️ **Y son DOS pasos, no uno.** La skill que CORRE vive en `.claude/commands/` (gitignored) y se
+copia **a mano** desde `scripts/deptos-equipetrol/*.command.md`. Cambiar solo el repo deja corriendo
+la versión vieja —el bug del 31-jul, que tuvo una skill dos días desactualizada auditando de menos—.
+👉 Tras editarlas: **`node scripts/verificar-skills.mjs`** (o `--fix`).
+
+✅ **No bloquean el día del rename**: con el atajo puesto el nombre viejo sigue existiendo, así que
+una skill que lo mencione sigue funcionando. Entran en la **misma limpieza posterior** que las 6
+funciones y los 53 puntos de código. Pero si esa limpieza se hace y las skills se olvidan, el síntoma
+es **una routine consultando un nombre inexistente a las 2 de la mañana**.
+
+## ⏱️ Cuánto tardan las capturas (medido en los logs, no estimado)
+
+El log de `cron-deptos-ventas-zn` declara **~55 min** para una tanda grande, con el desglose:
+**discovery ~30 · prep ~10 · MOAT ~5** + el resto. El tiempo se va en **traer páginas de los
+portales** (red, límites de C21/Remax, proxy) y en la lectura de los anuncios.
+👉 **Playwright no aceleraría nada**: sería más lento que el fetch directo que ya se usa, porque
+levanta un navegador entero para lo mismo. El cuello no es el render, es la red.
+
 ## 🔑 La lección del método, que es lo que más vale de este documento
 
 El barrido original recorrió el catálogo de Postgres de punta a punta y **se sintió completo**. No lo
