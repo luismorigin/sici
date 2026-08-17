@@ -1,5 +1,25 @@
 # TIEMPO 2 — foto previa y SQL (17-ago-2026)
 
+> # ✅ EJECUTADO Y VERIFICADO — 17-ago-2026
+> **La tabla viva se llama `propiedades_v2`.** Se cumplió la predicción al pie de la letra: **no se
+> movió un solo número**. Las tres capas verificadas:
+>
+> | Capa | Resultado |
+> |---|---|
+> | **Base** | `propiedades_v2`=TABLA · `propiedades_v2_shadow`=vista · 1590 vs 1590 · RPC feed **652**/**288** · RPC bot responde · vistas mercado **758**/**288** · `anon` sigue sin poder leer |
+> | **Lectura en producción** | los 5 feeds y `/mercado` en 200 · **ACM recalculado sin caché** (timestamp nuevo, mismos **385** comparables) · **shortlist `/b/[hash]`, que se renderiza en cada request, con sus 11 propiedades** |
+> | **Escritura real** | el **cargador real** aplicó una prop (8000920 "Zero") **a través del atajo**: *"✅ 1 escritos en propiedades_v2_shadow"*, y la fila quedó **idéntica** (precio, área, dorms, pm, zona) |
+>
+> 🔑 **Lo que evitó un falso OK:** los feeds son páginas cacheadas cada 6 h, así que un 200 podía ser
+> caché y no prueba de que la base respondiera. Se detectó porque **el ACM devolvió el mismo
+> timestamp al milisegundo**. Las pruebas válidas fueron las dos superficies que **no** se cachean:
+> el ACM con cache-buster y la shortlist dinámica.
+> 👉 Es la lección del día otra vez: *un `curl` a una página cacheada no ve la base*. La herramienta
+> define el punto ciego.
+>
+> **Pendiente:** la limpieza (6 funciones · 53 puntos de código · 6 skills) y recién después sacar el
+> atajo. Ver `docs/RETOMAR.md` §"LA LIMPIEZA POSTERIOR".
+
 > Medido **antes** de ejecutar, contra **producción** (`simonbo.com`) y la base. Es contra estos
 > números que se compara después. Mismo método que el TIEMPO 1.
 > Plan y contexto: `BARRIDO_RENAME_2026-08-17.md` · `docs/RETOMAR.md` §2.
