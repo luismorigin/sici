@@ -1,5 +1,10 @@
 # El admin contra la data nueva — análisis profundo
 
+> 🔴 **LEER PRIMERO §13 (revisión del 17-ago).** El plan en 3 pasos de §12 sigue siendo válido en el
+> QUÉ, pero **agrupa mal el trabajo**: ordena por pantalla, cuando lo que decide qué hacer con cada
+> pieza es qué le pasa el día del TIEMPO 2. §13 reordena en 4 grupos y muestra que **la mayor parte
+> del paso 2 no es trabajo del admin, sino consecuencia del cutover — y se paga sola.**
+
 > Pedido por el founder el 11-ago-2026 al arrancar el trabajo intermedio del cutover:
 > *"antes estaba pensado para corregir cosas raras… vale la pena analizar cómo funciona y qué sirve
 > ahora mejor con la data, y qué valdría la pena sacar o reordenar"*.
@@ -430,3 +435,118 @@ darse cuenta.
 
 **También:** los flags de TC del editor · `salud` (repuntar o retirar). El B2B (`brokers`,
 `simon-brokers`, `prospection`, `property-reports`) **se deja como está**: pausado y no molesta.
+
+---
+
+# 13. REVISIÓN DEL 17-ago-2026 — el paso 2 mezclaba cuatro cosas distintas
+
+> Pedida por el founder: *"creo que tenés que hacer un análisis más profundo de qué arreglar y cómo
+> hacerlo bien"*. Motivo: la revisión item por item del paso 2 daba respuestas contradictorias
+> (arreglar `market` sí, `market-alquileres` no, las funciones de proyectos "depende") y eso es
+> señal de que **el criterio de agrupación estaba mal**, no de que el terreno sea confuso.
+>
+> Todo lo de abajo está medido el 17-ago contra el código y el catálogo de Postgres.
+
+## 13.1 El criterio que faltaba
+
+El paso 2 agrupó el trabajo **por pantalla**. Pero desde el TIEMPO 1 lo que decide el trabajo de cada
+pieza no es en qué pantalla vive, sino **qué le va a pasar cuando el TIEMPO 2 renombre
+`propiedades_v2_shadow` a `propiedades_v2`**. Hay exactamente cuatro destinos, y mezclarlos es lo que
+producía la confusión:
+
+| | Grupo | Qué le hace el rename | Qué hacer hoy |
+|---|---|---|---|
+| **A** | Rotas que leen `propiedades_v2` y **no calculan precio** | **Las arregla solas** | 🚫 **Nada.** Tocarlas ahora es hacer el trabajo dos veces |
+| **B** | Rotas que leen `propiedades_v2` y **sí calculan precio viejo** | Las **despierta mal**: sin error, ~47% infladas | ✅ Actuar **antes** del rename |
+| **C** | Rotas por otra causa (su cola no recibe datos) | **Indiferente** | ✅ Retirar — no lo arregla nada |
+| **D** | Sanas. Mejoras genuinas | **Indiferente** | ✅ Cuando convenga |
+
+🔑 **El hallazgo que ordena todo:** de las 14 funciones del admin que hoy leen la tabla inexistente,
+**una sola calcula precio con la fórmula vieja** (`buscar_unidades_reales`). Las otras 13 son de
+matching y de proyectos: el rename las devuelve a la vida **bien**.
+👉 Es decir: **la mayor parte del paso 2 no es trabajo del admin. Es consecuencia del cutover**, y se
+paga sola el día del TIEMPO 2.
+
+## 13.2 GRUPO A — no tocar (el rename las arregla)
+
+Todo esto está **caído hoy** con `42P01`, y volverá solo:
+
+| Pieza | Qué se rompió |
+|---|---|
+| `inferir_datos_proyecto` (10 refs) | inferir datos del edificio |
+| `propagar_proyecto_a_propiedades` (7) · `propagar_proyecto_con_apertura_temporal` (3) | propagar al conjunto |
+| `sincronizar_propiedad_desde_proyecto` (5) | la usa **`usePropertyEditor`**, o sea el editor de propiedades |
+| `useProjectEditor` | lee `propiedades_v2` directo |
+| `/admin/market-alquileres` · `/admin/alquileres` · `/admin/proyectos` | ídem |
+
+Ninguna calcula precio con `precio_normalizado()` — verificado función por función. **Despiertan bien.**
+
+⚠️ **La contrapartida honesta:** mientras el TIEMPO 2 no ocurra, propagar / inferir / sincronizar
+**no funcionan**, y crear o corregir un edificio desde el admin queda a medias (crear sí anda:
+`crear_desarrollador` y `buscar_desarrolladores` no tocan esa tabla). Si eso hace falta antes del
+cutover, se repuntan a `_shadow` **aceptando tocarlas dos veces** — es una decisión de urgencia, no
+de arquitectura.
+
+## 13.3 GRUPO B — lo único que hay que tocar antes, y es chico
+
+**`/admin/propiedades` ya NO depende de `buscar_unidades_reales` para su listado.** El paso 1 lo mudó
+a consulta directa contra la tabla (con su motivo escrito en el código: la RPC del feed hace INNER
+JOIN con `proyectos_master` y **esconde las props sin edificio**, justo las que hay que revisar).
+
+Lo que quedó colgando es **un solo `useEffect` que puebla el autocompletado de asesores**
+(`index.tsx:237`). Y mirado de cerca:
+
+- del resultado **solo usa `asesor_nombre` e `inmobiliaria`** para agrupar y contar — **no lee ni un
+  precio**. O sea que ni siquiera es peligroso si despierta con el rename;
+- hoy está **roto en silencio**: la RPC falla y el desplegable queda vacío, sin error visible;
+- el arreglo es **reemplazarlo por la misma consulta directa que ya usa el resto de la pantalla**,
+  ~10 líneas.
+
+👉 **Con eso, `buscar_unidades_reales` se queda sin un solo llamador en el repo y se puede borrar.**
+Es la condición de entrada 2 del TIEMPO 2, completa.
+
+## 13.4 GRUPO C — retirar (el rename no las toca)
+
+Las **6 pantallas de `/admin/supervisor`** (2.721 líneas) están rotas por una causa distinta: su cola
+`matching_sugerencias` **no recibe una fila desde el 28-jul**, y el audit nocturno hace ese trabajo
+mejor —lee el anuncio, trae la evidencia, deja el SQL—. Tres de sus funciones
+(`aplicar_matches_revisados`, `contar_auto_aprobados_sin_validar`, `obtener_macrozonas_piloto`) ni
+siquiera tocan `propiedades_v2`: **el rename no les cambia nada**.
+Ídem `/admin/salud`, cuyas 3 fuentes están mudas desde el 28-jul.
+
+## 13.5 GRUPO D — el trabajo genuino del admin
+
+Lo que queda es lo que de verdad hay que construir, y **nada de esto depende del cutover**:
+
+1. **`/admin/market` → serie shadow.** Es mejora, no reparación: la pantalla hoy lee
+   `market_absorption_snapshots`, que existe pero **está congelada al 27-jul y no lo declara**. La
+   serie shadow llega a hoy, suma 25 métricas y trae `macrozona`.
+   🔴 Dos trampas propias de esa tabla: **`zona='global'` es el agregado DE SU MACROZONA, no el
+   total** (sin filtrar, mezcla Equipetrol con Zona Norte), y **la serie tiene un corte el 3-ago** —
+   antes de esa fecha el nivel está inflado (8,2% venta / 15,6% alquiler) y no se puede reconstruir.
+   La pantalla tiene que decirlo.
+   ✅ **`market_absorption_snapshots_shadow` NO se renombra en el TIEMPO 2** (el rename es solo
+   `propiedades_v2_shadow`): apuntar ahí es estable, se hace una vez.
+2. **Los 5 campos vivos en `proyectos`** (sellar entrega, alias, pet friendly, GPS verificado). Cero
+   implementado — verificado, ni una mención en el editor. Es UI nueva, el trabajo más grande de los
+   cuatro, y el que saca dos tareas de SQL a mano.
+3. **Los rechazos del gate, a la base y al parte matutino.** 🔑 **Esto no es trabajo del admin: es
+   del cron.** El formato ya se migró a v2 (por URL); de **128 entradas, 19 tienen motivo y 109 no**
+   (residuo del formato viejo — limpiarlas). Los 19 buenos citan el anuncio y son mejores que
+   cualquier pantalla.
+4. **PASO 3 — la bandeja del audit.** No empezado. Sigue siendo el trabajo de más valor y el más
+   caro; conviene después de que el TIEMPO 2 estabilice el terreno.
+
+## 13.6 El orden que se desprende
+
+1. **Grupo B** (~10 líneas) → cierra la condición de entrada 2 del TIEMPO 2.
+2. **TIEMPO 2** → el grupo A se arregla solo, gratis.
+3. **Grupo C** → retirar 2.721 líneas que ya no representan trabajo de nadie.
+4. **Grupo D** → el admin nuevo, sobre terreno estable. `market` puede adelantarse en cualquier
+   momento: no depende de nada.
+
+🔑 **La lección de método, para la próxima:** el plan del 11-ago agrupó por pantalla porque así se ve
+el admin desde afuera. Pero cuando una migración está a mitad de camino, la pregunta que decide el
+trabajo no es *"¿dónde vive esto?"* sino **"¿qué le pasa a esto cuando la migración termine?"**.
+Agrupar por lo primero produjo un plan donde items vecinos pedían acciones opuestas — y eso se sintió
+como confusión del terreno cuando era del mapa.
