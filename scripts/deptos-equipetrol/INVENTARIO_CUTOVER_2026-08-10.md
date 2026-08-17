@@ -425,9 +425,27 @@ sería planificar sobre una hipótesis — el error que este documento corrige (
      y `cargar-alquiler-shadow.mjs:477`). Leen los candados de la fila existente, y **solo cuentan el
      formato OBJETO con `bloqueado === true`** —la lección de `feedback_candado_formato_objeto`— y
      hacen `delete f[campo]` antes del upsert, así que el valor humano no se pisa. Lo reportan en el log.
-   ⚠️ **Pero nunca se ejercitó**: no hay una sola línea *"candados respetados"* en los logs de las
-   routines, y es esperable — la nocturna solo inserta NUEVAS, que no tienen candados. La protección
-   actúa al **re-procesar** (`--ids`, relectura, barrido). 👉 Falta un **test controlado**, no más código.
+   ⚠️ **Nunca se ejercitó en producción**: no hay una sola línea *"candados respetados"* en los logs
+   de las routines, y es esperable — la nocturna solo inserta NUEVAS, que no tienen candados. La
+   protección actúa al **re-procesar** (`--ids`, relectura, barrido).
+   ### ✅ TEST DE CANDADOS — corrido el 17-ago-2026, PASA (read-only, sin tocar nada)
+   El código exige **tres** cosas para proteger un campo, y cualquiera que falle deja el dato humano
+   sin protección. Se probaron las tres contra los **candados reales**, que es donde estaba el riesgo
+   (el propio comentario del código advierte de *"candados corruptos con claves numéricas"*):
+
+   | Condición del código | Resultado |
+   |---|---|
+   | el candado es un **objeto** | **147/147** props ✅ — ni un string, ni un array |
+   | cada entrada tiene **`bloqueado: true` booleano** | **172 candados activos en 144 props** ✅ — **cero** con `"true"` como texto, cero sin la clave, cero que no sean objeto. Las otras 7 entradas dicen `bloqueado: false`, y es correcto que no protejan |
+   | el campo candado **está en la fila que se escribe** | ✅ los 10 campos candados —`id_proyecto_master` (109), `zona` (26), `estado_construccion` (11), `duplicado_de` (9), `latitud`/`longitud` (8/4), `area_total_m2`, `precio_usd`, `tipo_cambio_detectado`— están todos en el objeto que arma el cargador. **`es_activa` es la excepción y no importa: el cargador nunca lo escribe**, así que no hay nada que pisar |
+
+   👉 **La protección cubre el 100% de los candados que existen hoy.** Y se descartó de paso el riesgo
+   que el propio código anticipaba: **no hay un solo candado corrupto** en la base viva.
+   ⚠️ **Lo que este test NO prueba:** la corrida end-to-end del cargador. Prueba que el **formato** de
+   los candados reales es el que el código reconoce y que los campos están en la fila — que era el
+   modo de falla plausible. Un fallo de ejecución (un error de JS en esa rama) requeriría correr el
+   cargador con `--ids` sobre una prop candada, y eso **escribe**: vale hacerlo la próxima vez que
+   haya que re-procesar algo, mirando el log, en vez de forzarlo ahora.
    ✅ **Los otros 4 escritores no miran los candados, y hoy no hacen daño** (verificado campo por
    campo): los 2 verificadores escriben `status/es_activa=false` y el **único** candado sobre
    `es_activa` (prop 8000566, Plaza Libertad) existe justamente para que **no se reactive** — el
