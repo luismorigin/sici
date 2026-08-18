@@ -2243,27 +2243,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   }, [filters])
 
   // Only fetch on mount if no SSG data (fallback) or if spotlight needs fetching
-  // Fetch on mount. 🔴 18-ago-2026 — ESTE FEED MOSTRABA 24 DE 301.
-  // Decía: `if (initialProperties.length === 0 || spotlightId) fetchProperties()`,
-  // o sea que solo pedía el listado completo cuando el SSG NO había traído nada.
-  // Era correcto cuando `getStaticProps` traía 500 props; el 11-ago se bajó a 24
-  // ("solo el primer viewport", para no hundir el LCP mobile) y **este useEffect no
-  // se actualizó**: con 24 en `initialProperties` la condición daba false y el resto
-  // no llegaba nunca. El comentario de `getStaticProps` ya prometía lo contrario
-  // ("el resto lo trae el cliente al hacer idle") — la promesa estaba, el código no.
-  // Ahora es el mismo mecanismo que `/ventas` (ver su useEffect de mount):
-  //   · sin SSG data, con spotlight o con ?shadow=0 → fetch inmediato
-  //   · con SSG data → el listado completo se difiere a idle
-  //   · guard `fetchGenRef.current === 0`: si el usuario ya filtró, el diferido no lo pisa.
-  useEffect(() => {
-    if (publicShareMode) return
-    const wantsProd = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '0'
-    if (initialProperties.length === 0 || spotlightId || wantsProd) { fetchProperties(); return }
-    const idle = typeof window.requestIdleCallback === 'function'
-      ? (cb: () => void) => window.requestIdleCallback(cb, { timeout: 3000 })
-      : (cb: () => void) => window.setTimeout(cb, 1500)
-    idle(() => { if (fetchGenRef.current === 0) fetchProperties() })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (publicShareMode) return; if (initialProperties.length === 0 || spotlightId) fetchProperties() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function applyFilters(newFilters: FiltrosVentaSimple) {
     setFilters(newFilters); setIsFiltered(true)
