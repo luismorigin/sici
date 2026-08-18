@@ -1,3 +1,4 @@
+import { EQUIPETROL } from '@/lib/macrozonas'
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo, Fragment } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
@@ -1706,7 +1707,7 @@ export default function AlquileresPage({
         <div className={`desktop-layout ${splitDesktop ? 'desktop-layout-split' : ''} ${publicShareMode ? 'desktop-layout-public' : ''} ${shortlistRedesign ? 'alq-shortlist-redesign' : ''} ${brokerMode ? 'desktop-layout-broker' : ''}`}>
           {/* Nav superior desktop — solo feed público (broker/public-share tienen sus banners) */}
           {splitDesktop && (
-            <FeedDesktopNav active="alquileres" variant="light"
+            <FeedDesktopNav macrozona={EQUIPETROL} active="alquileres" variant="light"
               whatsappHref={`https://wa.me/${SIMON_WHATSAPP}?text=${encodeURIComponent('Hola Simon, quiero ayuda para encontrar una propiedad')}`}
               onComparador={() => { if (favorites.size >= 2) openCompare(); else showToast(favorites.size === 1 ? 'Guardá al menos 2 alquileres con el corazón para comparar' : 'Guardá alquileres con el corazón para comparar') }}
               onMenu={() => setMenuOpen(true)}

@@ -1,11 +1,15 @@
 import Link from 'next/link'
+import type { Macrozona } from '@/lib/macrozonas'
 
 // Nav superior desktop de los feeds (ventas + alquileres).
 // Variantes: 'dark' (ventas — fondo negro) y 'light' (alquileres — fondo arena).
 // El item Preventa vive dentro de ventas: en /ventas aplica el filtro vía
 // onPreventa; desde otros feeds navega a /ventas?preventa=1 (deep-link existente).
 // El menú hamburguesa y el perfil reusan los drawers mfd-*/mfp-* de cada página.
-export default function FeedDesktopNav({ active, variant, whatsappHref, onPreventa, onComparador, onMenu, onProfile }: {
+export default function FeedDesktopNav({ macrozona, active, variant, whatsappHref, onPreventa, onComparador, onMenu, onProfile }: {
+  /** 🔴 De qué macrozona es este feed. Los enlaces salen de acá: sin esto, el nav de
+   *  Zona Norte mandaba a los feeds y al mercado de Equipetrol. */
+  macrozona: Macrozona
   active: 'ventas' | 'alquileres'
   variant: 'dark' | 'light'
   whatsappHref: string
@@ -23,14 +27,14 @@ export default function FeedDesktopNav({ active, variant, whatsappHref, onPreven
       <div className="fdn-links">
         {active === 'alquileres'
           ? <span className="fdn-link fdn-link-active">Alquileres</span>
-          : <Link href="/alquileres" className="fdn-link">Alquileres</Link>}
+          : <Link href={macrozona.rutaAlquiler} className="fdn-link">Alquileres</Link>}
         {active === 'ventas'
           ? <span className="fdn-link fdn-link-active">Ventas</span>
-          : <Link href="/ventas" className="fdn-link">Ventas</Link>}
+          : <Link href={macrozona.rutaVenta} className="fdn-link">Ventas</Link>}
         {onPreventa
           ? <button type="button" className="fdn-link" onClick={onPreventa}>Preventa</button>
-          : <Link href="/ventas?preventa=1" className="fdn-link">Preventa</Link>}
-        <a href="/mercado/equipetrol" className="fdn-link">Mercado</a>
+          : <Link href={`${macrozona.rutaVenta}?preventa=1`} className="fdn-link">Preventa</Link>}
+        {macrozona.rutaMercado && <a href={macrozona.rutaMercado} className="fdn-link">Mercado</a>}
         <div className="fdn-drop">
           <button type="button" className="fdn-link fdn-drop-btn">Simulá y calculá <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg></button>
           <div className="fdn-drop-menu">

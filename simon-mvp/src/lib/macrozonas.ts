@@ -17,7 +17,8 @@
 // QUÉ VA ACÁ y qué no: acá va lo PROPIO de cada zona —qué muestra y cómo se llama—.
 // Cómo se ve y cómo funciona es compartido (el componente del feed).
 
-import { ZONAS_EQUIPETROL_DB, getMicrozonasZN } from './zonas'
+import { ZONAS_EQUIPETROL_DB, getMicrozonasZN, ZONAS_CANONICAS, ZONAS_ZONA_NORTE } from './zonas'
+import type { ZonaCanonica } from './zonas'
 
 export interface Macrozona {
   /** id estable, para logs y evals */
@@ -30,8 +31,24 @@ export interface Macrozona {
   rutaVenta: string
   /** ruta del feed de alquiler */
   rutaAlquiler: string
+  /** Ruta de la página de mercado, o `null` si esta macrozona TODAVÍA NO TIENE.
+   *  🔑 El nav oculta el enlace cuando es `null`. Es la forma de no mentir: hasta el
+   *  18-ago el feed de Zona Norte enlazaba a `/mercado/equipetrol` — el usuario veía
+   *  las medianas de ZN, tocaba "ver mercado completo" y aterrizaba en otro mercado,
+   *  sin aviso. Declarar `null` es más honesto que apuntar a la zona de al lado. */
+  rutaMercado: string | null
   /** ¿se indexa? ZN está en dark launch hasta que se decida lanzarla. */
   indexable: boolean
+  /** Las zonas que ofrece el FILTRO. Sin esto, el feed de una macrozona lista las
+   *  zonas de otra — el usuario ve "Sirari" en Zona Norte y filtra a cero. */
+  zonasCanonicas: ZonaCanonica[]
+  /** Chips de ejemplo del buscador natural. Nombran zonas REALES de esta macrozona:
+   *  si dicen "Sirari" en el feed de Zona Norte, el usuario busca algo que no existe ahí. */
+  ejemplosBusqueda: string[]
+  /** Ejemplos del placeholder animado del buscador (el que "se escribe solo").
+   *  Igual que los chips: si nombran zonas de otra macrozona, invitan a buscar
+   *  algo que en este feed no existe. */
+  ejemplosPlaceholder: string[]
 }
 
 export const EQUIPETROL: Macrozona = {
@@ -40,7 +57,11 @@ export const EQUIPETROL: Macrozona = {
   zonasDB: ZONAS_EQUIPETROL_DB,
   rutaVenta: '/ventas',
   rutaAlquiler: '/alquileres',
+  rutaMercado: '/mercado/equipetrol',
   indexable: true,
+  zonasCanonicas: ZONAS_CANONICAS,
+  ejemplosBusqueda: ['2 dorm en Sirari', 'Hasta 120 mil', 'Preventa en Eq. Norte', 'Monoambiente con parqueo', 'Entrega inmediata'],
+  ejemplosPlaceholder: ['1 dorm en Sirari hasta 150 mil', 'preventa en Eq. Norte', '2 dormitorios con piscina', 'monoambiente hasta 80 mil', 'depto en Equipetrol con parqueo'],
 }
 
 export const ZONA_NORTE: Macrozona = {
@@ -51,7 +72,11 @@ export const ZONA_NORTE: Macrozona = {
   zonasDB: getMicrozonasZN(),
   rutaVenta: '/zona-norte/ventas',
   rutaAlquiler: '/zona-norte/alquileres',
+  rutaMercado: null, // TODO backlog: crear /mercado/zona-norte y apuntarla acá
   indexable: false, // dark launch: `noindex` + fuera del sitemap
+  zonasCanonicas: ZONAS_ZONA_NORTE,
+  ejemplosBusqueda: ['2 dorm en Banzer', 'Hasta 120 mil', 'Preventa en Alemana', 'Monoambiente con parqueo', 'Entrega inmediata'],
+  ejemplosPlaceholder: ['1 dorm en Banzer hasta 150 mil', 'preventa en Alemana', '2 dormitorios con piscina', 'monoambiente hasta 80 mil', 'depto en Zona Norte con parqueo'],
 }
 
 /** Todas las macrozonas declaradas. Agregar una nueva es sumarla acá. */
