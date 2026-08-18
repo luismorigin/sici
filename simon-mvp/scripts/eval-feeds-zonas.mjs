@@ -31,8 +31,18 @@ const guardar  = process.argv.includes('--guardar')
 const comparar = process.argv.includes('--comparar')
 
 // Las macrozonas y cómo se reconocen sus zonas en pantalla.
+// PROPIAS: nombres de microzona (lo que aparece en cada card). Sirve para contar cuánto
+// inventario propio muestra el feed, y se compara contra la línea de base.
 const EQ = /Eq\. \w+|Sirari|V\. Brigida/g
-const ZN = /ZN \d/g
+const ZN = /ZN \d|\d[º°]-\d[º°] ·/g
+// AJENAS: lo mismo MÁS el nombre de la macrozona. 🔴 Va aparte a propósito: el 18-ago el
+// H1 del feed de ventas de ZN decía "Departamentos en venta en Equipetrol" y este eval lo
+// dio por limpio, porque `Eq\. \w+` exige el punto y "Equipetrol" solo no matchea. El
+// patrón heredó el punto ciego de cómo se escriben los labels, no de cómo se nombra la
+// zona. Sumarlo a PROPIAS habría movido los conteos de la línea de base sin que nada
+// estuviera mal — por eso dos patrones y no uno.
+const EQ_AJENA = /Eq\. \w+|Sirari|V\. Brigida|Equipetrol/g
+const ZN_AJENA = /ZN \d|\d[º°]-\d[º°] ·|Zona Norte/g
 
 // Selectores del rediseño. VENTAS y ALQUILERES usan clases distintas para las mismas
 // piezas (deuda conocida del proyecto: son gemelos con nomenclatura propia).
@@ -50,10 +60,10 @@ const PIEZAS_ALQ = {
 }
 
 const FEEDS = [
-  { id: 'eq-venta',  ruta: '/ventas',                  propias: EQ, ajenas: ZN, piezas: PIEZAS_VENTA },
-  { id: 'zn-venta',  ruta: '/zona-norte/ventas',       propias: ZN, ajenas: EQ, piezas: PIEZAS_VENTA },
-  { id: 'eq-alq',    ruta: '/alquileres',              propias: EQ, ajenas: ZN, piezas: PIEZAS_ALQ  },
-  { id: 'zn-alq',    ruta: '/zona-norte/alquileres',   propias: ZN, ajenas: EQ, piezas: PIEZAS_ALQ  },
+  { id: 'eq-venta',  ruta: '/ventas',                  propias: EQ, ajenas: ZN_AJENA, piezas: PIEZAS_VENTA },
+  { id: 'zn-venta',  ruta: '/zona-norte/ventas',       propias: ZN, ajenas: EQ_AJENA, piezas: PIEZAS_VENTA },
+  { id: 'eq-alq',    ruta: '/alquileres',              propias: EQ, ajenas: ZN_AJENA, piezas: PIEZAS_ALQ  },
+  { id: 'zn-alq',    ruta: '/zona-norte/alquileres',   propias: ZN, ajenas: EQ_AJENA, piezas: PIEZAS_ALQ  },
 ]
 
 

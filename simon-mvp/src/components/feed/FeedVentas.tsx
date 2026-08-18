@@ -1802,7 +1802,7 @@ function BottomSheet({ nombreMacrozona, property: p, isOpen, onClose, onShare, o
   // broker/publicShare = la versión mktv anterior.
   const mercadoSection = (marketData ? (richLayout ? (
     <div className="bs-section" id="bsm-sec-mercado">
-      <div className="bs-sl"><span className="bs-sl-dot" />Cómo está el precio · {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
+      <div className="bs-sl"><span className="bs-sl-dot" />Cómo está el precio · {marketData.ampliado ? `${nombreMacrozona} (zona ampliada)` : displayZona(p.zona)}</div>
       <div className="bs-mkt2">
         <div className="bs-mkt2-verdict">
           <span className="bs-mkt2-vico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={mktStatus!.path} /></svg></span>
@@ -1843,7 +1843,7 @@ function BottomSheet({ nombreMacrozona, property: p, isOpen, onClose, onShare, o
         </div>
         <div className="bs-mkt2-note">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>
-          <span>Comparamos el precio <b>total y por m²</b>. El precio por m² permite comparar aunque cambie el tamaño del depto. {marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye preventa y entrega inmediata. ' : ''}Basado en {marketData.count} deptos similares en venta.</span>
+          <span>Comparamos el precio <b>total y por m²</b>. El precio por m² permite comparar aunque cambie el tamaño del depto. {marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo ${nombreMacrozona}. ` : ''}{marketData.mixto ? 'Incluye preventa y entrega inmediata. ' : ''}Basado en {marketData.count} deptos similares en venta.</span>
         </div>
         <div className="bs-mktv-summary">
           {p.dias_en_mercado !== null && (
@@ -1855,7 +1855,7 @@ function BottomSheet({ nombreMacrozona, property: p, isOpen, onClose, onShare, o
     </div>
   ) : (
     <div className="bs-section" id="bsm-sec-mercado">
-      <div className="bs-sl"><span className="bs-sl-dot" />Contexto de mercado · {marketData.ampliado ? 'Equipetrol (zona ampliada)' : displayZona(p.zona)}</div>
+      <div className="bs-sl"><span className="bs-sl-dot" />Contexto de mercado · {marketData.ampliado ? `${nombreMacrozona} (zona ampliada)` : displayZona(p.zona)}</div>
       <div className="bs-mktv">
         <div className="bs-mktv-this">
           <span className="bs-mktv-label">{sideMode ? 'Precio de este departamento' : 'Este depto'}</span>
@@ -1883,7 +1883,7 @@ function BottomSheet({ nombreMacrozona, property: p, isOpen, onClose, onShare, o
             </div>
           )
         })()}
-        <div className="bs-mktv-caveat">{marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo Equipetrol. ` : ''}{marketData.mixto ? 'Incluye preventa y entrega inmediata. ' : ''}Basado en {marketData.count} deptos comparables activos. El precio por m² varía según acabados, amenidades y desarrollador.</div>
+        <div className="bs-mktv-caveat">{marketData.ampliado ? `Pocos anuncios de esta tipología en ${displayZona(p.zona)} — comparado con todo ${nombreMacrozona}. ` : ''}{marketData.mixto ? 'Incluye preventa y entrega inmediata. ' : ''}Basado en {marketData.count} deptos comparables activos. El precio por m² varía según acabados, amenidades y desarrollador.</div>
         {/* Resumen días en el mercado + estado — solo modal desktop */}
         {sideMode && (
           <div className="bs-mktv-summary">
@@ -4226,7 +4226,7 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
                     amenSel={amenSel} onAmenToggle={toggleAmen} priceValues={priceValues} />
                   {/* Título + contador + toggle lista|mixto|mapa */}
                   <div className="vd-count-row">
-                    <h1 className="vd-h1">Departamentos en venta en {filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : 'Equipetrol'}</h1>
+                    <h1 className="vd-h1">Departamentos en venta en {filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : macrozona.nombre}</h1>
                     <span className="vd-count-num2">{mapArea
                       ? <><b>{confirmadosEnBounds.length}</b> en esta área</>
                       : <><b>{amenActivo ? confirmados.length : displayedProperties.length}</b> {amenActivo ? `de ${displayedProperties.length}` : isFiltered ? `de ${unfilteredCount}` : 'activos'}</>}</span>
@@ -4314,7 +4314,7 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
                           <div className="vd-mkt-head">
                             <div>
                               <div className="vd-mkt-title">Mercado de ventas</div>
-                              <div className="vd-mkt-sub">{filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : 'Equipetrol'}{mapArea ? ' · área del mapa' : ''} · publicaciones activas</div>
+                              <div className="vd-mkt-sub">{filters.zonas_permitidas?.length ? filters.zonas_permitidas.map(z => displayZona(z)).join(', ') : macrozona.nombre}{mapArea ? ' · área del mapa' : ''} · publicaciones activas</div>
                             </div>
                             {macrozona.rutaMercado && <a className="vd-mkt-link" href={`${macrozona.rutaMercado}/ventas`}>Ver mercado completo →</a>}
                           </div>

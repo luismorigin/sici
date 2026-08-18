@@ -127,7 +127,13 @@ export const ZONA_NORTE: Macrozona = {
   rutaAlquiler: '/zona-norte/alquileres',
   rutaMercado: null, // TODO backlog: crear /mercado/zona-norte y apuntarla acá
   indexable: false, // dark launch: `noindex` + fuera del sitemap
-  zonasCanonicas: ZONAS_ZONA_NORTE,
+  // 🔑 El feed muestra el label LEGIBLE ('2º-3º · La Salle/Banzer'), no el cifrado de
+  //    `zonas.ts` ('ZN 2-3 LS/Bz'). El cifrado nació para tablas del admin, donde el
+  //    ancho manda y quien lee ya conoce el código; en el feed lo lee alguien que
+  //    busca departamento y no tiene por qué descifrar 'R26/Bz'. El feed de alquiler
+  //    de ZN ya lo hacía así y se entendía mejor — esto lo empareja.
+  //    El resto del sistema (admin, tablas) sigue viendo el `labelCorto` original.
+  zonasCanonicas: ZONAS_ZONA_NORTE.map(z => ({ ...z, labelCorto: chipLabelZN(z.label) })),
   ejemplosBusqueda: ['2 dorm en Banzer', 'Hasta 120 mil', 'Preventa en Alemana', 'Monoambiente con parqueo', 'Entrega inmediata'],
   ejemplosPlaceholder: ['1 dorm en Banzer hasta 150 mil', 'preventa en Alemana', '2 dormitorios con piscina', 'monoambiente hasta 80 mil', 'depto en Zona Norte con parqueo'],
   ejemplosBusquedaAlquiler: ['1 dorm amoblado', 'Hasta Bs 4.500', 'Banzer', 'Con parqueo', '2 dorm en Alemana'],
