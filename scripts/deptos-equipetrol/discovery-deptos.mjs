@@ -167,7 +167,7 @@ log('3) Diff SHADOW-AWARE (shadow filtra ya-cargadas y mide desaparecidas)…');
 // Equipetrol, 0 con zona NULL → para Equipetrol NO cambia ningún número.
 const shadowTodas = [];
 for (let from = 0; ; from += 1000) {
-  const { data, error } = await sb.from('propiedades_v2_shadow')
+  const { data, error } = await sb.from('propiedades_v2')
     .select('id, url, es_activa, zona').eq('tipo_operacion', 'venta').range(from, from + 999);
   if (error) { console.error('   ERROR leyendo shadow:', error.message); process.exit(1); }
   shadowTodas.push(...data);

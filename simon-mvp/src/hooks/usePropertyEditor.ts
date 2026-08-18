@@ -26,7 +26,7 @@ import {
  * el nombre `propiedades_v2`: ese día se cambia ACÁ, una línea, y no se busca por el archivo.
  * Contexto: `scripts/deptos-equipetrol/INVENTARIO_CUTOVER_2026-08-10.md`.
  */
-const TABLA_PROPIEDADES = 'propiedades_v2_shadow'
+const TABLA_PROPIEDADES = 'propiedades_v2'
 
 const INITIAL_FORM: FormData = {
   tipo_operacion: 'venta',

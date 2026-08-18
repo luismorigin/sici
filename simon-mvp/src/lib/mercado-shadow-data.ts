@@ -227,7 +227,7 @@ export async function fetchAlquilerShadowExtra(): Promise<AlquilerShadowExtra | 
         .select('id, precio_mensual_bob, amoblado, estacionamientos, parqueo_incluido, dias_en_mercado, id_proyecto_master')
         .eq('zona_general', 'Equipetrol'),
       // equipado vive en datos_json de la tabla (no expuesto en la vista)
-      sb.from('propiedades_v2_shadow')
+      sb.from('propiedades_v2')
         .select('id, datos_json')
         .eq('tipo_operacion', 'alquiler')
         .eq('status', 'completado'),

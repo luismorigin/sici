@@ -236,7 +236,7 @@ async function main() {
 
   let filas = [];
   for (const op of OPS) {
-    let q = sb.from('propiedades_v2_shadow').select(COLS).eq('tipo_operacion', op)
+    let q = sb.from('propiedades_v2').select(COLS).eq('tipo_operacion', op)
       .eq('es_activa', true).in('status', STATUS_INVENTARIO).order('id', { ascending: true });
     if (ZONAS_FILTRO) q = q.in('zona', ZONAS_FILTRO);
     if (LIMIT) q = q.limit(LIMIT);
@@ -257,7 +257,7 @@ async function main() {
   if (ZONAS_FILTRO) {
     let fuera = 0;
     for (const op of OPS) {
-      const { count } = await sb.from('propiedades_v2_shadow')
+      const { count } = await sb.from('propiedades_v2')
         .select('id', { count: 'exact', head: true })
         .eq('tipo_operacion', op).eq('es_activa', true).in('status', STATUS_INVENTARIO)  // mismo corte que arriba, si no el aviso de alcance miente
         .not('zona', 'in', `(${ZONAS_FILTRO.map((z) => `"${z}"`).join(',')})`);
@@ -437,7 +437,7 @@ async function main() {
     // "0/0 hermanos" siempre y dejaba la pista inservible — cazado al probar, 4-ago-2026.
     if (sup5.length) {
       const pmsSup5 = [...new Set(sup5.map((s) => s.pm_actual))];
-      const { data: hermanosDb } = await sb.from('propiedades_v2_shadow')
+      const { data: hermanosDb } = await sb.from('propiedades_v2')
         .select('id, id_proyecto_master, latitud, longitud')
         .in('id_proyecto_master', pmsSup5).eq('es_activa', true).is('duplicado_de', null);
       const porPm = new Map();
@@ -828,7 +828,7 @@ async function main() {
   console.log(`     Siguiente: sup.1/sup.2/sup.4 → subagentes-lectores (JUEZ). sup.3 → dedup determinístico (revisar y aplicar):`);
   console.log(`       sup.1 → APROBAR(candidato) | PM_NUEVO(nombre_real) | SIN_NOMBRE`);
   console.log(`       sup.2 → CONFIRMAR el pm_actual | CORREGIR(otro pm) | RECHAZAR (nombre no aparece)`);
-  console.log(`       sup.3 → UPDATE propiedades_v2_shadow SET duplicado_de=<sobreviviente> WHERE id IN (<duplicados>)`);
+  console.log(`       sup.3 → UPDATE propiedades_v2 SET duplicado_de=<sobreviviente> WHERE id IN (<duplicados>)`);
   console.log(`       sup.4 → CONFIRMAR | CORREGIR(otro pm) | SIN_NOMBRE — el lector ya dudó; el juez decide`);
   console.log(`     SQL contra propiedades_v2_shadow lo aplica el humano (candado IS NULL / formato-objeto).\n`);
 }

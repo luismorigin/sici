@@ -102,7 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     // Pedirla hacía fallar la query entera, y sin mirar `error` el resultado se
     // presentaba como "no encontramos ese aviso" — un mensaje falso sobre un error.
     const { data, error } = await supabase
-      .from('propiedades_v2_shadow')
+      .from('propiedades_v2')
       .select('id,tipo_operacion,zona,latitud,dormitorios')
       .ilike('url', patron)
       .limit(1)

@@ -113,7 +113,7 @@ republicación por slug reescrito ahora se resuelve en la captura. Lo que queda 
 republicaciones con códigos distintos.
 
 ### 3. (Opcional) Confirmar en BD — SOLO para verificar cifras
-Si hace falta cotejar un número, usar las tablas **shadow**: `propiedades_v2_shadow`,
+Si hace falta cotejar un número, usar las tablas **shadow**: `propiedades_v2`,
 `market_absorption_snapshots_shadow`. **Nunca** tomar una fila reciente de `matching_sugerencias`
 como resultado de la routine (es n8n/prod). La BD confirma, no reemplaza al log.
 

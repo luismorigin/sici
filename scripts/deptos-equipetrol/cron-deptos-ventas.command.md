@@ -17,7 +17,7 @@
 >
 > **Qué es:** corre el ciclo híbrido de deptos-venta Equipetrol COMPLETO dentro de la sesión —
 > discovery propio → lectura (MOAT) → apply → feed — contra el **entorno SHADOW aislado**
-> (`propiedades_v2_shadow`). **PROD (n8n) queda intacto.** El único paso que necesita "modelo"
+> (`propiedades_v2`). **PROD (n8n) queda intacto.** El único paso que necesita "modelo"
 > (el MOAT = leer el anuncio y dictar precio/TC/dorms/nombre/gate) lo hacen **subagentes-lectores en
 > paralelo** (patrón `/audit-cola-matching`) → **gratis, bajo Max, sin API, sin servidor**.
 >
@@ -151,7 +151,7 @@ Cada `veredicto` sigue el schema de `READER_SPEC.md`. Lo esencial:
 > La normalización shadow ya entiende `bob`/`oficial_viejo`/default (`precio_normalizado_shadow`) — el
 > lector solo emite el tag + el crudo; el feed traduce en vivo. No pre-normalizar.
 
-### 4. Apply — escribe la fila correcta a shadow (muta SOLO `propiedades_v2_shadow`)
+### 4. Apply — escribe la fila correcta a shadow (muta SOLO `propiedades_v2`)
 ```
 node cargar-deptos-shadow.mjs --apply output/material-<ts>.json
 ```
@@ -263,7 +263,7 @@ de "te espera trabajo" vuelve a dejar ciego al founder.
 
 ## Reglas
 
-- **SHADOW, prod intacto.** El `--apply` solo muta `propiedades_v2_shadow` (service_role). A prod: solo
+- **SHADOW, prod intacto.** El `--apply` solo muta `propiedades_v2` (service_role). A prod: solo
   SELECT + RPC read-only (`buscar_proyecto_fuzzy`). Los alias sugeridos se REGISTRAN, no se escriben a
   `proyectos_master`. **El cutover a prod (híbrido escribe `propiedades_v2` real / n8n se apaga) es una
   decisión APARTE, irreversible, SIEMPRE con OK explícito del founder** — este comando no lo hace.
@@ -285,7 +285,7 @@ de "te espera trabajo" vuelve a dejar ciego al founder.
 - **Candados** (solo para comparación shadow-vs-prod limpia): sembrar `campos_bloqueados` prod→shadow.
   Para solo cargar/enriquecer NO hace falta. Ver `ESTADO_MIGRACION.md` §Frenos.
 - ✅ **Repoblar el inventario COMPLETO: HECHO** (barrido a shadow con el lector nuevo). Conteo vivo en
-  `ESTADO_MIGRACION.md` / SQL sobre `propiedades_v2_shadow` (`tipo_operacion='venta'`) (~460 venta al 17-jul; NO hardcodear).
+  `ESTADO_MIGRACION.md` / SQL sobre `propiedades_v2` (`tipo_operacion='venta'`) (~460 venta al 17-jul; NO hardcodear).
 - **Empaquetar el orquestador** (`cron-deptos-equipetrol.mjs`) que encadene los pasos determinísticos
   (discovery + prep) en un solo `.mjs` — hoy este `.command.md` es el orquestador (el agente ejecuta).
 - Contexto: `docs/arquitectura/PLATAFORMA_HIBRIDA_GENERICA.md` (visión) + memoria `project_checkpoint_deptos_hibrido`.

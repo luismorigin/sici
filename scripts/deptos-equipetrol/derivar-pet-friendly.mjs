@@ -29,7 +29,7 @@ async function main() {
   let data;
   try {
     data = await traerTodo(sb
-      .from('propiedades_v2_shadow')
+      .from('propiedades_v2')
       .select('id_proyecto_master, acepta_mascotas, datos_json')
       .eq('es_activa', true)
       .not('id_proyecto_master', 'is', null));

@@ -105,7 +105,7 @@ const ids = [...desapIds];
 //      verificador de una zona podía confirmar bajas de la otra, sin haberla crawleado nunca.
 //  (b) el disyuntor compara desaparecidas contra activas: si el denominador incluye otra zona,
 //      el umbral del 40% se diluye y la protección contra un crawl parcial se afloja sola.
-const { data: rows, error: selErr } = await sb.from('propiedades_v2_shadow')
+const { data: rows, error: selErr } = await sb.from('propiedades_v2')
   .select('id, url, fuente, status, primera_ausencia_at, es_activa')
   .eq('tipo_operacion', 'venta')
   .in('zona', ZONA.zonas)
@@ -113,7 +113,7 @@ const { data: rows, error: selErr } = await sb.from('propiedades_v2_shadow')
 if (selErr) { console.error('ERROR leyendo shadow:', selErr.message); process.exit(1); }
 
 // --- Disyuntor: ¿el crawl fue confiable? --- (denominador de ESTA zona, ver (b) arriba)
-const { count: activas } = await sb.from('propiedades_v2_shadow').select('*', { count: 'exact', head: true })
+const { count: activas } = await sb.from('propiedades_v2').select('*', { count: 'exact', head: true })
   .eq('tipo_operacion', 'venta').eq('es_activa', true).in('zona', ZONA.zonas);
 const cbTripped = activas > 0 && desap.length > activas * CB_RATIO;
 
@@ -157,7 +157,7 @@ if (!APPLY) { console.log(`\n  (DRY-RUN: no se escribió nada. Correr con --appl
 const nowIso = new Date().toISOString();
 async function upd(arr, patch, label) {
   if (!arr.length) return;
-  const { error } = await sb.from('propiedades_v2_shadow').update(patch)
+  const { error } = await sb.from('propiedades_v2').update(patch)
     .in('id', arr.map(c => c.id)).eq('tipo_operacion', 'venta');       // defensa extra: nunca fuera de venta
   console.log(error ? `   ✖ ${label}: ${error.message}` : `   ✓ ${label}: ${arr.length}`);
 }
@@ -165,7 +165,7 @@ await upd(revive, { status: 'completado', primera_ausencia_at: null }, 'revivida
 await upd(setCounter, { status: 'completado', primera_ausencia_at: nowIso }, 'contador (sigue en feed)');
 await upd(normaliza, { status: 'completado' }, 'normalizadas a feed');
 for (const c of confirma) {
-  const { error } = await sb.from('propiedades_v2_shadow').update({
+  const { error } = await sb.from('propiedades_v2').update({
     status: 'inactivo_confirmed', es_activa: false,
     fecha_inactivacion: c.primera_ausencia_at || nowIso, razon_inactiva: 'aviso_terminado',
   }).eq('id', c.id).eq('tipo_operacion', 'venta').eq('es_activa', true);

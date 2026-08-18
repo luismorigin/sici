@@ -13,7 +13,7 @@
 >
 > **Qué es:** corre el ciclo híbrido de deptos-ALQUILER Equipetrol COMPLETO dentro de la sesión —
 > discovery propio → lectura (MOAT) → apply → **verificador** → feed — contra el **entorno SHADOW aislado**
-> (`propiedades_v2_shadow`, `tipo_operacion='alquiler'`). **PROD (n8n) queda intacto.** El MOAT (leer el
+> (`propiedades_v2`, `tipo_operacion='alquiler'`). **PROD (n8n) queda intacto.** El MOAT (leer el
 > anuncio y dictar precio/TC/dorms/nombre/gate/condiciones) lo hacen **subagentes-lectores en paralelo**
 > (patrón `/audit-cola-matching`) → **gratis, bajo Max, sin API, sin servidor**.
 >
@@ -109,7 +109,7 @@ Si un subagente-lector falla por error de **servicio** (`529 Overloaded`, `500`,
 node inyectar-veredictos.mjs output/material-alq-<ts>.json output/veredictos-alquiler-<fecha>-c*.json
 ```
 
-### 4. Apply — escribe la fila a shadow (muta SOLO `propiedades_v2_shadow`)
+### 4. Apply — escribe la fila a shadow (muta SOLO `propiedades_v2`)
 ```
 node cargar-alquiler-shadow.mjs --apply output/material-alq-<ts>.json
 ```
@@ -176,7 +176,7 @@ Corto y accionable, distinguiendo el caso:
 Regla del mensaje: que se entienda **si hay algo para hacer o no**.
 
 ## Reglas
-- **SHADOW, prod intacto.** `--apply` y el verificador solo mutan `propiedades_v2_shadow`. A prod: solo SELECT
+- **SHADOW, prod intacto.** `--apply` y el verificador solo mutan `propiedades_v2`. A prod: solo SELECT
   + RPC read-only. **El cutover (híbrido escribe prod / n8n se apaga) es decisión APARTE, irreversible, con OK
   explícito del founder.**
 - **gratis bajo Max.** El MOAT son subagentes en sesión. `reader-api.mjs` (stub) = camino futuro por API.

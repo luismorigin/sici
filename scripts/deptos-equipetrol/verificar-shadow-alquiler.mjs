@@ -6,7 +6,7 @@ const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
 dotenv.config({ path: `${ROOT}/simon-mvp/.env.local` });
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-const { data: tabla } = await sb.from('propiedades_v2_shadow')
+const { data: tabla } = await sb.from('propiedades_v2')
   .select('id,url,precio_mensual_bob,precio_mensual_usd,moneda_original,id_proyecto_master')
   .eq('tipo_operacion', 'alquiler');
 const ambas = tabla.filter(r => r.precio_mensual_bob != null && r.precio_mensual_usd != null).length;

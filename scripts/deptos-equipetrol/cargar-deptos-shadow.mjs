@@ -118,7 +118,7 @@ async function traerLote() {
     throw error;
   }
   // Excluir los ya cargados en shadow → los lotes sucesivos AVANZAN sobre deptos nuevos.
-  const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('id');
+  const { data: yaEn } = await sb.from('propiedades_v2').select('id');
   // + los multiproyecto YA detectados (van a proyectos_detectados, NO a shadow ni a rechazados) —
   //   sin esto reaparecen en cada prep y consumen slots del lote. Se excluyen por url.
   const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', ZONA.macrozona);
@@ -227,7 +227,7 @@ async function prepNuevas(discoveryFile, n) {
   // 🔴 PAGINADO: shadow pasó las 1.000 filas y PostgREST corta ahí sin avisar. Sin esto el
   // filtro "ya está cargado" veía ~1.000 de 1.376 urls → props existentes volvían a fetchearse
   // como si fueran nuevas. Ver lib/traer-todo.mjs.
-  const yaEn = await traerTodo(sb.from('propiedades_v2_shadow').select('url'));
+  const yaEn = await traerTodo(sb.from('propiedades_v2').select('url'));
   const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', ZONA.macrozona);
   const urlsShadow = new Set([...yaEn.map((r) => r.url), ...(yaProy || []).map((r) => r.url)]);
   // + los RECHAZADOS por gate, por URL (2-ago-2026). Acá estaba el agujero: la memoria de rechazos se
@@ -554,7 +554,7 @@ async function apply(file) {
   let protegidas = 0;
   const candadosRespetados = [];
   if (filas.length) {
-    const { data: prev } = await sb.from('propiedades_v2_shadow')
+    const { data: prev } = await sb.from('propiedades_v2')
       .select('id,fecha_publicacion,campos_bloqueados').in('id', filas.map((f) => f.id));
     const prevById = new Map((prev || []).map((r) => [r.id, r]));
     for (const f of filas) {
@@ -583,7 +583,7 @@ async function apply(file) {
   // (ej. multiproyecto sin rangos → check_multiproperty_completo_v2). Se reporta, no se aborta.
   const fallidas = [];
   for (const f of filas) {
-    const { error } = await sb.from('propiedades_v2_shadow').upsert(f, { onConflict: 'id' });
+    const { error } = await sb.from('propiedades_v2').upsert(f, { onConflict: 'id' });
     if (error) fallidas.push({ id: f.id, mp: f.es_multiproyecto, motivo: (error.message.split('\n')[0] || '').slice(0, 70) });
   }
   const escritas = filas.length - fallidas.length;
@@ -600,7 +600,7 @@ async function apply(file) {
   if (reemplazos.length) {
     // 🔴 `datos_json` se MERGEA, no se pisa: un update con objeto plano reemplaza la
     // columna entera y borraría la trazabilidad del match, el TC y todo lo demás.
-    const { data: previas } = await sb.from('propiedades_v2_shadow')
+    const { data: previas } = await sb.from('propiedades_v2')
       .select('id, datos_json, duplicado_de').in('id', reemplazos.map((r) => r.vieja));
     const prevById = new Map((previas || []).map((p) => [p.id, p]));
     for (const r of reemplazos) {
@@ -609,7 +609,7 @@ async function apply(file) {
       if (prev.duplicado_de != null) continue;   // ya deduplicada por otra vía
       const dj = prev.datos_json && typeof prev.datos_json === 'object' ? prev.datos_json : {};
       const traza = dj.trazabilidad && typeof dj.trazabilidad === 'object' ? dj.trazabilidad : {};
-      const { error } = await sb.from('propiedades_v2_shadow')
+      const { error } = await sb.from('propiedades_v2')
         .update({
           duplicado_de: r.nueva,
           datos_json: { ...dj, trazabilidad: { ...traza,
@@ -631,7 +631,7 @@ async function apply(file) {
   // Descartes (basura estructural) → upsert aparte para NO contarlos como "unidades". Resiliente.
   let descartadas = 0;
   for (const d of descartes) {
-    const { error } = await sb.from('propiedades_v2_shadow').upsert(d, { onConflict: 'id' });
+    const { error } = await sb.from('propiedades_v2').upsert(d, { onConflict: 'id' });
     if (!error) descartadas++; else console.log(`⚠️  descarte ${d.id} NO escrito: ${(error.message.split('\n')[0] || '').slice(0, 70)}`);
   }
   if (rechazados.length) {

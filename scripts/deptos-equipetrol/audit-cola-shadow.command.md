@@ -1,5 +1,5 @@
 ---
-description: Audita MATCHING + DUPLICADOS del feed SHADOW del híbrido (venta + alquiler) — tres superficies: sin-match-con-nombre (PM_NUEVO/fuzzy), auto-matches riesgosos (nombre_unico_zona_dif) y duplicados SIN código repetido (apart-hotel/republicación, agrupa por pm+precio+área; el slug reescrito de C21 ya lo caza el discovery desde el PR #64). El .mjs filtra $0 SIN fetch (lee el anuncio ya guardado); el VEREDICTO de matching lo dan subagentes-lectores (juez), el dedup es determinístico. SQL contra propiedades_v2_shadow que aplica el humano. Read-only.
+description: Audita MATCHING + DUPLICADOS del feed SHADOW del híbrido (venta + alquiler) — tres superficies: sin-match-con-nombre (PM_NUEVO/fuzzy), auto-matches riesgosos (nombre_unico_zona_dif) y duplicados SIN código repetido (apart-hotel/republicación, agrupa por pm+precio+área; el slug reescrito de C21 ya lo caza el discovery desde el PR #64). El .mjs filtra $0 SIN fetch (lee el anuncio ya guardado); el VEREDICTO de matching lo dan subagentes-lectores (juez), el dedup es determinístico. SQL contra propiedades_v2 que aplica el humano. Read-only.
 ---
 
 # /audit-cola-shadow — Audit de matching del feed SHADOW (híbrido)
@@ -179,9 +179,9 @@ ILIKE ANY(...)` + verificar `dist` prop↔pm-candidato. Nombre + GPS combinados 
 portal NO bloquea un nombre explícito (matchear por nombre igual). PM_NUEVO = `gps_verificado_visual='si'`
 solo tras verificación humana (el founder da el GPS en Google Maps). NO inventar GPS.
 
-### 4. Generar el SQL — contra `propiedades_v2_shadow` (NO aplicar; el humano lo corre)
+### 4. Generar el SQL — contra `propiedades_v2` (NO aplicar; el humano lo corre)
 - **Candado `AND id_proyecto_master IS NULL`** en cada UPDATE de superficie 1 (no pisa lo ya correcto).
-- Superficie 2 CORREGIR/RECHAZAR: `UPDATE propiedades_v2_shadow SET id_proyecto_master=<nuevo|NULL>` +
+- Superficie 2 CORREGIR/RECHAZAR: `UPDATE propiedades_v2 SET id_proyecto_master=<nuevo|NULL>` +
   **candado formato-OBJETO** si es cluster numerado (un string NO protege, `feedback_candado_formato_objeto`):
   ```sql
   campos_bloqueados = COALESCE(campos_bloqueados,'{}'::jsonb) || jsonb_build_object(
@@ -207,7 +207,7 @@ solo tras verificación humana (el founder da el GPS en Google Maps). NO inventa
   **punto ciego** (los `lector_fijo` de confianza alta no entran a NINGUNA superficie). El tag deja la
   confianza original intacta y mantiene la prop elegible para el muestreo del punto ciego.
   Plantilla completa: `output/04-SHADOW-confirmados-2026-07-30.sql`.
-- **Superficie 3 (dedup):** `UPDATE propiedades_v2_shadow SET duplicado_de=<sobreviviente>, fecha_actualizacion=NOW()
+- **Superficie 3 (dedup):** `UPDATE propiedades_v2 SET duplicado_de=<sobreviviente>, fecha_actualizacion=NOW()
   WHERE id IN (<duplicados>)`. La vista filtra `duplicado_de IS NULL` → salen del feed. **Reversible** (`=NULL`).
   Confirmá por lectura los clusters de 2 antes de aplicar; los apart-hotel grandes son directos.
   ⚠️ **El `.mjs` ya ignora props con `duplicado_de`** (si no, marcaría un sobreviviente ya elegido →
@@ -260,7 +260,7 @@ El mensaje debe decir **qué hay para aplicar y dónde**:
    dist grande = sospechoso; con dist≈0 = casi seguro OK (pero igual lo lee el juez).
 2. **Candado `IS NULL` imprescindible** (superficie 1) + **formato-objeto** (superficie 2 clusters).
 3. **SIN_NOMBRE → sin match** es correcto (mejor que un FP).
-4. **SHADOW, read-only.** El `.mjs` no escribe; el SQL va contra `propiedades_v2_shadow`; a prod solo
+4. **SHADOW, read-only.** El `.mjs` no escribe; el SQL va contra `propiedades_v2`; a prod solo
    SELECT + RPC. PM/alias nuevos se registran para el cutover, no se escriben a prod.
 5. **El juez lee el anuncio GUARDADO** (no re-fetch). El drift lo cubre `/audit-deptos-shadow`.
 

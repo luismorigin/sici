@@ -38,7 +38,7 @@ console.log(`   ${doc.rotas?.length || 0} con portada rota · ${arreglables.leng
 
 let ok = 0, err = 0;
 for (const r of arreglables) {
-  const { data: p, error: e1 } = await sb.from('propiedades_v2_shadow').select('id,datos_json').eq('id', r.id).single();
+  const { data: p, error: e1 } = await sb.from('propiedades_v2').select('id,datos_json').eq('id', r.id).single();
   if (e1) { console.log(`   ⚠️  ${r.id}: ${e1.message}`); err++; continue; }
   const fotos = p.datos_json?.contenido?.fotos_urls;
   if (!Array.isArray(fotos) || !fotos.length) { console.log(`   ⚠️  ${r.id}: sin fotos`); err++; continue; }
@@ -55,7 +55,7 @@ for (const r of arreglables) {
 
   console.log(`   ${APPLY ? '✍️ ' : '  '} ${r.id} [${r.op}] ${r.edif || '—'}: portada HTTP ${r.http_portada} → sube la foto #${k + 1} de ${fotos.length}`);
   if (APPLY) {
-    const { error: e2 } = await sb.from('propiedades_v2_shadow').update({ datos_json: dj, fecha_actualizacion: new Date().toISOString() }).eq('id', r.id);
+    const { error: e2 } = await sb.from('propiedades_v2').update({ datos_json: dj, fecha_actualizacion: new Date().toISOString() }).eq('id', r.id);
     if (e2) { console.log(`      ❌ ${e2.message}`); err++; continue; }
   }
   ok++;

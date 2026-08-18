@@ -38,7 +38,7 @@ const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKi
 const fotoViva = async (u) => { try { return (await fetch(u, { method: 'HEAD', headers: UA, signal: AbortSignal.timeout(20000) })).status === 200; } catch { return false; } };
 
 console.log(`\n📷 REFRESCAR FOTOS — ${APPLY ? 'APPLY' : 'DRY-RUN'} · ${ids.length} props\n`);
-const { data: props, error } = await sb.from('propiedades_v2_shadow').select('id,fuente,url,tipo_operacion,nombre_edificio,datos_json').in('id', ids);
+const { data: props, error } = await sb.from('propiedades_v2').select('id,fuente,url,tipo_operacion,nombre_edificio,datos_json').in('id', ids);
 if (error) { console.error('❌', error.message); process.exit(1); }
 
 let ok = 0, sinCambio = 0, fallo = 0;
@@ -66,7 +66,7 @@ for (const p of props) {
   if (APPLY) {
     const dj = { ...p.datos_json, contenido: { ...p.datos_json.contenido, fotos_urls: nuevas, cantidad_fotos: nuevas.length,
       fotos_urls_anteriores: p.datos_json.contenido?.fotos_urls_anteriores ?? viejas, fotos_refrescadas: new Date().toISOString().slice(0, 10) } };
-    const { error: e2 } = await sb.from('propiedades_v2_shadow').update({ datos_json: dj, fecha_actualizacion: new Date().toISOString() }).eq('id', p.id);
+    const { error: e2 } = await sb.from('propiedades_v2').update({ datos_json: dj, fecha_actualizacion: new Date().toISOString() }).eq('id', p.id);
     if (e2) { console.log(`      ❌ ${e2.message}`); fallo++; continue; }
   }
   ok++;

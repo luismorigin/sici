@@ -242,7 +242,7 @@ async function enriquecerShortlists(client: SbClient, base: ShortlistBase[]): Pr
   if (propIds.length) {
     const cols = 'id, nombre_edificio, zona, dormitorios, area_total_m2'
     const [shadow, prod] = await Promise.all([
-      client.from('propiedades_v2_shadow').select(cols).in('id', propIds),
+      client.from('propiedades_v2').select(cols).in('id', propIds),
       client.from('propiedades_v2').select(cols).in('id', propIds),
     ])
     for (const r of prod.data ?? []) props.set(r.id, r)      // prod primero…

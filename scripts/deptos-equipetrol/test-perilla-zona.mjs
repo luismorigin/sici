@@ -72,7 +72,7 @@ console.log('\n=== 5. El filtro por zona del diff no cambia los números de Equi
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 const todas = [];
 for (let from = 0; ; from += 1000) {
-  const { data, error } = await sb.from('propiedades_v2_shadow')
+  const { data, error } = await sb.from('propiedades_v2')
     .select('id, url, es_activa, zona').eq('tipo_operacion', 'venta').range(from, from + 999);
   if (error) { console.error(error.message); process.exit(1); }
   todas.push(...data); if (data.length < 1000) break;
@@ -95,7 +95,7 @@ ok(todas.filter((r) => !r.zona).length === 0, 'ninguna prop sin zona (que quedar
 console.log('\n=== 6. Alquiler: el filtro por zona saca Zona Norte, y NADA de Equipetrol ===');
 const alq = [];
 for (let from = 0; ; from += 1000) {
-  const { data, error } = await sb.from('propiedades_v2_shadow')
+  const { data, error } = await sb.from('propiedades_v2')
     .select('id, es_activa, zona').eq('tipo_operacion', 'alquiler').range(from, from + 999);
   if (error) { console.error(error.message); process.exit(1); }
   alq.push(...data); if (data.length < 1000) break;

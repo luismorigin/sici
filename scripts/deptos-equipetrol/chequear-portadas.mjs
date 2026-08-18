@@ -73,7 +73,7 @@ async function main() {
   const alcance = ZONAS ? `${ZONAS_HIBRIDO[ZONA_ID].nombre} (${ZONAS.length} zonas)` : 'TODAS las zonas';
   console.log(`\n📷 CHEQUEO DE PORTADAS — alcance: ${alcance}. Read-only.\n`);
 
-  let q = sb.from('propiedades_v2_shadow')
+  let q = sb.from('propiedades_v2')
     .select('id,fuente,tipo_operacion,zona,nombre_edificio,url,datos_json')
     .eq('status', 'completado').eq('es_activa', true).is('duplicado_de', null);
   if (ZONAS) q = q.in('zona', ZONAS);

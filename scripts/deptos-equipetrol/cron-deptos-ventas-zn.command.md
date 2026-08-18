@@ -164,7 +164,7 @@ pendiente`** explícito). Distinguir **✅ OK** / **⚠️ con observación** / 
 
 ## Reglas
 
-- **SHADOW, prod intacto.** El `--apply` solo muta `propiedades_v2_shadow`. A prod solo SELECT + RPC
+- **SHADOW, prod intacto.** El `--apply` solo muta `propiedades_v2`. A prod solo SELECT + RPC
   read-only. Los alias se REGISTRAN, no se escriben a `proyectos_master`.
 - **El juez manda, no el script.** El `.mjs` filtra/fetchea/matchea; el veredicto lo dan los lectores.
 - **Antes de crear un edificio nuevo: chequear por PROXIMIDAD, no solo por nombre.** El 29-jul se creó

@@ -33,7 +33,7 @@ con `READER_SPEC` (que sí conoce `oficial_viejo`/`bob`).
 ## Alcance / gate
 
 - Es **pre-cutover** y valida shadow **vs el ANUNCIO**, no vs prod ([[project_gate_cutover_deptos_no_es_comparar_prod]]).
-- Read-only: el SQL de corrección se **sugiere**, lo aplica el humano (contra `propiedades_v2_shadow`).
+- Read-only: el SQL de corrección se **sugiere**, lo aplica el humano (contra `propiedades_v2`).
 - La detección determinística de **cambio de precio** necesita `datos_json.senales_portal` (baseline
   del portal al cargar). Filas viejas cargadas antes de que existiera ese campo → sin baseline: igual
   van al juez por drift/matching, y el juez ve `anuncio_hoy` + la decisión shadow (números a la vista).
@@ -101,7 +101,7 @@ Leé el `output/audit-shadow-<op>-<ts>.json`. Dividí el array `material` en chu
 
 ### 3. Reportar + SQL sugerido (read-only)
 Con los `veredicto_audit` mergeados, armá el reporte ejecutivo:
-- **🔴 Correcciones confirmadas** (precio/TC/estado cambió en el anuncio) → `UPDATE propiedades_v2_shadow
+- **🔴 Correcciones confirmadas** (precio/TC/estado cambió en el anuncio) → `UPDATE propiedades_v2
   SET ... , fecha_actualizacion=NOW() WHERE id=X;` (+ refrescar `datos_json.contenido.descripcion` con la
   de hoy, para que no reaparezca en cada corrida — mismo patrón §4.5 de la mensual).
 - **💀 Bajas residuales** (`bajas_residual` del JSON) → las únicas que requieren acción. Confirmá el
@@ -131,7 +131,7 @@ node notificar-slack.mjs "<resumen>"
   Explícito, para distinguir "corrió y está limpio" de "no corrió".
 
 ## Reglas
-- **SHADOW, read-only.** El `.mjs` no escribe nada. El SQL de corrección va contra `propiedades_v2_shadow`
+- **SHADOW, read-only.** El `.mjs` no escribe nada. El SQL de corrección va contra `propiedades_v2`
   y lo aplica el humano. Cero escritura a prod.
 - **El juez manda, no el script.** El `.mjs` detecta (drift/precio/matching); el VEREDICTO lo dan los
   subagentes-lectores con `READER_SPEC`. El script nunca decide precio/TC/estado.

@@ -20,7 +20,7 @@ const APPLY = process.argv.includes('--apply');
 // noches seguidas por un ejemplo mal congelado en el spec; el 31-jul, con el spec
 // corregido (aviso MIXTO → aceptar), entró al feed. Precargarlo lo habría sacado
 // de nuevo por 30 días — el "descartar de más" que este fix existe para evitar.
-const { data: enShadow } = await sb.from('propiedades_v2_shadow').select('url');
+const { data: enShadow } = await sb.from('propiedades_v2').select('url');
 const URLS_ACEPTADAS = new Set((enShadow || []).map((r) => r.url).filter(Boolean));
 
 // Copia EXACTA del criterio de cargar-deptos-shadow.mjs:380-387.

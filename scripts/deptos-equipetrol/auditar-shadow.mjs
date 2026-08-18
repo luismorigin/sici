@@ -87,7 +87,7 @@ const COLS_VENTA = 'id,fuente,url,precio_usd,tipo_cambio_detectado,moneda_origin
 const COLS_ALQ = 'id,fuente,url,precio_mensual_bob,precio_mensual_usd,moneda_original,amoblado,acepta_mascotas,dormitorios,banos,nombre_edificio,id_proyecto_master,es_activa,status,primera_ausencia_at,datos_json';
 
 async function traerFilas() {
-  let q = sb.from('propiedades_v2_shadow').select(OP === 'venta' ? COLS_VENTA : COLS_ALQ).eq('tipo_operacion', OP);
+  let q = sb.from('propiedades_v2').select(OP === 'venta' ? COLS_VENTA : COLS_ALQ).eq('tipo_operacion', OP);
   if (idsArg) q = q.in('id', idsArg);
   q = q.order('id', { ascending: true });
   if (LIMIT && !idsArg) q = q.limit(LIMIT);

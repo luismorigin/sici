@@ -152,7 +152,7 @@ log('3) Diff SHADOW-AWARE alquiler (shadow filtra ya-cargadas + mide desaparecid
 // la va a levantar el discovery de su propia zona cuando ZN entre al híbrido.
 const shadowTodas = [];
 for (let from = 0; ; from += 1000) {
-  const { data, error } = await sb.from('propiedades_v2_shadow')
+  const { data, error } = await sb.from('propiedades_v2')
     .select('id, url, es_activa, zona').eq('tipo_operacion', 'alquiler').range(from, from + 999);
   if (error) { console.error('   ERROR leyendo shadow:', error.message); process.exit(1); }
   shadowTodas.push(...data);

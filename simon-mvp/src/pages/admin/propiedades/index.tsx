@@ -12,7 +12,7 @@ import { ZONAS_ADMIN_FILTER, getZonaLabel } from '@/lib/zonas'
 // editor tienen que apuntar SIEMPRE a la misma, o entrás a editar una propiedad que el listado
 // no muestra (o al revés). En el TIEMPO 2 del cutover vuelve a llamarse `propiedades_v2`: se
 // cambia en los dos lugares. Contexto: `scripts/deptos-equipetrol/INVENTARIO_CUTOVER_2026-08-10.md`.
-const TABLA_PROPIEDADES = 'propiedades_v2_shadow'
+const TABLA_PROPIEDADES = 'propiedades_v2'
 
 // Supabase RPC/query results — no codegen, typed at usage boundaries
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

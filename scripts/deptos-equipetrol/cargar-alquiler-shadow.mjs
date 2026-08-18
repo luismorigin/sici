@@ -124,7 +124,7 @@ async function traerLote() {
     }
     throw error;
   }
-  const { data: yaEn } = await sb.from('propiedades_v2_shadow').select('id').eq('tipo_operacion', 'alquiler');
+  const { data: yaEn } = await sb.from('propiedades_v2').select('id').eq('tipo_operacion', 'alquiler');
   const cargados = new Set([...(yaEn || []).map((r) => r.id), ...leerRechazados(REJ_FILE).ids]);
   const frescos = data.filter((d) => !cargados.has(d.id));
   return frescos.slice(0, N);
@@ -225,7 +225,7 @@ async function prepNuevas(discoveryFile, n) {
   // colisión que PISA props reales en el upsert (el rango 8M lo comparten venta y alquiler).
   // 🔴 PAGINADO: shadow pasó las 1.000 filas y PostgREST corta ahí sin avisar (ver
   // lib/traer-todo.mjs). Sin esto el filtro "ya está cargado" quedaba incompleto.
-  const yaEn = await traerTodo(sb.from('propiedades_v2_shadow').select('url'));
+  const yaEn = await traerTodo(sb.from('propiedades_v2').select('url'));
   const { data: yaProy } = await sb.from('proyectos_detectados').select('url').eq('macrozona', ZONA.macrozona);
   const urlsShadow = new Set([...yaEn.map((r) => r.url), ...(yaProy || []).map((r) => r.url)]);
   // + los RECHAZADOS por gate, por URL (2-ago-2026). Mismo agujero que en venta: la memoria se
@@ -481,7 +481,7 @@ async function apply(file) {
   let protegidas = 0;
   const candadosRespetados = [];
   if (filas.length) {
-    const { data: prev } = await sb.from('propiedades_v2_shadow')
+    const { data: prev } = await sb.from('propiedades_v2')
       .select('id,fecha_publicacion,campos_bloqueados').in('id', filas.map((f) => f.id));
     const prevById = new Map((prev || []).map((r) => [r.id, r]));
     for (const f of filas) {
@@ -508,7 +508,7 @@ async function apply(file) {
   }
   const fallidas = [];
   for (const f of filas) {
-    const { error } = await sb.from('propiedades_v2_shadow').upsert(f, { onConflict: 'id' });
+    const { error } = await sb.from('propiedades_v2').upsert(f, { onConflict: 'id' });
     if (error) fallidas.push({ id: f.id, motivo: (error.message.split('\n')[0] || '').slice(0, 80) });
   }
   const escritas = filas.length - fallidas.length;
@@ -522,7 +522,7 @@ async function apply(file) {
     .map((e) => ({ nueva: e.id, vieja: e._apply.reemplaza_a.id, cod: e._apply.reemplaza_a.codigo_c21 }));
   let deduplicadas = 0;
   if (reemplazos.length) {
-    const { data: previas } = await sb.from('propiedades_v2_shadow')
+    const { data: previas } = await sb.from('propiedades_v2')
       .select('id, datos_json, duplicado_de').in('id', reemplazos.map((r) => r.vieja));
     const prevById = new Map((previas || []).map((p) => [p.id, p]));
     for (const r of reemplazos) {
@@ -531,7 +531,7 @@ async function apply(file) {
       if (prev.duplicado_de != null) continue;
       const dj = prev.datos_json && typeof prev.datos_json === 'object' ? prev.datos_json : {};
       const traza = dj.trazabilidad && typeof dj.trazabilidad === 'object' ? dj.trazabilidad : {};
-      const { error } = await sb.from('propiedades_v2_shadow')
+      const { error } = await sb.from('propiedades_v2')
         .update({
           duplicado_de: r.nueva,
           datos_json: { ...dj, trazabilidad: { ...traza,
@@ -551,7 +551,7 @@ async function apply(file) {
   // Descartes (basura estructural) → upsert aparte, no cuentan como "unidades". Resiliente.
   let descartadas = 0;
   for (const d of descartes) {
-    const { error } = await sb.from('propiedades_v2_shadow').upsert(d, { onConflict: 'id' });
+    const { error } = await sb.from('propiedades_v2').upsert(d, { onConflict: 'id' });
     if (!error) descartadas++; else console.log(`⚠️  descarte ${d.id} NO escrito: ${(error.message.split('\n')[0] || '').slice(0, 70)}`);
   }
   if (rechazados.length) {
