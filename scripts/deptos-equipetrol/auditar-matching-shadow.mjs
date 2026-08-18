@@ -830,7 +830,7 @@ async function main() {
   console.log(`       sup.2 → CONFIRMAR el pm_actual | CORREGIR(otro pm) | RECHAZAR (nombre no aparece)`);
   console.log(`       sup.3 → UPDATE propiedades_v2 SET duplicado_de=<sobreviviente> WHERE id IN (<duplicados>)`);
   console.log(`       sup.4 → CONFIRMAR | CORREGIR(otro pm) | SIN_NOMBRE — el lector ya dudó; el juez decide`);
-  console.log(`     SQL contra propiedades_v2_shadow lo aplica el humano (candado IS NULL / formato-objeto).\n`);
+  console.log(`     SQL contra propiedades_v2 lo aplica el humano (candado IS NULL / formato-objeto).\n`);
 }
 
 main().catch((e) => { console.error('❌', e.message); process.exit(1); });

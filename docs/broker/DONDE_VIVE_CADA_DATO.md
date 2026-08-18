@@ -26,7 +26,7 @@ Dos minutos de leer código ajeno contra medio día de construir el camino equiv
 
 | Dato | Dónde vive | Dónde NO (y qué pasa) |
 |---|---|---|
-| **Precio** | `v_mercado_venta_shadow.precio_norm` | 🔴 `propiedades_v2_shadow.precio_norm` **no existe** — la calcula la vista. Pedirla rompe la query entera, y sin mirar `error` el resultado se lee como "no se encontró". <br>🔴 `precio_usd` es el crudo: nunca para comparar ni mostrar (regla 1 de CLAUDE.md). |
+| **Precio** | `v_mercado_venta_shadow.precio_norm` | 🔴 `propiedades_v2.precio_norm` **no existe** — la calcula la vista. Pedirla rompe la query entera, y sin mirar `error` el resultado se lee como "no se encontró". <br>🔴 `precio_usd` es el crudo: nunca para comparar ni mostrar (regla 1 de CLAUDE.md). |
 | **Fotos** | `datos_json->'contenido'->'fotos_urls'` — la misma fuente que el feed | 🔴 `datos_json->'fotos_urls'` y `datos_json_discovery->'imagenes'`: **vacíos**, 0 de 393. <br>🔴 `advisor_property_snapshot`: solo cubre 213 de 393 (54%). Yo lo usé y perdí 180 fotos. |
 | **Fecha de entrega** | `proyectos_master.fecha_entrega` — 88 avisos | 🔴 `advisor_property_snapshot.fecha_entrega`: **11 avisos**. Ocho veces menos, y el campo se llama igual. |
 | **Amenidades** | `proyectos_master.amenidades_edificio` (array de texto, 80 distintas) | 🔴 No está en la vista de mercado. <br>⚠️ Lista vacía = **no la tenemos cargada**, NO "el edificio no tiene". Pasa en el 38%. |

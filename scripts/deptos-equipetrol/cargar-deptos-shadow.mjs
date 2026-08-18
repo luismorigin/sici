@@ -639,7 +639,7 @@ async function apply(file) {
     const sinUrl = rechazados.filter((r) => !r.url).length;
     console.log(`   🧠 memoria de rechazos: ${m.total} entradas (${m.urls_con_url} con URL)${m.repetidos ? ` · ${m.repetidos} ya estaban (re-lectura que el filtro debería evitar)` : ''}${sinUrl ? ` · ⚠️ ${sinUrl} sin URL (no van a filtrar)` : ''}`);
   }
-  console.log(`✅ ${escritas} escritos en propiedades_v2_shadow.  Rechazados (gate): ${rechazados.length}${rechazados.length ? ' → ' + rechazados.map((r) => `${r.id}(${r.razon})`).join(', ') : ''}${descartes.length ? `  ·  Descartes basura (baulera/parqueo, fuera del feed): ${descartadas}/${descartes.length}` : ''}${protegidas ? `  ·  fecha_publicacion protegida (LEAST) en ${protegidas}` : ''}`);
+  console.log(`✅ ${escritas} escritos en propiedades_v2.  Rechazados (gate): ${rechazados.length}${rechazados.length ? ' → ' + rechazados.map((r) => `${r.id}(${r.razon})`).join(', ') : ''}${descartes.length ? `  ·  Descartes basura (baulera/parqueo, fuera del feed): ${descartadas}/${descartes.length}` : ''}${protegidas ? `  ·  fecha_publicacion protegida (LEAST) en ${protegidas}` : ''}`);
   if (fallidas.length) console.log(`⚠️  ${fallidas.length} NO escritas (constraint): ${fallidas.map((f) => `${f.id}${f.mp ? '[multiproyecto]' : ''}(${f.motivo})`).join(', ')}`);
   // Multiproyectos → cola proyectos_detectados (mig 273; upsert por url+fuente → la cruda no se pierde)
   if (proyectos.length) {

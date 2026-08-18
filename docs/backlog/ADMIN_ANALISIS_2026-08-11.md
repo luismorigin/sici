@@ -1,5 +1,10 @@
 # El admin contra la data nueva — análisis profundo
 
+> ⚠️ **Leé esto con el cutover YA CERRADO (18-ago-2026).** La tabla viva se llama
+> **`propiedades_v2`** y el atajo `propiedades_v2_shadow` **fue borrado**. Donde el texto diga el
+> nombre viejo describiendo el presente, leé el nuevo. Y **el grupo A de §13 ya se cumplió**: las
+> funciones de matching y proyectos volvieron a la vida con el rename, como estaba previsto.
+
 > 🔴 **LEER PRIMERO §13 (revisión del 17-ago).** El plan en 3 pasos de §12 sigue siendo válido en el
 > QUÉ, pero **agrupa mal el trabajo**: ordena por pantalla, cuando lo que decide qué hacer con cada
 > pieza es qué le pasa el día del TIEMPO 2. §13 reordena en 4 grupos y muestra que **la mayor parte
@@ -530,7 +535,7 @@ Tres cosas que aparecieron al hacerlo, y que valen más que el cambio:
 credenciales acá. Sí se verificó **la consulta exacta contra la API REST real**, que es lo que corre
 en el navegador, y devuelve `{nombre, oficina}` poblados.
 
-🔐 **Hallazgo lateral, va aparte:** `anon` no puede leer `propiedades_v2_shadow` (mig 317) pero
+🔐 **Hallazgo lateral, va aparte:** `anon` no puede leer la tabla viva — hoy `propiedades_v2`, entonces `propiedades_v2_shadow` — (mig 317) pero
 **`authenticated` conserva `arwdDxtm` — permisos completos, incluido DELETE**, y la tabla no tiene
 RLS. El admin funciona *gracias a eso*. Es la otra mitad del agujero que cerró la 317. No se toca acá
 porque revocar SELECT rompe el admin entero: necesita su propia migración.
@@ -556,7 +561,7 @@ Lo que queda es lo que de verdad hay que construir, y **nada de esto depende del
    antes de esa fecha el nivel está inflado (8,2% venta / 15,6% alquiler) y no se puede reconstruir.
    La pantalla tiene que decirlo.
    ✅ **`market_absorption_snapshots_shadow` NO se renombra en el TIEMPO 2** (el rename es solo
-   `propiedades_v2_shadow`): apuntar ahí es estable, se hace una vez.
+   la tabla viva, hoy `propiedades_v2`): apuntar ahí es estable, se hace una vez.
 2. **Los 5 campos vivos en `proyectos`** (sellar entrega, alias, pet friendly, GPS verificado). Cero
    implementado — verificado, ni una mención en el editor. Es UI nueva, el trabajo más grande de los
    cuatro, y el que saca dos tareas de SQL a mano.

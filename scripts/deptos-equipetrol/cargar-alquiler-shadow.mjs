@@ -559,7 +559,7 @@ async function apply(file) {
     const sinUrl = rechazados.filter((r) => !r.url).length;
     console.log(`   🧠 memoria de rechazos: ${m.total} entradas (${m.urls_con_url} con URL)${m.repetidos ? ` · ${m.repetidos} ya estaban (re-lectura que el filtro debería evitar)` : ''}${sinUrl ? ` · ⚠️ ${sinUrl} sin URL (no van a filtrar)` : ''}`);
   }
-  console.log(`✅ ${escritas} escritos en propiedades_v2_shadow (alquiler).  Rechazados (gate): ${rechazados.length}${rechazados.length ? ' → ' + rechazados.map((r) => `${r.id}(${r.razon})`).join(', ') : ''}${descartes.length ? `  ·  Descartes basura (baulera/parqueo): ${descartadas}/${descartes.length}` : ''}${protegidas ? `  ·  fecha protegida (LEAST) en ${protegidas}` : ''}`);
+  console.log(`✅ ${escritas} escritos en propiedades_v2 (alquiler).  Rechazados (gate): ${rechazados.length}${rechazados.length ? ' → ' + rechazados.map((r) => `${r.id}(${r.razon})`).join(', ') : ''}${descartes.length ? `  ·  Descartes basura (baulera/parqueo): ${descartadas}/${descartes.length}` : ''}${protegidas ? `  ·  fecha protegida (LEAST) en ${protegidas}` : ''}`);
   if (fallidas.length) console.log(`⚠️  ${fallidas.length} NO escritas (constraint): ${fallidas.map((f) => `${f.id}(${f.motivo})`).join(', ')}`);
   console.log('');
   for (const r of reporte) console.log(`   ${r.id}  ${r.crudo} ${r.moneda} [${r.tc}]  ${r.dorm}d  edif="${r.edif || '—'}" → pm ${r.pm ?? '—'} [${r.match}]${r.motivo ? '  ·  ' + r.motivo : ''}`);
