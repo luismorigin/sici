@@ -1,6 +1,6 @@
 [
   {
-    "feed": "equipetrol",
+    "feed": "eq-venta",
     "ruta": "/ventas",
     "propias": 358,
     "ajenas": 0,
@@ -14,11 +14,39 @@
     "errores_consola": 0
   },
   {
-    "feed": "zona-norte",
+    "feed": "zn-venta",
     "ruta": "/zona-norte/ventas",
     "propias": 305,
     "ajenas": 0,
-    "precios": 610,
+    "precios": 615,
+    "piezas": {
+      "layout_desktop": 1,
+      "cards_lista": 305,
+      "pills_filtro": 1,
+      "boton_area_mapa": 0
+    },
+    "errores_consola": 0
+  },
+  {
+    "feed": "eq-alq",
+    "ruta": "/alquileres",
+    "propias": 216,
+    "ajenas": 0,
+    "precios": 194,
+    "piezas": {
+      "layout_desktop": 1,
+      "cards_lista": 181,
+      "pills_filtro": 1,
+      "boton_area_mapa": 0
+    },
+    "errores_consola": 0
+  },
+  {
+    "feed": "zn-alq",
+    "ruta": "/zona-norte/alquileres",
+    "propias": 139,
+    "ajenas": 0,
+    "precios": 110,
     "piezas": {
       "layout_desktop": 0,
       "cards_lista": 0,

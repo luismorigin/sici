@@ -31,22 +31,31 @@ const guardar  = process.argv.includes('--guardar')
 const comparar = process.argv.includes('--comparar')
 
 // Las macrozonas y cómo se reconocen sus zonas en pantalla.
-const FEEDS = [
-  { id: 'equipetrol', ruta: '/ventas',
-    propias: /Eq\. \w+|Sirari|V\. Brigida/g,
-    ajenas:  /ZN \d/g },
-  { id: 'zona-norte', ruta: '/zona-norte/ventas',
-    propias: /ZN \d/g,
-    ajenas:  /Eq\. \w+|Sirari|V\. Brigida/g },
-]
+const EQ = /Eq\. \w+|Sirari|V\. Brigida/g
+const ZN = /ZN \d/g
 
-// Piezas del rediseño. Selectores tomados de VERIFICAR_FEEDS_DESKTOP.md.
-const PIEZAS = {
+// Selectores del rediseño. VENTAS y ALQUILERES usan clases distintas para las mismas
+// piezas (deuda conocida del proyecto: son gemelos con nomenclatura propia).
+const PIEZAS_VENTA = {
   layout_desktop:  '.vd-cols',
   cards_lista:     '.vlc',
   pills_filtro:    '.vfp',
   boton_area_mapa: '.vd-map-search-btn',
 }
+const PIEZAS_ALQ = {
+  layout_desktop:  '.ad-cols',
+  cards_lista:     '.alc',
+  pills_filtro:    '.afp',
+  boton_area_mapa: '.ad-map-search-btn',
+}
+
+const FEEDS = [
+  { id: 'eq-venta',  ruta: '/ventas',                  propias: EQ, ajenas: ZN, piezas: PIEZAS_VENTA },
+  { id: 'zn-venta',  ruta: '/zona-norte/ventas',       propias: ZN, ajenas: EQ, piezas: PIEZAS_VENTA },
+  { id: 'eq-alq',    ruta: '/alquileres',              propias: EQ, ajenas: ZN, piezas: PIEZAS_ALQ  },
+  { id: 'zn-alq',    ruta: '/zona-norte/alquileres',   propias: ZN, ajenas: EQ, piezas: PIEZAS_ALQ  },
+]
+
 
 async function medir(browser, feed) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
@@ -64,11 +73,11 @@ async function medir(browser, feed) {
     const piezas = {}
     for (const [k, s] of Object.entries(sels)) piezas[k] = document.querySelectorAll(s).length
     return { texto: t, piezas }
-  }, PIEZAS)
+  }, feed.piezas)
 
   const propias = (r.texto.match(feed.propias) || []).length
   const ajenas  = (r.texto.match(feed.ajenas)  || []).length
-  const precios = (r.texto.match(/\$us [\d,]+/g) || []).length
+  const precios = (r.texto.match(/\$us [\d,]+|Bs [\d.,]+/g) || []).length
 
   await page.close()
   return { feed: feed.id, ruta: feed.ruta, propias, ajenas, precios, piezas: r.piezas,
@@ -111,12 +120,12 @@ if (guardar) {
     const b = base.find(x => x.feed === r.feed)
     if (!b) continue
     // Equipetrol NO se puede mover. ZN puede mejorar (más piezas), nunca perder propiedades.
-    if (r.feed === 'equipetrol' && (r.propias !== b.propias || JSON.stringify(r.piezas) !== JSON.stringify(b.piezas))) {
+    if (r.feed.startsWith('eq-') && (r.propias !== b.propias || JSON.stringify(r.piezas) !== JSON.stringify(b.piezas))) {
       console.log(`🔴 ${r.ruta} CAMBIÓ. Antes: ${b.propias} props, ${JSON.stringify(b.piezas)}`)
       console.log(`                     Ahora: ${r.propias} props, ${JSON.stringify(r.piezas)}\n`)
       fallas++
     }
-    if (r.feed === 'zona-norte' && r.propias < b.propias) {
+    if (r.feed.startsWith('zn-') && r.propias < b.propias) {
       console.log(`🔴 ${r.ruta} PERDIÓ propiedades: ${b.propias} → ${r.propias}\n`); fallas++
     }
   }
