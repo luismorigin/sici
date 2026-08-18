@@ -26,7 +26,6 @@ import type { UnidadVenta, FiltrosVentaSimple } from '@/lib/supabase'
 import { ZONAS_ZONA_NORTE, displayZona } from '@/lib/zonas'
 import type { ZonaCanonica } from '@/lib/zonas'
 import { trackEvent } from '@/lib/analytics'
-import { fetchMercadoData, type MercadoData } from '@/lib/mercado-data'
 import type { Broker } from '@/lib/simon-brokers'
 import ACMInline from '@/components/broker/ACMInline'
 import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerShortlists'
@@ -57,14 +56,8 @@ import type { MapViewBounds } from '@/components/venta/VentaMap'
 // WhatsApp oficial de Simon (negocio) — NO el personal del fundador.
 const SIMON_WHATSAPP = '59177066308'
 
-// Ejemplos reales para el placeholder typewriter del buscador natural (ventas).
-const SEARCH_EXAMPLES_VENTA = [
-  '1 dorm en Sirari hasta 150 mil',
-  'preventa en Eq. Norte',
-  '2 dormitorios con piscina',
-  'monoambiente hasta 80 mil',
-  'depto en Equipetrol con parqueo',
-]
+// Los ejemplos del buscador viven en `lib/macrozonas.ts` (`ejemplosPlaceholder`):
+// nombran zonas reales de CADA macrozona.
 
 // Nota de TC en el filtro de presupuesto: muestra el TC paralelo DEL DÍA
 // (config_global, vía /api/tc-actual) en vez del 6.96 oficial muerto hardcodeado.
@@ -2886,9 +2879,11 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
   // Entrada al feed. Alquileres tenía `page_enter_alquiler` desde siempre y
   // ventas no tenía nada equivalente, así que el primer paso del embudo existía
   // solo para una de las dos operaciones y no se podían comparar.
+  // La macrozona sale del contrato, NO fija: con 'equipetrol' hardcodeado el feed de
+  // Zona Norte reportaba sus visitas como Equipetrol y GA4 mostraba un solo feed.
   useEffect(() => {
-    trackEvent('feed_view', { operacion: 'venta', macrozona: 'equipetrol' })
-  }, [])
+    trackEvent('feed_view', { operacion: 'venta', macrozona: macrozona.id })
+  }, [macrozona.id])
 
   // Deep-link: parse ?edificio= from URL → pre-apply building filter
   useEffect(() => {

@@ -97,3 +97,37 @@ enlaces del nav. **Acá va como paso explícito.**
 ## Cómo se sabe que salió bien
 Agregar el feed de alquiler de Urubó = declararlo en `lib/macrozonas.ts` + una página delgada.
 Y `/alquileres` sin moverse ni una propiedad.
+
+---
+
+## ✅ EJECUTADO — 18-ago-2026
+
+**Fase 1 (el movimiento) y Fase 2 (el barrido) se hicieron juntas**, porque el barrido dejó de ser
+opcional: el eval marcó contaminación y la causa no fue una propiedad, fue **texto de la UI**.
+
+### Cómo quedó
+| | antes | después |
+|---|---|---|
+| `pages/alquileres.tsx` | 5.356 líneas | **254** (Head + `getStaticProps`) |
+| `pages/zona-norte/alquileres.tsx` | 3.893 líneas | **254** (Head + `getStaticProps`) |
+| `components/feed/FeedAlquileres.tsx` | — | **5.181**, compartido |
+
+Los 4 feeds pasan `scripts/eval-feeds-zonas.mjs --comparar`: **Equipetrol sin moverse** (358/351 y
+216/181, idénticos a la línea de base) y **`/zona-norte/alquileres` con el rediseño completo**
+(`layout_desktop=1 · cards=107 · pills=1`, antes **0 piezas**) y 0 propiedades de Equipetrol.
+
+### 🔑 Lo que enseñó este tramo
+1. **El eval encontró contaminación que NO era data.** Eran dos chips de ejemplo del buscador —
+   "Sirari" y "2 dorm en Eq. Centro"— hardcodeados en el feed. Invitaban al usuario de Zona Norte a
+   buscar zonas que ahí no existen. **Una zona se filtra por su `zonasDB`, pero se NOMBRA en una
+   docena de textos**, y esos textos no fallan: mienten en silencio.
+2. **Barrer por "Equipetrol" no alcanza** — hay que barrer por los NOMBRES de sus zonas (`Sirari`,
+   `Eq. `, `Brigida`). Es la regla 9 de CLAUDE.md aplicada al frontend: *¿qué clase de objeto no
+   puede ver mi instrumento?* Un `grep "Equipetrol"` no ve "Sirari".
+3. **El barrido de ventas también estaba incompleto** y lo destapó este: `trackEvent('feed_view')`
+   mandaba `macrozona: 'equipetrol'` **fijo** → las visitas al feed de ZN se reportaban a GA4 como
+   Equipetrol. Corregido a `macrozona.id`. No lo habría encontrado el eval: no se ve en pantalla.
+4. **Los ejemplos del buscador de alquiler van aparte de los de venta** (`ejemplosPlaceholderAlquiler`):
+   reusar los de venta ponía "hasta 150 mil" en un feed donde los precios son de 3.000 Bs/mes.
+5. `/api/alquileres` tiene **el mismo default a Equipetrol** que `/api/ventas` (línea 94). El
+   aislamiento se fuerza en `fetchFromAPI`, no en los llamadores — igual que en ventas.

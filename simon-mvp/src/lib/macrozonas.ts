@@ -17,8 +17,34 @@
 // QUÉ VA ACÁ y qué no: acá va lo PROPIO de cada zona —qué muestra y cómo se llama—.
 // Cómo se ve y cómo funciona es compartido (el componente del feed).
 
-import { ZONAS_EQUIPETROL_DB, getMicrozonasZN, ZONAS_CANONICAS, ZONAS_ZONA_NORTE } from './zonas'
+import { ZONAS_EQUIPETROL_DB, getMicrozonasZN, ZONAS_CANONICAS, ZONAS_ZONA_NORTE, ZONAS_ALQUILER_UI } from './zonas'
 import type { ZonaCanonica } from './zonas'
+
+/** Una zona tal como la ofrece el FILTRO del feed de alquiler. */
+export interface ZonaFiltroAlquiler {
+  /** Lo que viaja en `zonas_permitidas`. 🔴 Equipetrol manda SLUGS y Zona Norte manda
+   *  VALORES DE BD — la RPC acepta las dos formas y cada feed conserva exactamente lo
+   *  que ya enviaba. Unificarlo es una limpieza aparte, no parte de esta mudanza. */
+  id: string
+  label: string
+  /** Dónde se ofrece: `principal` = chips y pills · `ampliada` = solo en el panel de
+   *  filtros completo (Eq. 3er Anillo) · `otras` = nunca se ofrece (`sin_zona`).
+   *  Antes esto vivía como `z.id !== 'equipetrol_3er_anillo'` dentro del feed: nombres
+   *  de Equipetrol incrustados en un componente que ahora sirve a todas las zonas. */
+  rol: 'principal' | 'ampliada' | 'otras'
+}
+
+/** Etiqueta legible de una microzona de ZN para los chips del feed.
+ *  El `labelCorto` de `zonas.ts` está cifrado ('ZN 2-3 LS/Bz') y sirve para tablas;
+ *  en el feed, que es mobile-first y sin hover, se lee '2º-3º · La Salle/Banzer'. */
+const RING_ORD: Record<string, string> = { '2do': '2º', '3er': '3º', '4to': '4º', '6to': '6º', '8vo': '8º' }
+function chipLabelZN(full: string): string {
+  const idx = full.indexOf(' anillo ')
+  if (idx === -1) return full
+  const ring = full.slice(0, idx).split('-').map(r => RING_ORD[r] || r).join('-')
+  const rest = full.slice(idx + ' anillo '.length)
+  return `${ring} · ${rest}`
+}
 
 export interface Macrozona {
   /** id estable, para logs y evals */
@@ -49,6 +75,17 @@ export interface Macrozona {
    *  Igual que los chips: si nombran zonas de otra macrozona, invitan a buscar
    *  algo que en este feed no existe. */
   ejemplosPlaceholder: string[]
+  /** Las zonas del filtro del feed de ALQUILER. Va aparte de `zonasCanonicas` porque
+   *  alquiler filtra por otros ids y suma zonas que venta no ofrece. */
+  zonasAlquilerUI: ZonaFiltroAlquiler[]
+  /** Chips de ejemplo bajo el buscador del feed de ALQUILER. Nombran zonas REALES de
+   *  esta macrozona: en ZN decían "Sirari" y "2 dorm en Eq. Centro" — invitaciones a
+   *  buscar algo que en ese feed no existe (y lo que marcó el eval como contaminación). */
+  ejemplosBusquedaAlquiler: string[]
+  /** Ejemplos del placeholder del buscador en el feed de ALQUILER. Van aparte de los de
+   *  venta porque el alquiler se piensa en Bs y por mes: reusar los de venta pondría
+   *  "hasta 150 mil" en un feed donde los precios son de 3.000 Bs. */
+  ejemplosPlaceholderAlquiler: string[]
 }
 
 export const EQUIPETROL: Macrozona = {
@@ -62,6 +99,22 @@ export const EQUIPETROL: Macrozona = {
   zonasCanonicas: ZONAS_CANONICAS,
   ejemplosBusqueda: ['2 dorm en Sirari', 'Hasta 120 mil', 'Preventa en Eq. Norte', 'Monoambiente con parqueo', 'Entrega inmediata'],
   ejemplosPlaceholder: ['1 dorm en Sirari hasta 150 mil', 'preventa en Eq. Norte', '2 dormitorios con piscina', 'monoambiente hasta 80 mil', 'depto en Equipetrol con parqueo'],
+  // Derivado de `ZONAS_ALQUILER_UI` para que siga siendo la MISMA lista que ya servía
+  // el feed (mismos ids, mismo orden): esta mudanza no debe mover ni un filtro.
+  ejemplosBusquedaAlquiler: ['1 dorm amoblado', 'Hasta Bs 4.500', 'Sirari', 'Con parqueo', '2 dorm en Eq. Centro'],
+  ejemplosPlaceholderAlquiler: [
+    '2 dorm amoblado hasta 4.200 bs',
+    '1 dorm en Sirari',
+    'pet friendly con parqueo',
+    'monoambiente hasta 3 mil bs',
+    'depto sin amoblar en Eq. Norte',
+  ],
+  zonasAlquilerUI: ZONAS_ALQUILER_UI.map(z => ({
+    ...z,
+    rol: z.id === 'sin_zona' ? 'otras' as const
+       : z.id === 'equipetrol_3er_anillo' ? 'ampliada' as const
+       : 'principal' as const,
+  })),
 }
 
 export const ZONA_NORTE: Macrozona = {
@@ -77,6 +130,17 @@ export const ZONA_NORTE: Macrozona = {
   zonasCanonicas: ZONAS_ZONA_NORTE,
   ejemplosBusqueda: ['2 dorm en Banzer', 'Hasta 120 mil', 'Preventa en Alemana', 'Monoambiente con parqueo', 'Entrega inmediata'],
   ejemplosPlaceholder: ['1 dorm en Banzer hasta 150 mil', 'preventa en Alemana', '2 dormitorios con piscina', 'monoambiente hasta 80 mil', 'depto en Zona Norte con parqueo'],
+  ejemplosBusquedaAlquiler: ['1 dorm amoblado', 'Hasta Bs 4.500', 'Banzer', 'Con parqueo', '2 dorm en Alemana'],
+  ejemplosPlaceholderAlquiler: [
+    '2 dorm amoblado hasta 4.200 bs',
+    '1 dorm en Banzer',
+    'pet friendly con parqueo',
+    'monoambiente hasta 3 mil bs',
+    'depto sin amoblar en Alemana',
+  ],
+  // ZN filtra por VALOR DE BD (es lo que hacía su feed antes de la mudanza) y usa el
+  // label legible, no el cifrado. Sin 'Otras' ni 3er anillo: son de Equipetrol.
+  zonasAlquilerUI: ZONAS_ZONA_NORTE.map(z => ({ id: z.db, label: chipLabelZN(z.label), rol: 'principal' as const })),
 }
 
 /** Todas las macrozonas declaradas. Agregar una nueva es sumarla acá. */
