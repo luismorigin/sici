@@ -156,10 +156,23 @@ async function fetchFromAPI(
   // pasó a devolver HTTP 500 → "No se pudo cargar". Ahora igual que /ventas: base viva por
   // defecto, `?shadow=0` como escape.
   const shadow = typeof window === 'undefined' || new URLSearchParams(window.location.search).get('shadow') !== '0'
+  // 🔴 AISLAMIENTO DE MACROZONA — se fuerza ACÁ, no en cada llamador (18-ago-2026).
+  // `/api/ventas` tiene Equipetrol como DEFAULT: una llamada sin `zonas_permitidas`
+  // devuelve Equipetrol, no un error. Hasta hoy eso estaba tapado porque los dos únicos
+  // caminos que llegaban al API sí las ponían (`buildFilters()` y `getStaticProps`).
+  // Al agregar un tercero —el fetch diferido de mount— el feed de ZN sirvió propiedades
+  // de Eq. Centro y V. Brigida en producción. Se revirtió y se arregló de raíz:
+  // 🔑 el aislamiento no puede depender de que cada llamador se acuerde. Es el mismo
+  // criterio que la perilla `--zona` de los scripts, donde un default cómodo para escribir
+  // es peligroso para el resto.
+  const filtrosZN: FiltrosVentaSimple = {
+    ...filtros,
+    zonas_permitidas: filtros.zonas_permitidas?.length ? filtros.zonas_permitidas : getMicrozonasZN(),
+  }
   const res = await fetch('/api/ventas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filtros, spotlightId, shadow }),
+    body: JSON.stringify({ filtros: filtrosZN, spotlightId, shadow }),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
@@ -2243,7 +2256,20 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   }, [filters])
 
   // Only fetch on mount if no SSG data (fallback) or if spotlight needs fetching
-  useEffect(() => { if (publicShareMode) return; if (initialProperties.length === 0 || spotlightId) fetchProperties() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Fetch on mount — 18-ago-2026. Antes solo pedía el listado completo si el SSG no había
+  // traído nada, y como trae 24 ("solo el primer viewport", desde el 11-ago) el resto NO
+  // llegaba nunca: el feed mostraba 24 de ~305. El comentario de `getStaticProps` ya
+  // prometía lo contrario — la promesa estaba escrita y el código no la cumplía.
+  // Mismo mecanismo que `/ventas`; las zonas ZN las garantiza `fetchFromAPI`.
+  useEffect(() => {
+    if (publicShareMode) return
+    const wantsProd = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('shadow') === '0'
+    if (initialProperties.length === 0 || spotlightId || wantsProd) { fetchProperties(); return }
+    const idle = typeof window.requestIdleCallback === 'function'
+      ? (cb: () => void) => window.requestIdleCallback(cb, { timeout: 3000 })
+      : (cb: () => void) => window.setTimeout(cb, 1500)
+    idle(() => { if (fetchGenRef.current === 0) fetchProperties() })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function applyFilters(newFilters: FiltrosVentaSimple) {
     setFilters(newFilters); setIsFiltered(true)
