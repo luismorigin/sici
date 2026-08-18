@@ -102,7 +102,7 @@ Workflows n8n usan env vars para secrets (NO hardcodear): `SLACK_WEBHOOK_SICI=..
 
 ## Zonas Canonicas (6 zonas)
 
-Fuente de verdad: tabla `zonas_geograficas` (7 polígonos PostGIS, 6 nombres únicos). Trigger `trg_asignar_zona_venta` (mig 173) auto-asigna `zona`/`microzona` desde GPS. `get_zona_by_gps(lat,lon)` (mig 185) para ad-hoc. Desde mig 184 los nombres en BD = display definitivos.
+Fuente de verdad: tabla `zonas_geograficas` (7 polígonos PostGIS, 6 nombres únicos). 🔴 **El trigger `trg_asignar_zona_venta` (mig 173) NO actúa sobre la tabla viva.** Vive en `propiedades_v2_archivo` junto con los otros 4 — `propiedades_v2` tiene **cero triggers** (verificado 18-ago-2026). `propiedades_v2_shadow` se creó como tabla nueva y **nunca los heredó**, así que esto rige desde que shadow es la base viva, no desde el rename. 👉 **En el híbrido la zona la escribe el CARGADOR al capturar**: corregir un GPS a mano **no recalcula la zona**, hay que actualizarla en el mismo UPDATE. Es la trampa que hizo perder un paso revisando las routines del 18-ago. `get_zona_by_gps(lat,lon)` (mig 185) para ad-hoc y para calcular la zona nueva a mano. Desde mig 184 los nombres en BD = display definitivos.
 
 | Valor en BD (`p.zona`, `pm.zona`) | Display (`zonas.ts`) |
 |---|---|
