@@ -20,7 +20,10 @@ import { chromium } from 'playwright'
 import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-const BASE = 'http://localhost:3000'
+// Por defecto mide el dev local. `EVAL_BASE=https://simonbo.com` lo apunta a
+// produccion — util para confirmar que un deploy realmente salio, no solo que
+// las paginas responden 200 (un 200 puede ser la version vieja cacheada).
+const BASE = process.env.EVAL_BASE || 'http://localhost:3000'
 // fileURLToPath y no .pathname: la ruta del repo tiene un espacio ("Censo inmobiliario")
 // y .pathname lo devuelve como %20, que fs no resuelve.
 const LINEA_BASE = fileURLToPath(new URL('./eval-feeds-zonas.base.json', import.meta.url))
@@ -50,7 +53,9 @@ async function medir(browser, feed) {
   const errores = []
   page.on('console', m => { if (m.type() === 'error') errores.push(m.text().slice(0, 120)) })
 
-  await page.goto(BASE + feed.ruta, { waitUntil: 'networkidle', timeout: 60000 })
+  // 'domcontentloaded' y NO 'networkidle': contra produccion la red nunca queda
+  // quieta (analytics, pixel de Meta, Clarity) y networkidle da ERR_TIMED_OUT.
+  await page.goto(BASE + feed.ruta, { waitUntil: 'domcontentloaded', timeout: 90000 })
   // El listado completo llega por fetch diferido a idle: hay que esperarlo.
   await page.waitForTimeout(6000)
 
