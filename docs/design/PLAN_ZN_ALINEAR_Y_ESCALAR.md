@@ -19,83 +19,90 @@ propiedades de la otra.
 - **Lanzar ZN** (sacar `noindex` + sitemap). Decisión aparte, cuando el founder quiera.
 - **Migrar Equipetrol a los componentes nuevos.** Ver "el camino elegido".
 
-## 🔴 El camino elegido: NO se toca `ventas.tsx`
+## 🔴 El camino elegido: UNA página parametrizada (revisado el 18-ago)
 
-Había dos formas de compartir el diseño:
+**La primera versión de este plan decía "no tocar `ventas.tsx`, copiar las piezas a componentes".
+Se descartó al medir bien.** El founder señaló dos cosas que el inventario inicial no vio: el
+**resumen de mercado** del panel desktop, y que **todo el rediseño mobile** también falta.
 
-| | Toca Equipetrol | Riesgo sobre lo que factura |
+Medido después de eso — ZN no tiene **casi nada** del rediseño:
+
+| Pieza | `/ventas` | ZN |
+|---|---:|---:|
+| Resumen de mercado (desktop) | sí | **no** |
+| Buscador natural | 3 | **0** |
+| Header sticky mobile | 47 | **0** |
+| Menú hamburguesa | 30 | **0** |
+| Carrusel del mapa · barra inferior · chip de área · botón "ver los N" | sí | **0** |
+| Perfil mobile · histograma · buscador de edificios | sí | **0** |
+
+👉 **A ZN no le falta el rediseño desktop: le falta el rediseño entero, mobile incluido** — las
+~2.400 líneas de diferencia entre los dos archivos, casi completas.
+
+**Y eso da vuelta la decisión.** Con 3 piezas faltantes, copiarlas era razonable. Con todo faltando,
+"copiar sin tocar Equipetrol" significa **mantener dos feeds completos** — exactamente lo que
+queríamos evitar, y peor cuando venga Urubó.
+
+### Lo que se hace en su lugar
+El cuerpo de `ventas.tsx` pasa a **un componente que recibe la macrozona**, y quedan **dos páginas
+delgadas** que le pasan la suya. **No se reescribe: se mueve.** Misma lógica, mismo diseño, mismo
+tracking, en otro archivo.
+
+| | Duplicar | **Página parametrizada** |
 |---|---|---|
-| Extraer y que ambos usen lo mismo | **Sí** | **Real, en cada paso** |
-| **Copiar a componentes que solo usa ZN** ← **elegido** | **No** | **Cero** |
+| Agregar Urubó | copiar 6.000 líneas | **una página de ~20** |
+| Mejorar el feed | hacerlo en cada zona | **una vez, llega a todas** |
+| Riesgo sobre Equipetrol | cero | **una ventana, verificable y revertible** |
 
-Las piezas nuevas se crean **a partir del código de `ventas.tsx`**, pero solo las usan ZN y las
-macrozonas futuras. **`ventas.tsx` no se modifica ni una línea.**
+### El riesgo, dicho con precisión
+**No es permanente: es una ventana.** Se despliega, se verifica, y si algo falla se revierte con un
+comando — como pasó hoy con ZN: se rompió, se vio, se revirtió en quince minutos. La diferencia es
+que `/ventas` factura, así que esa ventana cuesta más. **Por eso el verificador corre ANTES del
+deploy, no después.**
 
-**El costo, declarado:** por un tiempo hay dos implementaciones del mismo diseño — la de Equipetrol
-(inline, como hoy) y la compartida. Es deuda reversible y sin urgencia.
-**Lo que se gana:** cuando se migre Equipetrol, las piezas ya van a llevar semanas probadas en ZN.
-Es mucho mejor momento que ahora, con campaña corriendo.
+⚠️ **Y lo que sí cambia para siempre:** cuando un cambio llega a todas las zonas, **un error también**.
+Hoy romper ZN dejaba Equipetrol intacto; después, no. Consecuencia obligatoria: **el verificador mide
+TODAS las zonas en cada cambio**, no solo la que se toca.
 
-## El estado de partida (medido el 18-ago)
+### Lo que NO se comparte
+Parametrizar no es uniformar. Cada macrozona conserva **su título y su SEO**, **su resumen de mercado
+calculado sobre su propio inventario** (nunca mezclado), **sus microzonas** y **su ruta**. Se comparte
+*cómo se ve y cómo funciona*; es propio *qué muestra y cómo se llama*.
 
-- `/ventas` **6.037** líneas · `/zona-norte/ventas` **3.605** · ZN no tiene **ninguna** de las piezas
-  del rediseño (`splitDesktop`, pills, list card, side sheet, nav, rail: 0 menciones).
-- Las piezas están **inline en `ventas.tsx`**, no son componentes. `components/venta/` solo tiene
-  `VentaMap` y `CompareSheet`.
-- Tamaños: `BottomSheet` **905** · `FilterPillsVentas` **197** · `VentaCard` **230** ·
-  `VentaListCard` **105** · `MapRailCard` **31**. Total ~**1.470**.
-- `FeedDesktopNav` **ya es compartido** — ZN puede usarlo sin extraer nada.
-- Los dos usan **el mismo sistema de estilos** (styled-jsx), así que la copia es mecánica.
+## Las fases
 
-## Fase 0 — El verificador (antes de tocar nada)
+### Fase 0 — El verificador (antes de tocar nada)
+`simon-mvp/scripts/eval-feeds-zonas.mjs`, con **Playwright** y no el navegador interno:
+`VERIFICAR_FEEDS_DESKTOP.md` documenta que el preview MCP **no hidrata el layout desktop**.
+Selectores del propio doc: `.vd-cols` (desktop montado) · `.vlc` (cards de lista) · `.vfp` (pills) ·
+`.bs-side` (panel lateral).
 
-Un script Playwright (`simon-mvp/scripts/eval-feeds-zonas.mjs`) que mide **los dos feeds** y deja la
-foto de hoy. Playwright y no el navegador interno: `docs/design/VERIFICAR_FEEDS_DESKTOP.md` explica
-que el preview MCP **no hidrata el layout desktop** — se queda en mobile. Ignorar eso costó tiempo el
-18-ago.
+**Mide, por feed:** cuántas propiedades · **de qué macrozona son** · qué piezas del rediseño están
+presentes · errores de consola. Deja la **línea de base** de hoy.
+🔑 El chequeo "de qué macrozona son" es el que **habría atajado el incidente del 18-ago** antes de
+llegar a producción.
 
-**Qué mide, por feed:**
-1. cuántas propiedades muestra
-2. **de qué macrozona son** (0 de la otra) ← el eval que habría atajado el incidente del 18-ago
-3. si el layout desktop se arma (columnas, pills, panel)
-4. errores en consola
+**Eval:** corre y reporta el estado actual sin fallar.
 
-**Eval de la fase:** el script corre y reporta el estado actual sin fallar.
+### Fase 1 — La base de macrozonas
+`lib/macrozonas.ts`: cada macrozona declarada con sus microzonas, título, rutas y etiquetas.
+🔑 **Sin valor por defecto, y Equipetrol declarado como una más.** Hoy Equipetrol es "lo normal" —está
+en la raíz de la URL y es el default del API— y **esa asimetría causó el incidente del 18-ago**. Si
+falta la macrozona, tiene que **fallar ruidosamente**.
 
-## Fases 1-N — Las piezas, de a una
+**Eval:** el verificador sigue dando idéntico (todavía no se usa en ninguna página).
 
-Cada fase: **copiar la pieza a un componente parametrizado por macrozona → usarla en ZN → correr el
-verificador**.
+### Fase 2 — El movimiento
+El cuerpo de `ventas.tsx` → componente parametrizado. `/ventas` y `/zona-norte/ventas` quedan como
+páginas delgadas que pasan su config.
 
-| Fase | Pieza | Por qué en ese orden |
-|---|---|---|
-| **1** | `VentaListCard` (105) + `FeedDesktopNav` (ya existe) | la más visible y la más chica; valida el enfoque con poco expuesto |
-| **2** | `FilterPillsVentas` (197) | los filtros; toca estado pero no layout |
-| **3** | El layout partido + toggle lista/mixto/mapa | reordena la página; es el cambio estructural |
-| **4** | `BottomSheet` en modo lateral (905) | el más grande, y el que más depende de lo anterior |
-| **5** | `MapRailCard` (31) + revisar mobile | cierre |
+**Eval — y es el criterio de aborto:**
+- `/ventas` **idéntico** a la línea de base: 351 propiedades, 0 de ZN, todas las piezas presentes
+- `/zona-norte/ventas`: **305**, **0 de Equipetrol**, y **ahora con las piezas del rediseño**
+- `tsc` 0 · `build` exit 0 · sin errores nuevos de consola
+- Se verifica **en local, antes de desplegar**
 
-**Eval de cada fase (idéntico, y es el criterio de aborto):**
-- ZN sigue mostrando **305** propiedades, **todas de Zona Norte, 0 de Equipetrol**
-- `/ventas` **idéntico**: 351, 0 de ZN — y como no se toca su archivo, cualquier cambio ahí es un
-  fallo grave
-- `tsc` 0 errores · `build` exit 0 · sin errores nuevos en consola
-- La pieza se ve en ZN como en Equipetrol
-
-🔴 **Si algo de eso falla, se revierte esa fase sola.** Cada fase es un commit.
-
-## La base para escalar
-
-`lib/macrozonas.ts` — un solo lugar que declara cada macrozona: sus zonas de BD, título, rutas,
-etiquetas.
-
-🔑 **Sin valor por defecto, y Equipetrol declarado como una macrozona más.** Hoy Equipetrol es "lo
-normal" —está en la raíz de la URL y es el default del API— y **esa asimetría fue la causa del
-incidente del 18-ago**: una llamada sin zonas devolvió Equipetrol en el feed de ZN, sin fallar.
-Si falta la macrozona, tiene que **fallar ruidosamente**.
-
-**Cómo se ve terminado:** agregar Urubó = declarar sus microzonas + una página delgada que pasa esa
-config a los componentes.
+🔴 Si `/ventas` cambia en algo, se revierte. Es un commit.
 
 ## Visión, para no cerrarse puertas
 Hoy la macrozona es **la puerta de entrada**. Con 4-5 zonas eso es fricción: el comprador piensa

@@ -1,0 +1,30 @@
+[
+  {
+    "feed": "equipetrol",
+    "ruta": "/ventas",
+    "propias": 358,
+    "ajenas": 0,
+    "precios": 708,
+    "piezas": {
+      "layout_desktop": 1,
+      "cards_lista": 351,
+      "pills_filtro": 1,
+      "boton_area_mapa": 0
+    },
+    "errores_consola": 0
+  },
+  {
+    "feed": "zona-norte",
+    "ruta": "/zona-norte/ventas",
+    "propias": 305,
+    "ajenas": 0,
+    "precios": 610,
+    "piezas": {
+      "layout_desktop": 0,
+      "cards_lista": 0,
+      "pills_filtro": 0,
+      "boton_area_mapa": 0
+    },
+    "errores_consola": 0
+  }
+]
