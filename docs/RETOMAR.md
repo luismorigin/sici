@@ -140,7 +140,14 @@ Leé primero:
 - Correr las 4 capturas a mano y comparar contra la línea de base.
 - Hacerlo A LA MAÑANA: deja ~15 h de colchón antes de que corra el cron.
 
-── LA LIMPIEZA POSTERIOR (para poder sacar el atajo) ────────────────────────
+── ✅ LA LIMPIEZA POSTERIOR — HECHA EL 18-ago-2026 ────────────────────
+Los 3 frentes cerrados y el atajo BORRADO: `propiedades_v2_shadow` ya no existe.
+6 funciones (mig 327) · 53 puntos de código · 6 skills (+ copiadas a .claude/commands).
+Verificado tras el DROP: feed 656/288, bot 386/181, vistas 761/288 — sin moverse —,
+los 5 feeds en 200 y el ACM recalculado sin caché. EL CUTOVER ESTÁ CERRADO.
+Lo de abajo queda como registro de qué se tocó.
+
+── lo que se hizo ───────────────────────────────────────────────────
 Nada de esto bloquea el día del rename: con el atajo puesto todo sigue andando.
 Pero el atajo NO se saca hasta que las tres cosas estén hechas, o algo se cae.
 Son TRES frentes, y la lista está cerrada:

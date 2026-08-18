@@ -53,7 +53,7 @@ Workflows n8n usan env vars para secrets (NO hardcodear): `SLACK_WEBHOOK_SICI=..
 2. **Discovery > Enrichment** — para campos físicos (area, dorms, GPS)
 3. 🟢 **La tabla viva se llama `propiedades_v2` — el TIEMPO 2 se ejecutó el 17-ago-2026.** Se cumplió la predicción firmada: no se movió un solo número (verificado en base, lectura en producción y **escritura real con el cargador**; confirmado end-to-end porque el bot respondió por WhatsApp). Tres nombres, tres cosas distintas:
    - **`propiedades_v2`** = 🟢 **LA TABLA VIVA.** El nombre bueno, por fin.
-   - **`propiedades_v2_shadow`** = ⚠️ **una VISTA (el "atajo"), no una tabla.** Existe a propósito para que las 6 funciones, los 53 puntos de código y las 6 skills que todavía nombran el nombre viejo sigan andando sin tocarse. **Escribir a través de ella FUNCIONA** (probado: upsert con conflicto real). Se borra cuando termine la limpieza — ver `docs/RETOMAR.md` §"LA LIMPIEZA POSTERIOR".
+   - **`propiedades_v2_shadow`** = ✅ **YA NO EXISTE.** Fue el "atajo" (una vista) que sostuvo el sistema entre el rename y la limpieza; se borró el **18-ago-2026** al terminar los 3 frentes — 6 funciones (mig 327), 53 puntos de código y 6 skills. **Cualquier query a ese nombre falla: es correcto.**
    - **`propiedades_v2_archivo`** = la vieja de n8n, **congelada desde el 28-jul**. Se conserva (33 matches de condominio, crudo histórico, 22k filas de `precios_historial`).
    `propiedades` a secas es LEGACY de 2025. Detalle: `scripts/deptos-equipetrol/TIEMPO2_FOTO_PREVIA_2026-08-17.md` · mapa completo: `BARRIDO_RENAME_2026-08-17.md`
 4. **SQL > Regex** — potenciar matching en BD, no extractores
