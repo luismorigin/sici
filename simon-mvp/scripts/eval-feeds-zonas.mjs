@@ -34,7 +34,7 @@ const comparar = process.argv.includes('--comparar')
 // PROPIAS: nombres de microzona (lo que aparece en cada card). Sirve para contar cuánto
 // inventario propio muestra el feed, y se compara contra la línea de base.
 const EQ = /Eq\. \w+|Sirari|V\. Brigida/g
-const ZN = /ZN \d|\d[º°]-\d[º°] ·/g
+const ZN = /ZN \d|\d[º°](-\d[º°])? ·/g
 // AJENAS: lo mismo MÁS el nombre de la macrozona. 🔴 Va aparte a propósito: el 18-ago el
 // H1 del feed de ventas de ZN decía "Departamentos en venta en Equipetrol" y este eval lo
 // dio por limpio, porque `Eq\. \w+` exige el punto y "Equipetrol" solo no matchea. El
@@ -42,7 +42,7 @@ const ZN = /ZN \d|\d[º°]-\d[º°] ·/g
 // zona. Sumarlo a PROPIAS habría movido los conteos de la línea de base sin que nada
 // estuviera mal — por eso dos patrones y no uno.
 const EQ_AJENA = /Eq\. \w+|Sirari|V\. Brigida|Equipetrol/g
-const ZN_AJENA = /ZN \d|\d[º°]-\d[º°] ·|Zona Norte/g
+const ZN_AJENA = /ZN \d|\d[º°](-\d[º°])? ·|Zona Norte/g
 
 // Selectores del rediseño. VENTAS y ALQUILERES usan clases distintas para las mismas
 // piezas (deuda conocida del proyecto: son gemelos con nomenclatura propia).

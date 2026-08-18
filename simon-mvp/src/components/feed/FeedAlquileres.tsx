@@ -593,6 +593,11 @@ export default function FeedAlquileres({ macrozona,
   // Placeholder typewriter del buscador (mobile + desktop), escribe por ref.
   const mSearchRef = useRef<HTMLInputElement>(null)
   const dSearchRef = useRef<HTMLInputElement>(null)
+  // Etiqueta de zona para las cards: la MISMA que ofrece el filtro (gemelo de FeedVentas).
+  const zonaLabel = useCallback(
+    (zonaDB: string) => macrozona.zonasCanonicas.find(z => z.db === zonaDB)?.labelCorto ?? displayZona(zonaDB),
+    [macrozona],
+  )
   useTypewriterPlaceholder(mSearchRef, macrozona.ejemplosPlaceholderAlquiler, 'Buscá "', '"')
   useTypewriterPlaceholder(dSearchRef, macrozona.ejemplosPlaceholderAlquiler, 'Buscá "', '"')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -2029,7 +2034,7 @@ export default function FeedAlquileres({ macrozona,
                             <span>Te compartieron este departamento</span>
                             <button onClick={clearSpotlight}>&times;</button>
                           </div>
-                          <AlquilerListCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
+                          <AlquilerListCard zonaLabel={zonaLabel(spotlightProperty.zona)} property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
                             isActive={sheetOpen && sheetProperty?.id === spotlightProperty.id}
                             marketChip={cardChips?.get(spotlightProperty.id) ?? null}
                             onToggleFavorite={toggleFavorite} onOpen={openDetail} />
@@ -2046,7 +2051,7 @@ export default function FeedAlquileres({ macrozona,
                         return (
                           <Fragment key={p.id}>
                             {showDivider && <div className="alq-pet-divider">🐾 También podrían aceptar mascotas · consultar con el anunciante</div>}
-                            <AlquilerListCard property={p} isFavorite={favorites.has(p.id)}
+                            <AlquilerListCard zonaLabel={zonaLabel(p.zona)} property={p} isFavorite={favorites.has(p.id)}
                               isActive={sheetOpen && sheetProperty?.id === p.id}
                               marketChip={cardChips?.get(p.id) ?? null}
                               onToggleFavorite={toggleFavorite} onOpen={openDetail} onHover={setHoveredId} />
@@ -2354,6 +2359,7 @@ export default function FeedAlquileres({ macrozona,
                 }
                 return (
                   <MobilePropertyCard
+                    zonaLabel={zonaLabel(item.data.zona)}
                     key={item.data.id}
                     property={item.data}
                     isFirst={idx === 0}
@@ -3939,11 +3945,13 @@ const DesktopCard = memo(function DesktopCard({
 )
 
 // ===== MOBILE PROPERTY CARD (full-screen) =====
-const MobilePropertyCard = memo(function MobilePropertyCard({
+const MobilePropertyCard = memo(function MobilePropertyCard({ zonaLabel,
   property: p, isFirst, showHint, isFavorite, favoritesCount, isSpotlight, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
   brokerMode = false, onAddToShortlist, publicShareMode = false, publicShareBroker = null, contactoDirecto = false, priceSnapshot = null,
   brokerComment = null, isDestacada = false, onReport, isReported = false, marketChip = null,
 }: {
+  /** Etiqueta legible de la zona — la misma que ofrece el filtro. */
+  zonaLabel: string
   property: UnidadAlquiler; isFirst: boolean; showHint?: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean; petFilterActive?: boolean
   // Chip fiduciario "vs. similares" (mismo dato que AlquilerListCard). null = sin base ≥6.
   marketChip?: { pos: 'bajo' | 'dentro' | 'sobre'; count: number } | null
@@ -4010,7 +4018,7 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
         <div className="amc-name">{displayName}</div>
         <div className="amc-meta-row">
           {esNuevoCaptura(p) ? <span className="amc-nuevo">Nuevo</span> : esPublicacionReciente(p) && <span className="amc-reciente">Reciente</span>}
-          <span className="amc-zona">{displayZona(p.zona)} <span className="amc-id">#{p.id}</span></span>
+          <span className="amc-zona">{zonaLabel}</span>
         </div>
         <div className="amc-price-block">
           <div className="amc-price">{formatPrice(p.precio_mensual_bob)}/mes</div>
@@ -4124,6 +4132,8 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { 
 
   return (
     <div className="pc-zone" ref={zoneRef}>
+      {/* Abajo-IZQUIERDA: el contador va abajo-derecha y los puntos, al centro */}
+      {propertyId != null && <div className="pc-id-chip">#{propertyId}</div>}
       <div className="pc-scroll" ref={scrollRef}>
         {(photos.length > 0 ? photos : ['']).map((url, i) => {
           const shouldLoad = i < maxLoaded
@@ -4164,7 +4174,9 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { 
 // ===== Desktop lista densa: AlquilerListCard =====
 // Card horizontal compacta para el layout desktop split (lista | mapa/side sheet).
 // Tap abre el side sheet; lo transaccional vive en el sheet — acá solo corazón.
-const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorite, isActive, onToggleFavorite, onOpen, marketChip = null, onHover }: {
+const AlquilerListCard = memo(function AlquilerListCard({ zonaLabel, property: p, isFavorite, isActive, onToggleFavorite, onOpen, marketChip = null, onHover }: {
+  /** Etiqueta legible de la zona — la misma que ofrece el filtro. */
+  zonaLabel: string
   property: UnidadAlquiler; isFavorite: boolean; isActive: boolean
   onToggleFavorite: (id: number) => void; onOpen: (p: UnidadAlquiler) => void
   // Posición fiduciaria vs rango típico de su tipología (null = sin base suficiente)
@@ -4208,6 +4220,7 @@ const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorit
       <div className="alc-photo" style={hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
         {badgeNuevo && <span className="alc-nueva">Nuevo</span>}
         {badgeReciente && <span className="alc-nueva alc-reciente-badge">{badgeRecienteLabel}</span>}
+        <div className="alc-id-chip">#{p.id}</div>
         {!hasPhotos && <div className="alc-nofoto">Sin fotos</div>}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="alc-nav alc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}>
@@ -4248,8 +4261,12 @@ const AlquilerListCard = memo(function AlquilerListCard({ property: p, isFavorit
             {conMascotas && <span className="alc-incl-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10c-2 0-4 2-4 4 0 2 1 3 3 3 1 0 2-1 3-1s2 1 3 1c2 0 3-1 3-3 0-2-2-4-4-4-1 0-1.5.5-2.5.5S10 10 9 10z"/></svg>Mascotas</span>}
           </div>
         )}
-        {/* Nombre · zona · #id chiquito */}
-        <div className="alc-name2">{nombreAlquiler(p)} <span className="alc-zona2">· {displayZona(p.zona)} · <span className="alc-id">#{p.id}</span></span></div>
+        {/* Nombre arriba, zona en su PROPIA linea — gemelo de VentaListCard, misma razon:
+            la linea es `nowrap` con "…" y lo que se cortaba era el final. El #id se fue a
+            la foto. Ojo: cuando el aviso no trae edificio, `nombreAlquiler` YA incluye la
+            zona ("Depto 1 dorm · V. Brigida") y se veia dos veces; al separarlas se nota. */}
+        <div className="alc-name2">{nombreAlquiler(p)}</div>
+        <div className="alc-zona-l2">{zonaLabel}</div>
         {/* Señal fiduciaria: posición vs. similares (sin veredicto) */}
         {marketChip && (
           <div className="alc-signals">

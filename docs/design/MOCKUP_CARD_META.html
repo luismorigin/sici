@@ -1,0 +1,220 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Card: nombre · zona · id — opciones</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#f4f1ea; font-family:'DM Sans',sans-serif; color:#141414 }
+  .wrap { max-width:1180px; margin:0 auto; padding:28px 24px 60px }
+  h1 { font-family:'Figtree'; font-size:24px; font-weight:600; margin:0 0 6px }
+  .sub { color:#6b6152; font-size:14px; margin:0 0 26px; max-width:760px; line-height:1.5 }
+  h2 { font-family:'Figtree'; font-size:16px; font-weight:600; margin:34px 0 4px; padding-top:18px; border-top:1px solid #ddd6c8 }
+  .h2sub { color:#6b6152; font-size:13px; margin:0 0 16px }
+  .row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start }
+  .col { flex:0 0 auto }
+  .tag { font-size:11.5px; font-weight:600; letter-spacing:.4px; text-transform:uppercase; color:#8a8070; margin-bottom:7px }
+  .tag.rec { color:#2f6b45 }
+  .note { font-size:12px; color:#6b6152; margin-top:7px; max-width:391px; line-height:1.45 }
+
+  /* ── superficie DESKTOP VENTA: replica de .vlc-* (columna real = 391px) ── */
+  .vlc { width:391px; background:#1c1c1c; border:1px solid #2b2b2b; border-radius:10px; padding:12px 14px }
+  .vlc-price { font-family:'DM Sans'; font-size:19px; font-weight:600; color:#EDE8DC; font-variant-numeric:tabular-nums }
+  .vlc-name { font-family:'Figtree'; font-size:15px; font-weight:500; color:#EDE8DC; line-height:1.3; margin-top:8px;
+              white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .vlc-zona { font-family:'DM Sans'; font-size:12.5px; font-weight:400; color:#9A8E7A }
+  .vlc-id   { font-size:11px; color:#877C6C }
+  /* opción C: la zona en su propia línea, sin truncar */
+  .vlc-zona-l2 { font-family:'DM Sans'; font-size:12.5px; color:#9A8E7A; margin-top:3px }
+  .vlc-specs { display:flex; gap:16px; margin-top:12px; font-size:13.5px; color:#D0C6B4 }
+
+  /* ── superficie DESKTOP ALQUILER: replica de .alc-* ── */
+  .alc { width:391px; background:#fff; border:1px solid #e6e0d4; border-radius:10px; padding:12px 14px }
+  .alc-price { font-family:'DM Sans'; font-size:19px; font-weight:600; color:#141414; font-variant-numeric:tabular-nums }
+  .alc-name2 { font-family:'Figtree'; font-size:15px; font-weight:500; color:#141414; line-height:1.3; margin-top:8px;
+               white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .alc-zona2 { font-family:'DM Sans'; font-size:12.5px; font-weight:400; color:#7A7060 }
+  .alc-id { color:#B8AD9E }
+  .alc-zona-l2 { font-family:'DM Sans'; font-size:12.5px; color:#7A7060; margin-top:3px }
+  .alc-specs { display:flex; gap:16px; margin-top:12px; font-size:13.5px; color:#5d5445 }
+
+  /* ── superficie MOBILE VENTA: replica de .mc-* (390px) ── */
+  .mc { width:390px; background:#141414; padding:16px 18px 20px; border-radius:10px }
+  .mc-name { font-family:'Figtree'; font-size:22px; font-weight:500; color:#EDE8DC; line-height:1.3; margin:0;
+             max-height:2.6em; overflow:hidden }
+  .mc-meta-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:5px 0 12px }
+  .mc-nuevo { font-size:11px; font-weight:700; color:#0A3D1E; font-family:'DM Sans'; letter-spacing:.3px;
+              background:#7BB389; padding:2px 8px; border-radius:4px }
+  .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:.3px; font-family:'DM Sans' }
+  .mc-id { color:rgba(237,232,220,.3); font-size:12px; margin-left:4px }
+  .mc-price { font-family:'DM Sans'; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1;
+              border-left:3px solid #3A6A48; padding-left:14px; font-variant-numeric:tabular-nums }
+  .mc-specs { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:15px; color:#C8C0B0; margin-top:12px }
+
+  /* ── superficie MOBILE ALQUILER: replica de .amc-* ── */
+  .amc { width:390px; background:#EDE8DC; padding:16px 18px 20px; border-radius:10px }
+  .amc-name { font-family:'Figtree'; font-size:22px; font-weight:500; color:#141414; line-height:1.3; margin:0;
+              max-height:2.6em; overflow:hidden }
+  .amc-meta-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:5px 0 12px }
+  .amc-zona { font-size:13px; color:#7A7060; letter-spacing:.3px; font-family:'DM Sans' }
+  .amc-id { color:#7A7060; font-size:12px; margin-left:4px }
+  .amc-price { font-family:'DM Sans'; font-size:28px; font-weight:500; color:#141414; line-height:1;
+               border-left:3px solid #3A6A48; padding-left:14px; font-variant-numeric:tabular-nums }
+  .amc-specs { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:15px; color:#4d453a; margin-top:12px }
+
+  /* chip del id sobre la foto (opción B) */
+  .foto { position:relative; width:391px; height:96px; border-radius:8px; overflow:hidden;
+          background:linear-gradient(135deg,#5d6b62,#2f3a34); margin-bottom:2px }
+  .foto-id { position:absolute; left:8px; bottom:8px; background:rgba(20,20,20,.72); color:rgba(237,232,220,.75);
+             font-size:11px; padding:3px 8px; border-radius:100px; backdrop-filter:blur(4px) }
+  .med { display:inline-block; background:#fff; border:1px solid #e2dbcd; border-radius:8px; padding:12px 16px;
+         font-size:13px; color:#3d372e; line-height:1.6; margin-top:10px }
+  .med b { font-variant-numeric:tabular-nums }
+  .cut { color:#a33; font-weight:600 }
+  .ok  { color:#2f6b45; font-weight:600 }
+</style>
+<div class="wrap">
+
+<h1>Dónde va el <span style="color:#8a8070">#id</span> y cómo se nombra la zona</h1>
+<p class="sub">
+  Hoy la card dice <b>nombre · zona · #id</b> en una sola línea. En escritorio esa línea es
+  <b>nowrap con “…”</b>: cuando no entra, <b>corta el final</b>. Medido sobre las 305 cards reales de
+  Zona Norte con la columna real de 391 px — en Equipetrol <b>no se corta ninguna</b> hoy ni en ninguna
+  de las opciones, así que esto es una decisión sobre Zona Norte y las zonas que vengan.
+</p>
+
+<h2>Escritorio · venta (columna real 391 px)</h2>
+<p class="h2sub">El peor caso real del feed: <i>CONDOMINIO BARCELONA 04.05 "MIRO TOWER"</i>.</p>
+<div class="row">
+  <div class="col">
+    <div class="tag">Actual</div>
+    <div class="vlc">
+      <div class="vlc-price">$us 118.650</div>
+      <div class="vlc-name">CONDOMINIO BARCELONA 04.05 "MIRO TOWER" <span class="vlc-zona">· ZN 4-6 R26/Bz · <span class="vlc-id">#8000451</span></span></div>
+      <div class="vlc-specs"><span>2 dorm</span><span>78 m²</span><span>P5</span></div>
+    </div>
+    <p class="note">Se corta y lo que desaparece es <b>el id</b> — el dato que menos importa. Suerte, no diseño.</p>
+  </div>
+  <div class="col">
+    <div class="tag">A · sin id</div>
+    <div class="vlc">
+      <div class="vlc-price">$us 118.650</div>
+      <div class="vlc-name">CONDOMINIO BARCELONA 04.05 "MIRO TOWER" <span class="vlc-zona">· ZN 4-6 R26/Bz</span></div>
+      <div class="vlc-specs"><span>2 dorm</span><span>78 m²</span><span>P5</span></div>
+    </div>
+    <p class="note">El id sale de la card (queda en el detalle). <b>13 cortadas</b> de 305.</p>
+  </div>
+  <div class="col">
+    <div class="tag">B · sin id + zona legible</div>
+    <div class="vlc">
+      <div class="vlc-price">$us 118.650</div>
+      <div class="vlc-name">CONDOMINIO BARCELONA 04.05 "MIRO TOWER" <span class="vlc-zona">· 4º-6º · Radial 26/Banzer</span></div>
+      <div class="vlc-specs"><span>2 dorm</span><span>78 m²</span><span>P5</span></div>
+    </div>
+    <p class="note"><b class="cut">Lo que se corta ahora es la zona.</b> 17 de 305. Se gana claridad en 288 y se pierde el dato en 17.</p>
+  </div>
+  <div class="col">
+    <div class="tag rec">C · zona en su línea ← recomendada</div>
+    <div class="vlc">
+      <div class="vlc-price">$us 118.650</div>
+      <div class="vlc-name">CONDOMINIO BARCELONA 04.05 "MIRO TOWER"</div>
+      <div class="vlc-zona-l2">4º-6º · Radial 26/Banzer</div>
+      <div class="vlc-specs"><span>2 dorm</span><span>78 m²</span><span>P5</span></div>
+    </div>
+    <p class="note"><b class="ok">La zona nunca se corta</b>, porque deja de competir con el nombre. Trunca sólo el nombre, que es lo aceptable. Cuesta <b>+16 px de alto</b> por card.</p>
+  </div>
+</div>
+
+<h2>Escritorio · alquiler</h2>
+<p class="h2sub">Mismo cambio, tema claro. Y un caso que hoy se repite solo: cuando el aviso no trae edificio, el nombre ya incluye la zona.</p>
+<div class="row">
+  <div class="col">
+    <div class="tag">Actual</div>
+    <div class="alc">
+      <div class="alc-price">Bs 3.300/mes</div>
+      <div class="alc-name2">Depto 1 dorm · V. Brigida <span class="alc-zona2">· V. Brigida · <span class="alc-id">#8000740</span></span></div>
+      <div class="alc-specs"><span>1 dorm</span><span>45 m²</span></div>
+    </div>
+    <p class="note"><b class="cut">“V. Brigida · V. Brigida”</b> — la zona aparece dos veces. Es real, sale del feed de hoy.</p>
+  </div>
+  <div class="col">
+    <div class="tag rec">C · zona en su línea</div>
+    <div class="alc">
+      <div class="alc-price">Bs 3.300/mes</div>
+      <div class="alc-name2">Depto 1 dorm</div>
+      <div class="alc-zona-l2">V. Brigida</div>
+      <div class="alc-specs"><span>1 dorm</span><span>45 m²</span></div>
+    </div>
+    <p class="note">Al separarlas, la repetición se ve y se puede sacar: el nombre no vuelve a decir la zona.</p>
+  </div>
+  <div class="col">
+    <div class="tag rec">C · caso ZN</div>
+    <div class="alc">
+      <div class="alc-price">Bs 4.200/mes</div>
+      <div class="alc-name2">Condominio Los Jazmines del Parque</div>
+      <div class="alc-zona-l2">4º-6º · Banzer/Alemana</div>
+      <div class="alc-specs"><span>2 dorm</span><span>70 m²</span></div>
+    </div>
+    <p class="note">Entra entero, sin “…”.</p>
+  </div>
+</div>
+
+<h2>Celular · venta y alquiler (390 px)</h2>
+<p class="h2sub">
+  🔴 Acá <b>no hay riesgo de corte</b>: la fila de zona ya es <code>flex-wrap</code>, así que baja de línea sola.
+  El nombre tiene tope de 2 líneas y se mantiene. Sacar el id sólo libera espacio.
+</p>
+<div class="row">
+  <div class="col">
+    <div class="tag">Actual</div>
+    <div class="mc">
+      <div class="mc-name">CONDOMINIO BARCELONA 04.05 "MIRO TOWER"</div>
+      <div class="mc-meta-row"><span class="mc-nuevo">Nuevo</span><span class="mc-zona">ZN 4-6 R26/Bz <span class="mc-id">#8000451</span></span></div>
+      <div class="mc-price">$us 118.650</div>
+      <div class="mc-specs"><span>2 dorm</span><span>78 m²</span><span>1 baño</span><span>P5</span></div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="tag rec">C · sin id + zona legible</div>
+    <div class="mc">
+      <div class="mc-name">CONDOMINIO BARCELONA 04.05 "MIRO TOWER"</div>
+      <div class="mc-meta-row"><span class="mc-nuevo">Nuevo</span><span class="mc-zona">4º-6º · Radial 26/Banzer</span></div>
+      <div class="mc-price">$us 118.650</div>
+      <div class="mc-specs"><span>2 dorm</span><span>78 m²</span><span>1 baño</span><span>P5</span></div>
+    </div>
+    <p class="note">Mismo alto. La zona se lee.</p>
+  </div>
+  <div class="col">
+    <div class="tag rec">C · alquiler</div>
+    <div class="amc">
+      <div class="amc-name">Condominio Vilareal Duo</div>
+      <div class="amc-meta-row"><span class="amc-zona">6º-8º · Radial 26/Banzer</span></div>
+      <div class="amc-price">Bs 2.500/mes</div>
+      <div class="amc-specs"><span>Mono</span><span>42 m²</span><span>1 baño</span><span>P3</span></div>
+    </div>
+  </div>
+</div>
+
+<h2>Si el id tiene que seguir viéndose</h2>
+<p class="h2sub">Variante B del id: sale del texto y va sobre la foto, como el contador de fotos. No compite con nada.</p>
+<div class="row">
+  <div class="col">
+    <div class="foto"><span class="foto-id">#8000451</span></div>
+    <div class="vlc" style="border-top-left-radius:0;border-top-right-radius:0">
+      <div class="vlc-price">$us 118.650</div>
+      <div class="vlc-name">CONDOMINIO BARCELONA 04.05 "MIRO TOWER"</div>
+      <div class="vlc-zona-l2">4º-6º · Radial 26/Banzer</div>
+    </div>
+  </div>
+  <div class="col" style="max-width:520px">
+    <div class="med">
+      <b>Lo medido</b>, columna real de 391 px, sobre las cards reales de anoche:<br>
+      · <b>Equipetrol</b>: 0 de 351 cortadas — hoy y en todas las opciones. <b class="ok">No la afecta ninguna decisión.</b><br>
+      · <b>Zona Norte</b>, hoy: <b>14</b> de 305 · sin id: <b>13</b> · sin id + zona legible: <b>17</b> ·
+        <b class="ok">zona en su línea: 0 zonas cortadas</b>.<br><br>
+      <b>Celular</b>: ninguna opción puede cortar — la fila envuelve y el nombre ya tiene tope de 2 líneas.<br><br>
+      El id sigue estando en el <b>detalle</b> (encabezado del panel) y en el <b>visor de fotos</b>: no se pierde,
+      deja de ocupar el renglón de decisión.
+    </div>
+  </div>
+</div>
+
+</div>

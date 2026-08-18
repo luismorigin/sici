@@ -1021,7 +1021,10 @@ const VentaCard = memo(function VentaCard({ nombreMacrozona, property: p, isFavo
 // Card horizontal compacta para el layout desktop split (lista | mapa/side sheet).
 // Mesa de decisión: más propiedades por pantalla, tap abre el side sheet.
 // Lo transaccional (WA, compartir, ver original) vive en el sheet — acá solo corazón.
-const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isActive, onToggleFavorite, onOpen, marketChip = null, onHover }: {
+const VentaListCard = memo(function VentaListCard({ zonaLabel, property: p, isFavorite, isActive, onToggleFavorite, onOpen, marketChip = null, onHover }: {
+  /** Etiqueta legible de la zona — la misma que el filtro. `displayZona` devuelve el
+   *  codigo corto ('ZN 4-6 R26/Bz'), que nacio para tablas del admin. */
+  zonaLabel: string
   property: UnidadVenta; isFavorite: boolean; isActive: boolean
   onToggleFavorite: (id: number) => void; onOpen: (p: UnidadVenta) => void
   // Posición fiduciaria vs rango típico de su tipología (null = sin base suficiente)
@@ -1070,6 +1073,7 @@ const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isA
             en modo lista se veía el precio sin la advertencia. Va abajo-izquierda para no chocar
             con "Nuevo/Reciente", que ocupan arriba-izquierda. */}
         {p.tc_sospechoso && <span className="vlc-tc-badge"><span className="vlc-tc-badge-i">ⓘ</span>Confirmar tipo de cambio</span>}
+        <div className="vlc-id-chip">#{p.id}</div>
         {!hasPhotos && <div className="vlc-nofoto">Sin fotos</div>}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="vlc-nav vlc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
@@ -1105,8 +1109,13 @@ const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isA
             {conBaulera && <span className="vlc-incl-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Baulera</span>}
           </div>
         )}
-        {/* Nombre · zona · #id chiquito */}
-        <div className="vlc-name">{p.proyecto} <span className="vlc-zona">· {displayZona(p.zona)} · <span className="vlc-id">#{p.id}</span></span></div>
+        {/* Nombre arriba, zona en su PROPIA linea. Antes iban juntos con el #id al final,
+            en una linea `nowrap` con "…": cuando no entraba se cortaba el final — hoy el id,
+            y con la zona legible se habria cortado la zona. Separadas, la zona nunca se corta
+            y trunca solo el nombre. El id se fue a la foto. Medido: 14 de 305 nombres se
+            cortan en ZN con la columna real de 391px; en Equipetrol, ninguno. */}
+        <div className="vlc-name">{p.proyecto}</div>
+        <div className="vlc-zona-l2">{zonaLabel}</div>
         {/* Señales de decisión: estado (Preventa destacada) + fiduciario */}
         <div className="vlc-signals">
           {esPreventa
@@ -1126,7 +1135,9 @@ const VentaListCard = memo(function VentaListCard({ property: p, isFavorite, isA
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
 // memo + handlers estables — mismo patrón que VentaCard desktop.
-const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, onMap, isSpotlight, isFirst, showSwipeHint = false, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false, marketChip = null }: {
+const MobileVentaCard = memo(function MobileVentaCard({ zonaLabel, property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, onMap, isSpotlight, isFirst, showSwipeHint = false, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false, marketChip = null }: {
+  /** Etiqueta legible de la zona — ver VentaListCard. */
+  zonaLabel: string
   property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
   onMap?: (p: UnidadVenta) => void
   // Hint "Desliza para más fotos" — se pasa true en las primeras posiciones del
@@ -1190,6 +1201,7 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
       {isDestacada && <div className="mc-destacada-chip">⭐ Recomendada por tu broker</div>}
       {/* Photo carousel zone (55%) */}
       <div className="mc-photo-zone" ref={zoneRef}>
+        <div className="mc-id-chip">#{p.id}</div>
         <div className="mc-photo-scroll" ref={scrollRef}>
           {photos.length > 0 ? photos.map((url, i) => {
             const shouldLoad = i < maxLoaded
@@ -1241,7 +1253,7 @@ const MobileVentaCard = memo(function MobileVentaCard({ property: p, isFavorite,
         <div className="mc-name">{p.proyecto}</div>
         <div className="mc-meta-row">
           {esNuevoCaptura(p) ? <span className="mc-nuevo">Nuevo</span> : esPublicacionReciente(p) && <span className="mc-reciente">Reciente</span>}
-          <span className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></span>
+          <span className="mc-zona">{zonaLabel}</span>
         </div>
         <div className="mc-price-block">
           <div className="mc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="mc-tc">(T.C. oficial)</span></div>
@@ -2777,6 +2789,13 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
   // ref (sin re-render del feed). Ver useTypewriterPlaceholder.
   const mSearchRef = useRef<HTMLInputElement>(null)
   const dSearchRef = useRef<HTMLInputElement>(null)
+  // Etiqueta de zona para las cards: la MISMA que ofrece el filtro. `displayZona` da el
+  // codigo corto de `zonas.ts` ('ZN 4-6 R26/Bz'), pensado para tablas del admin; en el feed
+  // lo lee alguien que busca departamento.
+  const zonaLabel = useCallback(
+    (zonaDB: string) => macrozona.zonasCanonicas.find(z => z.db === zonaDB)?.labelCorto ?? displayZona(zonaDB),
+    [macrozona],
+  )
   useTypewriterPlaceholder(mSearchRef, macrozona.ejemplosPlaceholder, 'Buscá "', '"')
   useTypewriterPlaceholder(dSearchRef, macrozona.ejemplosPlaceholder, 'Buscá "', '"')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -4266,7 +4285,7 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
                         <span>Te compartieron este departamento</span>
                         <button className="ds-spotlight-close" aria-label="Cerrar destacado" onClick={() => setSpotlightId(null)}>&times;</button>
                       </div>
-                      <VentaListCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
+                      <VentaListCard zonaLabel={zonaLabel(spotlightProperty.zona)} property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
                         isActive={sheetOpen && sheetProperty?.id === spotlightProperty.id}
                         marketChip={cardChips?.get(spotlightProperty.id) ?? null}
                         onToggleFavorite={onCardToggleFavorite} onOpen={onCardOpenSheet} onHover={onCardHover} />
@@ -4279,7 +4298,7 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
                     </div>
                   )}
                   {(spotlightProperty ? confirmadosEnBounds.filter(p => p.id !== spotlightId) : confirmadosEnBounds).map(p => (
-                    <VentaListCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
+                    <VentaListCard key={p.id} zonaLabel={zonaLabel(p.zona)} property={p} isFavorite={favorites.has(p.id)}
                       isActive={sheetOpen && sheetProperty?.id === p.id}
                       marketChip={cardChips?.get(p.id) ?? null}
                       onToggleFavorite={onCardToggleFavorite} onOpen={onCardOpenSheet} onHover={onCardHover} />
@@ -4530,7 +4549,7 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
                 return <div key={`ph-${item.data.id}`} className="mc-placeholder" />
               }
               const p = item.data
-              return <MobileVentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
+              return <MobileVentaCard key={p.id} zonaLabel={zonaLabel(p.zona)} property={p} isFavorite={favorites.has(p.id)}
                 isSpotlight={item.isSpotlight} isFirst={idx === 0} showSwipeHint={idx === swipeHintIdx}
                 onToggleFavorite={onCardToggleFavorite} onShare={onCardShare}
                 onPhotoTap={onCardPhotoTap} onDetails={onCardOpenSheet} onMap={onCardMap}
@@ -4787,7 +4806,10 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
         /* Nombre · zona · #id — con piso de contraste (todo legible) */
         .vlc-name { font-family:'Figtree',sans-serif; font-size:15px; font-weight:500; color:#EDE8DC; line-height:1.3; margin-top:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
         .vlc-zona { font-family:'DM Sans',sans-serif; font-size:12.5px; font-weight:400; color:#9A8E7A }
-        .vlc-id { font-size:11px; color:#877C6C }
+        /* La zona en su renglon: SIN nowrap a proposito — es la que nunca se debe cortar */
+        .vlc-zona-l2 { font-family:'DM Sans',sans-serif; font-size:12.5px; font-weight:400; color:#9A8E7A; margin-top:3px }
+        /* El #id vive sobre la foto: sigue disponible, deja de ocupar el renglon de decision */
+        .vlc-id-chip { position:absolute; top:8px; right:8px; z-index:3; background:rgba(20,20,20,0.62); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); color:rgba(237,232,220,0.62); font-family:'DM Sans',sans-serif; font-size:10px; padding:2px 7px; border-radius:100px; font-variant-numeric:tabular-nums; letter-spacing:0.2px }
         /* Señales de decisión: estado (texto, sin pill) + UN pill fiduciario */
         .vlc-signals { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-top:auto; padding-top:10px }
         .vlc-estado { font-size:11.5px; color:#A99E8C }
@@ -5473,6 +5495,8 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
         .mc-reciente { font-size:11px; font-weight:600; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:rgba(58,106,72,0.15); padding:2px 8px; border-radius:4px }
         .mc-nuevo { font-size:11px; font-weight:700; color:#0A3D1E; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:#7BB389; padding:2px 8px; border-radius:4px }
         .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; font-family:'DM Sans',sans-serif }
+        /* Abajo-IZQUIERDA: el contador de fotos ocupa abajo-derecha y los puntos, el centro */
+        .mc-id-chip { position:absolute; bottom:36px; left:16px; z-index:5; background:rgba(20,20,20,0.6); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); color:rgba(237,232,220,0.55); font-family:'DM Sans',sans-serif; font-size:11px; padding:4px 10px; border-radius:100px; font-variant-numeric:tabular-nums; pointer-events:none }
         .mc-price-block { border-left:3px solid #3A6A48; padding-left:14px; margin-bottom:8px; flex-shrink:0 }
         .mc-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
         .mc-tc { font-size:12px; font-weight:400; color:rgba(237,232,220,0.5); letter-spacing:0.2px }
