@@ -831,6 +831,68 @@ async function main() {
   console.log(`       sup.3 → UPDATE propiedades_v2 SET duplicado_de=<sobreviviente> WHERE id IN (<duplicados>)`);
   console.log(`       sup.4 → CONFIRMAR | CORREGIR(otro pm) | SIN_NOMBRE — el lector ya dudó; el juez decide`);
   console.log(`     SQL contra propiedades_v2 lo aplica el humano (candado IS NULL / formato-objeto).\n`);
+  await termometroTC();
+}
+
+
+// ============================================================================
+// TERMÓMETRO DEL TIPO DE CAMBIO — $0, solo lectura, sin juez
+// ----------------------------------------------------------------------------
+// POR QUÉ EXISTE. La decisión del 28-jul (mig 311: los avisos que dicen "TC 7" NO se
+// descuentan, se publican y se avisa) se tomó sobre UNA medición: esos avisos valían
+// +3,7% respecto de las otras unidades DE SU MISMO EDIFICIO. Rehecha el 19-ago daba
+// +19% en Equipetrol y +20% en Zona Norte. **Cambió tanto en tres semanas y nadie lo
+// estaba mirando** — se descubrió de casualidad, porque el founder preguntó por una
+// propiedad. Esto hace que se descubra por el log.
+//
+// NO decide nada ni bloquea nada: imprime 3 números y dice si hay que mirar.
+//   1. el test del mismo edificio (el que fundó la 311)
+//   2. cuántos avisos anclan al TC viejo, por macrozona
+//   3. si el criterio de comparación del badge tiene con qué comparar
+// Detalle: docs/reports/AUDITORIA_SENALES_PRECIO_2026-08-19.md
+// ============================================================================
+async function termometroTC() {
+  console.log('\n  TERMOMETRO DEL TIPO DE CAMBIO');
+  const { data: rows, error } = await sb
+    .from('v_mercado_venta_shadow')
+    .select('id_proyecto_master,precio_m2,tipo_cambio_detectado,zona');
+  if (error || !rows?.length) { console.log('     (sin datos)'); return; }
+
+  const mz = (z) => (z || '').includes('anillo') ? 'Zona Norte' : 'Equipetrol';
+  const mediana = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y);
+    return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
+
+  // 1) test del mismo edificio: TC7 vs sus vecinas, por macrozona
+  const porPM = {};
+  for (const r of rows) { if (!r.id_proyecto_master || !r.precio_m2) continue;
+    (porPM[r.id_proyecto_master] ??= []).push(r); }
+  for (const zona of ['Equipetrol', 'Zona Norte']) {
+    const tc7 = [], vec = [];
+    for (const u of Object.values(porPM)) {
+      const a = u.filter(x => x.tipo_cambio_detectado === 'oficial_viejo' && mz(x.zona) === zona);
+      const b = u.filter(x => x.tipo_cambio_detectado !== 'oficial_viejo' && mz(x.zona) === zona);
+      if (a.length && b.length) { tc7.push(...a.map(x => +x.precio_m2)); vec.push(...b.map(x => +x.precio_m2)); }
+    }
+    const mt = mediana(tc7), mv = mediana(vec);
+    if (mt && mv) {
+      const d = Math.round((mt / mv - 1) * 100);
+      // 28-jul: +3,7% (fundó la mig 311) · 19-ago: +19% Eq / +20% ZN
+      const alarma = Math.abs(d) >= 30 ? '  🔴 se movió mucho — revisar la decisión de la mig 311' : '';
+      console.log(`     ${zona.padEnd(11)} TC7 $${Math.round(mt)}/m² vs sus vecinas $${Math.round(mv)}/m² → ${d > 0 ? '+' : ''}${d}%${alarma}`);
+    } else console.log(`     ${zona.padEnd(11)} sin edificios mixtos para comparar`);
+  }
+
+  // 2) cuántos anclan al TC viejo
+  for (const zona of ['Equipetrol', 'Zona Norte']) {
+    const t = rows.filter(r => mz(r.zona) === zona);
+    const n = t.filter(r => r.tipo_cambio_detectado === 'oficial_viejo').length;
+    console.log(`     ${zona.padEnd(11)} anclan al TC viejo: ${n} de ${t.length} (${(100 * n / t.length).toFixed(1)}%)`);
+  }
+
+  // 3) ¿el criterio de comparación del badge tiene con qué comparar?
+  const ref = rows.filter(r => ['paralelo', 'oficial'].includes(r.tipo_cambio_detectado)).length;
+  console.log(`     criterio de comparación del badge: ${ref} avisos de referencia de ${rows.length}` +
+    (ref < rows.length * 0.25 ? '  ⚠️  MUDO (sigue con la lista vieja `paralelo/oficial`)' : ''));
 }
 
 main().catch((e) => { console.error('❌', e.message); process.exit(1); });
