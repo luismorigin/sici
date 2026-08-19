@@ -79,7 +79,8 @@ DECLARE
   def_actual TEXT;
   def_nueva  TEXT;
 BEGIN
-  SELECT pg_get_functiondef(oid) INTO def_actual
+  -- `p.oid` calificado: con el JOIN a pg_namespace, `oid` solo es ambiguo (42702).
+  SELECT pg_get_functiondef(p.oid) INTO def_actual
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
    WHERE n.nspname = 'public' AND p.proname = 'populate_broker_prospection';
 
