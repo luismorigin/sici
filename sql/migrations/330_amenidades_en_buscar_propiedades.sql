@@ -150,6 +150,8 @@ DO $chk$
 DECLARE
   r          jsonb;
   n_con_amen INT;
+  t0         timestamptz;
+  ms         numeric;
 BEGIN
   -- el campo llega, y con contenido
   r := buscar_propiedades('venta', NULL, NULL, NULL, NULL, NULL, 'precio', 6);
@@ -178,16 +180,13 @@ BEGIN
   -- 🔴 GUARDA DE TIEMPO. Estas RPC ya tuvieron timeouts (migs 321/325) y la función
   -- se evalúa por fila: si el planner la corriera antes del LIMIT, el bot vuelve a
   -- colgarse. Se mide de verdad, no se supone.
-  DECLARE t0 timestamptz; ms numeric;
-  BEGIN
-    t0 := clock_timestamp();
-    PERFORM buscar_propiedades('venta', NULL, NULL, NULL, NULL, NULL, 'precio', 6);
-    ms := EXTRACT(EPOCH FROM (clock_timestamp() - t0)) * 1000;
-    IF ms > 1500 THEN
-      RAISE EXCEPTION 'buscar_propiedades tardó % ms (antes ~400). Demasiado — abortado.', round(ms);
-    END IF;
-    RAISE NOTICE '   tiempo de respuesta: % ms', round(ms);
-  END;
+  t0 := clock_timestamp();
+  PERFORM buscar_propiedades('venta', NULL, NULL, NULL, NULL, NULL, 'precio', 6);
+  ms := EXTRACT(EPOCH FROM (clock_timestamp() - t0)) * 1000;
+  IF ms > 1500 THEN
+    RAISE EXCEPTION 'buscar_propiedades tardó % ms (antes ~400). Demasiado — abortado.', round(ms);
+  END IF;
+  RAISE NOTICE '   tiempo de respuesta: % ms', round(ms);
 
   RAISE NOTICE '✅ amenidades en el retorno · % de 6 con contenido · el resto del retorno intacto', n_con_amen;
 END
