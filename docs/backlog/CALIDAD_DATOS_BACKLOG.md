@@ -1,6 +1,66 @@
 # Backlog Calidad de Datos — SICI
 
-> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 13 Ago 2026.
+> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 19 Ago 2026.
+
+## 🔴 Avisos SIN NOMBRE DE EDIFICIO — en VENTA no se publican; en alquiler sí (19 Ago 2026)
+
+**El aviso no dice de qué edificio habla.** No es un nombre mal escrito (eso lo resuelve un alias del
+catálogo): el captador publicó "Departamento en venta" y nada más. Sin nombre no hay match posible
+—la regla del proyecto prohíbe matchear por GPS solo (`matching_no_usa_gps_solo`)— así que la
+propiedad queda sin `id_proyecto_master`.
+
+### Cuántos son (medido el 19-ago sobre inventario activo `status='completado'`)
+
+| | Equipetrol | Zona Norte |
+|---|---|---|
+| **Venta** | 34 de 468 · **7,3 %** | 71 de 398 · **17,8 %** |
+| **Alquiler** | 31 de 220 · **14,1 %** | 52 de 139 · **37,4 %** |
+
+**188 avisos activos en total.** Dos lecturas que el número absoluto esconde:
+- **Zona Norte está 2-3× peor que Equipetrol** en las dos operaciones — pero **Equipetrol no está
+  exento**: son 65 avisos. La frase "es un problema de ZN" es falsa.
+- **Alquiler está al doble que venta en las dos macrozonas.** En alquiler de Zona Norte, **4 de cada
+  10 avisos** no declaran edificio.
+
+### 🔑 La asimetría que importa: venta y alquiler se comportan distinto ante el mismo hueco
+
+| | `v_mercado_*_shadow` (mide) | RPC del feed (publica) | No se ve |
+|---|---:|---:|---:|
+| **Venta** | 764 | **658** | **106** |
+| **Alquiler** | 295 | 295 | **0** |
+
+`buscar_unidades_simple_shadow` hace **INNER JOIN a `proyectos_master`** → un aviso sin edificio
+**se captura, se guarda, cuenta para las medianas de mercado y no lo ve nadie**. Es el **14 % del
+inventario de venta**. `buscar_unidades_alquiler_shadow` **no** exige el join: las 64 sin edificio
+se publican igual.
+
+⚠️ **Lo que NO se verificó:** de las 106 retenidas en venta, 96 son las sin edificio; **las otras 10
+salen por algún otro criterio que no se persiguió**. Antes de tocar nada, medir esas 10 — puede haber
+un segundo mecanismo escondido.
+
+### Por qué NO se arregla con alias
+
+Un alias traduce una grafía (`"Platinium II"` → pm 25). Acá **no hay nada que traducir**: el aviso no
+nombra ningún edificio. Cargar alias no mueve este número ni un punto.
+
+### Las opciones
+
+1. **Dejarlo (hoy).** El sistema prefiere no publicar antes que atar un aviso al edificio equivocado.
+   Defendible — pero **la asimetría venta/alquiler no es una decisión tomada, es una consecuencia**
+   de que dos RPC se escribieron distinto. Nadie eligió que alquiler sí y venta no.
+2. **Inferir el edificio por GPS.** ❌ Choca de frente con `matching_no_usa_gps_solo`, y el pin
+   genérico de C21 (10 avisos activos de ZN comparten una coordenada, 8 edificios distintos) lo
+   volvería un generador de matches falsos.
+3. **Que el lector lo deduzca** del texto y las fotos en el MOAT. Más caro y no siempre posible, pero
+   es el único camino que respeta la regla del nombre.
+4. **Publicarlos declarando** *"edificio no informado"*, sin atarlos a ningún pm. Es la misma salida
+   que se eligió para el área faltante y para el estado de obra: **declarar lo que no se sabe en vez
+   de ocultarlo**. Recupera 106 avisos de venta sin inventar un solo match.
+
+👉 **Decisión pendiente del founder.** Anotado el 19-ago mientras se revisaban las routines; el tema
+salió de preguntar si el problema también pasaba en Equipetrol. Sí pasa.
+
+---
 
 ## 🔴 Avisos SIN ÁREA — el feed los oculta en silencio, y el filtro no hace lo que cree (13 Ago 2026)
 
