@@ -43,6 +43,12 @@ WITH medianas_tc AS (
     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY v.precio_m2) AS mediana_m2,
     COUNT(*) AS n_grupo
   FROM v_mercado_venta v
+  -- 🔴 ESTA LÍNEA ES LA QUE DEJÓ MUDO AL CRITERIO (medido 19-ago-2026).
+  -- `oficial` dejó de emitirse cuando Bolivia unificó el tipo de cambio → hoy los tags
+  -- son `no_especificado` · `oficial_viejo` · `paralelo` · `bob`. La referencia quedó en
+  -- 70 avisos de 761, sólo 7 de 39 grupos llegan al mínimo de 3, y **el criterio marca
+  -- CERO**. No falla: dejó de mirar. Ver `docs/arquitectura/TIPO_CAMBIO_SICI.md` §0 y
+  -- `docs/reports/AUDITORIA_SENALES_PRECIO_2026-08-19.md`.
   WHERE v.tipo_cambio_detectado IN ('paralelo', 'oficial')
   GROUP BY v.zona, v.dormitorios, v.estado_construccion
   HAVING COUNT(*) >= 3
