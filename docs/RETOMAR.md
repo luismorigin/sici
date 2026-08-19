@@ -58,17 +58,18 @@ Empezá diciéndome qué entendiste del estado actual antes de proponer nada.
 > shortlist dinámica) y **escritura real con el cargador**— y confirmado end-to-end porque **el bot
 > respondió por WhatsApp**. Detalle: `scripts/deptos-equipetrol/TIEMPO2_FOTO_PREVIA_2026-08-17.md`.
 >
-> ### 🔜 Lo inmediato al volver
-> 1. **`/revisar-routines`** — es el eval final: confirma que las 4 capturas nocturnas escribieron
->    bien a través del atajo. Si corrieron normal, el cutover queda cerrado del todo.
-> 2. **Probarle al bot en un chat NUEVO** (el hilo viejo arrastra contexto): *"alquileres de 2
->    dormitorios"*. Tras la **mig 326** debe informar **182** y techo **Bs 23.040**, no 168/20.000.
-> 3. **La limpieza** (abajo) — sin apuro, el atajo sostiene todo.
+> ### ✅ Lo inmediato al volver — LOS 3 CUMPLIDOS (18-19 ago)
+> 1. ~~`/revisar-routines`~~ → las capturas corrieron normal. **El cutover quedó cerrado.**
+> 2. ~~Probarle al bot~~ → informa **182**, la mig 326 quedó verificada.
+> 3. ~~La limpieza~~ → **hecha el 18-ago y el atajo BORRADO** (ver abajo). Y el 19-ago la **mig 328**
+>    desarmó además las 4 funciones del régimen viejo que quedaron leyendo la base viva.
 >
-> ### 🐛 Dos bugs encontrados el 17-ago, ninguno del cutover (flagueados aparte)
-> - **El feed ZN muestra 24 de 301.** El API devuelve las 301 bien; la página no aplica el fetch
->   diferido que sí funciona en `/ventas`. Está en dark launch → **riesgo cero hoy**, bloqueante el
->   día que se lance ZN.
+> ### ✅ Dos bugs encontrados el 17-ago, ninguno del cutover — LOS DOS ARREGLADOS
+> - ~~El feed ZN muestra 24 de 301~~ → **ARREGLADO el 18-ago.** No era solo el fetch diferido: al
+>   parametrizar los feeds por macrozona apareció que **`/api/ventas` devuelve EQUIPETROL cuando no
+>   le pasan `zonas_permitidas`** — el feed de ZN llegó a servir props de Eq. Centro en producción,
+>   con `tsc` y `build` en verde. El aislamiento se fuerza ahora DENTRO de `fetchFromAPI`.
+>   Hoy los 4 feeds comparten un componente por operación (`docs/design/PLAN_ZN_ALINEAR_Y_ESCALAR.md`).
 > - ~~El bot informaba 168 alquileres de 182~~ → **ARREGLADO, mig 326.** Los 14 publicados en USD
 >   quedaban afuera porque la vista no los convierte a Bs y la RPC del feed sí.
 >

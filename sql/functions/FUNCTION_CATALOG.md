@@ -73,36 +73,37 @@
 |---------|-----------------|------------------|
 | `registrar_discovery_alquiler(url, fuente, ...)` | `alquiler/registrar_discovery_alquiler.sql` | 169 |
 
-## Query Layer / Búsqueda (6 funciones)
+## Query Layer / Búsqueda (7 funciones · 1 desarmada)
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
 | `buscar_unidades_reales(filtros)` | `query_layer/buscar_unidades_reales.sql` | 168 |
-| `buscar_unidades_simple(filtros)` | `query_layer/buscar_unidades_simple.sql` | 241 (acepta `filtros.ids[]` para shortlists; default trae feed /ventas) |
+| ~~`buscar_unidades_simple(filtros)`~~ → **`_trash_buscar_unidades_simple`** | `query_layer/buscar_unidades_simple.sql` | 🔴 **DESARMADA (mig 328, 19-ago-2026).** Calculaba con `precio_normalizado()` del régimen VIEJO y desde el TIEMPO 2 leía la tabla VIVA: devolvía precios inflados sin fallar. Sus 2 llamadores se resolvieron antes (endpoint de shortlists → `rpcShadowFirst`; `populate_broker_prospection` → RPC shadow). Usar **`buscar_unidades_simple_shadow`**. |
 | `buscar_unidades_alquiler(filtros)` | `query_layer/buscar_unidades_alquiler.sql` | 241 (acepta `filtros.ids[]` para shortlists; default trae feed /alquileres) |
 | `buscar_unidades_broker(filtros)` | `broker/buscar_unidades_broker.sql` | 101 |
 | `buscar_unidades_con_amenities(amenities, filtros)` | — | 069 |
 | `buscar_proyecto_fuzzy(nombre, umbral, limite)` | — | 022 |
 | `buscar_broker_por_telefono(tel)` | — | 075 |
+| `amenidades_normalizadas(propiedad_id)` | — | **330** (19-ago-2026) · Amenidades de una propiedad en vocabulario CANÓNICO, combinando `datos_json->amenities->lista` (curada, 10 valores) + `proyectos_master.amenidades_edificio` (**texto libre, ~78 variantes**: `piscina`/`Piscina`, 7 formas de "lavandería", `looby`…). Rescata el 88,7% de las menciones del edificio. Consumidor: `buscar_propiedades` (bot). ⚠️ **Duplica en SQL el vocabulario de `simon-mvp/src/config/amenidades-mercado.ts`** — el bot no puede leer TS. Si se agrega una amenidad allá, reflejarla acá. |
 
-## Análisis de Mercado / Valuación (8 funciones)
+## Análisis de Mercado / Valuación (8 funciones · 2 desarmadas en la mig 328)
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
 | `calcular_posicion_mercado(precio_m2, zona, dorms)` | `query_layer/calcular_posicion_mercado.sql` | 168 |
 | `generar_razon_fiduciaria(propiedad_id)` | `query_layer/generar_razon_fiduciaria.sql` | 168 |
 | `generar_resumen_fiduciario(proyecto, ...)` | — | 025 |
-| `analisis_mercado_fiduciario(filtros)` | — | 030 |
+| ~~`analisis_mercado_fiduciario(filtros)`~~ → **`_trash_analisis_mercado_fiduciario`** | — | 🔴 **DESARMADA (mig 328).** Sin llamadores: su wrapper JS (`obtenerAnalisisFiduciario`) se borró de `lib/supabase.ts` el mismo día. |
 | `calcular_precio_m2_unidad()` | — | — |
 | `calcular_precio_m2_virtual()` | — | — |
-| `explicar_precio(id)` | — | — |
+| ~~`explicar_precio(id)`~~ → **`_trash_explicar_precio`** | — | 🔴 **DESARMADA (mig 328).** Solo la llamaba `analisis_mercado_fiduciario`, desarmada también. |
 | `contar_bajadas_precio(fecha_hoy, fecha_ayer)` | — | 090 |
 
-## Snapshots (3 funciones)
+## Snapshots (3 funciones · 1 desarmada en la mig 328)
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
-| `snapshot_absorcion_mercado()` | `snapshots/snapshot_absorcion_mercado.sql` | 200 |
+| ~~`snapshot_absorcion_mercado()`~~ → **`_trash_snapshot_absorcion_mercado`** | `snapshots/snapshot_absorcion_mercado.sql` | 🔴 **DESARMADA (mig 328).** Solo la llamaba n8n, apagado desde julio; su tabla no tiene filas desde el 27-jul. La viva es **`snapshot_absorcion_mercado_shadow`**, que escribe cada noche. |
 | `snapshot_absorcion_mercado_shadow()` | `snapshots/snapshot_absorcion_mercado_shadow.sql` (puntero → mig 286) | 286 |
 | `guardar_snapshot_precios()` | — | — |
 
