@@ -280,6 +280,15 @@ function esPublicacionReciente(p: UnidadVenta): boolean {
 // Solo los diferenciadores BIEN listados en la data (≥29% confirman). Descartados
 // por dato: Estac. Visitas/Parque Infantil (raros), Pet Friendly (1.6%, subreportado), Jardín (0%).
 // Fuente de verdad única: config/amenidades-mercado.ts (flag `filtrable`). No hardcodear.
+// 🔴 EL TEXTO DEL BADGE DE TC ASUME QUE VIENE DEL CRITERIO A.
+// `tc_sospechoso` se enciende por DOS vías: (A) el aviso menciona "Bs 7"/"6.96"
+// —tag `oficial_viejo`, mig 311— y (B) comparación de $/m² contra su grupo (mig 227).
+// El texto "Cotiza a Bs 7" sólo es verdad para A. Hoy es seguro porque **B no marca a
+// nadie**: su mediana de referencia se calcula con `IN ('paralelo','oficial')` y el tag
+// `oficial` dejó de existir cuando Bolivia unificó el tipo de cambio → quedó muda sin
+// fallar. 👉 Si algún día se repara B, este texto MIENTE en esos casos: hay que hacer
+// que la RPC devuelva `tipo_cambio_detectado` (hoy no lo hace) y elegir el texto según
+// el origen. Ver docs/reports/AUDITORIA_SENALES_PRECIO_2026-08-19.md.
 const AMEN_DIFERENCIADORES = AMENIDADES_FILTRABLES
 const AMEN_ATRIBUTOS = ['Amoblado', 'Equipado', 'Parqueo', 'Baulera']
 const _DIACR_AMEN = new RegExp('[\\u0300-\\u036f]', 'g')
@@ -894,7 +903,7 @@ const VentaCard = memo(function VentaCard({ nombreMacrozona, property: p, isFavo
           </div>
         )}
         {!useCarousel && !hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
-        {p.tc_sospechoso && !publicShareMode && <div className="vc-tc-badge"><span className="vc-tc-badge-i">ⓘ</span>Confirmar tipo de cambio</div>}
+        {p.tc_sospechoso && !publicShareMode && <div className="vc-tc-badge"><span className="vc-tc-badge-i">ⓘ</span>Cotiza a Bs 7 · confirmar</div>}
         {brokerMode && !publicShareMode && (() => { const fb = fuenteBadge(p.fuente); return fb ? <div className="vc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null })()}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="vc-nav vc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); useCarousel ? navTo(photoIdx - 1) : setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
@@ -906,7 +915,7 @@ const VentaCard = memo(function VentaCard({ nombreMacrozona, property: p, isFavo
         <div className="vc-name">{p.proyecto}{esNuevoCaptura(p) ? <span className="vc-nuevo">Nuevo</span> : esPublicacionReciente(p) && <span className="vc-reciente">Reciente</span>}</div>
         <div className="vc-zona">{displayZona(p.zona)} <span className="vc-id">#{p.id}</span></div>
         <div className="vc-price-block">
-          <div className="vc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="vc-tc">(T.C. oficial)</span></div>
+          <div className="vc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
           {(() => { const b = priceChangeBadge(priceSnapshot, p.precio_usd); return b ? <div className={`vc-price-change vc-price-change-${b.kind}`}>{b.label}</div> : null })()}
           <div className="vc-specs">{[
             p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
@@ -1072,7 +1081,7 @@ const VentaListCard = memo(function VentaListCard({ zonaLabel, property: p, isFa
             muestran, y la lista no. Con la mig 311 pasan a ser ~42 props, así que el hueco se nota:
             en modo lista se veía el precio sin la advertencia. Va abajo-izquierda para no chocar
             con "Nuevo/Reciente", que ocupan arriba-izquierda. */}
-        {p.tc_sospechoso && <span className="vlc-tc-badge"><span className="vlc-tc-badge-i">ⓘ</span>Confirmar tipo de cambio</span>}
+        {p.tc_sospechoso && <span className="vlc-tc-badge"><span className="vlc-tc-badge-i">ⓘ</span>Cotiza a Bs 7 · confirmar</span>}
         <div className="vlc-id-chip">#{p.id}</div>
         {!hasPhotos && <div className="vlc-nofoto">Sin fotos</div>}
         {photos.length > 1 && (<>
@@ -1086,7 +1095,7 @@ const VentaListCard = memo(function VentaListCard({ zonaLabel, property: p, isFa
         <div className="vlc-toprow">
           <div className="vlc-priceblock">
             <div className="vlc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
-            <div className="vlc-pricesub">{p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m² · ` : ''}T.C. oficial</div>
+            <div className="vlc-pricesub">{p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : ''}</div>
           </div>
           <button className={`vlc-fav ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={e => { e.stopPropagation(); onToggleFavorite(p.id) }}>
             <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 19, height: 19 }}>
@@ -1256,7 +1265,7 @@ const MobileVentaCard = memo(function MobileVentaCard({ zonaLabel, property: p, 
           <span className="mc-zona">{zonaLabel}</span>
         </div>
         <div className="mc-price-block">
-          <div className="mc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="mc-tc">(T.C. oficial)</span></div>
+          <div className="mc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
           {(() => { const b = priceChangeBadge(priceSnapshot, p.precio_usd); return b ? <div className={`mc-price-change mc-price-change-${b.kind}`}>{b.label}</div> : null })()}
           <div className="mc-specs">
             {p.dormitorios !== null && <span className="mc-sp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 12V7a1 1 0 011-1h16a1 1 0 011 1v5M3 12h18M3 12v6M21 12v6M6 12V9h5v3"/></svg>{p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`}</span>}
@@ -2028,7 +2037,7 @@ function BottomSheet({ nombreMacrozona, property: p, isOpen, onClose, onShare, o
       </div>
       <div className="bs-h-zona">{displayZona(p.zona)} · #{p.id}</div>
       <div className="bs-h-price-block">
-        <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span>{p.tc_sospechoso && !publicShareMode && <span className="bs-tc-badge">Confirmar tipo de cambio</span>}</div>
+        <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}{p.tc_sospechoso && !publicShareMode && <span className="bs-tc-badge">Cotiza a Bs 7 · confirmar</span>}</div>
         <div className="bs-h-specs">{[
           p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
           p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
@@ -3123,7 +3132,7 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
       const newCount = favorites.size + 1
       if (brokerMode) {
         // Aviso al broker cuando agrega prop con TC sospechoso: el cliente no
-        // verá el badge "Confirmar tipo de cambio" en la shortlist (es señal
+        // vera el badge "Cotiza a Bs 7 - confirmar" en la shortlist (es senal
         // interna). El broker debe verificar el precio antes de enviar.
         const prop = properties.find(x => x.id === id)
         const isReportada = reportedIds.has(id)
