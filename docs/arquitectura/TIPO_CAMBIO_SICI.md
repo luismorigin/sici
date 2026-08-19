@@ -1,9 +1,61 @@
 # Tipo de Cambio en SICI — Documento Autoritativo
 
 **Fecha:** 10 de marzo de 2026
-**Ultima actualizacion:** 14 de agosto de 2026 (§11 reescrita: el escritor del TC ya no es n8n)
+**Ultima actualizacion:** 19 de agosto de 2026 (§0 nueva: el vocabulario de tags vigente)
 **Status:** Documento de referencia para entender el sistema de TC y precios en SICI
 **Actualizar este documento** antes de modificar cualquier extractor, merge o funcion de precio.
+
+---
+
+## 0. 🔴 EL VOCABULARIO DE TAGS — LEER ESTO ANTES QUE NADA
+
+**El resto del documento (§1 en adelante) describe el REGIMEN VIEJO, el de n8n.** Sigue siendo
+util como historia y para entender el legacy, pero **sus tags y sus listas ya no son los vigentes**.
+
+### Los 4 tags vivos (conteo en `propiedades_v2`, venta, 19-ago-2026)
+
+| tag | que significa | avisos |
+|---|---|---|
+| `no_especificado` | el aviso **calla** sobre el tipo de cambio, o solo dice USD | 628 |
+| `oficial_viejo` | el aviso **ancla explicito al rate muerto**: "6.96", "Bs 7", "TC 7" | 117 |
+| `paralelo` | el aviso menciona el paralelo / "al dia" | 75 |
+| `bob` | el precio **viene publicado en bolivianos** | 49 |
+
+### 🔑 `oficial_viejo` ES EL SUCESOR DE `oficial`
+
+Los dos significan lo mismo — *"este precio esta anclado al tipo de cambio oficial"*. Cambio el
+nombre porque **Bolivia unifico el oficial con el paralelo**: el que antes era "el oficial" paso a
+ser "el viejo", y los tags colapsaron. **`oficial` YA NO SE EMITE**: cero registros en la tabla viva
+(quedan 395 en `propiedades_v2_archivo`, congelada).
+
+⚠️ **Esta equivalencia no estaba escrita en ningun lado, y costo caro dos veces:**
+1. El criterio de comparacion del badge de TC (mig 227) calcula su mediana con
+   `IN ('paralelo', 'oficial')` — la lista de este documento. Al desaparecer `oficial`, su
+   referencia cayo a 70 avisos de 761 y **el criterio dejo de marcar a nadie, sin fallar**.
+   Sigue mudo hoy.
+2. En el analisis del 19-ago se trato a `oficial_viejo` como un tag raro a excluir, cuando era la
+   traduccion directa del criterio original. Lo corrigio el founder.
+
+👉 **Toda lista de tags escrita antes del 21-jul-2026 esta desactualizada.** Si encontras
+`IN ('paralelo', 'oficial')` en una funcion, esa funcion esta rota — no falla, mira menos de lo que
+cree. Verificar SIEMPRE contra la base:
+```sql
+SELECT tipo_cambio_detectado, COUNT(*) FROM propiedades_v2
+ WHERE es_activa AND tipo_operacion='venta' GROUP BY 1 ORDER BY 2 DESC;
+```
+
+### Que se hace con cada tag (funcion viva `precio_normalizado_shadow`, mig 272 + 311)
+
+| tag | normalizacion |
+|---|---|
+| `bob` | **se convierte**: BOB / `config_global.tipo_cambio_paralelo` (el TC del dia) |
+| `oficial_viejo` | **NO se toca** (mig 311, 28-jul) — se publica lo que dice el anuncio y se enciende el badge |
+| `paralelo` · `no_especificado` | **NO se tocan** — USD directo |
+
+Medido en Equipetrol el 19-ago: **de 391 avisos solo 17 (4,3%) se normalizan**. A los otros 374 se
+les publica el numero exacto del aviso. Detalle de la decision:
+`scripts/deptos-equipetrol/TC_NUEVO_DECISION.md` · auditoria:
+`docs/reports/AUDITORIA_SENALES_PRECIO_2026-08-19.md`
 
 ---
 
@@ -33,14 +85,16 @@
   - **Merge:** Escribe `v_enr_tipo_cambio_detectado` a la columna (desde v2.2.0, fix 14 Ene 2026)
 - **Reglas de deteccion (regex):**
   - `paralelo`: "tc paralelo", "cambio paralelo", "dolar blue", "pago en dolares"
-  - `oficial`: "tc oficial", "tc 7", "tc 6"
+  - `oficial`: "tc oficial", "tc 7", "tc 6"  ⚠️ **REGIMEN VIEJO — hoy este tag se llama `oficial_viejo`** (ver §0)
   - `no_especificado`: default
+  - ⚠️ **Falta `bob`** (precio publicado en bolivianos), que el reader del hibrido si emite.
 
 ### `depende_de_tc` (propiedades_v2)
 - **Que es:** Flag booleano que indica si `precio_usd` fue derivado de BOB.
 - **Quien lo calcula:** El merge, lineas 825-830:
   ```sql
   depende_de_tc = CASE
+      -- ⚠️ LISTA DEL REGIMEN VIEJO. `oficial` ya no se emite (ver §0).
       WHEN v_enr_tipo_cambio_detectado IN ('paralelo', 'oficial')
            AND v_enr_precio_fue_normalizado = true
       THEN true
@@ -220,6 +274,7 @@ Y devuelve su clasificacion de TC. El precio no cambia.
 **Regla de `depende_de_tc`** (lineas 825-830):
 ```sql
 depende_de_tc = CASE
+    -- ⚠️ LISTA DEL REGIMEN VIEJO. `oficial` ya no se emite (ver §0).
     WHEN tipo_cambio_detectado IN ('paralelo', 'oficial')
          AND precio_fue_normalizado = true
     THEN true ELSE false

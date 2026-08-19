@@ -135,7 +135,7 @@ Conteos: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`. Descripció
 4. **`buscar_unidades_reales()` retorna `precio_normalizado() AS precio_usd`** — frontend recibe valores ya normalizados, no re-normalizar en JS.
 5. Para ad-hoc usar `v_mercado_venta` (expone `precio_norm`/`precio_m2`) — regla 10.
 
-Referencia completa: `docs/arquitectura/TIPO_CAMBIO_SICI.md` (flujo portal→extractor→merge→dashboard→query, bugs históricos, TC Binance).
+Referencia completa: `docs/arquitectura/TIPO_CAMBIO_SICI.md` — 🔴 **empezar por su §0**, que es lo único actualizado al régimen nuevo: el vocabulario de tags vigente y **por qué `oficial_viejo` es el sucesor de `oficial`**. De §1 en adelante el documento describe el régimen VIEJO (sirve de historia, sus listas de tags NO). (flujo portal→extractor→merge→dashboard→query, bugs históricos, TC Binance).
 
 ## Documentacion Principal
 
@@ -160,7 +160,7 @@ Referencia completa: `docs/arquitectura/TIPO_CAMBIO_SICI.md` (flujo portal→ext
 | **Fichas técnicas proyectos** | `docs/fichas/` — data de desarrollador no disponible en portales |
 | **Estudios mercado SaaS** | `docs/backlog/ESTUDIOS_MERCADO_SAAS.md` — framework `scripts/estudio-mercado/` |
 | **🏗️ Paquete B2B desarrolladoras (Mesa + Informe)** | `docs/analysis/README_MESA_INFORME.md` — **empezar por ahí**. Tablero interactivo (`mesa-de-guerra.html`) + informe imprimible (`mockup-informe-mercado.html`) + **`mesa-data.js` = FUENTE ÚNICA** (data del corte + META + CONF + CTX + SLOTS + EDITORIAL). 🔴 **Los 3 archivos viajan JUNTOS**; refrescar corte o clonar a otra zona = regenerar SOLO `mesa-data.js`, las vistas no se tocan. Prototipo con data real **congelada al 3-ago-2026** (no se auto-refresca). El pase editorial por edición tiene checklist fiduciario de 8 reglas en el README. Contexto estratégico: `ANALISIS_DATA_ENGINE_MOAT.md` · rigor: `AUDITORIA_ESTADISTICA_MESA_INFORME.md` (🔴 antigüedad del stock ≠ tiempo de venta) · pricing: `docs/backlog/PRODUCTO_INFORME_MERCADO.md` §10 |
-| **Sistema TC y precios** | `docs/arquitectura/TIPO_CAMBIO_SICI.md` |
+| **Sistema TC y precios** | `docs/arquitectura/TIPO_CAMBIO_SICI.md` — **§0 = el vocabulario de tags vigente** (`no_especificado` · `oficial_viejo` · `paralelo` · `bob`); el resto es el régimen viejo |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
 | **Brand Guidelines** | Repo externo `simon-brand` — ver sección abajo |
