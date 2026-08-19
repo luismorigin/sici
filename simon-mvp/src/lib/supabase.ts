@@ -1066,28 +1066,10 @@ export interface FiltrosAnalisis {
   contexto?: ContextoUsuario
 }
 
-export async function obtenerAnalisisFiduciario(filtros: FiltrosAnalisis): Promise<AnalisisMercadoFiduciario | null> {
-  if (!supabase) {
-    console.warn('Supabase no configurado')
-    return null
-  }
-
-  try {
-    const { data, error } = await supabase.rpc('analisis_mercado_fiduciario', {
-      p_filtros: filtros
-    })
-
-    if (error) {
-      console.error('Error en RPC analisis_mercado_fiduciario:', error)
-      return null
-    }
-
-    return data as AnalisisMercadoFiduciario
-  } catch (err) {
-    console.error('Error obteniendo análisis fiduciario:', err)
-    return null
-  }
-}
+// `obtenerAnalisisFiduciario` se borró el 19-ago-2026 (mig 328). Envolvía la RPC
+// `analisis_mercado_fiduciario`, que calculaba con la fórmula del régimen VIEJO y
+// desde el TIEMPO 2 leía la tabla viva. No la llamaba nadie: se verificó en los 9
+// repos del disco antes de desarmarla. La RPC quedó como `_trash_*`.
 
 // ========== ANÁLISIS FIDUCIARIO DESDE BÚSQUEDA REAL ==========
 // Esta función construye el análisis usando los mismos filtros que buscarUnidadesReales
