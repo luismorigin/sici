@@ -16,6 +16,12 @@
 -- NO SE BORRA NADA: se renombra a `_trash_*`. Revertir es otro rename (al pie).
 -- Regla 13 del proyecto: rename antes de DROP.
 --
+-- FORMATO: sigue a la mig 327 (su hermana), no a `_template.sql`. El template
+-- está armado para migraciones que CREAN objetos —tabla → GRANTs → RLS → RPC →
+-- vista— y esta no crea ninguno: renombra y recrea. Del checklist del template
+-- sí aplican: aplicar por Supabase UI/psql (no MCP), rollback documentado, y
+-- registrar en `docs/migrations/MIGRATION_INDEX.md`.
+--
 -- =============================================================================
 -- EL BARRIDO — 6 ángulos, ninguno por memoria
 -- =============================================================================
@@ -125,7 +131,14 @@ BEGIN
     RAISE EXCEPTION 'populate_broker_prospection sigue llamando a la RPC vieja. Abortado.';
   END IF;
 
-  RAISE NOTICE '✅ 4 funciones desarmadas · cadena del Advisor intacta · prospección apuntada a shadow';
+  -- Los GRANT: `CREATE OR REPLACE FUNCTION` los PRESERVA, pero se verifica igual —
+  -- si la prospección se quedara sin EXECUTE, el botón Refrescar del admin daría
+  -- 42501 desde el browser y recién nos enteraríamos ahí.
+  IF NOT has_function_privilege('service_role', 'public.populate_broker_prospection()', 'EXECUTE') THEN
+    RAISE EXCEPTION 'populate_broker_prospection perdió EXECUTE para service_role. Abortado.';
+  END IF;
+
+  RAISE NOTICE '✅ 4 funciones desarmadas · cadena del Advisor intacta · prospección apuntada a shadow · GRANTs intactos';
 END
 $chk$;
 
