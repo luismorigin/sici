@@ -7,6 +7,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import type { BrokerShortlist, BrokerShortlistWithItems, UpdateShortlistPayload } from '@/types/broker-shortlist'
+import { rpcShadowFirst } from '@/lib/rpc-shadow'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -59,8 +60,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const previewByPropId: Record<number, PreviewRow> = {}
 
       if (ventaIds.length > 0) {
-        const { data: rows } = await supabase.rpc('buscar_unidades_simple', {
-          p_filtros: { limite: 500, solo_con_fotos: false }
+        // 🔴 Dos arreglos en esta llamada (19-ago-2026):
+        //  1. `rpcShadowFirst` → pega contra `buscar_unidades_simple_shadow`. La RPC sin sufijo
+        //     calcula con `precio_normalizado()` (regimen VIEJO) y desde el TIEMPO 2 lee la tabla
+        //     VIVA: no falla, devuelve precios inflados. Eran 9 propiedades de las shortlists.
+        //  2. Filtrar por `ids` en vez de pedir 500 y descartar en JS: la RPC devuelve 659 y el
+        //     tope dejaba 16 propiedades de shortlist sin preview, en silencio.
+        const { data: rows } = await rpcShadowFirst(supabase, 'buscar_unidades_simple', {
+          p_filtros: { ids: ventaIds, limite: ventaIds.length, solo_con_fotos: false }
         })
         for (const r of (rows || []) as Record<string, unknown>[]) {
           if (typeof r.id !== 'number' || !ventaIds.includes(r.id)) continue
