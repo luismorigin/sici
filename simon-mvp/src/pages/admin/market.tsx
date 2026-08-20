@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { precioDelFeed } from '@/lib/precio-utils'
+import { fetchAllRows } from '@/lib/supabase-paginado'
 import { displayZona, ZONAS_EQUIPETROL_DB } from '@/lib/zonas'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -199,6 +200,9 @@ export default function MarketPulseDashboard() {
   // Por qué no hay absorción, cuando no la hay. Un panel vacío sin motivo es
   // indistinguible de un mercado quieto.
   const [absorcionError, setAbsorcionError] = useState<string | null>(null)
+  // Qué bloques de la pantalla no cargaron. Se muestra arriba: media pantalla en
+  // silencio es peor que una pantalla que avisa qué le falta.
+  const [bloquesFallidos, setBloquesFallidos] = useState<string[]>([])
   const [absorcionZonas, setAbsorcionZonas] = useState<Record<string, { absorbidas: number; pending: number; tasa: number; meses: number | null }>>({})
   const [absorcionGlobal, setAbsorcionGlobal] = useState<{ tasa: number; meses: number | null; pending: number } | null>(null)
   const [absorcionHistorico, setAbsorcionHistorico] = useState<AbsorcionHistorico[]>([])
@@ -211,23 +215,32 @@ export default function MarketPulseDashboard() {
     if (!supabase) return
     setLoading(true)
 
+    // 🔑 `allSettled`, no `all`. Con `Promise.all` el primer bloque que falla corta a
+    // los demás y el catch solo escribía en la consola: la pantalla quedaba a medias,
+    // con paneles vacíos y sin una sola señal de que algo había fallado. Desde que las
+    // consultas paginan (`fetchAllRows` LANZA en vez de devolver vacío) eso pasó de
+    // improbable a probable.
+    const bloques: Array<[string, () => Promise<void>]> = [
+      ['KPIs', fetchKPIs],
+      ['tipologías', fetchTipologias],
+      ['top proyectos', fetchTopProyectos],
+      ['estados de obra', fetchEstados],
+      ['histórico de TC', fetchTCHistorico],
+      ['oportunidades', fetchOportunidades],
+      ['amenidades', fetchRankingAmenidades],
+      ['análisis por zona', fetchZonaAnalysis],
+      ['calidad de datos', fetchDataQuality],
+      ['antigüedad', fetchAntiguedad],
+      ['absorción', fetchAbsorcion],
+    ]
     try {
-      await Promise.all([
-        fetchKPIs(),
-        fetchTipologias(),
-        fetchTopProyectos(),
-        fetchEstados(),
-        fetchTCHistorico(),
-        fetchOportunidades(),
-        fetchRankingAmenidades(),
-        fetchZonaAnalysis(),
-        fetchDataQuality(),
-        fetchAntiguedad(),
-        fetchAbsorcion()
-      ])
+      const r = await Promise.allSettled(bloques.map(([, fn]) => fn()))
+      const fallaron = r
+        .map((x, i) => (x.status === 'rejected' ? { nombre: bloques[i][0], razon: x.reason } : null))
+        .filter(Boolean) as Array<{ nombre: string; razon: unknown }>
+      for (const f of fallaron) console.error(`[market] falló "${f.nombre}":`, f.razon)
+      setBloquesFallidos(fallaron.map(f => f.nombre))
       setLastUpdate(new Date())
-    } catch (err) {
-      console.error('Error fetching market data:', err)
     } finally {
       setLoading(false)
     }
@@ -240,7 +253,8 @@ export default function MarketPulseDashboard() {
     if (!supabase) return
 
     // Fetch properties
-    const { data: props } = await supabase
+    const props = await fetchAllRows<any>(
+      supabase
       .from('propiedades_v2')
       .select('precio_usd, area_total_m2, id_proyecto_master, tipo_cambio_detectado')
       .eq('status', 'completado')
@@ -250,7 +264,9 @@ export default function MarketPulseDashboard() {
       .not('zona', 'is', null)
       .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
-      .gte('fecha_publicacion', cutoffDate)
+      .gte('fecha_publicacion', cutoffDate),
+      'admin/market: propiedades_v2',
+    )
 
     // Fetch TC
     const { data: tcParalelo } = await supabase
@@ -305,7 +321,8 @@ export default function MarketPulseDashboard() {
   const fetchTipologias = async () => {
     if (!supabase) return
 
-    const { data } = await supabase
+    const data = await fetchAllRows<any>(
+      supabase
       .from('propiedades_v2')
       .select('dormitorios, precio_usd, area_total_m2, tipo_cambio_detectado')
       .eq('status', 'completado')
@@ -315,7 +332,9 @@ export default function MarketPulseDashboard() {
       .not('zona', 'is', null)
       .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
-      .gte('fecha_publicacion', cutoffDate)
+      .gte('fecha_publicacion', cutoffDate),
+      'admin/market: propiedades_v2',
+    )
 
     const { data: tcData } = await supabase
       .from('config_global')
@@ -370,7 +389,8 @@ export default function MarketPulseDashboard() {
     if (!supabase) return
 
     // Fetch all properties with project IDs
-    const { data: props } = await supabase
+    const props = await fetchAllRows<any>(
+      supabase
       .from('propiedades_v2')
       .select('id_proyecto_master, precio_usd, area_total_m2, tipo_cambio_detectado')
       .eq('status', 'completado')
@@ -381,7 +401,9 @@ export default function MarketPulseDashboard() {
       .not('zona', 'is', null)
       .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
-      .gte('fecha_publicacion', cutoffDate)
+      .gte('fecha_publicacion', cutoffDate),
+      'admin/market: propiedades_v2',
+    )
 
     if (!props || props.length === 0) return
 
@@ -455,7 +477,8 @@ export default function MarketPulseDashboard() {
   const fetchEstados = async () => {
     if (!supabase) return
 
-    const { data } = await supabase
+    const data = await fetchAllRows<any>(
+      supabase
       .from('propiedades_v2')
       .select('estado_construccion, precio_usd, area_total_m2, tipo_cambio_detectado')
       .eq('status', 'completado')
@@ -466,7 +489,9 @@ export default function MarketPulseDashboard() {
       .not('zona', 'is', null)
       .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
-      .gte('fecha_publicacion', cutoffDate)
+      .gte('fecha_publicacion', cutoffDate),
+      'admin/market: propiedades_v2',
+    )
 
     const { data: tcData } = await supabase
       .from('config_global')
@@ -536,7 +561,8 @@ export default function MarketPulseDashboard() {
     if (!supabase) return
 
     // Fetch all valid properties with projects, estado and amenidades
-    const { data: props } = await supabase
+    const props = await fetchAllRows<any>(
+      supabase
       .from('propiedades_v2')
       .select('id_proyecto_master, dormitorios, precio_usd, area_total_m2, estado_construccion, datos_json, tipo_cambio_detectado')
       .eq('status', 'completado')
@@ -547,7 +573,9 @@ export default function MarketPulseDashboard() {
       .not('zona', 'is', null)
       .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
-      .gte('fecha_publicacion', cutoffDate)
+      .gte('fecha_publicacion', cutoffDate),
+      'admin/market: propiedades_v2',
+    )
 
     if (!props) return
 
@@ -669,7 +697,8 @@ export default function MarketPulseDashboard() {
     if (!supabase) return
 
     // Fetch properties with amenidades
-    const { data: props } = await supabase
+    const props = await fetchAllRows<any>(
+      supabase
       .from('propiedades_v2')
       .select('id_proyecto_master, datos_json, precio_usd, area_total_m2, tipo_cambio_detectado')
       .eq('status', 'completado')
@@ -679,7 +708,9 @@ export default function MarketPulseDashboard() {
       .not('zona', 'is', null)
       .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera","garaje","deposito")')
-      .gte('fecha_publicacion', cutoffDate)
+      .gte('fecha_publicacion', cutoffDate),
+      'admin/market: propiedades_v2',
+    )
 
     const { data: tcData } = await supabase
       .from('config_global')
@@ -787,11 +818,14 @@ export default function MarketPulseDashboard() {
     // cuando el TIEMPO 1 renombró la tabla, la gemela SIN sufijo se quedó pegada a
     // `propiedades_v2_archivo` y sirve la foto CONGELADA del 27-jul-2026 — sin error,
     // sin aviso. Esta pantalla mostró ese corte durante casi un mes.
-    const { data } = await supabase
+    const data = await fetchAllRows<any>(
+      supabase
       .from('v_mercado_venta_shadow')
       .select('id, zona, dormitorios, precio_norm, area_total_m2, estado_construccion, id_proyecto_master')
       .eq('zona_general', 'Equipetrol') // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
-      .not('zona', 'is', null)
+      .not('zona', 'is', null),
+      'admin/market: v_mercado_venta_shadow',
+    )
 
     if (!data) return
 
@@ -961,14 +995,17 @@ export default function MarketPulseDashboard() {
     if (!supabase) return
 
     // Query WITHOUT zona filter to measure data quality
-    const { data } = await supabase
+    const data = await fetchAllRows<any>(
+      supabase
       .from('propiedades_v2')
       .select('zona, id_proyecto_master, precio_usd, datos_json')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
       .is('duplicado_de', null)
-      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")'),
+      'admin/market: propiedades_v2',
+    )
 
     if (!data) return
 
@@ -989,7 +1026,8 @@ export default function MarketPulseDashboard() {
   const fetchAntiguedad = async () => {
     if (!supabase) return
 
-    const { data } = await supabase
+    const data = await fetchAllRows<any>(
+      supabase
       .from('propiedades_v2')
       .select('fecha_publicacion')
       .eq('status', 'completado')
@@ -998,7 +1036,9 @@ export default function MarketPulseDashboard() {
       .is('duplicado_de', null)
       .not('zona', 'is', null)
       .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
-      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")'),
+      'admin/market: propiedades_v2',
+    )
 
     if (!data) return
 
@@ -1251,6 +1291,22 @@ export default function MarketPulseDashboard() {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200">
+        {/* 🔴 Lo que NO cargó, arriba de todo. Una pantalla a medias sin aviso se lee
+            como una pantalla completa — y sus paneles vacíos, como mercado sin movimiento. */}
+        {bloquesFallidos.length > 0 && (
+          <div className="bg-red-50 border-b-2 border-red-300 px-6 py-3">
+            <div className="max-w-7xl mx-auto text-sm">
+              <span className="font-semibold text-red-800">
+                No cargó {bloquesFallidos.length === 1 ? 'un bloque' : `${bloquesFallidos.length} bloques`}:
+              </span>{' '}
+              <span className="text-red-700">{bloquesFallidos.join(' · ')}</span>
+              <span className="text-red-600">
+                {' '}— lo que ves abajo está incompleto. El motivo está en la consola del navegador.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <header className="bg-gradient-to-r from-slate-900 to-slate-800 text-white py-4 px-6 shadow-lg">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
