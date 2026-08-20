@@ -59,7 +59,26 @@ if (globales < 4) {
   process.exit(1);
 }
 
-const resumen = `📸 Snapshot shadow OK: ${filas} filas (${globales} globales · ${macrozonas.size} macrozona(s): ${[...macrozonas].join(', ')} · ${zonasVenta.size} zonas venta · ${zonasAlq.size} zonas alquiler)`;
+// 🔴 `filas` es lo que la RPC INTENTA escribir, NO lo que queda en la tabla: el UNIQUE
+// (fecha, dormitorios, zona, macrozona) colapsa las repetidas, así que los dos números
+// difieren siempre. Reportar solo el primero hizo que tres logs de la MISMA noche dijeran
+// 133, 132 y 81 filas (18 y 19-ago-2026), y cada vez hubo que ir a la base a desempatar.
+// Se informan los DOS y se nombra cuál es cuál: el de la tabla es el que vale.
+const hoyLocal = (() => { const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+let enTabla = null;
+try {
+  const { count, error: errCount } = await sb
+    .from('market_absorption_snapshots_shadow')
+    .select('*', { count: 'exact', head: true })
+    .eq('fecha', hoyLocal);
+  if (!errCount) enTabla = count;
+} catch { /* informativo: no puede tumbar el snapshot, que ya está escrito */ }
+
+const detalleFilas = enTabla == null
+  ? `${filas} filas upserteadas (no se pudo leer el conteo de la tabla)`
+  : `${enTabla} filas en la tabla para ${hoyLocal} (la RPC upserteó ${filas}; el UNIQUE colapsa el resto)`;
+const resumen = `📸 Snapshot shadow OK: ${detalleFilas} — ${globales} globales · ${macrozonas.size} macrozona(s): ${[...macrozonas].join(', ')} · ${zonasVenta.size} zonas venta · ${zonasAlq.size} zonas alquiler`;
 console.log(resumen);
 if (!quiet) {
   for (const r of data) console.log(`   dorm ${r.dormitorios_out} · ${r.zona_out}`);

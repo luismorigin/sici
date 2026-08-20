@@ -271,22 +271,28 @@ export default function MarketPulseDashboard() {
       let sumPrecio = 0
       let sumArea = 0
       let sumPrecioM2 = 0
+      // 🔑 Se cuentan las que EFECTIVAMENTE entraron al promedio, no las que hay.
+      // Dividir por `totalUnidades` cuando algunas quedaron afuera (sin TC no se puede
+      // convertir) da un promedio bajo — el mismo error de "no sabemos tratado como
+      // número", una línea más abajo.
+      let nPromediadas = 0
 
       validProps.forEach(p => {
         const precio = precioDelFeed(parseFloat(p.precio_usd) || 0, p.tipo_cambio_detectado, tcPar)
-        if (precio === null) return   // sin TC no se puede convertir: se EXCLUYE del calculo, nunca entra como 0
+        if (precio === null) return   // sin TC no se puede convertir: se EXCLUYE del cálculo, nunca entra como 0
         const area = parseFloat(p.area_total_m2) || 1
         sumPrecio += precio
         sumArea += area
         sumPrecioM2 += precio / area
+        nPromediadas++
       })
 
       setKpis({
         total_unidades: totalUnidades,
         proyectos_activos: proyectosSet.size,
-        precio_m2_promedio: Math.round(sumPrecioM2 / totalUnidades),
-        ticket_promedio: Math.round(sumPrecio / totalUnidades),
-        area_promedio: Math.round((sumArea / totalUnidades) * 10) / 10,
+        precio_m2_promedio: nPromediadas ? Math.round(sumPrecioM2 / nPromediadas) : 0,
+        ticket_promedio: nPromediadas ? Math.round(sumPrecio / nPromediadas) : 0,
+        area_promedio: nPromediadas ? Math.round((sumArea / nPromediadas) * 10) / 10 : 0,
         tc_paralelo: parseFloat(tcParalelo?.valor) || 0,
         tc_oficial: parseFloat(tcOficial?.valor) || 0
       })
