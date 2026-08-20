@@ -47,8 +47,15 @@ no en el del audit. Si solo se mira el audit, se pasa.
 > Si las routines de ZN todavía no están agendadas, **decilo en el parte** en vez de omitirlas.
 
 > Corren en cadena (captura → captura → audit). El audit lee lo que se cargó esa noche.
-> Los logs de captura **se van appendeando** (varias corridas por archivo) → leer la sección de
-> ARRIBA (la más reciente / la fecha de anoche). El log del audit se sobrescribe cada noche.
+>
+> 🔴 **BUSCÁ LA ENTRADA POR SU FECHA, NUNCA POR SU POSICIÓN.** Esta línea decía "leer la sección de
+> ARRIBA" y "el log del audit se sobrescribe cada noche": **las dos cosas son falsas**. Todos los logs
+> se appendean, y **no todos por el mismo lado** — el 19-ago la entrada del día en
+> `cron-deptos-alquiler-log.md` estaba en la **línea 2218**, con la del 18 arriba de todo, y el log del
+> audit acumula sus entradas al FINAL. Leer "la de arriba" reporta la noche equivocada, y eso no se
+> nota: los números son plausibles.
+> 👉 En cada log: `grep -n "^## <AAAA-MM-DD de hoy>"`. **Si un log no tiene entrada de hoy, esa
+> routine no corrió** — y eso es lo primero del parte, no un detalle.
 > (Si algún día se agenda `cron-casas` como routine nocturna, sumar su log; hoy no está agendada.)
 
 ## Pasos
@@ -108,26 +115,71 @@ RECHAZAR / DEDUP / PM_NUEVO) · **SQL listo para aplicar** · bloqueos (PM_NUEVO
 > 🔑 El dedup NO puede cazar estos casos y no es un bug: **el precio es parte de su clave de grupo**,
 > así que dos avisos del mismo depto con precios distintos nunca se comparan.
 
+> 🗺️ **Superficie 10 — la prop y su EDIFICIO en macrozonas distintas** (20-ago-2026). Un edificio no
+> está en dos macrozonas: si la prop dice Zona Norte y su pm es de Equipetrol, **uno de los dos está
+> mal**, y casi siempre es la prop — su `zona` la escribe el cargador desde el GPS del aviso, que a
+> menudo es el pin genérico del portal. No falla, no avisa, y esa prop **alimenta la mediana de una
+> microzona donde no está**.
+> 🔑 **Reportá la DISTANCIA, no solo el conteo**: en el estreno los 3 casos no eran equivalentes —
+> 99 m y 308 m son borde de macrozona (plausible), pero **5.089 m es un error real**. Un parte que diga
+> "3 casos" sin la distancia los hace parecer iguales.
+> ⚠️ Y no la confundas con la superficie 5: la 5 mide metros y **queda ciega cuando el pin es genérico**
+> (ahí la distancia se anula a propósito); la 10 ve igual porque compara macrozonas. Son complementarias.
+
+> 🏷️ **Los alias sugeridos ya vienen filtrados** (20-ago-2026). El cargador los cruza contra el catálogo
+> y descarta los `YA_CARGADO` / `REDUNDANTE` / `AMBIGUO` / `MATCH_RIESGOSO`, declarando cada descarte con
+> su motivo. Antes llegaban en crudo y **más de la mitad no servía** (30 propuestos en 3 noches, 15
+> útiles). 👉 Si el log de captura muestra descartes, **contalos en una línea y no los repitas uno por
+> uno** — lo que va al parte son los que quedaron.
+
 📌 Desde el 4-ago **la superficie 3 va a traer MENOS dedups**, y eso es esperado, no una regresión: la
 republicación por slug reescrito ahora se resuelve en la captura. Lo que queda ahí son apart-hoteles y
 republicaciones con códigos distintos.
 
 ### 3. (Opcional) Confirmar en BD — SOLO para verificar cifras
-Si hace falta cotejar un número, usar las tablas **shadow**: `propiedades_v2`,
-`market_absorption_snapshots_shadow`. **Nunca** tomar una fila reciente de `matching_sugerencias`
+Si hace falta cotejar un número: la tabla viva es **`propiedades_v2`** (el rename del TIEMPO 2, 17-ago)
+y la serie es `market_absorption_snapshots_shadow`. 🔴 **`propiedades_v2_shadow` YA NO EXISTE** — se
+borró el 20-ago y cualquier query a ese nombre falla, que es lo correcto. Las **vistas** de mercado sí
+conservan el sufijo: `v_mercado_venta_shadow` / `v_mercado_alquiler_shadow` (las gemelas sin sufijo
+apuntan al archivo congelado del 27-jul y **no dan error: sirven datos viejos**). **Nunca** tomar una fila reciente de `matching_sugerencias`
 como resultado de la routine (es n8n/prod). La BD confirma, no reemplaza al log.
 
 ## Qué reportar (parte matutino)
 
-1. **Estado de las 5 routines**: corrieron sí/no + una línea de resultado cada una. Si alguna de ZN todavía no está agendada, decirlo (no omitirla en silencio).
-2. **Lo que necesita tu acción** (arriba de todo):
-   - SQL del audit listo para aplicar (cuántos UPDATEs, qué hacen).
-   - PM_NUEVO bloqueado esperando GPS del founder (con la pista del edificio).
-   - Alertas recurrentes (ej. basura Santorini Ventura que vuelve cada noche → candidato a filtro
-     en discovery; ver deuda del gate por URL vs id efímero).
-3. **Salud general**: capturado, rechazado, multiproyecto, verificador, snapshot. Marcar cualquier
-   cosa fuera de lo normal (disyuntor del verificador disparado, snapshot no escrito, gate con
-   volumen raro).
+> 🎯 **El parte se escribe para que Lucho ACTÚE, no para que se entere.** Las tres reglas de abajo
+> salieron de medir tres partes seguidos (18, 19 y 20-ago): en los tres tuvo que pedir a mano lo mismo
+> — *"dame el SQL por acá"*, *"qué vale la pena hacer realmente"* — y dos veces corrió un bloque que
+> no aplicó nada porque terminaba en `ROLLBACK`.
 
-**$0, read-only. Este comando NO aplica ningún SQL** — solo lee y resume. Lo que haya para aplicar,
-lo aplica el humano.
+1. **Estado de las 5 routines**: corrieron sí/no + una línea de resultado cada una. Si alguna de ZN
+   todavía no está agendada, decirlo (no omitirla en silencio).
+   🆕 **Leé la línea de alcance que ahora imprime el audit** (`✅ Las 4 capturas de hoy dejaron log`
+   o `🔴 ALCANCE INCOMPLETO — N de 4 capturas sin log`). Si está incompleta, **su "0 superficies" no
+   cubre la noche**: decilo y re-corré el audit, que es read-only y $0.
+
+2. **Lo que necesita tu acción** (arriba de todo):
+   - 🔴 **PEGÁ EL SQL EN EL CHAT, no la ruta del archivo.** Decir "está en `output/…sql`" obliga a
+     pedirlo. Pasó los 3 días seguidos.
+   - 🔴 **Verificá el SQL contra la base ANTES de pasarlo, y entregalo con `COMMIT` puesto.** Las
+     plantillas del audit terminan en `ROLLBACK` para que un humano revise — pero si vos ya
+     comprobaste que las filas están como el audit las vio, dejar el `ROLLBACK` solo agrega una
+     ronda: el 19 y el 20 corrió el bloque, no cambió nada, y hubo que descubrir por qué. Entregalo
+     con `COMMIT` y decí **qué tiene que ver en el `SELECT` final** para saber que salió bien.
+   - PM_NUEVO bloqueado esperando GPS (con la pista del edificio: dirección y referencias del aviso).
+   - Alertas recurrentes (ej. basura que vuelve cada noche → candidato a filtro en discovery).
+
+3. **Salud general**: capturado, rechazado, multiproyecto, verificador, snapshot. Marcar lo que esté
+   fuera de lo normal (disyuntor disparado, snapshot no escrito, gate con volumen raro).
+   🆕 **Y los TIEMPOS de la cadena**: si un lector del MOAT tardó más de 10 min o un discovery abortó,
+   va al parte. El 19 y el 20 los lectores se colgaron 60 y 80 minutos, estiraron la cadena ~2,5 h y
+   por eso el audit terminó corriendo antes que la última captura. El síntoma no estaba en ningún
+   número de propiedades: estaba en el reloj.
+
+4. 🆕 **Cerrá con un ranking de esfuerzo/impacto, no con una lista plana.**
+   🔴 **Ningún pendiente se recomienda sin su número medido.** El 20-ago se recomendó arreglar el prep
+   diciendo "se está tirando la fuente más barata que hay"; al medirlo, **recuperaba 2 propiedades**.
+   Y un barrido de "19 edificios sin zona" resultó ser **1**: los otros 18 estaban legítimamente fuera
+   de cobertura. Medí primero, recomendá después, y decí explícitamente **qué NO vale la pena hacer**.
+
+**$0, read-only. Este comando NO aplica ningún SQL** — solo lee, mide y resume. Lo que haya para
+aplicar, lo aplica el humano.
