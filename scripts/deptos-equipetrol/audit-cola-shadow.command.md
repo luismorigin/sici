@@ -215,6 +215,26 @@ solo tras verificación humana (el founder da el GPS en Google Maps). NO inventa
   ya deduplicadas al cluster. 🔴 **Desde el 4-ago `duplicado_de` ya NO viene solo heredado de prod**: lo
   escribe también el cargador en `--apply` cuando C21 reescribió el slug (`dedup_por='cargador_slug_reescrito'`).
   El filtro aplica igual — pero no asumas que una fila con `duplicado_de` nació en el régimen viejo.
+- **Superficie 8 — TAG DE TC SIN ANCLA EN EL AVISO (pendiente, anotado el 20-ago-2026):** props con
+  `tipo_cambio_detectado = 'oficial_viejo'` cuyo aviso **no menciona el número** (6.96 / Bs 7 / TC 7).
+  Ese tag enciende el badge **"Cotiza a Bs 7"** en el feed (commit `e966096`), así que un tag mal
+  puesto le hace decir a la card algo que el anuncio no dice.
+  🔴 **NO SE PUEDE DETECTAR CON REGEX — está probado.** Se intentó tres veces el 20-ago y las tres
+  fallaron en variantes distintas: `T/C 7` (con barra), `Tipo de cambio; 7` (punto y coma),
+  `¡A TIPO DE CAMBIO 7!` (mayúsculas y signos), `TC 6.97` (no 6.96). Cada patrón daba un número
+  distinto — 85, después 14, después menos. **Ninguno era confiable.** Por eso el tag lo pone un
+  lector que lee el aviso ENTERO, y por eso la revisión va acá: es la única herramienta que puede
+  leer con criterio.
+  **Antecedente real:** dos props (`8000937`, `8000943`) tenían el tag porque el lector razonó que
+  *"el BCB es la institución del rate viejo"* — y el BCB es el oficial **vigente**. Se corrigieron a
+  mano el 20-ago (commit `eca70f2`); el spec ahora lo nombra. Quedan **~12 candidatos** del mismo
+  tipo. Medición de referencia: de 97 con el tag, **83 sí anclan al número** (12 dicen 6.96, 71 dicen
+  "cambio 7") — el badge está bien en la gran mayoría.
+  **Veredicto del juez:** CONFIRMAR el tag · CORREGIR a `no_especificado` (si no hay ancla numérica)
+  · o `paralelo`. ⚠️ **Corregir el tag NO mueve el precio**: en el régimen nuevo el único tag que
+  transforma el precio es `bob`. Lo único que cambia es si el badge se enciende.
+  🔑 **Hueco declarado que hoy no se puede cerrar:** un aviso anclado a un valor INTERMEDIO
+  (8.50 / 9 / 10) merecería badge y no hay palanca para encenderlo sin mentir sobre el rate. Son 4.
 - **Superficie 6 (estado de obra):** el veredicto NO va a la propiedad, va al **catálogo del edificio**
   — es una característica del edificio, no del aviso (si va en la prop hay que repetirla en cada aviso
   nuevo). Y **se guarda la FECHA DE LA OBSERVACIÓN, no el estado a secas**: *"al 6-ago-2026 ya estaba
