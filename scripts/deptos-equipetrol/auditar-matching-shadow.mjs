@@ -867,6 +867,95 @@ async function main() {
   }
 
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERSISTIR LOS HALLAZGOS DE MATCHING (mig 335) — la bandeja de /admin/revisar
+  // ═══════════════════════════════════════════════════════════════════════════
+  // El audit sigue escribiendo su log y su JSON: son lo que se lee a la mañana y no
+  // se tocan. Esto es ADEMÁS, y resuelve lo que el log no puede: que lo NO aplicado
+  // quede en algún lado. Hoy, un caso que no se aplicó esa mañana desaparece — la
+  // noche siguiente se vuelve a detectar y a juzgar, gastando lectores, y nadie
+  // sabe si ya se había decidido que no.
+  //
+  // 🔑 UPSERT por (propiedad_id, superficie): el mismo caso vuelve todas las noches
+  // mientras no se resuelva. Sin la clave habría siete copias en una semana; con
+  // ella se actualiza y `visto_veces` cuenta cuántas noches lleva esperando.
+  //
+  // ⚠️ NO PISA lo ya resuelto: un hallazgo aplicado o descartado se deja como está.
+  // Si se re-abriera cada noche, descartar no serviría de nada.
+  //
+  // Solo superficies 1, 2 y 4 — las de matching. Las tres terminan en la misma
+  // acción (asignar o corregir el edificio) y comparten la misma evidencia.
+  // El VEREDICTO lo da el juez, no este script: acá va NULL y la bandeja muestra el
+  // candidato con su contexto. Escribirlo como veredicto sería hacer pasar por
+  // decisión lo que es una detección.
+  try {
+    const paraBandeja = [
+      ...sup1.map((x) => ({ sup: 1, x, pm_actual: null })),
+      ...sup2.map((x) => ({ sup: 2, x, pm_actual: x.pm_actual ?? null })),
+      ...sup4.map((x) => ({ sup: 4, x, pm_actual: x.pm_actual ?? null })),
+    ];
+
+    if (paraBandeja.length) {
+      // qué hay ya en la tabla, para no pisar lo resuelto y para contar las vueltas
+      const { data: previos, error: ePrev } = await sb
+        .from('audit_hallazgos')
+        .select('id, propiedad_id, superficie, estado, visto_veces')
+        .in('propiedad_id', paraBandeja.map((h) => h.x.prop_id));
+      if (ePrev) throw ePrev;
+
+      const porClave = new Map((previos || []).map((r) => [`${r.propiedad_id}|${r.superficie}`, r]));
+      const filasUp = [];
+      let saltados = 0;
+
+      for (const { sup, x, pm_actual } of paraBandeja) {
+        const prev = porClave.get(`${x.prop_id}|${sup}`);
+        if (prev && prev.estado !== 'pendiente') { saltados++; continue; }  // ya decidido
+        filasUp.push({
+          superficie: sup,
+          propiedad_id: x.prop_id,
+          // 🔴 El NOMBRE de la macrozona tal como vive en la BD ('Equipetrol' / 'Zona
+          // Norte'), no el id del flag ('equipetrol' / 'zona-norte'): la bandeja lo
+          // muestra y se cruza con las vistas, que usan el nombre.
+          macrozona: ZONA_ID === 'todas' ? (x.zona || 'sin zona') : ZONAS_HIBRIDO[ZONA_ID].nombre,
+          operacion: x.op,
+          veredicto: null,
+          pm_actual,
+          pm_propuesto: null,
+          nombre_propuesto: x.nombre_edificio || null,
+          evidencia: null,
+          contexto: {
+            url: x.url, titulo: x.titulo, zona: x.zona,
+            nombre_edificio: x.nombre_edificio,
+            candidatos: x.candidatos || null,
+            metodo: x.metodo || null,
+            pm_nombre: x.pm_nombre || null,
+            dist_metros: x.dist_metros ?? null,
+            confianza_lector: x.confianza_lector || null,
+          },
+          ultima_vez_at: new Date().toISOString(),
+          visto_veces: prev ? (prev.visto_veces || 1) + 1 : 1,
+        });
+      }
+
+      if (filasUp.length) {
+        const { error: eUp } = await sb
+          .from('audit_hallazgos')
+          .upsert(filasUp, { onConflict: 'propiedad_id,superficie' });
+        if (eUp) throw eUp;
+      }
+      console.log(`🗂️  bandeja: ${filasUp.length} hallazgo(s) escrito(s)` +
+        (saltados ? ` · ${saltados} ya resuelto(s), no se re-abren` : ''));
+    } else {
+      console.log('🗂️  bandeja: sin hallazgos de matching esta corrida');
+    }
+  } catch (e) {
+    // 🔴 NO tumba el audit. La bandeja es un extra: si falla, el log —que es lo que
+    // se lee a la mañana— tiene que salir igual. Pero se DECLARA, porque una bandeja
+    // vacía por un error se ve idéntica a una bandeja vacía porque no hubo hallazgos.
+    console.warn(`⚠️  bandeja: NO se pudieron persistir los hallazgos → ${e?.message || e}`);
+    console.warn('    (el log y el JSON salieron igual; /admin/revisar va a mostrar de menos)');
+  }
+
   const file = join(OUT, `audit-matching-shadow-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, ops: OPS, total_filas: filas.length,
