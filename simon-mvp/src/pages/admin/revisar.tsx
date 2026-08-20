@@ -50,6 +50,20 @@ const VEREDICTO_ESTILO: Record<string, { texto: string; clase: string }> = {
   SIN_NOMBRE:{ texto: '— El aviso no lo nombra',   clase: 'bg-slate-100 text-slate-700 border-slate-300' },
 }
 
+/** El contexto viene como JSONB: se lee con cuidado y sin romper si falta algo. */
+function ctxTexto(h: Hallazgo, k: string): string | null {
+  const v = h.contexto?.[k]
+  return typeof v === 'string' && v.trim() ? v : null
+}
+function ctxNumero(h: Hallazgo, k: string): number | null {
+  const v = h.contexto?.[k]
+  return typeof v === 'number' ? Math.round(v) : null
+}
+function candidatos(h: Hallazgo): Array<{ nombre?: string; score?: number; id_proyecto_master?: number }> {
+  const v = h.contexto?.candidatos
+  return Array.isArray(v) ? v : []
+}
+
 function diasDesde(iso: string): number {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
 }
@@ -175,7 +189,7 @@ export default function BandejaDelAudit() {
                           es un caso más: es uno que nadie se anima a decidir. */}
                       {h.visto_veces > 1 && (
                         <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                          vuelve hace {dias === 0 ? 'hoy' : `${dias} día${dias === 1 ? '' : 's'}`} · {h.visto_veces} veces
+                          apareció {h.visto_veces} veces · {dias === 0 ? 'desde hoy' : `hace ${dias} día${dias === 1 ? '' : 's'}`}
                         </span>
                       )}
                     </div>
@@ -193,13 +207,82 @@ export default function BandejaDelAudit() {
                         {h.nombre_propuesto && <> · nombre propuesto: <b>{h.nombre_propuesto}</b></>}
                       </p>
 
-                      {/* 🔑 LA EVIDENCIA ES EL CORAZÓN DE LA PANTALLA. Sin la cita del
-                          anuncio, aprobar es confiar a ciegas en un score — que es
-                          exactamente lo que hacía el supervisor que se retiró hoy. */}
-                      {h.evidencia && (
+                      {/* 🔑 CON QUÉ DECIDIR. Sin esto la tarjeta obliga a abrir la propiedad en
+                          otra pestaña — justo lo que la bandeja viene a evitar — y aprobar sería
+                          confiar a ciegas en un nombre, que es lo que hacía el supervisor
+                          retirado. La `evidencia` (la cita que elige el juez) puede no estar
+                          todavía; el contexto que guardó el audit sí, y se muestra igual. */}
+                      {h.evidencia ? (
                         <blockquote className="mt-3 border-l-4 border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-700 italic">
                           {h.evidencia}
                         </blockquote>
+                      ) : (
+                        <p className="mt-3 text-xs text-slate-500">
+                          Sin cita del anuncio todavía: el veredicto lo da el lector y esta corrida solo
+                          detectó el caso. Abajo está lo que trajo el audit.
+                        </p>
+                      )}
+
+                      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                        {ctxTexto(h, 'titulo') && (
+                          <>
+                            <dt className="text-slate-500">Aviso</dt>
+                            <dd className="text-slate-800">{ctxTexto(h, 'titulo')}</dd>
+                          </>
+                        )}
+                        {ctxTexto(h, 'zona') && (
+                          <>
+                            <dt className="text-slate-500">Zona</dt>
+                            <dd className="text-slate-800">{ctxTexto(h, 'zona')}</dd>
+                          </>
+                        )}
+                        {ctxTexto(h, 'pm_nombre') && (
+                          <>
+                            <dt className="text-slate-500">Edificio actual</dt>
+                            <dd className="text-slate-800">
+                              {ctxTexto(h, 'pm_nombre')}
+                              {ctxNumero(h, 'dist_metros') != null && (
+                                <span className="text-slate-500"> · a {ctxNumero(h, 'dist_metros')} m</span>
+                              )}
+                            </dd>
+                          </>
+                        )}
+                        {ctxTexto(h, 'confianza_lector') && (
+                          <>
+                            <dt className="text-slate-500">El lector dijo</dt>
+                            <dd className="text-slate-800">confianza {ctxTexto(h, 'confianza_lector')}</dd>
+                          </>
+                        )}
+                      </dl>
+
+                      {/* Los candidatos con su score. 🔴 El score NO decide — aprobar por score
+                          mete basura: 16 falsos positivos de 25, incluido uno de 95. Son a quién
+                          mirar, no cuál es. */}
+                      {candidatos(h).length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-xs text-slate-500 mb-1">
+                            Candidatos ({candidatos(h).length}) — el score dice a quién mirar, no cuál es:
+                          </p>
+                          <ul className="flex flex-wrap gap-2">
+                            {candidatos(h).slice(0, 6).map((c, i) => (
+                              <li key={i} className="text-xs bg-slate-100 border border-slate-200 rounded-full px-2.5 py-1">
+                                {c.nombre || `pm ${c.id_proyecto_master ?? '?'}`}
+                                {c.score != null && <span className="text-slate-500"> · {c.score}</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {ctxTexto(h, 'url') && (
+                        <a
+                          href={ctxTexto(h, 'url') as string}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block mt-3 text-sm text-sky-700 hover:text-sky-900 underline underline-offset-2"
+                        >
+                          Ver el aviso original ↗
+                        </a>
                       )}
 
                       {avisos[h.id] && (
@@ -225,10 +308,21 @@ export default function BandejaDelAudit() {
                           className="text-sm text-slate-500 hover:text-slate-800 underline underline-offset-2">
                           Abrir la propiedad
                         </Link>
-                        {h.pm_propuesto == null && h.veredicto === 'PM_NUEVO' && (
-                          <span className="text-xs text-slate-500">
-                            Un edificio nuevo se crea en <Link href="/admin/proyectos" className="underline">Proyectos</Link> —
-                            necesita GPS verificado a mano.
+                        {/* Un botón gris sin explicación es una pregunta sin responder. */}
+                        {h.pm_propuesto == null && (
+                          <span className="text-xs text-slate-500 max-w-md">
+                            {h.veredicto === 'PM_NUEVO' ? (
+                              <>
+                                «Aplicar» no está disponible: un edificio nuevo se crea en{' '}
+                                <Link href="/admin/proyectos" className="underline">Proyectos</Link> y necesita GPS
+                                verificado a mano.
+                              </>
+                            ) : (
+                              <>
+                                «Aplicar» no está disponible todavía: falta el veredicto del lector, que es quien
+                                dice a qué edificio va. El audit solo detectó el caso.
+                              </>
+                            )}
                           </span>
                         )}
                       </div>
