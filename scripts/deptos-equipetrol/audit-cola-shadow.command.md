@@ -215,7 +215,34 @@ solo tras verificación humana (el founder da el GPS en Google Maps). NO inventa
   ya deduplicadas al cluster. 🔴 **Desde el 4-ago `duplicado_de` ya NO viene solo heredado de prod**: lo
   escribe también el cargador en `--apply` cuando C21 reescribió el slug (`dedup_por='cargador_slug_reescrito'`).
   El filtro aplica igual — pero no asumas que una fila con `duplicado_de` nació en el régimen viejo.
-- **Superficie 8 — TAG DE TC SIN ANCLA EN EL AVISO (pendiente, anotado el 20-ago-2026):** props con
+- **Superficie 9 — EL AVISO HABLA SOLO EN BOLIVIANOS Y NO ESTÁ TAGUEADO `bob`** (20-ago-2026, en el
+  `.mjs`). **Origen:** `8000699` (Vilareal Duo). El aviso decía *"Precio: Bs. 382.800"* y nada más —
+  ni una mención de dólares. Alguien lo dividió por 6,96 y guardó **$55.000**, cuando al cambio real
+  son **$33.097**: **66% de sobreprecio**, en el feed y en el bot.
+  🔑 **Por qué este detector y no "revisar los tags de TC"** (medido antes de escribirlo): la vía del
+  tag daba **83% de falsos positivos** — de 6 candidatos, 5 tenían el tag bien puesto (ver §8) — y
+  necesitaba un juez LLM para confirmar 5 de cada 6. **La moneda, en cambio, es inequívoca**: si el
+  aviso sólo habla en Bs, el precio está en Bs. Sobre 769 avisos dio **exactamente 1 resultado y era
+  el correcto: 0 falsos positivos, sin juez.** Mismo razonamiento que la superficie 7 con Sky Eclipse:
+  no se toca lo que funciona, se agrega el detector que SÍ discrimina.
+  **Filtros:** monto en Bs de 5+ dígitos (para no cazar *"expensas Bs 500"*) **y** ninguna mención de
+  dólares. **Rastro:** `datos_json.trazabilidad.moneda_revisada`.
+  🔴 **REPORTA, NO DECIDE — y el arreglo mueve el PRECIO, no sólo el tag**: los `bob` guardan los
+  **bolivianos crudos** en `precio_usd` y la vista los divide por el TC del día.
+  ```sql
+  UPDATE propiedades_v2
+  SET precio_usd = <los Bs del aviso>, tipo_cambio_detectado = 'bob', moneda_original = 'BOB',
+      datos_json = COALESCE(datos_json,'{}'::jsonb) || jsonb_build_object(
+        'trazabilidad', COALESCE(datos_json->'trazabilidad','{}'::jsonb) || jsonb_build_object(
+          'moneda_revisada','auditor_superficie_9_<fecha>','moneda_revisada_evidencia','<la cita>'))
+  WHERE id = <ID> AND tipo_cambio_detectado <> 'bob';   -- candado
+  ```
+  ✅ **Validado el 20-ago**: da 0 y **el 0 es real** — corriendo la misma lógica sin el filtro `<> bob`
+  aparecen **18 avisos en bolivianos y los 18 están bien tagueados**, incluido su caso fundador.
+  🔑 Un detector que da 0 hay que probarlo contra el caso que lo motivó: si no, no se distingue
+  *"limpio"* de *"roto"*.
+- **Superficie 8 — TAG DE TC SIN ANCLA EN EL AVISO — ⛔ DESCARTADA como superficie automática
+  (20-ago-2026), queda como registro:** props con
   `tipo_cambio_detectado = 'oficial_viejo'` cuyo aviso **no menciona el número** (6.96 / Bs 7 / TC 7).
   Ese tag enciende el badge **"Cotiza a Bs 7"** en el feed (commit `e966096`), así que un tag mal
   puesto le hace decir a la card algo que el anuncio no dice.
