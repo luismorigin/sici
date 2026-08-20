@@ -196,6 +196,9 @@ export default function MarketPulseDashboard() {
   const [edificioDispersion, setEdificioDispersion] = useState<EdificioDispersion[]>([])
   const [antiguedad, setAntiguedad] = useState<AntiguedadBucket[]>([])
   const [zonaEstados, setZonaEstados] = useState<ZonaEstado[]>([])
+  // Por qué no hay absorción, cuando no la hay. Un panel vacío sin motivo es
+  // indistinguible de un mercado quieto.
+  const [absorcionError, setAbsorcionError] = useState<string | null>(null)
   const [absorcionZonas, setAbsorcionZonas] = useState<Record<string, { absorbidas: number; pending: number; tasa: number; meses: number | null }>>({})
   const [absorcionGlobal, setAbsorcionGlobal] = useState<{ tasa: number; meses: number | null; pending: number } | null>(null)
   const [absorcionHistorico, setAbsorcionHistorico] = useState<AbsorcionHistorico[]>([])
@@ -1030,20 +1033,28 @@ export default function MarketPulseDashboard() {
   }
 
   const fetchAbsorcion = async () => {
-    if (!supabase) return
-
-    // Snapshot más reciente (hoy o ayer) — global + zonas
-    // 🔴 `.eq('macrozona', ...)` NO ES OPCIONAL. Desde la mig 313 esta tabla es
-    // multi-macrozona y **`zona='global'` es el agregado DE SU MACROZONA, no el total**:
-    // sin el filtro se mezclan Equipetrol y Zona Norte, que tienen niveles de precio
-    // distintos ($1.672 vs $1.389 el m²), y el resultado no es de ningún mercado.
-    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0]
-    const { data: todaySnap } = await supabase
-      .from('market_absorption_snapshots_shadow')
-      .select('fecha, zona, dormitorios, venta_activas, venta_absorbidas_30d, venta_pending_30d, venta_tasa_absorcion, venta_meses_inventario')
-      .eq('macrozona', MACROZONA_DASHBOARD)
-      .gte('fecha', twoDaysAgo)
-      .order('fecha', { ascending: false })
+    // 🔴 VIA API ROUTE, no consulta directa. `market_absorption_snapshots_shadow` no es
+    // legible por `authenticated` (el rol con el que corre el admin en el browser), y
+    // Supabase devuelve ese 42501 DENTRO del objeto: la promesa no rechaza, el `.data`
+    // llega vacío y la pantalla pinta "No hay datos" — que se lee como "el mercado no
+    // se movió" en vez de "no tengo permiso". Medido acá el 20-ago-2026.
+    // El endpoint la lee con la llave de servidor; el GRANT no se toca (regla 13).
+    let todaySnap: any[] = []
+    let histSnap: any[] = []
+    try {
+      const r = await fetch(`/api/admin/market-absorcion?macrozona=${encodeURIComponent(MACROZONA_DASHBOARD)}`)
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      const j = await r.json()
+      todaySnap = j.hoy || []
+      histSnap = j.serie || []
+      setAbsorcionError(null)
+    } catch (e) {
+      // 🔑 El fallo se DECLARA. Un panel vacío sin explicación es lo que dejó esta
+      // pantalla mostrando "No hay datos" mientras la tabla tenía 68 filas.
+      console.error('[market] absorción:', e)
+      setAbsorcionError(e instanceof Error ? e.message : 'no se pudo cargar')
+      return
+    }
 
     if (todaySnap && todaySnap.length > 0) {
       const latestDate = (todaySnap[0] as any).fecha
@@ -1083,15 +1094,7 @@ export default function MarketPulseDashboard() {
       setAbsorcionZonas(zonaMap)
     }
 
-    // Serie histórica global
-    const { data: histSnap } = await supabase
-      .from('market_absorption_snapshots_shadow')
-      .select('fecha, dormitorios, venta_activas, venta_tasa_absorcion, venta_absorbidas_30d')
-      .eq('zona', 'global')
-      .eq('macrozona', MACROZONA_DASHBOARD)
-      .gte('fecha', SERIE_SHADOW_DESDE)
-      .order('fecha', { ascending: true })
-
+    // La serie viene en la misma respuesta del endpoint (una sola ida al servidor).
     if (histSnap && histSnap.length > 0) {
       const byDate = new Map<string, { activas: number; absSum: number; absorbidas: number; count: number }>()
       for (const row of histSnap as any[]) {
@@ -2037,7 +2040,16 @@ export default function MarketPulseDashboard() {
                   </div>
                 </>
               ) : (
-                <p className="text-slate-500 text-center py-12">No hay datos históricos</p>
+                <div className="text-center py-12">
+                  {/* Un panel vacío tiene que decir POR QUÉ. "No hay datos" se lee como
+                      "el mercado no se movió"; casi siempre es que la consulta falló. */}
+                  <p className="text-slate-500">{absorcionError ? 'No se pudo cargar la absorción' : 'Todavía sin serie para esta macrozona'}</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {absorcionError
+                      ? `Motivo: ${absorcionError}`
+                      : `La serie arranca el ${SERIE_SHADOW_DESDE} — antes de esa fecha el nivel está inflado (mig 314) y no se puede reconstruir.`}
+                  </p>
+                </div>
               )}
             </div>
 
@@ -2072,7 +2084,16 @@ export default function MarketPulseDashboard() {
                   </div>
                 </>
               ) : (
-                <p className="text-slate-500 text-center py-12">No hay datos de absorción</p>
+                <div className="text-center py-12">
+                  {/* Un panel vacío tiene que decir POR QUÉ. "No hay datos" se lee como
+                      "el mercado no se movió"; casi siempre es que la consulta falló. */}
+                  <p className="text-slate-500">{absorcionError ? 'No se pudo cargar la absorción' : 'Todavía sin datos de absorción'}</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {absorcionError
+                      ? `Motivo: ${absorcionError}`
+                      : `La serie arranca el ${SERIE_SHADOW_DESDE} — antes de esa fecha el nivel está inflado (mig 314) y no se puede reconstruir.`}
+                  </p>
+                </div>
               )}
             </div>
 
