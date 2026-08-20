@@ -88,9 +88,17 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 > - **v4 — tag fiel a la cruda (NINGÚN tag infla: el feed shadow toma paralelo / oficial-nuevo / no_especificado /
 >   `oficial_viejo` DIRECTO; el ÚNICO que mueve el precio es `bob`, que convierte de bolivianos):**
 >   · **"oficial" solo** (sin número) = oficial NUEVO (≈paralelo) → `no_especificado`. `oficial_viejo` SOLO con el
->     número viejo explícito (6.96/7). *(Histórico: antes de la mig 311 este tag descontaba, y por eso la spec exigía
->     que la palabra "oficial" sola NO lo llevara — habría subvaluado, caso Onix Art $1.800→$1.188/m². La distinción
->     sigue siendo correcta para el badge, aunque ya no cambie el precio.)*
+>     número viejo explícito (6.96/7).
+>     🔴 **Y "oficial" incluye el NOMBRE DE LA INSTITUCIÓN: "BCB", "Banco Central", "T/C Oficial BCB" sin cifra
+>     → `no_especificado`, SIN badge.** El BCB *es* el oficial vigente (el nuevo unificado), no el rate muerto.
+>     Esta línea faltaba y costó: el 18-ago dos lectores tagearon `oficial_viejo` por razonar que "el BCB es la
+>     institución del rate viejo" (8000937, 8000943 — corregidos a mano el 20-ago), mientras otros 14 avisos con
+>     el mismo texto quedaron `no_especificado`. **Mismo texto, badge distinto.** La regla ya existía para la
+>     palabra "oficial"; lo que faltaba era el sinónimo. 👉 Si el aviso ancla a un valor INTERMEDIO (8.50 / 9 / 10),
+>     no es ninguno de los dos: hoy no hay tag ni palanca para su badge — dejalo `no_especificado` y anotalo.
+>     *(Histórico: antes de la mig 311 `oficial_viejo` descontaba, y por eso la spec exigía que la palabra
+>     "oficial" sola NO lo llevara — habría subvaluado, caso Onix Art $1.800→$1.188/m². La distinción sigue
+>     siendo correcta para el badge, aunque ya no cambie el precio.)*
 >   · **"paralelo" DECLARADO solo** ("al paralelo", "TC/tipo de cambio paralelo", "dólares físicos/billete") → tag
 >     `paralelo` (registro fiel; hoy normaliza directo igual que no_especificado — no infla).
 >   · **"paralelo" EQUIPARADO** ("dólares O paralelo", "USD o TC del día") o **SILENCIO** → `no_especificado`.
