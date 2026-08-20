@@ -39,7 +39,9 @@ export interface AcmComparable {
   m2: number         // USD/m²
   dias: number       // días publicado
   pq: 'i' | 'n' | 's'  // parqueo: incluido / no / sin declarar
-  est: 'P' | 'E' | '-' // preventa / entregado / sin declarar
+  /** preventa / entregado / **sin saber**. El desconocido es `'?'`, igual que en
+   *  `acm-buscar` y que en las cuatro comparaciones del prototipo. */
+  est: 'P' | 'E' | '?'
   am: string[]         // las que tenga cargadas el edificio — vacío = no cargadas, NO "no tiene"
   mz?: string | null   // microzona
   amo?: boolean        // ¿el aviso declara si está amoblado? (en venta: ninguno, hasta ahora)
@@ -185,9 +187,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // 🔴 El enum dice `entrega_inmediata`, no `entregado`: escribirlo mal no rompe
         // nada, simplemente deja a todos "sin estado declarar" y el informe mezcla
         // preventa con entregado sin avisar.
+        // 🔴 El "no sé" se escribe `'?'`, NO `'-'` (corregido el 20-ago-2026).
+        // Los dos significan lo mismo para un humano, pero el prototipo compara
+        // `est === '?'` en cuatro lugares y `acm-buscar` lo devuelve así. Con `'-'`,
+        // esas comparaciones daban **false** y las unidades sin estado conocido
+        // entraban al filtro "mismo estado" comparándose entre sí: dos desconocidos
+        // se trataban como si compartieran estado. Eran **76 de 394 comparables (19%)**.
+        // No fallaba: cambiaba en silencio qué entra al cohorte de un ACM.
         est: inf ? inf.est
           : f.estado_construccion === 'preventa' || f.estado_construccion === 'pozo' ? 'P'
-          : f.estado_construccion === 'entrega_inmediata' ? 'E' : '-',
+          : f.estado_construccion === 'entrega_inmediata' ? 'E' : '?',
         eo: inf ? (inf.origen as any) : (f.estado_construccion ? 'aviso' : null),
         // 🔴 Lo que declara el aviso, aparte del estado efectivo. Cuando la corrección
         // de la mig 315 lo contradice —el aviso dice preventa y el edificio ya se
