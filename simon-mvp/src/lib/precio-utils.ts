@@ -44,9 +44,23 @@ export function normalizarPrecio(
  * Esta función existe para las pantallas que consultan la tabla directamente (el admin,
  * que necesita ver también lo que el feed esconde) y tienen que mostrar el mismo número.
  *
- *   `bob`          → el aviso publica en bolivianos     → crudo ÷ TC del día
- *   `oficial_viejo`→ el aviso ancla a 6,96 / "TC 7"     → crudo × 6,96 ÷ TC del día
- *   resto          → el aviso publica en dólares reales → crudo, sin tocar
+ *   `bob`  → el aviso publica en bolivianos → crudo ÷ TC del día
+ *   resto  → crudo, sin tocar
+ *
+ * 🔴 `oficial_viejo` NO SE CONVIERTE — y esto se corrigió el 20-ago-2026.
+ * Esta función nacía descontándolo (`crudo × 6,96 ÷ TC`), pero la **mig 311 (28-jul)**
+ * ya había decidido lo contrario en la BD: que el aviso mencione el rate viejo no prueba
+ * que el precio en dólares salga de ahí, y medido contra las vecinas del mismo edificio
+ * vale igual sin descontar. Se publica lo que dice el anuncio y se enciende el badge
+ * "Cotiza a Bs 7 · confirmar".
+ *
+ * El desfase costaba 40% en 129 propiedades: el cliente veía $100.581 de promedio y el
+ * admin mostraba $60.526. Justo en las pantallas que el paso 1 arregló PARA que mostraran
+ * el mismo número que el feed.
+ *
+ * 🔑 Esta función es una RÉPLICA de `precio_normalizado_shadow()`. Cuando una migración
+ * cambie esa función, hay que tocar acá también — no hay nada que lo fuerce, y por eso
+ * conviene verificar contra `pg_get_functiondef` antes de confiar en ella.
  *
  * @param tcDelDia `config_global.tipo_cambio_paralelo` (Binance, cron diario).
  * @returns `null` si hace falta convertir y no hay TC — para **declararlo**, no inventarlo.
@@ -62,9 +76,6 @@ export function precioDelFeed(
     if (!tcDelDia) return null
     return Math.round(valor / tcDelDia)
   }
-  if (tag === 'oficial_viejo') {
-    if (!tcDelDia) return null
-    return Math.round(valor * TC_OFICIAL / tcDelDia)
-  }
+  // `oficial_viejo` cae acá a propósito: se devuelve el crudo, igual que la BD.
   return valor
 }
