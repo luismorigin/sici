@@ -203,6 +203,11 @@ export default function MarketPulseDashboard() {
   // Qué bloques de la pantalla no cargaron. Se muestra arriba: media pantalla en
   // silencio es peor que una pantalla que avisa qué le falta.
   const [bloquesFallidos, setBloquesFallidos] = useState<string[]>([])
+  // 🔴 Cuántos días de bajas registradas hay detrás del número de absorción. La ventana
+  // del cálculo es de 30 días; con menos, un "0%" no significa "no se vendió nada" —
+  // significa que el verificador todavía no marcó bajas suficientes. Sin declararlo, el
+  // KPI más verde de la pantalla dice que el mercado está parado.
+  const [absorcionMadurez, setAbsorcionMadurez] = useState<{ dias: number; confiable: boolean } | null>(null)
   const [absorcionZonas, setAbsorcionZonas] = useState<Record<string, { absorbidas: number; pending: number; tasa: number; meses: number | null }>>({})
   const [absorcionGlobal, setAbsorcionGlobal] = useState<{ tasa: number; meses: number | null; pending: number } | null>(null)
   const [absorcionHistorico, setAbsorcionHistorico] = useState<AbsorcionHistorico[]>([])
@@ -1087,6 +1092,7 @@ export default function MarketPulseDashboard() {
       const j = await r.json()
       todaySnap = j.hoy || []
       histSnap = j.serie || []
+      setAbsorcionMadurez({ dias: j.diasDeHistoria ?? 0, confiable: !!j.absorcionConfiable })
       setAbsorcionError(null)
     } catch (e) {
       // 🔑 El fallo se DECLARA. Un panel vacío sin explicación es lo que dejó esta
@@ -1371,11 +1377,26 @@ export default function MarketPulseDashboard() {
               </div>
               <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-5 shadow-lg text-white hover:shadow-xl transition-shadow">
                 <p className="text-emerald-100 text-xs uppercase tracking-wide font-medium">Absorción 30d</p>
-                <p className="text-4xl font-bold mt-1">{absorcionGlobal?.tasa ?? '—'}%</p>
-                <p className="text-emerald-200 text-sm mt-1">
-                  {absorcionGlobal?.meses ? `${absorcionGlobal.meses} meses inv.` : '—'}
-                  {absorcionGlobal?.pending ? ` · +${absorcionGlobal.pending} pend.` : ''}
-                </p>
+                {/* Mientras la medición no tenga sus 30 días, el número no se muestra como
+                    dato firme: un 0% se lee como "el mercado está parado" cuando en realidad
+                    es "todavía no lo estamos midiendo". Se muestra igual —el admin necesita
+                    verlo— pero atenuado y con los días que lleva. */}
+                {absorcionMadurez && !absorcionMadurez.confiable ? (
+                  <>
+                    <p className="text-4xl font-bold mt-1 opacity-60">{absorcionGlobal?.tasa ?? '—'}%</p>
+                    <p className="text-emerald-100 text-xs mt-1 leading-snug">
+                      ⚠️ Aún no medible: la ventana es de 30 días y hay <b>{absorcionMadurez.dias}</b> de bajas registradas.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-4xl font-bold mt-1">{absorcionGlobal?.tasa ?? '—'}%</p>
+                    <p className="text-emerald-200 text-sm mt-1">
+                      {absorcionGlobal?.meses ? `${absorcionGlobal.meses} meses inv.` : '—'}
+                      {absorcionGlobal?.pending ? ` · +${absorcionGlobal.pending} pend.` : ''}
+                    </p>
+                  </>
+                )}
               </div>
               <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl p-5 shadow-lg text-white hover:shadow-xl transition-shadow">
                 <p className="text-amber-100 text-xs uppercase tracking-wide font-medium">TC Paralelo</p>

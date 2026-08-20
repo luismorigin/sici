@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const dosDiasAtras = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0]
 
-    const [hoyRes, serieRes] = await Promise.all([
+    const [hoyRes, serieRes, bajasRes] = await Promise.all([
       // el corte más reciente, por zona y tipología
       sb.from('market_absorption_snapshots_shadow')
         .select('fecha, zona, dormitorios, venta_activas, venta_absorbidas_30d, venta_pending_30d, venta_tasa_absorcion, venta_meses_inventario')
@@ -73,12 +73,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .eq('macrozona', macrozona)
         .gte('fecha', SERIE_DESDE)
         .order('fecha', { ascending: true }),
+      // 🔴 DESDE CUÁNDO SE MIDE DE VERDAD. La absorción se calcula sobre las bajas de
+      // los últimos 30 días (`primera_ausencia_at`), y ese campo empezó a llenarse hace
+      // muy poco: al 20-ago-2026 tenía **3 días** de historia. La ventana está vacía en
+      // 27 de sus 30 días, así que el número no mide absorción — mide lo que el
+      // verificador alcanzó a marcar esta semana. Se devuelve para que la pantalla lo
+      // declare en vez de mostrar un 0% que se lee como "el mercado está parado".
+      sb.from('propiedades_v2')
+        .select('primera_ausencia_at')
+        .not('primera_ausencia_at', 'is', null)
+        .order('primera_ausencia_at', { ascending: true })
+        .limit(1),
     ])
 
     // 🔑 Los errores se MIRAN y se devuelven. Que este endpoint exista no sirve de nada
     // si repite el modo de falla que vino a arreglar: fallar y decir "no hay datos".
     if (hoyRes.error) throw new Error(`snapshot del día: ${hoyRes.error.message}`)
     if (serieRes.error) throw new Error(`serie: ${serieRes.error.message}`)
+    if (bajasRes.error) throw new Error(`historia de bajas: ${bajasRes.error.message}`)
+
+    const primeraBaja = bajasRes.data?.[0]?.primera_ausencia_at ?? null
+    const diasDeHistoria = primeraBaja
+      ? Math.floor((Date.now() - new Date(primeraBaja).getTime()) / 86400000)
+      : 0
+    // La ventana de la absorción es de 30 días: con menos, el número está calculado
+    // sobre una ventana casi vacía y no es comparable con la serie vieja.
+    const absorcionConfiable = diasDeHistoria >= 30
 
     res.setHeader('Cache-Control', 'private, max-age=300')
     return res.status(200).json({
@@ -86,6 +106,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       hoy: hoyRes.data ?? [],
       serie: serieRes.data ?? [],
       desde: SERIE_DESDE,
+      bajasDesde: primeraBaja,
+      diasDeHistoria,
+      absorcionConfiable,
       nota: `La serie arranca el ${SERIE_DESDE}: antes de esa fecha el nivel está inflado (mig 314) y no se puede reconstruir.`,
     })
   } catch (err) {
