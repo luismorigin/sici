@@ -3,7 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { normalizarPrecio } from '@/lib/precio-utils'
+import { precioDelFeed } from '@/lib/precio-utils'
 import { displayZona, ZONAS_EQUIPETROL_DB } from '@/lib/zonas'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -51,12 +51,6 @@ interface EstadoData {
   precio_m2: number
 }
 
-interface SnapshotData {
-  fecha: string
-  props_total: number
-  props_completadas: number
-  pct_match_completadas: number
-}
 
 interface TCHistoricoData {
   fecha: string
@@ -157,6 +151,30 @@ interface AbsorcionHistorico {
 // COMPONENT
 // ============================================================================
 
+// La macrozona del dashboard. Hoy Equipetrol (aislamiento de la mig 257); el día que
+// se quiera ver Zona Norte, esto pasa a ser un selector — la data ya está, por macrozona.
+const MACROZONA_DASHBOARD = 'Equipetrol'
+
+// (20-ago-2026) Se quitó el bloque que leía `auditoria_snapshots`: la tabla está
+// congelada desde el 27-jul y su resultado **no se pintaba en ninguna parte** — se
+// cargaba en un state que nadie leía. Consulta muerta contra un dato muerto.
+
+// 🔴 LA SERIE SHADOW TIENE UN CORTE EL 3-AGO-2026 (mig 314) y no se puede reconstruir.
+// Hasta ese día las vistas contaban avisos YA DADOS DE BAJA (filtraban `status` pero no
+// `es_activa`), así que las filas del 21-jul al 2-ago están infladas: 8,2% en venta.
+// Peor: la distorsión CRECE con el tiempo, porque las bajas se acumulan. Se arranca la
+// serie el 3-ago para no dibujar una caída que es del método, no del mercado.
+const SERIE_SHADOW_DESDE = '2026-08-03'
+
+// 🔴 PRECIOS: esta pantalla lee `propiedades_v2` (la tabla VIVA) y por lo tanto usa
+// `precioDelFeed` — el régimen NUEVO, el mismo número que ve el cliente.
+// Hasta el 20-ago-2026 usaba `normalizarPrecio`, que es del régimen VIEJO y solo vale
+// para `propiedades_v2_archivo`: multiplicaba los avisos tagueados `paralelo` por
+// TC/6,96 (hoy ×1,66), así que el dashboard mostraba **102 propiedades un 66% más
+// caras** de lo que valen. No fallaba: daba un número creíble y falso.
+// 🔑 `precioDelFeed` devuelve `null` cuando haría falta convertir y no hay TC. Ese null
+// se EXCLUYE del cálculo, nunca entra como 0 — un cero hunde medianas y promedios, que
+// es el error de "no sabemos tratado como número" que ya mordió tres veces en el admin.
 export default function MarketPulseDashboard() {
   const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin', 'supervisor', 'viewer'])
   const [loading, setLoading] = useState(true)
@@ -167,7 +185,6 @@ export default function MarketPulseDashboard() {
   const [tipologias, setTipologias] = useState<TipologiaData[]>([])
   const [topProyectos, setTopProyectos] = useState<ProyectoData[]>([])
   const [estados, setEstados] = useState<EstadoData[]>([])
-  const [snapshots, setSnapshots] = useState<SnapshotData[]>([])
   const [tcHistorico, setTcHistorico] = useState<TCHistoricoData[]>([])
   const [oportunidades, setOportunidades] = useState<OportunidadData[]>([])
   const [rankingAmenidades, setRankingAmenidades] = useState<AmenidadData[]>([])
@@ -197,7 +214,6 @@ export default function MarketPulseDashboard() {
         fetchTipologias(),
         fetchTopProyectos(),
         fetchEstados(),
-        fetchSnapshots(),
         fetchTCHistorico(),
         fetchOportunidades(),
         fetchRankingAmenidades(),
@@ -257,7 +273,8 @@ export default function MarketPulseDashboard() {
       let sumPrecioM2 = 0
 
       validProps.forEach(p => {
-        const precio = normalizarPrecio(parseFloat(p.precio_usd) || 0, p.tipo_cambio_detectado, tcPar)
+        const precio = precioDelFeed(parseFloat(p.precio_usd) || 0, p.tipo_cambio_detectado, tcPar)
+        if (precio === null) return   // sin TC no se puede convertir: se EXCLUYE del calculo, nunca entra como 0
         const area = parseFloat(p.area_total_m2) || 1
         sumPrecio += precio
         sumArea += area
@@ -314,7 +331,8 @@ export default function MarketPulseDashboard() {
         if (!grouped[key]) {
           grouped[key] = { dormitorios: p.dormitorios, precios: [], areas: [], preciosM2: [] }
         }
-        const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
+        const precio = precioDelFeed(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
+        if (precio === null) return   // sin TC no se puede convertir: se EXCLUYE del calculo, nunca entra como 0
         const area = parseFloat(p.area_total_m2) || 1
         grouped[key].precios.push(precio)
         grouped[key].areas.push(area)
@@ -401,9 +419,9 @@ export default function MarketPulseDashboard() {
         }
       }
 
-      const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
+      const precio = precioDelFeed(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
       const area = parseFloat(p.area_total_m2) || 1
-      if (precio > 1000) {
+      if (precio !== null && precio > 1000) {
         grouped[key].precios.push(precio)
         grouped[key].preciosM2.push(precio / area)
       }
@@ -456,9 +474,9 @@ export default function MarketPulseDashboard() {
         if (!grouped[key]) {
           grouped[key] = { estado: key, preciosM2: [] }
         }
-        const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
+        const precio = precioDelFeed(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
         const area = parseFloat(p.area_total_m2) || 1
-        if (precio > 1000) {
+        if (precio !== null && precio > 1000) {
           grouped[key].preciosM2.push(precio / area)
         }
       })
@@ -476,19 +494,6 @@ export default function MarketPulseDashboard() {
     }
   }
 
-  const fetchSnapshots = async () => {
-    if (!supabase) return
-
-    const { data } = await supabase
-      .from('auditoria_snapshots')
-      .select('fecha, props_total, props_completadas, pct_match_completadas')
-      .order('fecha', { ascending: true })
-      .limit(30)
-
-    if (data) {
-      setSnapshots(data)
-    }
-  }
 
   const fetchTCHistorico = async () => {
     if (!supabase) return
@@ -556,15 +561,16 @@ export default function MarketPulseDashboard() {
     const projectMap = new Map(projects.map(p => [p.id_proyecto_master, { nombre: p.nombre_oficial, desarrollador: p.desarrollador }]))
 
     // Calculate average price/m2 for reference
-    const validProps = props.filter(p => {
-      const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
-      const area = parseFloat(p.area_total_m2)
-      return precio > 10000 && area >= 20
-    })
+    // El precio se calcula UNA vez por propiedad y viaja con ella. Antes se calculaba
+    // dos veces —en el filter y otra vez en el reduce— y así es como se cuelan los desfases.
+    // El `null` (sin TC) se excluye acá: nunca entra al promedio como 0.
+    const validProps = props
+      .map((p: any) => ({ ...p, precioVivo: precioDelFeed(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar) }))
+      .filter((p: any) => p.precioVivo !== null && p.precioVivo > 10000 && parseFloat(p.area_total_m2) >= 20)
 
-    const avgPrecioM2 = validProps.reduce((acc, p) => {
-      return acc + normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar) / parseFloat(p.area_total_m2)
-    }, 0) / validProps.length
+    const avgPrecioM2 = validProps.length
+      ? validProps.reduce((acc: number, p: any) => acc + p.precioVivo / parseFloat(p.area_total_m2), 0) / validProps.length
+      : 0
 
     // Helper to count amenidades
     const contarAmenidades = (datosJson: any): number => {
@@ -592,7 +598,8 @@ export default function MarketPulseDashboard() {
     // - Amenidades ≥ 5 (real value)
     // - NOT precio_sospechoso (exclude data errors)
     const oportunidadesReales = props.filter(p => {
-      const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
+      const precio = precioDelFeed(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
+      if (precio === null) return   // sin TC no se puede convertir: se EXCLUYE del calculo, nunca entra como 0
       const area = parseFloat(p.area_total_m2)
       if (!precio || !area) return false
 
@@ -610,8 +617,12 @@ export default function MarketPulseDashboard() {
     })
 
     // Map to OportunidadData
-    const mappedOportunidades: OportunidadData[] = oportunidadesReales.map(p => {
-      const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
+    const mappedOportunidades: OportunidadData[] = oportunidadesReales
+      // las que no se pueden convertir (sin TC) salen ANTES del map: un `return` pelado
+      // dentro de un map deja `undefined` en el array, que es peor que excluirlas.
+      .filter((p: any) => precioDelFeed(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar) !== null)
+      .map(p => {
+      const precio = precioDelFeed(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)!
       const area = parseFloat(p.area_total_m2)
       const precioM2 = precio / area
       const projData = projectMap.get(p.id_proyecto_master)
@@ -727,7 +738,7 @@ export default function MarketPulseDashboard() {
           projectAmenidades[p.id_proyecto_master].amenidades.push(lista.length)
         }
 
-        const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
+        const precio = precioDelFeed(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
         const area = parseFloat(p.area_total_m2)
         if (precio && area) {
           projectAmenidades[p.id_proyecto_master].preciosM2.push(precio / area)
@@ -763,9 +774,12 @@ export default function MarketPulseDashboard() {
   const fetchZonaAnalysis = async () => {
     if (!supabase) return
 
-    // Usa v_mercado_venta (migración 193) — filtros canónicos + precio_norm pre-calculado
+    // 🔴 `v_mercado_venta_shadow`, NO `v_mercado_venta`. Las vistas se ligan por OID:
+    // cuando el TIEMPO 1 renombró la tabla, la gemela SIN sufijo se quedó pegada a
+    // `propiedades_v2_archivo` y sirve la foto CONGELADA del 27-jul-2026 — sin error,
+    // sin aviso. Esta pantalla mostró ese corte durante casi un mes.
     const { data } = await supabase
-      .from('v_mercado_venta')
+      .from('v_mercado_venta_shadow')
       .select('id, zona, dormitorios, precio_norm, area_total_m2, estado_construccion, id_proyecto_master')
       .eq('zona_general', 'Equipetrol') // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('zona', 'is', null)
@@ -1013,10 +1027,15 @@ export default function MarketPulseDashboard() {
     if (!supabase) return
 
     // Snapshot más reciente (hoy o ayer) — global + zonas
+    // 🔴 `.eq('macrozona', ...)` NO ES OPCIONAL. Desde la mig 313 esta tabla es
+    // multi-macrozona y **`zona='global'` es el agregado DE SU MACROZONA, no el total**:
+    // sin el filtro se mezclan Equipetrol y Zona Norte, que tienen niveles de precio
+    // distintos ($1.672 vs $1.389 el m²), y el resultado no es de ningún mercado.
     const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0]
     const { data: todaySnap } = await supabase
-      .from('market_absorption_snapshots')
+      .from('market_absorption_snapshots_shadow')
       .select('fecha, zona, dormitorios, venta_activas, venta_absorbidas_30d, venta_pending_30d, venta_tasa_absorcion, venta_meses_inventario')
+      .eq('macrozona', MACROZONA_DASHBOARD)
       .gte('fecha', twoDaysAgo)
       .order('fecha', { ascending: false })
 
@@ -1060,9 +1079,11 @@ export default function MarketPulseDashboard() {
 
     // Serie histórica global
     const { data: histSnap } = await supabase
-      .from('market_absorption_snapshots')
+      .from('market_absorption_snapshots_shadow')
       .select('fecha, dormitorios, venta_activas, venta_tasa_absorcion, venta_absorbidas_30d')
       .eq('zona', 'global')
+      .eq('macrozona', MACROZONA_DASHBOARD)
+      .gte('fecha', SERIE_SHADOW_DESDE)
       .order('fecha', { ascending: true })
 
     if (histSnap && histSnap.length > 0) {
