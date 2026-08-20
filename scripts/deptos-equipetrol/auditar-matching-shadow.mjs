@@ -40,7 +40,7 @@
 // ============================================================================
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { detectarDuplicados } from '../auditoria-feed-ventas/lib/dup-checks.mjs';
@@ -59,6 +59,7 @@ const opArg = (() => { const i = argv.indexOf('--op'); return i >= 0 ? argv[i + 
 const OPS = opArg === 'venta' ? ['venta'] : opArg === 'alquiler' ? ['alquiler'] : ['venta', 'alquiler'];
 const LIMIT = (() => { const i = argv.indexOf('--limit'); return i >= 0 ? Number(argv[i + 1]) : null; })();
 const SIN_GUARDA = argv.includes('--sin-guarda');
+let AVISO_ALCANCE = null;   // se llena si faltan capturas: se repite al final del resumen
 
 // --zona=<id> · default 'equipetrol' (el audit nocturno no pasa nada → sigue auditando Equipetrol).
 // 'todas' = sin filtro, para cuando prod y shadow sean lo mismo (post-cutover).
@@ -86,15 +87,39 @@ const ZONAS_FILTRO = ZONA_ID === 'todas' ? null : ZONAS_HIBRIDO[ZONA_ID].zonas;
 // Marcador de "las capturas ya corrieron hoy": el snapshot diario (paso 5c), que escriben
 // AMBAS capturas y es idempotente. No sirve mirar si hay props nuevas: una noche sin altas
 // es perfectamente normal y no distingue "no había nada" de "no corrió".
+// 🔴 CORREGIDO 20-ago-2026 — el snapshot NO distingue CUÁL captura corrió.
+// Las 4 capturas ejecutan el paso 5c y el snapshot es idempotente, así que con que UNA
+// corriera, la guarda vieja daba OK. El 19-ago habían corrido 3 de 4 (faltaba alquiler ZN,
+// que cerró 12 min DESPUÉS de este audit): la guarda pasó, el audit declaró
+// "0 en las 7 superficies" y había 2 props sin match que no podía ver. Un cero parcial es
+// peor que un error, porque se lee como "está todo bien".
+// Ahora se verifica CADA captura por su propio log: cada routine appendea una entrada
+// `## <fecha>` al suyo. Es un marcador conservador a propósito (el log se escribe al final
+// de la sesión, después de que la captura terminó), y eso es exactamente lo que queremos.
+const LOGS_CAPTURA = [
+  ['venta Equipetrol',    'cron-deptos-ventas-log.md'],
+  ['alquiler Equipetrol', 'cron-deptos-alquiler-log.md'],
+  ['venta Zona Norte',    'cron-deptos-ventas-zn-log.md'],
+  ['alquiler Zona Norte', 'cron-deptos-alquiler-zn-log.md'],
+];
+
 async function capturasDeHoyCorrieron() {
   const ahora = new Date(); // la máquina del founder corre en hora de Bolivia
   const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
-  const { data, error } = await sb
-    .from('market_absorption_snapshots_shadow').select('fecha').eq('fecha', hoy).limit(1);
-  // Ante un error de consulta NO bloqueamos: la guarda existe para evitar un audit ciego,
-  // no para volverse ella misma un motivo de caída.
-  if (error) { console.log(`   ⚠️  No se pudo verificar el snapshot de hoy (${error.message}) — sigo igual.`); return { ok: true, hoy }; }
-  return { ok: (data || []).length > 0, hoy };
+  const corrieron = [], faltan = [];
+  for (const [nombre, archivo] of LOGS_CAPTURA) {
+    let tiene = false;
+    try {
+      // Se busca el ENCABEZADO de hoy en TODO el archivo, no en la cabecera: el log de
+      // alquiler Equipetrol appendea abajo y los otros arriba (verificado el 19-ago, su
+      // entrada del día estaba en la línea 2218). Una posición fija leería la noche equivocada.
+      const txt = readFileSync(join(OUT, archivo), 'utf8');
+      tiene = new RegExp(String.raw`^##\s+` + hoy, 'm').test(txt);
+    } catch { tiene = false; }   // log inexistente = esa captura nunca corrió
+    (tiene ? corrieron : faltan).push(nombre);
+  }
+  // ok = corrieron LAS 4. Ninguna = caso original (el audit le ganó la carrera a todas).
+  return { ok: faltan.length === 0, ninguna: corrieron.length === 0, hoy, corrieron, faltan };
 }
 
 // Métodos que marcan AUTO-MATCH RIESGOSO (surface 2). El matcher híbrido pone confianza 85 +
@@ -197,19 +222,43 @@ async function main() {
   console.log(`\n🔎 AUDIT MATCHING SHADOW — ops: ${OPS.join('+')}${LIMIT ? ` (limit ${LIMIT}/op)` : ''}. READ-ONLY, $0 (sin fetch).\n`);
 
   const guarda = await capturasDeHoyCorrieron();
+  // NINGUNA corrió → abortar (caso original del 24-jul-2026: el audit le ganó la carrera a
+  // todas y auditó el inventario de la víspera reportando "nada que aplicar").
+  if (guarda.ninguna && !SIN_GUARDA) {
+    console.error(
+      `
+🛑 ABORTADO — NINGUNA de las 4 capturas de hoy (${guarda.hoy}) dejó log.
+` +
+      `   Este audit estaría revisando el inventario de ayer y reportaría "nada que aplicar"
+` +
+      `   sin haber visto lo de esta noche (pasó el 24-jul-2026).
+
+` +
+      `   Qué hacer:
+` +
+      `     · Corré primero las capturas y después este audit.
+` +
+      `     · Para auditar el inventario actual igual: node auditar-matching-shadow.mjs --sin-guarda
+`
+    );
+    process.exit(2);
+  }
+  // ALGUNAS corrieron → NO abortar: no auditar es peor que auditar con aviso. Pero se declara
+  // fuerte, arriba y abajo, nombrando las que faltan. Sin esto el audit del 19-ago dijo
+  // "0 en las 7 superficies" con 3 de 4 capturas y se leyó como noche limpia.
   if (!guarda.ok) {
-    if (!SIN_GUARDA) {
-      console.error(
-        `\n🛑 ABORTADO — las capturas de hoy (${guarda.hoy}) todavía no corrieron.\n` +
-        `   No hay snapshot shadow de hoy, así que este audit estaría revisando el inventario de ayer\n` +
-        `   y reportaría "nada que aplicar" sin haber visto lo de esta noche (pasó el 24-jul-2026).\n\n` +
-        `   Qué hacer:\n` +
-        `     · Si las routines se dispararon desordenadas, corré primero las capturas y después este audit.\n` +
-        `     · Si querés auditar el inventario actual igual: node auditar-matching-shadow.mjs --sin-guarda\n`
-      );
-      process.exit(2);
-    }
-    console.log(`   ⚠️  --sin-guarda: las capturas de hoy (${guarda.hoy}) no corrieron. Audito el inventario tal como está.\n`);
+    AVISO_ALCANCE = `las capturas de ${guarda.hoy} corrieron PARCIALMENTE: falta(n) ${guarda.faltan.join(' · ')}. `
+      + `Lo que esas capturas carguen NO está en este audit — el cero de una superficie no las cubre.`;
+    console.log(`
+🔴 ALCANCE INCOMPLETO — ${guarda.faltan.length} de 4 capturas sin log de hoy (${guarda.hoy}):`);
+    for (const f of guarda.faltan)    console.log(`      ❌ ${f}`);
+    for (const c of guarda.corrieron) console.log(`      ✅ ${c}`);
+    console.log(`   Audito igual (no auditar sería peor), pero este audit NO cubre lo que carguen las que faltan.`);
+    console.log(`   👉 Si corren después, RE-CORRÉ este audit: es read-only y $0.
+`);
+  } else {
+    console.log(`   ✅ Las 4 capturas de hoy (${guarda.hoy}) dejaron log — este audit corre después de todas.
+`);
   }
 
   // ── Qué se audita (1-ago-2026) ──────────────────────────────────────────
@@ -705,12 +754,126 @@ async function main() {
     }
   }
 
-  // ── SUPERFICIE 9 — EL AVISO PUBLICA EN BOLIVIANOS Y NO ESTA TAGUEADO `bob` (20-ago-2026) ──  // Origen: 8000699 (Vilareal Duo). El aviso decia "Precio: Bs. 382.800" y nada mas —  // ni una mencion de dolares. Alguien lo dividio por 6,96 y guardo $55.000, cuando al  // cambio real son $33.097. **66% de sobreprecio**, en el feed y en el bot, 5 semanas.  //  // 🔑 POR QUE ESTE DETECTOR Y NO "REVISAR LOS TAGS DE TC" (medido el 20-ago antes de  // escribirlo). Se probo la via del tag: buscar props con `oficial_viejo` cuyo aviso no  // mencione el numero. De 6 candidatos, **5 tenian el tag BIEN puesto** — 83% de falsos  // positivos — porque el ancla al 7 se escribe de formas que ningun regex alcanza:  //   · `T. C. 7.00` (puntos y espacios)  · `Tipo de cambio promocional de Bs. 7`  //   · `(𝐓𝐂 𝟕)` en Unicode decorativo — no son las letras T y C  //   · `$us 70.000 (Bs 490.000)` → **el ratio da 7,0 exacto sin nombrar el tipo de cambio**.  //     No existe expresion regular para "estos dos numeros se dividen en 7".  // Esa via necesitaba un juez LLM para confirmar 5 de cada 6. **La moneda, en cambio, es  // inequivoca**: si el aviso solo habla en Bs, el precio esta en Bs. Sobre los 769 avisos  // dio exactamente 1 resultado y era el correcto: **0 falsos positivos, sin juez**.  //  // Es el mismo razonamiento de la superficie 7: cuando aparecio Sky Eclipse no se toco el  // dedup (habria roto 5 grupos legitimos), se agrego el detector que SI discriminaba.  //  // 🔴 REPORTA, NO DECIDE. El arreglo no es solo el tag: hay que mover el precio en Bs a  // `precio_usd` (los `bob` guardan los bolivianos CRUDOS y la vista los divide por el TC  // del dia). Por eso sale con el SQL sugerido y lo aplica el humano.  //  // FILTROS: el aviso menciona un monto en Bs de 5+ digitos (para no cazar "expensas Bs 500")  // y NO menciona dolares en ninguna forma. Rastro que corta la relectura:  // `datos_json.trazabilidad.moneda_revisada`.  const sup9 = [];  {    let q9 = sb.from('v_mercado_venta_shadow')      .select('id,nombre_edificio,zona,area_total_m2,precio_usd,precio_norm,precio_m2,tipo_cambio_detectado,url')      .neq('tipo_cambio_detectado', 'bob');    if (ZONAS_FILTRO) q9 = q9.in('zona', ZONAS_FILTRO);    const { data: mv9, error: e9 } = await q9;    if (e9) {      console.log(`   ⚠️  Superficie 9 no pudo leer v_mercado_venta_shadow (${e9.message}) — se declara, no se omite.`);    } else {      const ids9 = (mv9 || []).map((x) => x.id);      const { data: crudas9 } = ids9.length        ? await sb.from('propiedades_v2').select('id,datos_json').in('id', ids9)        : { data: [] };      const porId9 = new Map((crudas9 || []).map((x) => [x.id, x]));      for (const p of (mv9 || [])) {        const cruda = porId9.get(p.id);        if (cruda?.datos_json?.trazabilidad?.moneda_revisada) continue;   // ya revisado por un humano        const desc = (cruda?.datos_json?.contenido?.descripcion || '').replace(/\s+/g, ' ');        if (!desc) continue;        const t = desc.toLowerCase();        const montoBs = t.match(/bs\.? ?([0-9][0-9.,]{4,})/);        if (!montoBs) continue;        if (/\$us|usd|d[oó]lar/.test(t)) continue;   // habla en las dos monedas → no es inequivoco        const bs = Number(montoBs[1].replace(/[.,]/g, '').slice(0, 9));        sup9.push({          prop_id: p.id, nombre_edificio: p.nombre_edificio, zona: p.zona,          tag_actual: p.tipo_cambio_detectado,          precio_guardado_usd: p.precio_usd != null ? Number(p.precio_usd) : null,          precio_que_muestra: p.precio_norm != null ? Math.round(Number(p.precio_norm)) : null,          precio_m2_hoy: p.precio_m2 != null ? Math.round(Number(p.precio_m2)) : null,          bs_del_aviso: bs,          divisor_implicito: p.precio_usd ? Number((bs / Number(p.precio_usd)).toFixed(2)) : null,          cita: montoBs[0], url: p.url,        });      }      sup9.sort((a, b) => (b.bs_del_aviso || 0) - (a.bs_del_aviso || 0));    }  }  const file = join(OUT, `audit-matching-shadow-${TS}.json`);
+  // ── SUPERFICIE 9 — EL AVISO PUBLICA EN BOLIVIANOS Y NO ESTA TAGUEADO `bob` (20-ago-2026) ──
+  // Origen: 8000699 (Vilareal Duo). El aviso decia "Precio: Bs. 382.800" y nada mas —
+  // ni una mencion de dolares. Alguien lo dividio por 6,96 y guardo $55.000, cuando al
+  // cambio real son $33.097. **66% de sobreprecio**, en el feed y en el bot, 5 semanas.
+  //
+  // 🔑 POR QUE ESTE DETECTOR Y NO "REVISAR LOS TAGS DE TC" (medido el 20-ago antes de
+  // escribirlo). Se probo la via del tag: buscar props con `oficial_viejo` cuyo aviso no
+  // mencione el numero. De 6 candidatos, **5 tenian el tag BIEN puesto** — 83% de falsos
+  // positivos — porque el ancla al 7 se escribe de formas que ningun regex alcanza:
+  //   · `T. C. 7.00` (puntos y espacios)  · `Tipo de cambio promocional de Bs. 7`
+  //   · `(𝐓𝐂 𝟕)` en Unicode decorativo — no son las letras T y C
+  //   · `$us 70.000 (Bs 490.000)` → **el ratio da 7,0 exacto sin nombrar el tipo de cambio**.
+  //     No existe expresion regular para "estos dos numeros se dividen en 7".
+  // Esa via necesitaba un juez LLM para confirmar 5 de cada 6. **La moneda, en cambio, es
+  // inequivoca**: si el aviso solo habla en Bs, el precio esta en Bs. Sobre los 769 avisos
+  // dio exactamente 1 resultado y era el correcto: **0 falsos positivos, sin juez**.
+  //
+  // Es el mismo razonamiento de la superficie 7: cuando aparecio Sky Eclipse no se toco el
+  // dedup (habria roto 5 grupos legitimos), se agrego el detector que SI discriminaba.
+  //
+  // 🔴 REPORTA, NO DECIDE. El arreglo no es solo el tag: hay que mover el precio en Bs a
+  // `precio_usd` (los `bob` guardan los bolivianos CRUDOS y la vista los divide por el TC
+  // del dia). Por eso sale con el SQL sugerido y lo aplica el humano.
+  //
+  // FILTROS: el aviso menciona un monto en Bs de 5+ digitos (para no cazar "expensas Bs 500")
+  // y NO menciona dolares en ninguna forma. Rastro que corta la relectura:
+  // `datos_json.trazabilidad.moneda_revisada`.
+  const sup9 = [];
+  {
+    let q9 = sb.from('v_mercado_venta_shadow')
+      .select('id,nombre_edificio,zona,area_total_m2,precio_usd,precio_norm,precio_m2,tipo_cambio_detectado,url')
+      .neq('tipo_cambio_detectado', 'bob');
+    if (ZONAS_FILTRO) q9 = q9.in('zona', ZONAS_FILTRO);
+    const { data: mv9, error: e9 } = await q9;
+    if (e9) {
+      console.log(`   ⚠️  Superficie 9 no pudo leer v_mercado_venta_shadow (${e9.message}) — se declara, no se omite.`);
+    } else {
+      const ids9 = (mv9 || []).map((x) => x.id);
+      const { data: crudas9 } = ids9.length
+        ? await sb.from('propiedades_v2').select('id,datos_json').in('id', ids9)
+        : { data: [] };
+      const porId9 = new Map((crudas9 || []).map((x) => [x.id, x]));
+      for (const p of (mv9 || [])) {
+        const cruda = porId9.get(p.id);
+        if (cruda?.datos_json?.trazabilidad?.moneda_revisada) continue;   // ya revisado por un humano
+        const desc = (cruda?.datos_json?.contenido?.descripcion || '').replace(/\s+/g, ' ');
+        if (!desc) continue;
+        const t = desc.toLowerCase();
+        const montoBs = t.match(/bs\.? ?([0-9][0-9.,]{4,})/);
+        if (!montoBs) continue;
+        if (/\$us|usd|d[oó]lar/.test(t)) continue;   // habla en las dos monedas → no es inequivoco
+        const bs = Number(montoBs[1].replace(/[.,]/g, '').slice(0, 9));
+        sup9.push({
+          prop_id: p.id, nombre_edificio: p.nombre_edificio, zona: p.zona,
+          tag_actual: p.tipo_cambio_detectado,
+          precio_guardado_usd: p.precio_usd != null ? Number(p.precio_usd) : null,
+          precio_que_muestra: p.precio_norm != null ? Math.round(Number(p.precio_norm)) : null,
+          precio_m2_hoy: p.precio_m2 != null ? Math.round(Number(p.precio_m2)) : null,
+          bs_del_aviso: bs,
+          divisor_implicito: p.precio_usd ? Number((bs / Number(p.precio_usd)).toFixed(2)) : null,
+          cita: montoBs[0], url: p.url,
+        });
+      }
+      sup9.sort((a, b) => (b.bs_del_aviso || 0) - (a.bs_del_aviso || 0));
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // SUPERFICIE 10 — la PROPIEDAD y su EDIFICIO están en MACROZONAS distintas
+  // ---------------------------------------------------------------------------
+  // Un edificio no está en dos macrozonas. Si la prop dice Zona Norte y su pm es de
+  // Equipetrol, uno de los dos está mal — y el que casi siempre está mal es el de la
+  // prop, porque su `zona` la escribe el cargador desde el GPS del aviso, que a menudo
+  // es el pin genérico del portal.
+  // 🔴 No falla, no avisa, y el precio de esa prop entra en la mediana de una microzona
+  // donde no está. Dos casos en una semana: 8000944 (Smart Quipe, monoambiente de
+  // USD 52.000 zonificado en el 6to-8vo anillo de ZN estando en Equipetrol Centro) y
+  // 8000995 (Edificio García, en ZN estando en Av. Busch). Los dos se encontraron a mano.
+  // 🔑 Se compara MACROZONA, no zona: entre zonas vecinas de la misma macrozona el borde
+  // es difuso y daría ruido; entre macrozonas no hay ambigüedad posible.
+  const sup10 = [];
+  {
+    const macroDe = (zona) => {
+      for (const [id, cfg] of Object.entries(ZONAS_HIBRIDO)) {
+        if ((cfg.zonas || []).includes(zona)) return id;
+      }
+      return null;   // zona fuera de toda macrozona conocida → no se juzga
+    };
+    const conPm = filas.filter((p) => p.id_proyecto_master != null && p.zona && !p.duplicado_de);
+    const idsPm = [...new Set(conPm.map((p) => p.id_proyecto_master))];
+    let porPmZona = new Map();
+    if (idsPm.length) {
+      const { data: pmsZ, error: ePm } = await sb.from('proyectos_master')
+        .select('id_proyecto_master,nombre_oficial,zona').in('id_proyecto_master', idsPm);
+      if (ePm) console.log(`   ⚠️  Superficie 10 no pudo leer proyectos_master (${ePm.message}) — se declara, no se omite.`);
+      else porPmZona = new Map((pmsZ || []).map((x) => [x.id_proyecto_master, x]));
+    }
+    for (const p of conPm) {
+      const pm = porPmZona.get(p.id_proyecto_master);
+      if (!pm || !pm.zona) continue;
+      const mProp = macroDe(p.zona), mEdif = macroDe(pm.zona);
+      if (!mProp || !mEdif || mProp === mEdif) continue;
+      sup10.push({
+        prop_id: p.id, op: p.tipo_operacion, url: p.url,
+        zona_prop: p.zona, macrozona_prop: mProp,
+        pm: p.id_proyecto_master, pm_nombre: pm.nombre_oficial,
+        zona_pm: pm.zona, macrozona_pm: mEdif,
+        lat: p.latitud, lon: p.longitud,
+      });
+    }
+  }
+
+
+  const file = join(OUT, `audit-matching-shadow-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, ops: OPS, total_filas: filas.length,
-    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, superficie_6_estado_obra_contradictorio: sup6.length, superficie_6_props_afectadas: sup6.reduce((a, c) => a + c.props_afectadas, 0), superficie_7_brecha_precio: sup7.length, superficie_7_props_afectadas: sup7.reduce((a, c) => a + c.n, 0), ya_confirmados_por_auditor: supConfirmadas.length },
+    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, superficie_6_estado_obra_contradictorio: sup6.length, superficie_6_props_afectadas: sup6.reduce((a, c) => a + c.props_afectadas, 0), superficie_7_brecha_precio: sup7.length, superficie_7_props_afectadas: sup7.reduce((a, c) => a + c.n, 0), superficie_10_macrozona_incoherente: sup10.length, ya_confirmados_por_auditor: supConfirmadas.length },
     superficie_7_umbral_brecha_pct: BRECHA_SOSPECHOSA_PCT,
     superficie_9_moneda_incoherente: sup9.length,
+    superficie_10: sup10,
     superficie_5_umbral_metros: DISTANCIA_SOSPECHOSA_M,
     superficie_1: sup1, superficie_2: sup2,
     // Nombres YA juzgados como no-edificio (odónimo / familia ambigua) → no van al juez.
@@ -742,7 +905,12 @@ async function main() {
     // SUPERFICIE 7 — dos avisos del MISMO depto (pm + área + captador) a precios que no
     // pueden ser los dos ciertos. REPORTA, NO DECIDE: no dice cuál es el bueno. El rastro
     // que corta la relectura es `datos_json.trazabilidad.brecha_precio_revisada`.
-    superficie_7: sup7,    // SUPERFICIE 9 — el aviso habla SOLO en bolivianos y no esta tagueado `bob`. El precio    // en Bs es el dato del aviso; si figura en USD, alguien lo convirtio (y con que rate).    // REPORTA, NO DECIDE: el arreglo mueve el precio ademas del tag. Rastro:    // `datos_json.trazabilidad.moneda_revisada`.    superficie_9: sup9,
+    superficie_7: sup7,
+    // SUPERFICIE 9 — el aviso habla SOLO en bolivianos y no esta tagueado `bob`. El precio
+    // en Bs es el dato del aviso; si figura en USD, alguien lo convirtio (y con que rate).
+    // REPORTA, NO DECIDE: el arreglo mueve el precio ademas del tag. Rastro:
+    // `datos_json.trazabilidad.moneda_revisada`.
+    superficie_9: sup9,
     // Matches de superficie 2/4 que un juez YA confirmó (tag `datos_json.trazabilidad.confirmado_por`).
     // No vuelven al juez. Quedan acá para poder revocar una confirmación que hubiera salido mal.
     ya_confirmados_por_auditor: supConfirmadas.map((s) => ({
@@ -795,7 +963,33 @@ async function main() {
     if (sup7.length > 10) console.log(`     … y ${sup7.length - 10} más (todos en el JSON)`);
     console.log('');
   }
-  if (sup9.length) {    console.log(`  💱 Superficie 9 (el aviso habla SOLO en Bs y no está tagueado \`bob\`): ${sup9.length}`);    console.log(`     ⚠️  El precio en Bs es el dato del aviso. Si figura en USD, alguien lo convirtió`);    console.log(`         — y el divisor dice con qué rate. 6,96/7 = el rate MUERTO (infla ~66%).`);    for (const s of sup9.slice(0, 10)) {      console.log(`     ${s.prop_id} "${s.nombre_edificio || '—'}" [${s.zona}] · aviso: "${s.cita}"`);      console.log(`        guardado $${s.precio_guardado_usd} · muestra $${s.precio_que_muestra}` +        `${s.precio_m2_hoy ? ` ($${s.precio_m2_hoy}/m²)` : ''} · divisor implícito: ${s.divisor_implicito ?? '—'}`);      console.log(`        → si es \`bob\`: precio_usd = ${s.bs_del_aviso} (los Bs crudos) y la vista los divide por el TC del día`);    }    if (sup9.length > 10) console.log(`     … y ${sup9.length - 10} más (todos en el JSON)`);    console.log('');  }  console.log(`  Superficie 1 (sin match + con nombre → PM_NUEVO/fuzzy): ${sup1.length}`);
+  if (sup9.length) {
+    console.log(`  💱 Superficie 9 (el aviso habla SOLO en Bs y no está tagueado \`bob\`): ${sup9.length}`);
+    console.log(`     ⚠️  El precio en Bs es el dato del aviso. Si figura en USD, alguien lo convirtió`);
+    console.log(`         — y el divisor dice con qué rate. 6,96/7 = el rate MUERTO (infla ~66%).`);
+    for (const s of sup9.slice(0, 10)) {
+      console.log(`     ${s.prop_id} "${s.nombre_edificio || '—'}" [${s.zona}] · aviso: "${s.cita}"`);
+      console.log(`        guardado $${s.precio_guardado_usd} · muestra $${s.precio_que_muestra}` +
+        `${s.precio_m2_hoy ? ` ($${s.precio_m2_hoy}/m²)` : ''} · divisor implícito: ${s.divisor_implicito ?? '—'}`);
+      console.log(`        → si es \`bob\`: precio_usd = ${s.bs_del_aviso} (los Bs crudos) y la vista los divide por el TC del día`);
+    }
+    if (sup9.length > 10) console.log(`     … y ${sup9.length - 10} más (todos en el JSON)`);
+    console.log('');
+  }
+  if (sup10.length) {
+    console.log(`  🗺️  Superficie 10 (la prop y su EDIFICIO en macrozonas distintas): ${sup10.length}`);
+    console.log(`     ⚠️  Un edificio no está en dos macrozonas. La zona de la prop la escribe el`);
+    console.log(`         cargador desde el GPS del aviso — que suele ser el pin genérico del portal.`);
+    console.log(`         Mientras no se corrija, esa prop alimenta la mediana de una microzona ajena.`);
+    console.log(`         🔴 Corregir el GPS NO recalcula la zona: va en el MISMO UPDATE.`);
+    for (const s of sup10.slice(0, 15)) {
+      console.log(`     ${s.prop_id} [${s.op}] "${s.pm_nombre}" (pm ${s.pm})`);
+      console.log(`        prop dice: ${s.zona_prop} [${s.macrozona_prop}]  ·  edificio: ${s.zona_pm} [${s.macrozona_pm}]`);
+    }
+    if (sup10.length > 15) console.log(`     … y ${sup10.length - 15} más (todos en el JSON)`);
+    console.log('');
+  }
+  console.log(`  Superficie 1 (sin match + con nombre → PM_NUEVO/fuzzy): ${sup1.length}`);
   for (const s of sup1.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}"  cands:${s.candidatos.length}${s.candidatos[0] ? ` (mejor ${s.candidatos[0].nombre} ${s.candidatos[0].score})` : ''}`);
   // Se DECLARA lo filtrado (regla 3 de NOMBRES_NO_EDIFICIO): un descarte invisible se lee
   // como "no había nada". Estas props siguen sin match — que es el veredicto correcto —,
@@ -829,6 +1023,13 @@ async function main() {
     for (const s of supConfirmadas.slice(0, 20)) console.log(`        ${s.prop_id} [${s.op}] sup${s.superficie} "${s.nombre_edificio}" → pm ${s.pm_actual} · ${s.confirmado_por}`);
   }
   console.log(`\n  📦 → ${file}`);
+  // 🔴 El aviso de alcance se REPITE acá: el resumen es lo que se copia al log y lo que se
+  // lee a la mañana. Un "0 superficies" al lado de "faltó una captura" se lee distinto que
+  // un "0" solo — y ésa es toda la diferencia entre "está limpio" y "no lo miré entero".
+  if (AVISO_ALCANCE) {
+    console.log(`
+  🔴 OJO — ${AVISO_ALCANCE}`);
+  }
   console.log(`     Siguiente: sup.1/sup.2/sup.4 → subagentes-lectores (JUEZ). sup.3 → dedup determinístico (revisar y aplicar):`);
   console.log(`       sup.1 → APROBAR(candidato) | PM_NUEVO(nombre_real) | SIN_NOMBRE`);
   console.log(`       sup.2 → CONFIRMAR el pm_actual | CORREGIR(otro pm) | RECHAZAR (nombre no aparece)`);

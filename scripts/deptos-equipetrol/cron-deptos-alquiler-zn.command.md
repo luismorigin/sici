@@ -71,6 +71,14 @@ Cada subagente lee su chunk + **`READER_SPEC_ALQUILER.md`** (¡no el de venta!) 
 #### 🔁 Reintento con backoff (obligatorio en corrida desatendida)
 Si un subagente falla por error de **servicio** (`529 Overloaded`, `500`, timeout, "API Error"):
 
+0. 🕐 **PONELE RELOJ: lanzá cada chunk en BACKGROUND y cortalo a los 10 minutos.**
+   Un lector sano tarda **2-4 minutos**. Si a los 10 no devolvió, dalo por muerto, **cortalo**
+   (`TaskStop`) y relanzá ese chunk — no esperes a que falle solo.
+   🔴 **Por qué**: el 19 y el 20-ago-2026 los lectores no fallaron rápido, se colgaron **60 y 80
+   minutos** y murieron *sin escribir el archivo de veredictos*; los reintentos salieron en **2 y 3
+   minutos**. Con esa forma de morir, el backoff de abajo es irrelevante: el tiempo muerto ya lo
+   puso el propio intento. **Costo medido: ~2,5 h de cadena**, y el audit terminó corriendo ANTES
+   que la última captura, así que su "0 en las 7 superficies" no cubría la noche.
 1. **Reintentá ese chunk hasta 3 veces**, esperando **60s → 180s → 300s**.
 2. Si a la 3ª sigue fallando, seguí con los otros y reintentá el que falló **al final**.
 3. Recién ahí leé inline con el mismo spec. **Si tuviste que leer más de 2 chunks inline, abortá y

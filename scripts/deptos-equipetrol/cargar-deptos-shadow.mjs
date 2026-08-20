@@ -33,6 +33,7 @@ import { resolverZona, conSufijo } from './lib/zonas-hibrido.mjs';
 import { detalleDesdeBase } from './lib/detalle-desde-base.mjs';
 import { leerRechazados, guardarRechazados, TTL_DIAS, UMBRAL_FETCH_FALLIDO, RAZON_FETCH_FALLIDO } from './lib/rechazados.mjs';
 import { traerTodo } from './lib/traer-todo.mjs';
+import { filtrarAliasSugeridos, declararDescartes } from './lib/filtrar-alias.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -511,7 +512,7 @@ async function apply(file) {
       match = await matchearPorNombre(sb, { nombre: v.nombre_edificio_canonico, zona: e.zona, lat: e._apply.latitud, lon: e._apply.longitud });
       if (!match.auto) match.pm = null; // ambiguo/débil → sin match (lo levanta el audit); no forzar
     }
-    if (v.alias_sugerido && match.pm) aliasSugeridos.push({ pm: match.pm, alias: v.alias_sugerido, edif: v.nombre_edificio_canonico });
+    if (v.alias_sugerido && match.pm) aliasSugeridos.push({ pm: match.pm, alias: v.alias_sugerido, edif: v.nombre_edificio_canonico, metodo: match.metodo });
 
     // ── GUARDRAIL DE ÁREA (29-jul-2026) ──────────────────────────────────────
     // El veredicto ya pisa la del portal cuando el texto declara superficie (v4.3). Lo que
@@ -657,6 +658,18 @@ async function apply(file) {
   // grafía vuelve a la cola del audit y termina otra vez en el escritorio del founder.
   // Sigue sin escribirse solo: `proyectos_master` es PROD y el invariante shadow es no
   // tocarlo. Lo que cambia es que ahora queda un .sql listo para que el humano lo aplique.
+  // 🔎 FILTRO (20-ago-2026): el cargador revisa sus propios alias contra el catálogo
+  // ANTES de proponerlos. Medido 18/19/20-ago: de 30 propuestos en tres noches, 15 servían;
+  // el resto ya estaba cargado o repetía el nombre oficial. Y uno (pm 223 ← "Edificio Ónix")
+  // venía de un auto-match que este mismo cargador había marcado como riesgoso: el error de
+  // la noche pidiendo quedar grabado en el catálogo, donde afecta a TODOS los avisos futuros.
+  // Se muta el array para no tocar el resto del bloque. Lo descartado se DECLARA siempre.
+  {
+    const { aplicables, descartados } = await filtrarAliasSugeridos(sb, aliasSugeridos);
+    declararDescartes(descartados);
+    aliasSugeridos.length = 0;
+    aliasSugeridos.push(...aplicables);
+  }
   if (aliasSugeridos.length) {
     console.log(`\n🏷️  Alias sugeridos (${aliasSugeridos.length}):`);
     for (const a of aliasSugeridos) console.log(`   pm ${a.pm} (${a.edif}) ← alias "${a.alias}"`);

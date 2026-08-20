@@ -34,6 +34,7 @@ import { resolverZona, conSufijo } from './lib/zonas-hibrido.mjs';
 import { detalleDesdeBase } from './lib/detalle-desde-base.mjs';
 import { leerRechazados, guardarRechazados, TTL_DIAS, UMBRAL_FETCH_FALLIDO, RAZON_FETCH_FALLIDO } from './lib/rechazados.mjs';
 import { traerTodo } from './lib/traer-todo.mjs';
+import { filtrarAliasSugeridos, declararDescartes } from './lib/filtrar-alias.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -467,7 +468,7 @@ async function apply(file) {
       match = await matchearPorNombre(sb, { nombre: v.nombre_edificio_canonico, zona: e.zona, lat: e._apply.latitud, lon: e._apply.longitud });
       if (!match.auto) match.pm = null;
     }
-    if (v.alias_sugerido && match.pm) aliasSugeridos.push({ pm: match.pm, alias: v.alias_sugerido, edif: v.nombre_edificio_canonico });
+    if (v.alias_sugerido && match.pm) aliasSugeridos.push({ pm: match.pm, alias: v.alias_sugerido, edif: v.nombre_edificio_canonico, metodo: match.metodo });
 
     filas.push(construirFila(e, v, match));
     reporte.push({ id: e.id, crudo: v.precio_mensual, moneda: v.tipo_cambio_detectado === 'bob' ? 'BOB' : 'USD', tc: v.tipo_cambio_detectado, dorm: v.dormitorios, edif: v.nombre_edificio_canonico, pm: match.pm, match: match.metodo, motivo: match.motivo });
@@ -568,6 +569,18 @@ async function apply(file) {
   // es desatendida y nadie mira esa consola. El 3-ago se perdió así el alias
   // `pm 411 (Atlantis Towers) ← "Edificio Atlantis"`; se recuperó del log de la routine, no del
   // script. Venta ya escribía su .sql desde el 30-jul; este camino se quedó atrás.
+  // 🔎 FILTRO (20-ago-2026): el cargador revisa sus propios alias contra el catálogo
+  // ANTES de proponerlos. Medido 18/19/20-ago: de 30 propuestos en tres noches, 15 servían;
+  // el resto ya estaba cargado o repetía el nombre oficial. Y uno (pm 223 ← "Edificio Ónix")
+  // venía de un auto-match que este mismo cargador había marcado como riesgoso: el error de
+  // la noche pidiendo quedar grabado en el catálogo, donde afecta a TODOS los avisos futuros.
+  // Se muta el array para no tocar el resto del bloque. Lo descartado se DECLARA siempre.
+  {
+    const { aplicables, descartados } = await filtrarAliasSugeridos(sb, aliasSugeridos);
+    declararDescartes(descartados);
+    aliasSugeridos.length = 0;
+    aliasSugeridos.push(...aplicables);
+  }
   if (aliasSugeridos.length) {
     console.log(`\n🏷️  Alias sugeridos (NO se escriben a prod en fase shadow) (${aliasSugeridos.length}):`);
     for (const a of aliasSugeridos) console.log(`   pm ${a.pm} (${a.edif}) ← alias "${a.alias}"`);
