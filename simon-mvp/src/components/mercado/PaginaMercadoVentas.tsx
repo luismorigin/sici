@@ -218,7 +218,7 @@ export default function PaginaMercadoVentas({
             : []),
           ...(extra?.yieldZonas || []).map(y => ({
             '@type': 'PropertyValue',
-            name: `Rendimiento bruto anual de alquiler en ${y.zona}, ${nombre} (1 dormitorio)`,
+            name: `Rendimiento bruto anual de alquiler en ${labelZona(y.zona)}, ${nombre} (1 dormitorio)`,
             value: y.roi,
             unitText: 'porcentaje',
           })),
@@ -230,7 +230,7 @@ export default function PaginaMercadoVentas({
           })),
           ...zonas.map(z => ({
             '@type': 'PropertyValue',
-            name: `Precio metro cuadrado en ${z.zonaDisplay}, ${nombre}`,
+            name: `Precio metro cuadrado en ${labelZona(z.zonaDisplay)}, ${nombre}`,
             value: z.medianaPrecioM2,
             unitText: 'USD/m2',
           })),
@@ -449,7 +449,7 @@ export default function PaginaMercadoVentas({
               <div className="mkt-rows">
                 {extra.yieldZonas.map(y => (
                   <div className="mkt-row" key={y.zona}>
-                    <span className="mkt-row-l">{y.zona}</span>
+                    <span className="mkt-row-l">{labelZona(y.zona)}</span>
                     <span className="mkt-row-track"><i style={{ width: `${Math.round((y.roi / maxRoi) * 100)}%` }} /></span>
                     <span className="mkt-row-v num">{y.roi.toFixed(1).replace('.', ',')}%</span>
                   </div>
