@@ -564,9 +564,6 @@ export default function DashboardSalud() {
               <Link href="/admin/propiedades" className="text-slate-300 hover:text-white text-sm">
                 Propiedades
               </Link>
-              <Link href="/admin/supervisor" className="text-slate-300 hover:text-white text-sm">
-                Supervisor
-              </Link>
               <Link href="/admin/market" className="text-purple-400 hover:text-purple-300 text-sm font-medium">
                 Market Venta
               </Link>
@@ -775,8 +772,7 @@ export default function DashboardSalud() {
               </h2>
               {colas && (
                 <div className="space-y-3">
-                  <Link
-                    href="/admin/supervisor/matching"
+                  <div
                     className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
                   >
                     <div className="flex justify-between items-center mb-1">
@@ -791,9 +787,8 @@ export default function DashboardSalud() {
                         A: {colas.cola_matching_alquiler}
                       </span>
                     </div>
-                  </Link>
-                  <Link
-                    href="/admin/supervisor/sin-match"
+                  </div>
+                  <div
                     className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
                   >
                     <div className="flex justify-between items-center mb-1">
@@ -808,25 +803,23 @@ export default function DashboardSalud() {
                         A: {colas.cola_sin_match_alquiler}
                       </span>
                     </div>
-                  </Link>
-                  <Link
-                    href="/admin/supervisor/excluidas"
+                  </div>
+                  <div
                     className="flex justify-between items-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
                   >
                     <span className="text-slate-700">Excluidas por revisar</span>
                     <span className="font-bold text-slate-600">
                       {colas.cola_excluidas} →
                     </span>
-                  </Link>
-                  <Link
-                    href="/admin/supervisor/auto-aprobados"
+                  </div>
+                  <div
                     className="flex justify-between items-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
                   >
                     <span className="text-slate-700">Auto-aprobados sin validar</span>
                     <span className={`font-bold ${colas.cola_auto_aprobados > 50 ? 'text-amber-600' : 'text-green-600'}`}>
                       {colas.cola_auto_aprobados} →
                     </span>
-                  </Link>
+                  </div>
                 </div>
               )}
             </div>

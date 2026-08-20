@@ -21,6 +21,18 @@ const nextConfig = {
   poweredByHeader: false,
   async redirects() {
     return [
+      // ⛔ SUPERVISOR HITL RETIRADO el 20-ago-2026 (6 pantallas, 2.721 líneas).
+      // Su cola `matching_sugerencias` no recibía una fila desde el 28-jul y el audit
+      // nocturno hace ese trabajo mejor: lee el anuncio, trae la cita que sostiene cada
+      // decisión y deja el SQL escrito — la pantalla solo mostraba un score.
+      // 🔑 Se revisaron sus 250 pendientes antes de borrar: 241 eran historia muerta (ya
+      // matcheadas, borradas o dadas de baja) y de las 9 vivas, 8 proponían match por
+      // GPS-solo —que la regla canónica prohíbe— y la novena un atractor conocido
+      // ('CONDOMINIO ONE'). No se perdió un solo match aprovechable.
+      // Entraba en silencio: mostraba cero pendientes y se leía como "está todo limpio".
+      { source: '/admin/supervisor', destination: '/admin/propiedades', permanent: false },
+      { source: '/admin/supervisor/:path*', destination: '/admin/propiedades', permanent: false },
+
       // ⛔ Funnel premium APAGADO el 14-ago-2026 (`/filtros-v2`, `/formulario-v2`,
       // `/resultados-v2` borradas). Estaba dormido hacía meses — el producto es el feed —
       // y era el último consumidor no-admin de `buscar_unidades_reales()`, la RPC del

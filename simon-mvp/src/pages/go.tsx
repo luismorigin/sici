@@ -52,16 +52,6 @@ const SECTIONS: Section[] = [
       { label: 'Market Pulse $', href: '/admin/market' },
       { label: 'Market Pulse Alq.', href: '/admin/market-alquileres' },
       { label: 'Admin alquileres', href: '/admin/alquileres' },
-      { label: 'Supervisor HITL', href: '/admin/supervisor' },
-      { label: 'Propiedades', href: '/admin/propiedades' },
-      { label: 'Proyectos', href: '/admin/proyectos' },
-    ],
-  },
-  {
-    title: 'Herramientas',
-    color: '#2a4a5f',
-    items: [
-      { label: 'Simon Advisor', href: 'https://simon-advisor.vercel.app/', external: true, hint: 'App externa' },
     ],
   },
   {
