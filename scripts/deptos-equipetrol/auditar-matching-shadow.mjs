@@ -300,7 +300,10 @@ async function main() {
     const porGps = new Map();
     for (const p of filas) {
       const k = claveGps(p.latitud, p.longitud);
-      if (!k || p.id_proyecto_master == null) continue;
+      // 🔴 excluye los gemelos deduplicados: dos filas del MISMO aviso en la misma
+      // coordenada (dedup por slug reescrito, PR #64) fabricaban un "pin generico" falso
+      // que apagaba a la vez la superficie 2 y la 5. Cazado el 20-ago-2026 (Onix, 960 m).
+      if (!k || p.id_proyecto_master == null || p.duplicado_de != null) continue;
       if (!porGps.has(k)) porGps.set(k, new Set());
       porGps.get(k).add(p.id_proyecto_master);
     }
