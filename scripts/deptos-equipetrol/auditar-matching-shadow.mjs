@@ -126,6 +126,11 @@ async function capturasDeHoyCorrieron() {
 // metodo 'nombre_unico_zona_dif' cuando el nombre es único exacto pero la zona no corrobora.
 const METODOS_RIESGO = new Set(['nombre_unico_zona_dif']);
 const slugDe = (url) => (url ? String(url).replace(/^https?:\/\/[^/]+\//, '').replace(/^propiedad\//, '') : null);
+// 🔗 La URL va SIEMPRE junto al id en la salida: un id suelto obliga a ir a buscar el aviso a mano
+// para poder decidir. Pedido del founder el 20-ago-2026 — el veredicto de casi toda superficie se
+// toma LEYENDO el anuncio, así que el link es parte del hallazgo, no un adorno.
+const linkDe = (u) => (u ? `
+        🔗 ${u}` : '');
 
 function haversine(lat1, lon1, lat2, lon2) {
   if ([lat1, lon1, lat2, lon2].some((v) => v == null || isNaN(Number(v)))) return null;
@@ -1014,7 +1019,7 @@ async function main() {
     console.log(`     ⚠️  REPORTA, NO DESCONECTA: la mitad de los sospechosos suelen tener el match BIEN`);
     console.log(`         y el pin del portal mal (medido 4-ago: 3 de 6). Hay que LEER el aviso.`);
     for (const s of sup5.slice(0, 12)) {
-      console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio || '—'}" → pm ${s.pm_actual} "${s.pm_nombre || '?'}"  ${(s.dist_metros / 1000).toFixed(1)} km`);
+      console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio || '—'}" → pm ${s.pm_actual} "${s.pm_nombre || '?'}"  ${(s.dist_metros / 1000).toFixed(1)} km${linkDe(s.url)}`);
       console.log(`        sospechoso: ${s.sospechoso}${s.hermanos_del_pm != null ? `  (${s.hermanos_pegados_al_pm}/${s.hermanos_del_pm} hermanos pegados)` : ''}`);
     }
     if (sup5.length > 12) console.log(`     … y ${sup5.length - 12} más (todas en el JSON, ordenadas por distancia)`);
@@ -1057,7 +1062,7 @@ async function main() {
     console.log(`     ⚠️  El precio en Bs es el dato del aviso. Si figura en USD, alguien lo convirtió`);
     console.log(`         — y el divisor dice con qué rate. 6,96/7 = el rate MUERTO (infla ~66%).`);
     for (const s of sup9.slice(0, 10)) {
-      console.log(`     ${s.prop_id} "${s.nombre_edificio || '—'}" [${s.zona}] · aviso: "${s.cita}"`);
+      console.log(`     ${s.prop_id} "${s.nombre_edificio || '—'}" [${s.zona}] · aviso: "${s.cita}"${linkDe(s.url)}`);
       console.log(`        guardado $${s.precio_guardado_usd} · muestra $${s.precio_que_muestra}` +
         `${s.precio_m2_hoy ? ` ($${s.precio_m2_hoy}/m²)` : ''} · divisor implícito: ${s.divisor_implicito ?? '—'}`);
       console.log(`        → si es \`bob\`: precio_usd = ${s.bs_del_aviso} (los Bs crudos) y la vista los divide por el TC del día`);
@@ -1072,14 +1077,14 @@ async function main() {
     console.log(`         Mientras no se corrija, esa prop alimenta la mediana de una microzona ajena.`);
     console.log(`         🔴 Corregir el GPS NO recalcula la zona: va en el MISMO UPDATE.`);
     for (const s of sup10.slice(0, 15)) {
-      console.log(`     ${s.prop_id} [${s.op}] "${s.pm_nombre}" (pm ${s.pm})`);
+      console.log(`     ${s.prop_id} [${s.op}] "${s.pm_nombre}" (pm ${s.pm})${linkDe(s.url)}`);
       console.log(`        prop dice: ${s.zona_prop} [${s.macrozona_prop}]  ·  edificio: ${s.zona_pm} [${s.macrozona_pm}]`);
     }
     if (sup10.length > 15) console.log(`     … y ${sup10.length - 15} más (todos en el JSON)`);
     console.log('');
   }
   console.log(`  Superficie 1 (sin match + con nombre → PM_NUEVO/fuzzy): ${sup1.length}`);
-  for (const s of sup1.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}"  cands:${s.candidatos.length}${s.candidatos[0] ? ` (mejor ${s.candidatos[0].nombre} ${s.candidatos[0].score})` : ''}`);
+  for (const s of sup1.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}"  cands:${s.candidatos.length}${s.candidatos[0] ? ` (mejor ${s.candidatos[0].nombre} ${s.candidatos[0].score})` : ''}${linkDe(s.url)}`);
   // Se DECLARA lo filtrado (regla 3 de NOMBRES_NO_EDIFICIO): un descarte invisible se lee
   // como "no había nada". Estas props siguen sin match — que es el veredicto correcto —,
   // lo único que se evita es re-juzgarlas cada noche.
@@ -1088,7 +1093,7 @@ async function main() {
     for (const s of sup1Ruido.slice(0, 20)) console.log(`        ${s.prop_id} [${s.op}] "${s.nombre_edificio}" · ${s.ruido.tipo} (decidido ${s.ruido.decidido})`);
   }
   console.log(`  Superficie 2 (auto-match riesgoso nombre_unico_zona_dif): ${sup2.length}`);
-  for (const s of sup2.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'}, zona ${s.pm_zona || '?'} vs ${s.zona}) dist ${s.dist_metros ?? '?'}m`);
+  for (const s of sup2.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'}, zona ${s.pm_zona || '?'} vs ${s.zona}) dist ${s.dist_metros ?? '?'}m${linkDe(s.url)}`);
   // Se DECLARA lo silenciado: un filtro que no se ve es un filtro que nadie audita.
   if (sup2Auto.length) {
     const nPin = sup2Auto.filter((s) => s.gps_placeholder).length;
@@ -1099,7 +1104,7 @@ async function main() {
   console.log(`  Superficie 3 (duplicados apart-hotel/republicación): ${sup3.length} clusters · ${dupProps} props a deduplicar`);
   for (const c of sup3.slice(0, 20)) console.log(`     [${c.op}] "${c.edificio}"${c.pm ? ` pm${c.pm}` : ''} $${c.precio} ${c.area}m² → sobrevive ${c.sobreviviente}, duplicados: ${c.duplicados.join(',')} (${c.n} avisos)${c.por_clave_fuerte ? ` · ⚑ por PISO ${c.piso}+área+precio (textos DIFIEREN) · publicados ${c.fechas_pub.length === 1 ? `el MISMO día (${c.fechas_pub[0]}) → fuerte` : `en fechas DISTINTAS (${c.fechas_pub.join(' vs ')}) → mirar`}` : ''}`);
   console.log(`  Superficie 4 (el LECTOR fijó el pm, con dudas): ${sup4.length}`);
-  for (const s of sup4.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'})  confianza del lector: ${s.confianza_lector}${s.dist_metros != null ? ` · ${s.dist_metros}m` : ''}`);
+  for (const s of sup4.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'})  confianza del lector: ${s.confianza_lector}${s.dist_metros != null ? ` · ${s.dist_metros}m` : ''}${linkDe(s.url)}`);
   // Con sup4 en 0 hay DOS motivos posibles y conviene no confundirlos en el parte matutino:
   // que no haya nada que juzgar, o que lo que había ya esté confirmado y tagueado.
   if (!sup4.length && !supConfirmadas.some((s) => s.superficie === 4)) {

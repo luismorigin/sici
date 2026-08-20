@@ -158,6 +158,13 @@ como resultado de la routine (es n8n/prod). La BD confirma, no reemplaza al log.
    cubre la noche**: decilo y re-corré el audit, que es read-only y $0.
 
 2. **Lo que necesita tu acción** (arriba de todo):
+   - 🔗 **TODO id que aparezca en el parte va con la URL de su anuncio, clickeable.** Un id suelto
+     obliga a ir a buscar el aviso a mano, y **casi todo veredicto se toma leyendo el anuncio**:
+     "¿es una casa mal tipificada?", "¿el precio bajo es real o es la moneda?", "¿este edificio es
+     el de Beni o el de Banzer?". El link es parte del hallazgo, no un adorno.
+     Formato: `**8001008** (Baruc Norte) — https://c21.com.bo/propiedad/118870_...`
+     Desde el 20-ago el `.mjs` del audit ya la imprime junto al id (`🔗`) en las 6 superficies que
+     listan props; si falta, sale de `propiedades_v2.url`.
    - 🔴 **PEGÁ EL SQL EN EL CHAT, no la ruta del archivo.** Decir "está en `output/…sql`" obliga a
      pedirlo. Pasó los 3 días seguidos.
    - 🔴 **Verificá el SQL contra la base ANTES de pasarlo, y entregalo con `COMMIT` puesto.** Las
