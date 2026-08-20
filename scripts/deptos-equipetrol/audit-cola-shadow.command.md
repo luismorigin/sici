@@ -235,6 +235,23 @@ solo tras verificación humana (el founder da el GPS en Google Maps). NO inventa
   transforma el precio es `bob`. Lo único que cambia es si el badge se enciende.
   🔑 **Hueco declarado que hoy no se puede cerrar:** un aviso anclado a un valor INTERMEDIO
   (8.50 / 9 / 10) merecería badge y no hay palanca para encenderlo sin mentir sobre el rate. Son 4.
+  ✅ **PRIMERA CORRIDA — 20-ago-2026. De 6 candidatos, 5 tenían el tag BIEN puesto.** No apareció
+  ningún caso del tipo BCB. Los 5 los trajo el filtro porque el ancla al 7 está escrita de formas que
+  **ningún regex alcanza** — y esto es la prueba concreta de por qué esta superficie existe:
+  · `T. C. 7.00` (puntos y espacios) · `Tipo de cambio promocional de Bs. 7` (19 chars de por medio)
+  · `(𝐓𝐂 𝟕)` **en Unicode decorativo** — no son las letras T y C
+  · `$us 70.000 (Bs 490.000)` y `100,000$us o Bs 700,000` → **el ratio da 7,0 exacto sin nombrar el
+    tipo de cambio**. No existe expresión regular para *"estos dos números se dividen en 7"*.
+  🔴 **El único que estaba mal NO era un tag ambiguo: era una MONEDA mal clasificada.** `8000699`
+  (Vilareal Duo) publicaba *"Precio: Bs. 382.800"* y nada más; alguien lo dividió por 6,96 y guardó
+  **$55.000** cuando al cambio real son **$33.097** — 66% de sobreprecio, en el feed y en el bot.
+  Corregido a `bob` (los Bs crudos van a `precio_usd`, como los otros 50; la vista divide por el TC
+  del día). **Caso único en los 769 avisos**, verificado con el patrón completo.
+  📌 **Rastro para no re-juzgar:** los confirmados llevan `trazabilidad.tc_confirmado_por`.
+  🔑 **Clave PROPIA, no `confirmado_por`**: esa la usan las superficies 2 y 4 para el juicio de
+  MATCHING, y un confirmado de tipo de cambio no debe apagar el juicio de matching de esa prop.
+  Filtro: `AND datos_json->'trazabilidad'->>'tc_confirmado_por' IS NULL`.
+  Plantilla: `output/08-TC-confirmados-2026-08-20.sql`.
 - **Superficie 6 (estado de obra):** el veredicto NO va a la propiedad, va al **catálogo del edificio**
   — es una característica del edificio, no del aviso (si va en la prop hay que repetirla en cada aviso
   nuevo). Y **se guarda la FECHA DE LA OBSERVACIÓN, no el estado a secas**: *"al 6-ago-2026 ya estaba
