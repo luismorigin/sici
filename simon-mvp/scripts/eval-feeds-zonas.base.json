@@ -2,57 +2,71 @@
   {
     "feed": "eq-venta",
     "ruta": "/ventas",
-    "propias": 358,
+    "propias": 364,
     "ajenas": 0,
-    "precios": 708,
+    "mencionesTexto": 0,
+    "precios": 748,
     "piezas": {
       "layout_desktop": 1,
-      "cards_lista": 351,
+      "cards_lista": 357,
       "pills_filtro": 1,
       "boton_area_mapa": 0
     },
+    "zonasCards": 357,
+    "contextos": [],
     "errores_consola": 0
   },
   {
     "feed": "zn-venta",
     "ruta": "/zona-norte/ventas",
-    "propias": 305,
+    "propias": 306,
     "ajenas": 0,
-    "precios": 615,
+    "mencionesTexto": 1,
+    "precios": 680,
     "piezas": {
       "layout_desktop": 1,
-      "cards_lista": 305,
+      "cards_lista": 306,
       "pills_filtro": 1,
       "boton_area_mapa": 0
     },
+    "zonasCards": 306,
+    "contextos": [
+      "ipado Parqueo Baulera Edificio El Mirador de Equipetrol 2º-3º · La Salle/Banzer"
+    ],
     "errores_consola": 0
   },
   {
     "feed": "eq-alq",
     "ruta": "/alquileres",
-    "propias": 216,
+    "propias": 234,
     "ajenas": 0,
-    "precios": 194,
+    "mencionesTexto": 0,
+    "precios": 212,
     "piezas": {
       "layout_desktop": 1,
-      "cards_lista": 181,
+      "cards_lista": 197,
       "pills_filtro": 1,
       "boton_area_mapa": 0
     },
+    "zonasCards": 197,
+    "contextos": [],
     "errores_consola": 0
   },
   {
     "feed": "zn-alq",
     "ruta": "/zona-norte/alquileres",
-    "propias": 139,
+    "propias": 148,
     "ajenas": 0,
-    "precios": 110,
+    "mencionesTexto": 0,
+    "precios": 125,
     "piezas": {
-      "layout_desktop": 0,
-      "cards_lista": 0,
-      "pills_filtro": 0,
+      "layout_desktop": 1,
+      "cards_lista": 114,
+      "pills_filtro": 1,
       "boton_area_mapa": 0
     },
+    "zonasCards": 114,
+    "contextos": [],
     "errores_consola": 0
   }
 ]

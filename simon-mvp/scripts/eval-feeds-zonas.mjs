@@ -46,6 +46,14 @@ const ZN_AJENA = /ZN \d|\d[º°](-\d[º°])? ·|Zona Norte/g
 
 // Selectores del rediseño. VENTAS y ALQUILERES usan clases distintas para las mismas
 // piezas (deuda conocida del proyecto: son gemelos con nomenclatura propia).
+// 🔴 Donde la card DECLARA su zona. Es el unico lugar donde una mencion de la otra
+// macrozona significa contaminacion: en el resto del texto puede ser el NOMBRE de un
+// edificio ("Edificio El Mirador de Equipetrol", que esta en Zona Norte y su GPS lo
+// confirma). Contar sobre `body.innerText` mezclaba las dos cosas y dejaba el eval en
+// rojo permanente por un aviso legitimo — y un rojo permanente se termina ignorando.
+const SEL_ZONA_VENTA = '.vlc-zona-l2, .vlc-zona'
+const SEL_ZONA_ALQ   = '.alc-zona-l2'
+
 const PIEZAS_VENTA = {
   layout_desktop:  '.vd-cols',
   cards_lista:     '.vlc',
@@ -60,10 +68,10 @@ const PIEZAS_ALQ = {
 }
 
 const FEEDS = [
-  { id: 'eq-venta',  ruta: '/ventas',                  propias: EQ, ajenas: ZN_AJENA, piezas: PIEZAS_VENTA },
-  { id: 'zn-venta',  ruta: '/zona-norte/ventas',       propias: ZN, ajenas: EQ_AJENA, piezas: PIEZAS_VENTA },
-  { id: 'eq-alq',    ruta: '/alquileres',              propias: EQ, ajenas: ZN_AJENA, piezas: PIEZAS_ALQ  },
-  { id: 'zn-alq',    ruta: '/zona-norte/alquileres',   propias: ZN, ajenas: EQ_AJENA, piezas: PIEZAS_ALQ  },
+  { id: 'eq-venta',  ruta: '/ventas',                propias: EQ, ajenas: ZN_AJENA, piezas: PIEZAS_VENTA, selZona: SEL_ZONA_VENTA },
+  { id: 'zn-venta',  ruta: '/zona-norte/ventas',     propias: ZN, ajenas: EQ_AJENA, piezas: PIEZAS_VENTA, selZona: SEL_ZONA_VENTA },
+  { id: 'eq-alq',    ruta: '/alquileres',            propias: EQ, ajenas: ZN_AJENA, piezas: PIEZAS_ALQ,  selZona: SEL_ZONA_ALQ   },
+  { id: 'zn-alq',    ruta: '/zona-norte/alquileres', propias: ZN, ajenas: EQ_AJENA, piezas: PIEZAS_ALQ,  selZona: SEL_ZONA_ALQ   },
 ]
 
 
@@ -78,19 +86,40 @@ async function medir(browser, feed) {
   // El listado completo llega por fetch diferido a idle: hay que esperarlo.
   await page.waitForTimeout(6000)
 
-  const r = await page.evaluate((sels) => {
+  const r = await page.evaluate(({ sels, selZona }) => {
     const t = document.body.innerText
     const piezas = {}
     for (const [k, s] of Object.entries(sels)) piezas[k] = document.querySelectorAll(s).length
-    return { texto: t, piezas }
-  }, feed.piezas)
+    const zonasCards = [...document.querySelectorAll(selZona)].map(e => e.textContent || '')
+    return { texto: t, piezas, zonasCards }
+  }, { sels: feed.piezas, selZona: feed.selZona })
 
   const propias = (r.texto.match(feed.propias) || []).length
-  const ajenas  = (r.texto.match(feed.ajenas)  || []).length
+  // 🔴 EL VEREDICTO: cuantas CARDS declaran una zona de la otra macrozona.
+  const ajenas = r.zonasCards.filter(z => new RegExp(feed.ajenas.source).test(z)).length
+  // Informativo: menciones en el resto del texto (puede ser el nombre de un edificio).
+  const mencionesTexto = (r.texto.match(feed.ajenas) || []).length
   const precios = (r.texto.match(/\$us [\d,]+|Bs [\d.,]+/g) || []).length
 
+  // 🔑 CADA "ajena" se muestra CON SU CONTEXTO, no solo se cuenta.
+  // El patron barre `body.innerText` entero —a proposito, para no perder poder de
+  // deteccion— y eso incluye los NOMBRES de los edificios. El 20-ago-2026 marco
+  // contaminacion en /zona-norte/ventas por un aviso del "Edificio El Mirador de
+  // Equipetrol": nombre comercial que invoca el barrio de al lado, ubicado en Zona
+  // Norte y con el GPS confirmandolo (`get_zona_by_gps` devuelve su misma microzona).
+  // Un semaforo rojo sin contexto se termina ignorando; con la cita, distinguir un
+  // nombre de una zona mal asignada toma dos segundos. El veredicto queda en el humano.
+  const contextos = []
+  const reAjena = new RegExp(feed.ajenas.source, 'g')
+  let mm
+  while ((mm = reAjena.exec(r.texto)) !== null && contextos.length < 8) {
+    contextos.push(r.texto.slice(Math.max(0, mm.index - 45), mm.index + mm[0].length + 25)
+                          .replace(/\s+/g, ' ').trim())
+  }
+
   await page.close()
-  return { feed: feed.id, ruta: feed.ruta, propias, ajenas, precios, piezas: r.piezas,
+  return { feed: feed.id, ruta: feed.ruta, propias, ajenas, mencionesTexto, precios,
+           piezas: r.piezas, zonasCards: r.zonasCards.length, contextos,
            errores_consola: errores.length }
 }
 
@@ -105,7 +134,14 @@ for (const r of resultados) {
   const ok = r.ajenas === 0 ? '✅' : '🔴'
   console.log(`${ok} ${r.ruta}`)
   console.log(`     propiedades de SU macrozona: ${r.propias}`)
-  console.log(`     de la OTRA macrozona:        ${r.ajenas}  ${r.ajenas ? '← CONTAMINACIÓN' : ''}`)
+  console.log(`     de la OTRA macrozona:        ${r.ajenas}  ${r.ajenas ? '← REVISAR (citas abajo)' : ''}`)
+  if (r.ajenas) {
+    for (const c of r.contextos || []) console.log(`       · …${c}…`)
+  } else if (r.mencionesTexto) {
+    console.log(`     (${r.mencionesTexto} mención/es de la otra zona en el texto — nombres de edificio, no zonas:`)
+    for (const c of (r.contextos || []).slice(0, 2)) console.log(`       · …${c}…`)
+    console.log('      ninguna card declara esa zona)')
+  }
   console.log(`     precios visibles:            ${r.precios}`)
   console.log(`     piezas del rediseño:         ${Object.entries(r.piezas).map(([k, v]) => `${k}=${v}`).join(' · ')}`)
   if (r.errores_consola) console.log(`     ⚠️  errores de consola:      ${r.errores_consola}`)
@@ -113,9 +149,25 @@ for (const r of resultados) {
 }
 
 // 🔴 La contaminación entre macrozonas es siempre un fallo, con o sin línea de base.
+// 🔴 GUARDA DEL INSTRUMENTO. El veredicto de contaminación se calcula sobre las
+// etiquetas de zona de las cards; si ese selector deja de encontrarlas —una clase que
+// se renombra, un rediseño— el eval no falla: da VERDE en todo, para siempre, y con
+// más autoridad que antes. Un eval que no puede ver lo que mide es peor que no tenerlo.
+// Es la regla #9 del proyecto aplicada al propio instrumento: preguntar qué clase de
+// objeto NO puede ver la herramienta antes de creerle el resultado.
+const ciegos = resultados.filter(r => r.zonasCards === 0 && r.piezas.cards_lista > 0)
+if (ciegos.length) {
+  console.log('🔴 EL EVAL ESTÁ CIEGO: ' + ciegos.map(r => r.ruta).join(', '))
+  console.log('   Hay cards en pantalla pero el selector de zona no encontró ninguna etiqueta.')
+  console.log('   El verde de arriba NO significa nada. Revisar SEL_ZONA_VENTA / SEL_ZONA_ALQ.')
+  process.exit(1)
+}
+
 const contaminados = resultados.filter(r => r.ajenas > 0)
 if (contaminados.length) {
-  console.log('🔴 FALLA: ' + contaminados.map(r => r.ruta).join(', ') + ' muestra(n) otra macrozona.\n')
+  console.log('🔴 REVISAR: ' + contaminados.map(r => r.ruta).join(', ') + ' menciona(n) la otra macrozona.')
+  console.log('   Mirá las citas de arriba: si son NOMBRES de edificio ("El Mirador de Equipetrol"),')
+  console.log('   es un falso positivo del patrón. Si es la ZONA de una card, es contaminación real.')
   process.exit(1)
 }
 

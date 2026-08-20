@@ -145,7 +145,9 @@ function VentasHead({ seo, brokerSlug = null, publicShareHash = null }: {
         variableMeasured: [
           { '@type': 'PropertyValue', name: 'Precio mediano por metro cuadrado', value: seo.medianaPrecioM2, unitText: 'USD/m2' },
           { '@type': 'PropertyValue', name: 'Departamentos en venta', value: seo.totalPropiedades, unitText: 'unidades' },
-          { '@type': 'PropertyValue', name: 'Actividad de mercado mensual', value: seo.absorcionPct, unitText: 'porcentaje' },
+          ...(seo.absorcionPct != null
+            ? [{ '@type': 'PropertyValue', name: 'Actividad de mercado mensual', value: seo.absorcionPct, unitText: 'porcentaje' }]
+            : []),
           ...seo.tipologias.map(t => ({
             '@type': 'PropertyValue',
             name: `Precio mediano ${DORM_LABELS_SEO[t.dormitorios] || t.dormitorios + 'D'}`,
@@ -263,7 +265,7 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
   // Ver docs/backlog/SSG_FEEDS_PRIMERA_PINTURA_2026-08-11.md.
   const { getServerSupabase } = await import('@/lib/supabase-server')
   const supabase = getServerSupabase()
-  const data = await fetchMercadoData()
+  const data = await fetchMercadoData(EQUIPETROL)
 
   // Fetch initial properties (default filters: recientes, solo_con_fotos)
   let initialProperties: UnidadVenta[] = []

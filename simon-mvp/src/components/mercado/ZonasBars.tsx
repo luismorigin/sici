@@ -26,7 +26,11 @@ export default function ZonasBars({ items }: { items: ZonaBarItem[] }) {
           </div>
           <div className="zb-v num">
             {z.valorFmt}
-            {i > 0 && <small>−{Math.round((1 - z.valor / max) * 100)}%</small>}
+            {/* Un "−0%" (dos zonas que empatan al redondear) se lee como un dato y no lo es.
+                Apareció en Zona Norte, donde hay más zonas y más chances de empate. */}
+            {i > 0 && Math.round((1 - z.valor / max) * 100) > 0 && (
+              <small>−{Math.round((1 - z.valor / max) * 100)}%</small>
+            )}
           </div>
         </div>
       ))}

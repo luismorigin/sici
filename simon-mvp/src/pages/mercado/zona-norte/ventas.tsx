@@ -1,4 +1,4 @@
-// /mercado/equipetrol/ventas — envoltorio delgado.
+// /mercado/zona-norte/ventas — envoltorio delgado.
 //
 // Todo lo que se ve vive en `components/mercado/PaginaMercadoVentas.tsx`, que es
 // el mismo componente para todas las macrozonas. Acá quedan las dos cosas que sí
@@ -7,15 +7,15 @@
 // 🔑 Agregar una macrozona = declarar su entrada en `lib/macrozonas.ts` + copiar
 // este archivo cambiando la constante. Nada más.
 import type { GetStaticProps } from 'next'
-import { EQUIPETROL } from '@/lib/macrozonas'
+import { ZONA_NORTE } from '@/lib/macrozonas'
 import { fetchMercadoData } from '@/lib/mercado-data'
 import { fetchSerieMensualVentas, fetchVentasShadowExtra } from '@/lib/mercado-shadow-data'
 import { supabase } from '@/lib/supabase'
 import PaginaMercadoVentas, { type PaginaMercadoVentasProps } from '@/components/mercado/PaginaMercadoVentas'
 
-const MACROZONA = EQUIPETROL
+const MACROZONA = ZONA_NORTE
 
-export default function MercadoEquipetrolVentas(props: Omit<PaginaMercadoVentasProps, 'macrozona'>) {
+export default function MercadoZonaNorteVentas(props: Omit<PaginaMercadoVentasProps, 'macrozona'>) {
   return <PaginaMercadoVentas macrozona={MACROZONA} {...props} />
 }
 

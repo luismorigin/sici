@@ -46,11 +46,17 @@ function chipLabelZN(full: string): string {
   return `${ring} · ${rest}`
 }
 
+/** Los nombres de macrozona tal como viven en la BD: `zona_general` en las vistas
+ *  y `macrozona` en los snapshots. Es un tipo CERRADO a proposito — asi una zona
+ *  nueva no se puede consultar con un nombre que la base no conoce. */
+export type MacrozonaNombre = 'Equipetrol' | 'Zona Norte'
+
 export interface Macrozona {
   /** id estable, para logs y evals */
   id: 'equipetrol' | 'zona-norte'
-  /** nombre para mostrar y para el SEO ("en Equipetrol", "en Zona Norte") */
-  nombre: string
+  /** nombre para mostrar y para el SEO ("en Equipetrol", "en Zona Norte").
+   *  Es TAMBIEN el valor con el que se consulta la base (`zona_general` / `macrozona`). */
+  nombre: MacrozonaNombre
   /** las zonas tal como están en la BD. Es EL filtro: sin esto no hay aislamiento. */
   zonasDB: string[]
   /** ruta del feed de venta */
@@ -86,6 +92,18 @@ export interface Macrozona {
    *  venta porque el alquiler se piensa en Bs y por mes: reusar los de venta pondría
    *  "hasta 150 mil" en un feed donde los precios son de 3.000 Bs. */
   ejemplosPlaceholderAlquiler: string[]
+  /** Nombre con ciudad y país para el SEO y el Schema.org `Place`. Google y los
+   *  buscadores de IA lo usan para ubicar la zona: "Zona Norte" a secas existe en
+   *  media docena de ciudades. */
+  nombreSEO: string
+  /** Centro geográfico para el `GeoCoordinates` del Schema.org. NO es un punto
+   *  elegido a ojo: es la mediana del GPS de las propiedades activas de la
+   *  macrozona (medido el 20-ago-2026 sobre `v_mercado_venta_shadow`). */
+  geo: { lat: number; lon: number }
+  /** Fecha de la primera publicación de la página de mercado, para el
+   *  `datePublished` del Schema.org. Una zona nueva no puede heredar la de otra:
+   *  declarar que se publicó en marzo algo que salió en agosto es falso. */
+  mercadoDesde: string
 }
 
 export const EQUIPETROL: Macrozona = {
@@ -115,6 +133,9 @@ export const EQUIPETROL: Macrozona = {
        : z.id === 'equipetrol_3er_anillo' ? 'ampliada' as const
        : 'principal' as const,
   })),
+  nombreSEO: 'Equipetrol, Santa Cruz de la Sierra, Bolivia',
+  geo: { lat: -17.765, lon: -63.196 },
+  mercadoDesde: '2026-03-09',
 }
 
 export const ZONA_NORTE: Macrozona = {
@@ -125,7 +146,7 @@ export const ZONA_NORTE: Macrozona = {
   zonasDB: getMicrozonasZN(),
   rutaVenta: '/zona-norte/ventas',
   rutaAlquiler: '/zona-norte/alquileres',
-  rutaMercado: null, // TODO backlog: crear /mercado/zona-norte y apuntarla acá
+  rutaMercado: '/mercado/zona-norte', // creada el 20-ago-2026 (sigue noindex: `indexable: false`)
   indexable: false, // dark launch: `noindex` + fuera del sitemap
   // 🔑 El feed muestra el label LEGIBLE ('2º-3º · La Salle/Banzer'), no el cifrado de
   //    `zonas.ts` ('ZN 2-3 LS/Bz'). El cifrado nació para tablas del admin, donde el
@@ -147,6 +168,10 @@ export const ZONA_NORTE: Macrozona = {
   // ZN filtra por VALOR DE BD (es lo que hacía su feed antes de la mudanza) y usa el
   // label legible, no el cifrado. Sin 'Otras' ni 3er anillo: son de Equipetrol.
   zonasAlquilerUI: ZONAS_ZONA_NORTE.map(z => ({ id: z.db, label: chipLabelZN(z.label), rol: 'principal' as const })),
+  nombreSEO: 'Zona Norte, Santa Cruz de la Sierra, Bolivia',
+  // Mediana del GPS de las 376 props activas de ZN (medido 20-ago-2026).
+  geo: { lat: -17.748, lon: -63.177 },
+  mercadoDesde: '2026-08-20',
 }
 
 /** Todas las macrozonas declaradas. Agregar una nueva es sumarla acá. */

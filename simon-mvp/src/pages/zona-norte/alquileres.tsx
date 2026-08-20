@@ -15,7 +15,7 @@ import Head from 'next/head'
 import type { GetStaticProps } from 'next'
 import { type UnidadAlquiler, buscarUnidadesAlquiler } from '@/lib/supabase'
 import { getMicrozonasZN } from '@/lib/zonas'
-import { fetchMercadoAlquilerDataZN as fetchMercadoAlquilerData } from '@/lib/mercado-alquiler-data-zn'
+import { fetchMercadoAlquilerData } from '@/lib/mercado-alquiler-data'
 import FeedAlquileres, { fmtBsSEO, formatMesAnioSEO, formatFechaCortaSEO, DORM_LABELS_SEO } from '@/components/feed/FeedAlquileres'
 import type { AlquileresSEO } from '@/components/feed/FeedAlquileres'
 import { ZONA_NORTE } from '@/lib/macrozonas'
@@ -219,7 +219,7 @@ export const getStaticProps: GetStaticProps<{ seo: AlquileresSEO; initialPropert
   const { getServerSupabase } = await import('@/lib/supabase-server')
   const serverDb = getServerSupabase()
   const [data, initialProperties] = await Promise.all([
-    fetchMercadoAlquilerData(),
+    fetchMercadoAlquilerData(ZONA_NORTE),
     buscarUnidadesAlquiler(
       { orden: 'recientes', limite: 8, solo_con_fotos: true, zonas_permitidas: getMicrozonasZN() },
       { shadow: true, client: serverDb ?? undefined },

@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { fetchAllRows } from './supabase-paginado'
-import { ZONAS_EQUIPETROL_DB } from './zonas'
+import { displayZona } from './zonas'
+import type { Macrozona } from './macrozonas'
 
 // --- Types ---
 
@@ -73,41 +74,7 @@ function median(values: number[]): number {
   return percentile(sorted, 0.5)
 }
 
-const ZONA_DISPLAY: Record<string, string> = {
-  'Equipetrol Centro': 'Eq. Centro',
-  'Equipetrol Norte': 'Eq. Norte',
-  'Equipetrol Oeste': 'Eq. Oeste',
-  'Sirari': 'Sirari',
-  'Villa Brigida': 'V. Brigida',
-  'Eq. 3er Anillo': 'Eq. 3er Anillo',
-}
-
 // --- Fallback data (real data from Mar 2026) ---
-
-const FALLBACK_DATA: MercadoAlquilerData = {
-  kpis: {
-    totalUnidades: 154,
-    rentaMedianaBs: 5200,
-    bsM2Promedio: 75,
-    edificiosConOferta: 42,
-    fechaActualizacion: '2026-03-17',
-  },
-  tipologias: [
-    { dormitorios: 0, unidades: 11, rentaMedianaBs: 3500, rentaP25Bs: 2800, rentaP75Bs: 4200, bsM2Mediana: 95, amobladoSi: null, sinDeclarar: null },
-    { dormitorios: 1, unidades: 71, rentaMedianaBs: 4500, rentaP25Bs: 3500, rentaP75Bs: 5800, bsM2Mediana: 80, amobladoSi: null, sinDeclarar: null },
-    { dormitorios: 2, unidades: 53, rentaMedianaBs: 6500, rentaP25Bs: 5000, rentaP75Bs: 8500, bsM2Mediana: 72, amobladoSi: null, sinDeclarar: null },
-    { dormitorios: 3, unidades: 12, rentaMedianaBs: 10500, rentaP25Bs: 8000, rentaP75Bs: 13000, bsM2Mediana: 65, amobladoSi: null, sinDeclarar: null },
-  ],
-  zonas: [
-    { zonaDisplay: 'Eq. Centro', unidades: 66, bsM2Promedio: 79, rentaMedianaBs: 5200 },
-    { zonaDisplay: 'Eq. Norte', unidades: 25, bsM2Promedio: 90, rentaMedianaBs: 6000 },
-    { zonaDisplay: 'Sirari', unidades: 25, bsM2Promedio: 81, rentaMedianaBs: 5000 },
-    { zonaDisplay: 'Eq. Oeste', unidades: 14, bsM2Promedio: 74, rentaMedianaBs: 4800 },
-    { zonaDisplay: 'V. Brigida', unidades: 11, bsM2Promedio: 79, rentaMedianaBs: 4500 },
-  ],
-  yieldData: [],
-  generatedAt: '2026-03-17T09:00:00Z',
-}
 
 // --- Data fetching ---
 
@@ -123,7 +90,7 @@ interface RawAlquilerProp {
   amoblado: string | null // 'si' | 'no' | 'semi' | null (solo el positivo es confiable)
 }
 
-export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
+export async function fetchMercadoAlquilerData(macrozona: Macrozona): Promise<MercadoAlquilerData> {
   try {
     if (!supabase) throw new Error('Supabase not initialized')
 
@@ -134,19 +101,19 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
     const rawProps = await fetchAllRows<any>(
       supabase
         .from('v_mercado_alquiler_shadow')
-        .select('precio_mensual_bob, precio_mensual_usd, area_total_m2, dormitorios, zona, id_proyecto_master, es_multiproyecto, tipo_propiedad_original, amoblado'),
+        .select('precio_mensual_bob, precio_mensual_usd, area_total_m2, dormitorios, zona, id_proyecto_master, es_multiproyecto, tipo_propiedad_original, amoblado')
+        .in('zona', macrozona.zonasDB),
       'mercado alquiler: v_mercado_alquiler_shadow',
     )
 
     if (!rawProps || rawProps.length === 0) {
-      console.warn('fetchMercadoAlquilerData: no data, using fallback')
-      return FALLBACK_DATA
+      throw new Error(`fetchMercadoAlquilerData: sin datos para ${macrozona.nombre}`)
     }
 
     // Filter: zona in Equipetrol, area >= 20, precio > 0
     const excludeTypes = ['baulera', 'parqueo', 'garaje', 'deposito']
     const props = (rawProps as RawAlquilerProp[]).filter(p => {
-      if (!p.zona || !ZONAS_EQUIPETROL_DB.includes(p.zona)) return false
+      if (!p.zona || !macrozona.zonasDB.includes(p.zona)) return false
       if (!p.precio_mensual_bob || p.precio_mensual_bob <= 0) return false
       if (!p.area_total_m2 || p.area_total_m2 < 20) return false
       if (p.es_multiproyecto === true) return false
@@ -155,8 +122,7 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
     })
 
     if (props.length === 0) {
-      console.warn('fetchMercadoAlquilerData: no props after filtering, using fallback')
-      return FALLBACK_DATA
+      throw new Error(`fetchMercadoAlquilerData: 0 props tras filtrar en ${macrozona.nombre}`)
     }
 
     // --- KPIs ---
@@ -227,7 +193,7 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
 
     const zonas: AlquilerZonaRow[] = Object.entries(zonaGroups)
       .map(([zona, g]) => ({
-        zonaDisplay: ZONA_DISPLAY[zona] || zona,
+        zonaDisplay: displayZona(zona),
         unidades: g.precios.length,
         bsM2Promedio: Math.round(g.bsM2.reduce((a, b) => a + b, 0) / g.bsM2.length * 10) / 10,
         rentaMedianaBs: Math.round(median(g.precios)),
@@ -244,7 +210,7 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
       // de PostgREST, que es silencioso. Si se cortara, el yield de las zonas que quedan al
       // final saldría con menos comparables (o vacío) sin que nada lo indique.
       const ventaProps = await fetchAllRows<{ zona: string; precio_m2: number }>(
-        supabase.from('v_mercado_venta_shadow').select('zona, precio_m2'),
+        supabase.from('v_mercado_venta_shadow').select('zona, precio_m2').in('zona', macrozona.zonasDB),
         'yield: v_mercado_venta_shadow',
       )
 
@@ -277,7 +243,7 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
           const yieldAnual = (rentaBsM2 * 12 / ventaBsM2) * 100
 
           yieldData.push({
-            zonaDisplay: ZONA_DISPLAY[zona] || zona,
+            zonaDisplay: displayZona(zona),
             rentaBsM2: Math.round(rentaBsM2 * 10) / 10,
             ventaUsdM2: Math.round(ventaUsdM2),
             yieldAnual: Math.round(yieldAnual * 100) / 100,
@@ -298,7 +264,11 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
       generatedAt: new Date().toISOString(),
     }
   } catch (err) {
+    // 🔴 SE PROPAGA — mismo motivo que en `mercado-data.ts`: el FALLBACK servia
+    // numeros reales de marzo de 2026 (regimen TC viejo) con la fecha de hoy, y con
+    // macrozonas habria servido los de Equipetrol en la pagina de Zona Norte.
+    // Con ISR, un fallo de regeneracion deja servida la ultima version buena.
     console.error('fetchMercadoAlquilerData error:', err)
-    return FALLBACK_DATA
+    throw err
   }
 }

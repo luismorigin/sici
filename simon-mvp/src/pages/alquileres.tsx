@@ -219,7 +219,7 @@ export const getStaticProps: GetStaticProps<{ seo: AlquileresSEO; initialPropert
   const { getServerSupabase } = await import('@/lib/supabase-server')
   const serverDb = getServerSupabase()
   const [data, initialProperties] = await Promise.all([
-    fetchMercadoAlquilerData(),
+    fetchMercadoAlquilerData(EQUIPETROL),
     buscarUnidadesAlquiler(
       { orden: 'recientes', limite: 8, solo_con_fotos: true, zonas_permitidas: ZONAS_EQUIPETROL_DB },
       { shadow: true, client: serverDb ?? undefined },

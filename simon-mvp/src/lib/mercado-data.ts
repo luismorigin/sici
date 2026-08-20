@@ -1,13 +1,14 @@
 import { supabase } from './supabase'
+import { displayZona } from './zonas'
+import type { Macrozona } from './macrozonas'
 import { fetchAllRows } from './supabase-paginado'
-import { ZONAS_EQUIPETROL_DB } from './zonas'
 
 // --- Types ---
 
 export interface MercadoKPIs {
   totalPropiedades: number
   medianaPrecioM2: number
-  absorcionPct: number
+  absorcionPct: number | null
   fechaActualizacion: string
 }
 
@@ -19,9 +20,9 @@ export interface TipologiaRow {
   precioP75: number
   medianaPrecioM2: number
   // Rango típico del $/m² (rediseño mobile): el rango de precio total solo no
-  // responde "¿es caro para lo que es, o solo es grande?". Opcionales porque el
-  // FALLBACK (snapshot real de mar-2026) no los tiene y no se inventan datos —
-  // la UI muestra el rango de m² solo cuando existe.
+  // responde "¿es caro para lo que es, o solo es grande?". Siguen opcionales en el
+  // tipo —la UI muestra el rango de m² solo cuando existe— aunque desde que se
+  // eliminó el FALLBACK (20-ago-2026) esta función siempre los calcula.
   m2P25?: number
   m2P75?: number
 }
@@ -33,18 +34,11 @@ export interface ZonaRow {
   precioMediano: number
 }
 
-export interface HistoricoPoint {
-  fecha: string
-  totalActivas: number
-  precioM2Promedio: number
-  absorcionPct: number
-}
 
 export interface MercadoData {
   kpis: MercadoKPIs
   tipologias: TipologiaRow[]
   zonas: ZonaRow[]
-  historico: HistoricoPoint[]
   generatedAt: string
 }
 
@@ -64,40 +58,6 @@ function median(values: number[]): number {
   return percentile(sorted, 0.5)
 }
 
-const ZONA_DISPLAY: Record<string, string> = {
-  'Equipetrol Centro': 'Eq. Centro',
-  'Equipetrol Norte': 'Eq. Norte',
-  'Equipetrol Oeste': 'Eq. Oeste',
-  'Sirari': 'Sirari',
-  'Villa Brigida': 'V. Brigida',
-  'Eq. 3er Anillo': 'Eq. 3er Anillo',
-}
-
-// --- Fallbacks (real data from Mar 2026) ---
-
-const FALLBACK_DATA: MercadoData = {
-  kpis: {
-    totalPropiedades: 268,
-    medianaPrecioM2: 2090,
-    absorcionPct: 8.4,
-    fechaActualizacion: '2026-03-09',
-  },
-  tipologias: [
-    { dormitorios: 0, unidades: 38, precioMediano: 88721, precioP25: 74191, precioP75: 107701, medianaPrecioM2: 2186 },
-    { dormitorios: 1, unidades: 119, precioMediano: 106839, precioP25: 94285, precioP75: 136198, medianaPrecioM2: 2123 },
-    { dormitorios: 2, unidades: 81, precioMediano: 181832, precioP25: 150762, precioP75: 227011, medianaPrecioM2: 2040 },
-    { dormitorios: 3, unidades: 26, precioMediano: 326287, precioP25: 247784, precioP75: 443321, medianaPrecioM2: 1873 },
-  ],
-  zonas: [
-    { zonaDisplay: 'Eq. Centro', unidades: 120, medianaPrecioM2: 2244, precioMediano: 120000 },
-    { zonaDisplay: 'Sirari', unidades: 44, medianaPrecioM2: 2085, precioMediano: 175000 },
-    { zonaDisplay: 'V. Brigida', unidades: 40, medianaPrecioM2: 1938, precioMediano: 115000 },
-    { zonaDisplay: 'Eq. Oeste', unidades: 32, medianaPrecioM2: 2075, precioMediano: 160000 },
-    { zonaDisplay: 'Eq. Norte', unidades: 26, medianaPrecioM2: 2339, precioMediano: 153000 },
-  ],
-  historico: [],
-  generatedAt: '2026-03-09T09:00:00Z',
-}
 
 // --- Data fetching ---
 
@@ -114,12 +74,12 @@ interface RawProp {
   tipo_propiedad_original: string | null
 }
 
-function applyQualityFilters(props: RawProp[]): RawProp[] {
+function applyQualityFilters(props: RawProp[], zonasDB: string[]): RawProp[] {
   const now = new Date()
   const excludeTypes = ['baulera', 'parqueo', 'garaje', 'deposito']
 
   return props.filter(p => {
-    if (!p.zona || !ZONAS_EQUIPETROL_DB.includes(p.zona)) return false
+    if (!p.zona || !zonasDB.includes(p.zona)) return false
     const precio = p.precio_norm ? parseFloat(String(p.precio_norm)) : 0
     if (precio <= 0 || p.area_total_m2 < 20) return false
     if (p.es_multiproyecto === true) return false
@@ -134,7 +94,7 @@ function applyQualityFilters(props: RawProp[]): RawProp[] {
   })
 }
 
-export async function fetchMercadoData(): Promise<MercadoData> {
+export async function fetchMercadoData(macrozona: Macrozona): Promise<MercadoData> {
   try {
     if (!supabase) throw new Error('Supabase not initialized')
 
@@ -149,13 +109,13 @@ export async function fetchMercadoData(): Promise<MercadoData> {
         .select('precio_norm, area_total_m2, dormitorios, zona, estado_construccion, fecha_publicacion, fecha_discovery, es_multiproyecto, tipo_propiedad_original')
         .gte('area_total_m2', 20)
         .gt('precio_norm', 0)
-        .in('zona', ZONAS_EQUIPETROL_DB),
+        .in('zona', macrozona.zonasDB),
       'mercado venta: v_mercado_venta_shadow',
     )
 
     if (!rawProps || rawProps.length === 0) throw new Error('No properties found')
 
-    const props = applyQualityFilters(rawProps as RawProp[])
+    const props = applyQualityFilters(rawProps as RawProp[], macrozona.zonasDB)
     if (props.length === 0) throw new Error('No properties after filtering')
 
     // precio_norm ya viene normalizado de la vista — sin TC en JS
@@ -168,21 +128,29 @@ export async function fetchMercadoData(): Promise<MercadoData> {
     const allPreciosM2 = enriched.map(p => p.precioM2).sort((a, b) => a - b)
     const medianaPrecioM2 = Math.round(percentile(allPreciosM2, 0.5))
 
-    // Absorption from latest snapshot
-    const { data: absRows } = await supabase
-      .from('market_absorption_snapshots')
-      .select('fecha, venta_tasa_absorcion')
-      .eq('zona', 'global')
-      .order('fecha', { ascending: false })
-      .limit(8)
-
-    let absorcionPct = FALLBACK_DATA.kpis.absorcionPct
-    if (absRows && absRows.length > 0) {
-      const latestDate = (absRows[0] as any).fecha
-      const latest = absRows.filter((r: any) => r.fecha === latestDate)
-      const sum = latest.reduce((s: number, r: any) => s + (parseFloat(r.venta_tasa_absorcion) || 0), 0)
-      absorcionPct = Math.round((sum / latest.length) * 10) / 10
-    }
+    // ── ACTIVIDAD DE MERCADO (absorcion): NO SE PUBLICA (20-ago-2026) ──────────
+    // Se devuelve `null` y la pagina no pinta la tarjeta. Las dos fuentes fallan,
+    // cada una por su lado, y ninguna FALLA RUIDOSAMENTE:
+    //
+    //  · `market_absorption_snapshots` (prod, la que se usaba hasta hoy) quedo
+    //    CONGELADA el 27-jul con el cutover. Servia una absorcion de hace 24 dias
+    //    bajo un badge que decia "Actualizado hoy".
+    //
+    //  · `market_absorption_snapshots_shadow` (la viva) tiene el numero, pero el
+    //    numero todavia no significa nada: se calcula sobre las bajas de los
+    //    ultimos 30 dias (`primera_ausencia_at`) y ese campo tiene **3 dias de
+    //    historia** — la primera baja registrada es del 17-ago-2026. La ventana
+    //    esta vacia en 27 de sus 30 dias. Por eso da 1,0% en Equipetrol y 0,0% en
+    //    Zona Norte, y salta de 0 a 6 de un dia para el otro: no mide absorcion,
+    //    mide lo que el verificador alcanzo a marcar esta semana.
+    //    (Ademas esa tabla no es legible con la clave publica, que es la que usa
+    //    este archivo — habria dado 0 en silencio.)
+    //
+    // 🔑 Publicar 1% de actividad donde antes decia 8% no es "actualizar el dato":
+    // es afirmar que el mercado se freno, cuando lo que se frenó fue la medicion.
+    // Se reactiva cuando `primera_ausencia_at` acumule ~30 dias (mediados de sep)
+    // y se compare contra la serie de prod antes de encenderlo.
+    const absorcionPct: number | null = null
 
     const kpis: MercadoKPIs = {
       totalPropiedades: enriched.length,
@@ -214,7 +182,7 @@ export async function fetchMercadoData(): Promise<MercadoData> {
     // --- Zonas ---
     const zonaGroups = new Map<string, typeof enriched>()
     for (const p of enriched) {
-      const display = ZONA_DISPLAY[p.zona!] || p.zona!
+      const display = displayZona(p.zona!)
       const group = zonaGroups.get(display) || []
       group.push(p)
       zonaGroups.set(display, group)
@@ -233,46 +201,22 @@ export async function fetchMercadoData(): Promise<MercadoData> {
       })
       .sort((a, b) => b.unidades - a.unidades)
 
-    // --- Histórico ---
-    const { data: histData } = await supabase
-      .from('market_absorption_snapshots')
-      .select('fecha, venta_activas, venta_usd_m2, venta_tasa_absorcion')
-      .eq('zona', 'global')
-      .order('fecha', { ascending: true })
+    // El bloque `historico` se elimino el 20-ago-2026: consultaba
+    // `market_absorption_snapshots` (prod, congelada el 27-jul) y NINGUNA pagina lo
+    // consumia — `getStaticProps` ya lo descartaba antes de serializar. La curva
+    // historica vive ahora en `v_serie_precios_venta` (mig 334).
 
-    const historico: HistoricoPoint[] = []
-    if (histData && histData.length > 0) {
-      const byDate = new Map<string, { activas: number; precioSum: number; absSum: number; count: number }>()
-      for (const row of histData as any[]) {
-        const entry = byDate.get(row.fecha) || { activas: 0, precioSum: 0, absSum: 0, count: 0 }
-        entry.activas += parseInt(row.venta_activas) || 0
-        entry.precioSum += parseInt(row.venta_usd_m2) || 0
-        entry.absSum += parseFloat(row.venta_tasa_absorcion) || 0
-        entry.count += 1
-        byDate.set(row.fecha, entry)
-      }
-
-      const allPoints = Array.from(byDate.entries()).map(([fecha, d]) => ({
-        fecha,
-        totalActivas: d.activas,
-        precioM2Promedio: Math.round(d.precioSum / d.count),
-        absorcionPct: Math.round((d.absSum / d.count) * 10) / 10,
-      }))
-
-      // <=60 points: show all. >60: sample weekly.
-      // With daily snapshots, 60 points ≈ 2 months — plenty readable.
-      if (allPoints.length <= 60) {
-        historico.push(...allPoints)
-      } else {
-        for (let i = 0; i < allPoints.length; i++) {
-          if (i % 7 === 0 || i === allPoints.length - 1) historico.push(allPoints[i])
-        }
-      }
-    }
-
-    return { kpis, tipologias, zonas, historico, generatedAt: new Date().toISOString() }
+    return { kpis, tipologias, zonas, generatedAt: new Date().toISOString() }
   } catch (error) {
+    // 🔴 SE PROPAGA. Hasta el 20-ago-2026 aca habia un FALLBACK con numeros reales
+    // del 9-mar-2026 ($2.090/m2, regimen TC viejo) que se servian con la fecha de
+    // HOY: si Supabase fallaba durante el build, la pagina publicaba precios 25%
+    // por encima del mercado sin una sola senal de que algo habia salido mal.
+    // Y con macrozonas era peor: Zona Norte habria mostrado los numeros de Equipetrol.
+    // 🔑 Con ISR, un fallo de regeneracion deja servida la ultima version BUENA —
+    // que es exactamente lo que se quiere. Un fallo en el primer build es ruidoso,
+    // y eso tambien es lo que se quiere.
     console.error('[mercado-data] Error fetching data:', error)
-    return { ...FALLBACK_DATA, generatedAt: new Date().toISOString() }
+    throw error
   }
 }

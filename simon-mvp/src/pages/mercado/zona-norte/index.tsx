@@ -1,13 +1,13 @@
-// /mercado/equipetrol — envoltorio delgado del hub de mercado.
+// /mercado/zona-norte — envoltorio delgado del hub de mercado.
 import type { GetStaticProps } from 'next'
-import { EQUIPETROL } from '@/lib/macrozonas'
+import { ZONA_NORTE } from '@/lib/macrozonas'
 import PaginaMercadoHub, { getPropsMercadoHub, type PaginaMercadoHubProps } from '@/components/mercado/PaginaMercadoHub'
 
-const MACROZONA = EQUIPETROL
+const MACROZONA = ZONA_NORTE
 
 type Props = Omit<PaginaMercadoHubProps, 'macrozona'>
 
-export default function MercadoEquipetrolHub(props: Props) {
+export default function MercadoZonaNorteHub(props: Props) {
   return <PaginaMercadoHub macrozona={MACROZONA} {...props} />
 }
 

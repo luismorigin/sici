@@ -71,7 +71,10 @@ export
 interface VentasSEO {
   totalPropiedades: number
   medianaPrecioM2: number
-  absorcionPct: number
+  /** `null` = no lo estamos midiendo (no es 0). Ver `lib/mercado-data.ts`:
+   *  la serie de prod quedo congelada el 27-jul y la viva tiene 3 dias de bajas.
+   *  Quien lo consuma debe OMITIR el dato, nunca mostrar 0. */
+  absorcionPct: number | null
   fechaActualizacion: string
   generatedAt: string
   tipologias: Array<{ dormitorios: number; unidades: number; precioMediano: number; precioP25: number; precioP75: number }>

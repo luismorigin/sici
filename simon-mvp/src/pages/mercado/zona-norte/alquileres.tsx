@@ -1,19 +1,19 @@
-// /mercado/equipetrol/alquileres — envoltorio delgado.
+// /mercado/zona-norte/alquileres — envoltorio delgado.
 //
 // Todo lo que se ve vive en `components/mercado/PaginaMercadoAlquileres.tsx`, que
 // es el mismo componente para todas las macrozonas.
 import type { GetStaticProps } from 'next'
-import { EQUIPETROL } from '@/lib/macrozonas'
+import { ZONA_NORTE } from '@/lib/macrozonas'
 import { fetchMercadoAlquilerData } from '@/lib/mercado-alquiler-data'
 import { fetchAlquilerShadowExtra } from '@/lib/mercado-shadow-data'
 import { supabase } from '@/lib/supabase'
 import PaginaMercadoAlquileres, { type PaginaMercadoAlquileresProps } from '@/components/mercado/PaginaMercadoAlquileres'
 
-const MACROZONA = EQUIPETROL
+const MACROZONA = ZONA_NORTE
 
 type Props = Omit<PaginaMercadoAlquileresProps, 'macrozona'>
 
-export default function MercadoEquipetrolAlquileres(props: Props) {
+export default function MercadoZonaNorteAlquileres(props: Props) {
   return <PaginaMercadoAlquileres macrozona={MACROZONA} {...props} />
 }
 
