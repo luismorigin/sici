@@ -464,10 +464,15 @@ export default function PaginaMercadoVentas({
           </section>
 
           <footer className="mkt-foot">
-            <p>
-              * Actividad de mercado: retiros mensuales ÷ inventario. Incluye ventas reales, vencimientos de
-              exclusividad y retiros temporales — no equivale a ventas confirmadas.
-            </p>
+            {/* La nota del asterisco viaja CON su tarjeta. Al dejar de publicar la
+                actividad (absorcionPct null) quedaba explicando un asterisco que ya no
+                estaba en ninguna parte de la pagina. */}
+            {kpis.absorcionPct != null && (
+              <p>
+                * Actividad de mercado: retiros mensuales ÷ inventario. Incluye ventas reales, vencimientos de
+                exclusividad y retiros temporales — no equivale a ventas confirmadas.
+              </p>
+            )}
             <p>
               Metodología: precios de publicación, no de cierre. Serie histórica reexpresada al criterio actual
               de tipos de cambio (error estimado del método ~7%, declarado). Rendimientos brutos sin expensas ni
