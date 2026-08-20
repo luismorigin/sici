@@ -269,6 +269,105 @@ async function procesarCambioDeBsuid(sb: Supa, ev: unknown): Promise<boolean | n
   }
 }
 
+
+// ============================================================================
+// AVISO A SLACK — entro alguien del LADO OFERTA (agente o propietario)
+// ----------------------------------------------------------------------------
+// PEDIDO de lab-kapso (20-ago-2026). El bot ya sabe atender a un agente que quiere
+// publicar: le explica que Simon no es un portal y **le pregunta con que red
+// trabaja** — esa pregunta es un filtro de negocio, no cortesia: separa al que
+// trabaja con C21/Remax (inventario que ya tenemos, se resuelve explicando) del
+// INDEPENDIENTE, que es el unico caso donde hay algo que ganar.
+//
+// El problema: ese dato quedaba enterrado en el CRM entre los compradores. Y el bot
+// a veces cierra con "asi te tengo en cuenta" — una promesa que nadie cumplia.
+// Incidencia medida por lab-kapso: 3 de 143 conversaciones (2%), los tres por el
+// anuncio pago. Al ritmo de la campaña: ~1 cada 3 dias.
+//
+// 🔴 DOS TURNOS, NO UNO. El bot pregunta en el turno 1 y la respuesta que decide
+// —con que red trabaja— llega en el turno 2. Avisar solo del turno 1 manda una
+// notificacion SIN el dato que importa.
+//
+// ⚠️ EL DETECTOR DEPENDE DE COMO REDACTA EL PROMPT, Y EL PROMPT CAMBIA. Los 3 casos
+// reales de agosto usaban OTRA redaccion que este patron no matchea (se reescribio
+// el 19-ago). Si vuelve a cambiar, esto deja de avisar EN SILENCIO — y con ~1 caso
+// cada 3 dias, el silencio se ve igual que "no hubo casos". Por eso el parte diario
+// cuenta las detecciones: una semana en cero con la campaña andando = revisar el
+// patron, no asumir que no hubo agentes.
+// ============================================================================
+const SLACK_LADO_OFERTA = process.env.SLACK_WEBHOOK_URL
+
+/** Es la respuesta del BOT cuando alguien quiere publicar su propiedad. */
+function esRespuestaLadoOferta(texto: string | null | undefined): boolean {
+  if (!texto) return false
+  const t = texto.toLowerCase()
+  const noEsPortal = /no es un portal|no publicamos|no hay forma de publicar|portal donde se publica|no lo manejo por ac/.test(t)
+  const captador = /captador|que la capta|que captan|corredores que captan|capta la propiedad/.test(t)
+  return noEsPortal && captador
+}
+
+type FilaMsg = { contacto_id?: string; telefono: string; direccion: string; texto: string | null; kapso_conversation_id: string | null }
+
+async function nombreDe(sb: Supa, id?: string): Promise<string> {
+  if (!id) return 'sin nombre'
+  const { data } = await sb.from('simon_contactos').select('nombre').eq('id', id).single()
+  return (data as { nombre?: string } | null)?.nombre || 'sin nombre'
+}
+
+async function ultimoTexto(sb: Supa, id: string | undefined, dir: 'in' | 'out'): Promise<string | null> {
+  if (!id) return null
+  const { data } = await sb.from('simon_mensajes').select('texto')
+    .eq('contacto_id', id).eq('direccion', dir).order('created_at', { ascending: false }).limit(1)
+  return (data as Array<{ texto: string | null }> | null)?.[0]?.texto ?? null
+}
+
+async function avisarLadoOferta(sb: Supa, filas: FilaMsg[]) {
+  if (!SLACK_LADO_OFERTA) return
+
+  const enviar = async (titulo: string, cuerpo: string, conv: string | null) => {
+    try {
+      await fetch(SLACK_LADO_OFERTA, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: titulo,
+          blocks: [
+            { type: 'header', text: { type: 'plain_text', text: titulo, emoji: true } },
+            { type: 'section', text: { type: 'mrkdwn', text: cuerpo } },
+            ...(conv ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: 'conversacion: ' + '`' + conv + '`' }] }] : []),
+          ],
+        }),
+      })
+    } catch (e) {
+      // Un Slack caido NO puede tumbar el ingest: el mensaje ya se guardo.
+      console.error('[kapso/webhook] slack lado-oferta:', e)
+    }
+  }
+
+  // TURNO 1 — el bot acaba de explicar y preguntar con que red trabaja
+  for (const f of filas) {
+    if (f.direccion !== 'out' || !esRespuestaLadoOferta(f.texto)) continue
+    const previo = await ultimoTexto(sb, f.contacto_id, 'in')
+    await enviar('🏢 Alguien del lado OFERTA le escribio al bot',
+      ['*' + (await nombreDe(sb, f.contacto_id)) + '* · ' + f.telefono,
+       '> ' + (previo || '(sin mensaje previo)').slice(0, 300),
+       '_El bot le pregunto con que red trabaja. Si responde, llega otro aviso._'].join('\n'),
+      f.kapso_conversation_id)
+  }
+
+  // TURNO 2 — el cliente responde: ACA esta el dato que decide
+  for (const f of filas) {
+    if (f.direccion !== 'in' || !f.contacto_id) continue
+    if (!esRespuestaLadoOferta(await ultimoTexto(sb, f.contacto_id, 'out'))) continue
+    await enviar('🏢 Respondio con que red trabaja',
+      ['*' + (await nombreDe(sb, f.contacto_id)) + '* · ' + f.telefono,
+       '> ' + (f.texto || '').slice(0, 300),
+       '_Si es una red que ya cubrimos, se resuelve explicando. Si es independiente, ahi hay inventario que nadie mas tiene._'].join('\n'),
+      f.kapso_conversation_id)
+  }
+}
+
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -407,6 +506,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .upsert(filas, { onConflict: 'kapso_message_id', ignoreDuplicates: true })
       if (error) throw error
       guardados = filas.length
+      // Si entro alguien del lado oferta, avisar. No bloquea el 200: el mensaje ya se guardo.
+      await avisarLadoOferta(sb, filas as unknown as FilaMsg[])
     }
 
     // Con la RPC el alias ya quedó registrado; esto solo cubre el camino viejo.
