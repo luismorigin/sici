@@ -8,48 +8,39 @@
 
 ---
 
-## 1. PASO 2 del admin
+## 1. ✅ EL ADMIN — LOS TRES PASOS ESTÁN HECHOS (20-ago-2026)
 
-```
-Retomamos el PASO 2 del rediseño del admin.
+> Esta sección tenía el prompt para arrancar el **paso 2**. Quedó inválida al terminarse, y
+> se reemplaza en vez de borrarse: una instrucción que ya no aplica y sigue escrita es
+> exactamente lo que hizo perder un mes con la curva de mercado.
 
-Leé primero, en este orden:
-1. docs/backlog/ADMIN_ANALISIS_2026-08-11.md — el análisis completo y el plan en
-   3 pasos. El paso 1 ya está hecho y en main (commits 1323b21 y 4aa0d0e).
-2. La memoria project_admin_cambio_de_trabajo.
+| paso | qué era | estado |
+|---|---|---|
+| **1** | que el admin hable el idioma del feed | ✅ 11-ago (`1323b21`, `4aa0d0e`) |
+| **2** | `/admin/market` a las fuentes vivas + retirar lo muerto | ✅ 20-ago |
+| **3** | la bandeja del audit | ✅ 20-ago — vive en **`/admin/revisar`** |
 
-Antes de escribir código quiero, como en el paso 1:
-- El goal del paso 2 en una frase, y qué NO entra.
-- La línea de base MEDIDA de lo que vamos a tocar (números de hoy, guardados en
-  un archivo, para poder comparar después).
-- Los evals, con el criterio de aborto.
-Recién con eso aprobado, la rama y la implementación.
+**Paso 2** — `market` tenía **4 fuentes y 3 rotas**, ninguna fallando: mostraba 65 props
+**11 veces más caras** (las de bolivianos, con el crudo en Bs pintado como dólares), servía la
+foto congelada del 27-jul en el análisis por zona, y sus gráficos de absorción decían "no hay
+datos" por **falta de permiso**. Se retiró el **supervisor HITL** (6 pantallas, 2.721 líneas)
+tras revisar sus 250 pendientes: 241 eran historia muerta y de las 9 vivas, 8 proponían match
+por GPS-solo. Detalle: memoria `project_admin_market_reparado`.
 
-El paso 2 son cuatro trabajos:
-a) market y market-alquileres → apuntarlos a market_absorption_snapshots_shadow.
-   Tiene TODAS las columnas de la serie vieja + 25 nuevas + macrozona. Declarar
-   el corte del 21-jul.
-b) Repuntar propagar / sincronizar / inferir del editor de proyectos: hoy sus
-   funciones leen la tabla archivada.
-c) Agregar a proyectos_master los 5 campos vivos que hoy no tienen pantalla:
-   entrega_verificada (+_at/_por/_notas), alias_conocidos, pet_friendly,
-   gps_verificado_visual. Son los que hoy se aplican pegando SQL.
-d) Los rechazos del gate: que vayan a la base con su motivo y aparezcan en el
-   parte matutino. Limpiar de paso las 109 entradas viejas sin motivo de
-   scripts/deptos-equipetrol/output/rechazados.json.
+**Paso 3** — mig 335 `audit_hallazgos` + `/api/admin/hallazgos` + la pantalla. Probado de
+punta a punta: se descarta un hallazgo, corre el audit otra vez y **no lo re-abre**.
 
-Contexto que no está en los docs y conviene tener presente:
-- El admin ya está apuntado a la base viva (propiedades_v2_shadow) y desplegado.
-- lib/precio-utils tiene DOS normalizaciones: precioDelFeed (régimen nuevo, base
-  viva) y normalizarPrecio (viejo, para el archivo). Usar la equivocada no da
-  error: da ~67% de diferencia.
-- El patrón de error que apareció 5 veces el 11-ago: tratar "no sabemos" como un
-  número (null→false, sin área→0). Mirarlo en cada cosa que toques.
-
-Empezá diciéndome qué entendiste del estado actual antes de proponer nada.
-```
-
----
+### Lo que quedó abierto del admin
+- 🔴 **`authenticated` tiene DELETE sobre la tabla viva, sin RLS.** El admin funciona gracias a
+  eso, así que no se arregla revocando y ya: necesita su propia migración. **Es lo único de
+  todo el backlog que puede causar un daño irreversible.**
+- 🔴 **El login del admin se cuelga en local** ("Verificando acceso…") con sesión válida. La
+  consulta que necesita responde en 622 ms; el evento que la dispara no llega. Se intentó un
+  arreglo (el bypass de dev delega en `INITIAL_SESSION`) y **no era la causa** — revertido.
+- **Retirar `/admin/salud`**: sus 3 fuentes están mudas desde el 28-jul, así que muestra un
+  sistema sano que nadie está midiendo.
+- **Mediados de septiembre**: reactivar el KPI de absorción, cuando `primera_ausencia_at`
+  acumule sus 30 días (hoy tiene 2). Comparar contra la serie vieja antes de encenderlo.
 
 ## 2. ✅ TIEMPO 2 DEL CUTOVER — EJECUTADO EL 17-ago-2026
 
