@@ -40,7 +40,7 @@
 // ============================================================================
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { detectarDuplicados } from '../auditoria-feed-ventas/lib/dup-checks.mjs';
@@ -59,6 +59,15 @@ const opArg = (() => { const i = argv.indexOf('--op'); return i >= 0 ? argv[i + 
 const OPS = opArg === 'venta' ? ['venta'] : opArg === 'alquiler' ? ['alquiler'] : ['venta', 'alquiler'];
 const LIMIT = (() => { const i = argv.indexOf('--limit'); return i >= 0 ? Number(argv[i + 1]) : null; })();
 const SIN_GUARDA = argv.includes('--sin-guarda');
+// 🔁 --si-falta: modo REINTENTO AGENDADO. Sale sin hacer nada si el audit de hoy ya corrió
+// con las 4 capturas presentes, o si todavía faltan capturas por correr. Pensado para
+// agendarse varias veces al día: el primer disparo que encuentre las 4 corre y deja marca;
+// los demás salen en segundos. Nace del 21-ago-2026, cuando el audit se disparó 09:01 y las
+// 4 capturas 09:06-09:11 — la guarda lo detectó y abortó, pero el re-corrido fue a mano.
+// 🔑 Se agenda EL AUDIT varias veces en vez de que la última captura lo llame: si esa captura
+// falla o la cadena se desordena, un audit que depende de ella no corre nunca.
+const SI_FALTA = argv.includes('--si-falta');
+let guardaGlobal = null, marcaCompletaGlobal = null;   // los usa el cierre para dejar la marca del dia
 let AVISO_ALCANCE = null;   // se llena si faltan capturas: se repite al final del resumen
 
 // --zona=<id> · default 'equipetrol' (el audit nocturno no pasa nada → sigue auditando Equipetrol).
@@ -227,6 +236,34 @@ async function main() {
   console.log(`\n🔎 AUDIT MATCHING SHADOW — ops: ${OPS.join('+')}${LIMIT ? ` (limit ${LIMIT}/op)` : ''}. READ-ONLY, $0 (sin fetch).\n`);
 
   const guarda = await capturasDeHoyCorrieron();
+
+  // 🔁 MODO REINTENTO AGENDADO (--si-falta): decide solo si le toca correr.
+  //    · ya corrió hoy con las 4 capturas  -> sale (no re-audita al pedo)
+  //    · todavia faltan capturas           -> sale (que lo tome el proximo disparo)
+  //    · estan las 4 y aun no corrio       -> corre normal y deja la marca al final
+  const marcaCompleta = join(OUT, `.audit-completo-${guarda.hoy}.json`);
+  guardaGlobal = guarda; marcaCompletaGlobal = marcaCompleta;
+  if (SI_FALTA) {
+    if (existsSync(marcaCompleta)) {
+      let cuando = '';
+      try { cuando = ` (corrio ${JSON.parse(readFileSync(marcaCompleta, 'utf8')).ts})`; } catch {}
+      console.log(`
+  ⏭️  El audit de hoy (${guarda.hoy}) ya corrio con las 4 capturas${cuando}. Nada que hacer.
+`);
+      process.exit(0);
+    }
+    if (!guarda.ok) {
+      console.log(`
+  ⏳ Todavia faltan capturas de hoy (${guarda.hoy}): ${guarda.faltan.join(' · ')}.`);
+      console.log(`     No audito ahora — lo toma el proximo disparo agendado. (Para forzar: --sin-guarda)
+`);
+      process.exit(0);
+    }
+    console.log(`
+  ▶️  Las 4 capturas de hoy estan y el audit todavia no corrio con ellas: corro ahora.
+`);
+  }
+
   // NINGUNA corrió → abortar (caso original del 24-jul-2026: el audit le ganó la carrera a
   // todas y auditó el inventario de la víspera reportando "nada que aplicar").
   if (guarda.ninguna && !SIN_GUARDA) {
@@ -1117,6 +1154,17 @@ async function main() {
     for (const s of supConfirmadas.slice(0, 20)) console.log(`        ${s.prop_id} [${s.op}] sup${s.superficie} "${s.nombre_edificio}" → pm ${s.pm_actual} · ${s.confirmado_por}`);
   }
   console.log(`\n  📦 → ${file}`);
+  // Marca de "hoy ya se audito con las 4 capturas presentes". La leen los disparos
+  // agendados posteriores (--si-falta) para no repetir trabajo. Solo se escribe si el
+  // alcance fue COMPLETO: un audit parcial no debe bloquear al que si pueda ver todo.
+  if (guardaGlobal?.ok && marcaCompletaGlobal) {
+    try {
+      writeFileSync(marcaCompletaGlobal, JSON.stringify({
+        ts: new Date().toISOString(), fecha: guardaGlobal.hoy, zona: ZONA_ID,
+        capturas: guardaGlobal.corrieron, json: file,
+      }, null, 2));
+    } catch { /* la marca es una optimizacion, no puede tumbar el audit */ }
+  }
   // 🔴 El aviso de alcance se REPITE acá: el resumen es lo que se copia al log y lo que se
   // lee a la mañana. Un "0 superficies" al lado de "faltó una captura" se lee distinto que
   // un "0" solo — y ésa es toda la diferencia entre "está limpio" y "no lo miré entero".

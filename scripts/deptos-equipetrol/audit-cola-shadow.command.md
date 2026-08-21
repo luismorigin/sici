@@ -128,6 +128,30 @@ carga, eso lo cubre el otro comando, `/audit-deptos-shadow`, que sí re-fetchea 
 
 ## Flujo de ejecución (desde `scripts/deptos-equipetrol/`)
 
+### 0. 🔁 Si te disparó un REINTENTO agendado: `--si-falta` decide si te toca correr
+
+```
+node auditar-matching-shadow.mjs --zona=todas --si-falta
+```
+**Corré esto PRIMERO cuando la corrida sea un reintento agendado** (no la de las 04:53). El script
+decide solo y sale en menos de un segundo si no le toca:
+- **Ya corrió hoy con las 4 capturas** → `⏭️ Nada que hacer` y sale. **No sigas con los pasos de
+  abajo**: el audit del día ya está hecho y su log ya está escrito.
+- **Todavía faltan capturas** → `⏳ Todavía faltan capturas` + cuáles. Sale. Lo tomará el próximo
+  disparo. **Tampoco sigas.**
+- **Están las 4 y aún no corrió con ellas** → `▶️ corro ahora` y hace el audit completo. Seguí con
+  los pasos 2 en adelante (juez, SQL, log, Slack) como una corrida normal.
+
+🔑 **Por qué se agenda EL AUDIT varias veces en vez de que la última captura lo llame:** si esa captura
+falla o la cadena se desordena, un audit que dependa de ella no corre nunca. Así el audit no depende
+del eslabón más frágil — el primer disparo que encuentre las 4 capturas hace el trabajo.
+
+📌 **De dónde salió** (21-ago-2026): el audit se disparó **09:01** y las 4 capturas **09:06–09:11** —
+la máquina había dormido y todas dispararon juntas al arrancar. La guarda lo detectó y abortó
+correctamente, pero **el re-corrido hubo que pedirlo a mano**, y sin eso el parte de la mañana habría
+descrito el inventario de la víspera. La marca del día vive en `output/.audit-completo-<fecha>.json`
+y solo se escribe si el alcance fue COMPLETO: un audit parcial no bloquea al que sí pueda ver todo.
+
 ### 1. Correr la fase mecánica ($0, sin fetch)
 ```
 node auditar-matching-shadow.mjs --zona=equipetrol    # ambas operaciones
