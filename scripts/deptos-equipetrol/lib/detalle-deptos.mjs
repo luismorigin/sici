@@ -15,7 +15,27 @@ const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKi
 const DEPTO_M2_MIN = 1000, DEPTO_M2_MAX = 4500; // rango $/m² coherente deptos Eq (p05 1498 · p95 3268)
 
 export const num = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : null; };
-export const numOrZero = (v) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : null; }; // dorms: 0 = monoambiente válido
+// dorms: 0 = monoambiente VÁLIDO, por eso no alcanza con `num()` (que descartaría el 0).
+// 🔴 Pero `Number(null)` es 0, así que hasta el 22-ago-2026 un portal que NO declaraba
+// dormitorios entraba como 0 = MONOAMBIENTE. Caso 8001021: C21 manda `recamaras: null`,
+// el aviso se titula "alquiler", la descripción es un punto — y quedó guardado como
+// monoambiente de 55 m². El lector marcó `confianza: baja` (no tenía con qué decidir) y
+// lo levantó la superficie 4b. Afectaba a los DOS portales (C21 y Remax).
+// 🔑 MEDIRLO CON `senales_portal.recamaras` NO SIRVE: ese campo ES la salida del bug.
+// Muestra de 14 monoambientes activos de C21, preguntándole al portal HOY:
+//   el portal DECLARA 0 ....  0
+//   el portal NO DICE ......  8   ← el 0 lo puso esta función
+//   el portal dice 1 .......  6   ← y el lector lo bajó a 0 leyendo "monoambiente": bien
+// De los 8 sin dato, **7 tenían "monoambiente" en el título o el texto**, así que el lector
+// acertaba igual. El daño real es el caso restante: cuando el aviso NO lo aclara y el
+// lector recibe un "el portal dice 0" que el portal nunca dijo (3565, 8001021).
+// Ahora: null/undefined/'' → null (no sabemos) · '0' → 0 (el portal lo declaró).
+// No cambia lo ya guardado: sólo deja de fabricar el dato en las capturas nuevas.
+export const numOrZero = (v) => {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+};
 
 // Fallback de ÁREA por texto (cuando falta la estructurada del discovery).
 // Espeja extraerArea() de n8n: regex sobre la descripción "Superficie: 43,5 m2".
