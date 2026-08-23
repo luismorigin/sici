@@ -369,6 +369,7 @@ async function main() {
   const supConfirmadas = [];   // matches de superficie 2/4 que el juez YA confirmó (tag confirmado_por)
   let sup2 = [], sup2Auto = [];
   const sup4 = [];   // el lector fijo el pm con confianza no-alta (superficie 4, 29-jul-2026)
+  const sup4b = [];  // el lector dudo y NO hay match: nadie las miraba (superficie 4b, 22-ago-2026)
   let sup5 = [];     // match con DISTANCIA sospechosa prop↔pm (superficie 5, 4-ago-2026)
   const pmRiesgoIds = new Set();
 
@@ -446,6 +447,33 @@ async function main() {
         sup4.push({ ...base, pm_actual: p.id_proyecto_master, confianza_lector: confianzaLector(p), pm_nombre: null, pm_zona: null, dist_metros: null });
         pmRiesgoIds.add(p.id_proyecto_master);
       }
+    }
+    // SUPERFICIE 4b — el LECTOR dudó y NO hay match (22-ago-2026)
+    // Hermana de la 4, y el punto ciego que la 4 dejó abierto: su condición exige
+    // `id_proyecto_master != null`, o sea que la duda del lector sólo se mira cuando ADEMÁS
+    // hubo match. Sin nombre no hay match, sin match no hay superficie — y la señal que el
+    // propio sistema emitió ("no estoy seguro") se guardaba en la base sin que la leyera nadie.
+    //
+    // Medido el 22-ago sobre las activas: 63 dudosas en alquiler y 97 en venta; la superficie 4
+    // veía 32 y 78. Las otras **50 no las miraba nada**, y ninguna tiene nombre, así que
+    // tampoco caían en la superficie 1. Como el audit corre por MACROZONA, se reparten así
+    // (medido CORRIENDO las 4 combinaciones, no con una query — un JOIN a `zonas_geograficas`
+    //  duplica filas: Equipetrol tiene 7 polígonos para 6 nombres):
+    //   Equipetrol  alquiler  7 (2 con `baja`) · venta  8
+    //   Zona Norte  alquiler 31               · venta 11
+    // 🔑 En alquiler se perdía la MITAD de las señales, contra 1 de cada 5 en venta: menos
+    // nombres → menos matches → y la 4 apoyaba su alarma justo en lo que faltaba.
+    //
+    // Caso de origen: 8001019, un aviso a 13 km de Equipetrol que fijaba el piso del panorama
+    // del bot en 1.800 Bs. El lector lo había marcado `confianza: baja` el día que se capturó.
+    // Lo encontró lab-kapso mirando el feed. Ver docs/backlog/PLAN_SENALES_HUERFANAS_DEL_LECTOR.md
+    //
+    // 🔴 REPORTA, NO DECIDE: que el lector dudara no dice QUÉ está mal — puede ser el nombre, el
+    // precio, el área o nada. Es una cola de lectura priorizada, no un veredicto.
+    // ⚠️ La PRIMERA corrida trae el backlog acumulado (~50), no la tasa nocturna.
+    else if (p.id_proyecto_master == null && !candado(p, 'id_proyecto_master')
+             && confianzaLector(p) && confianzaLector(p) !== 'alta') {
+      sup4b.push({ ...base, metodo: metodo || 'sin_metodo', confianza_lector: confianzaLector(p) });
     }
     // SUPERFICIE 5 — el match está LEJOS del edificio (4-ago-2026)
     // Cierra el FIX B1 que quedó pendiente desde el 30-may (BITACORA:669). Las superficies
@@ -1042,6 +1070,11 @@ async function main() {
     // REPORTA, NO DECIDE: el arreglo mueve el precio ademas del tag. Rastro:
     // `datos_json.trazabilidad.moneda_revisada`.
     superficie_9: sup9,
+    // SUPERFICIE 4b — el lector dudó y NO hay match. La 4 sólo mira las dudas que ADEMÁS
+    // tuvieron match; éstas no las miraba nadie. `baja` antes que `media`. REPORTA, NO DECIDE:
+    // la duda no dice qué está mal, sólo que hay que leer el aviso.
+    superficie_4b: sup4b.slice().sort((a, b) =>
+      (a.confianza_lector === 'baja' ? 0 : 1) - (b.confianza_lector === 'baja' ? 0 : 1) || a.prop_id - b.prop_id),
     // Matches de superficie 2/4 que un juez YA confirmó (tag `datos_json.trazabilidad.confirmado_por`).
     // No vuelven al juez. Quedan acá para poder revocar una confirmación que hubiera salido mal.
     ya_confirmados_por_auditor: supConfirmadas.map((s) => ({
@@ -1147,6 +1180,24 @@ async function main() {
   if (!sup4.length && !supConfirmadas.some((s) => s.superficie === 4)) {
     console.log(`     (las props cargadas antes del 29-jul no guardan la confianza del lector → no entran acá)`);
   }
+  // ── Superficie 4b — el lector dudó y NO hay match ──────────────────────────────
+  const sup4bOrd = sup4b.slice().sort((a, b) =>
+    (a.confianza_lector === 'baja' ? 0 : 1) - (b.confianza_lector === 'baja' ? 0 : 1) || a.prop_id - b.prop_id);
+  const n4bBaja = sup4bOrd.filter((s) => s.confianza_lector === 'baja').length;
+  console.log(`  Superficie 4b (el LECTOR dudó y NO hay match): ${sup4bOrd.length}${n4bBaja ? ` · ${n4bBaja} con confianza BAJA` : ''}`);
+  if (sup4bOrd.length) {
+    console.log(`     ⚠️  REPORTA, NO DECIDE: la duda del lector no dice QUÉ está mal (nombre, precio, área o nada).`);
+    console.log(`         Es una cola de lectura priorizada — 'baja' primero. Sin nombre tampoco caen en la superficie 1.`);
+    // La primera corrida arrastra todo lo acumulado desde el 29-jul; después es un goteo.
+    // Umbral en 15: medido el 22-ago, la corrida más cargada es ZN alquiler con 24.
+    if (sup4bOrd.length >= 15) {
+      console.log(`     📦 Este número es el BACKLOG ACUMULADO de la primera corrida, no la tasa nocturna.`);
+    }
+  }
+  for (const s of sup4bOrd.slice(0, 20)) {
+    console.log(`     ${s.prop_id} [${s.op}] zona ${s.zona || '—'} · método ${s.metodo} · confianza del lector: ${s.confianza_lector}${linkDe(s.url)}`);
+  }
+  if (sup4bOrd.length > 20) console.log(`     … y ${sup4bOrd.length - 20} más (la lista completa va en el JSON)`);
   // Se DECLARA lo excluido por confirmación previa (mismo criterio que los otros dos filtros).
   if (supConfirmadas.length) {
     const n2 = supConfirmadas.filter((s) => s.superficie === 2).length;
