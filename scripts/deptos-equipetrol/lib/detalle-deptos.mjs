@@ -86,6 +86,54 @@ function amenitiesC21(e) {
   return campos.filter((f) => f && f.valor === true).map((f) => f.label || f.nombre).filter(Boolean);
 }
 
+// ---------------------------------------------------------------------------
+// NOMBRE DEL EDIFICIO desde `entity.direccionFormat` (22-ago-2026)
+// ---------------------------------------------------------------------------
+// C21 pone el nombre del edificio en la dirección y hasta hoy lo tirábamos: de 25
+// alquileres de Equipetrol sin `nombre_edificio`, **19 traían algo ahí**. Sin
+// nombre no hay match, y sin match la duda del lector no la mira ninguna
+// superficie del audit (ver superficie 4b y docs/backlog/PLAN_SENALES_HUERFANAS_DEL_LECTOR.md).
+//
+// Probado: los dos casos que la superficie 4b levantó el 22-ago matchean su ficha
+// con el nombre recuperado — "Nano Tec By Smart Studio" → pm 129 (score 0.633) y
+// "Eurodesign Leblanc" → pm 112 (score **1.000**). Los edificios ya estaban en el
+// catálogo; lo que faltaba era el nombre.
+//
+// 🔴 EL FILTRO ES LA MITAD DEL TRABAJO, no un detalle. El campo trae mezclado el
+// nombre con la zona y con direcciones, y un nombre FALSO produce un match falso,
+// que es peor que no tener nombre: medido, `Jazmines Nro 427` devuelve 1 candidato
+// en `buscar_proyecto_fuzzy` y los 2 PM "Jazmines" están a 4,7 km.
+//   "Edifico Nano Tec By Smart Studio - Zona Equipetrol" → "Nano Tec By Smart Studio"
+//   "Equipetrol Calle Leonardo Nava Edificio One Soul"   → "One Soul"
+//   "Equipetrol" · "Zona Equipetrol" · "equipetrol sirari"        → null (es la zona)
+//   "Jazmines Nro 427 427" · "Equipetrol Calle 7 este s/n"        → null (es dirección)
+// Los 20 casos de prueba viven en `probar-nombre-desde-direccion.mjs` (20/20).
+//
+// ⚠️ Sale como CANDIDATO (`nombre_en_direccion`), sin autoridad sobre el matching:
+// el audit lo muestra, el matcher no lo usa. Asciende a `nombre_edificio` recién
+// cuando una tanda medida lo respalde.
+const ZONA_RE      = /\b(equipetrol|sirari|villa\s*brigida|brigida|zona|nor\s*este|norte|sur|este|oeste|centro|anillo|santa\s*cruz|bolivia)\b/gi;
+const MARCADOR_RE  = /\b(edificios?|edifico|condominios?|cond\.?|torres?|residencial(es)?|residencias?)\b/i;
+const CORTE_RE     = /\s+\b(departamento|depto|dpto|piso|of\.|oficina|unidad)\b.*$/i;
+const DIRECCION_RE = /\b(nro|n°|s\/n|sn|calle|avenida|av\.?|pasaje|barrio|km|entre)\b/i;
+
+export function nombreDesdeDireccion(direccionFormat) {
+  if (!direccionFormat) return null;
+  let s = String(direccionFormat).split(',')[0].trim();
+  if (!s) return null;
+  const m = s.match(MARCADOR_RE);
+  if (m) s = s.slice(m.index + m[0].length).trim();   // lo que sigue a "Edificio"/"Condominio"
+  s = s.split(/\s+[-–]\s+/)[0].trim();                 // corta el sufijo " - Zona Equipetrol"
+  s = s.replace(CORTE_RE, '').trim();                  // corta " DEPARTAMENTO 4 PISO 5"
+  if (!s) return null;
+  if (DIRECCION_RE.test(s)) return null;               // era una dirección, no un nombre
+  if (/^\d/.test(s)) return null;
+  // Si al sacarle las palabras de zona no queda nada, era la zona y no un edificio.
+  const resto = s.replace(ZONA_RE, '').replace(/[^a-záéíóúñ0-9\s]/gi, ' ').replace(/\s+/g, ' ').trim();
+  if (resto.length < 3) return null;
+  return s;
+}
+
 export async function fetchC21Depto(url) {
   const j = await fetchRetry(`${url}?json=true`, { json: true, headers: UA });
   if (!j) return null;
@@ -120,6 +168,9 @@ export async function fetchC21Depto(url) {
     precio_fuente_usd: pickPrecioC21(e), moneda: e.moneda || null,
     tc_portal: null,                       // C21 no expone TC estructurado (precioFormat = precioVenta/6.96 SIEMPRE)
     precio_bob_portal: num(e.precioVenta),  // candidato BOB; el LECTOR computa ratio = precioVenta / precio_del_texto
+    // nombre del edificio que C21 esconde en la dirección (ver nombreDesdeDireccion)
+    nombre_en_direccion: nombreDesdeDireccion(e.direccionFormat),
+    direccion_portal: e.direccionFormat || null,
     _diag: { precio: e.precio, precioVenta: e.precioVenta, precioFormat: e.precioFormat, m2C: e.m2C },
   };
 }

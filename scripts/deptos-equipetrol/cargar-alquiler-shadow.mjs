@@ -154,7 +154,17 @@ async function prep() {
 
     const disc = p.datos_json_discovery || {};
     const precio = precioCrudoAlquiler(p);
-    const nombreGuess = p.nombre_edificio || (p.datos_json_enrichment?.llm_output?.nombre_edificio) || null;
+    // 3er fallback (22-ago-2026): el nombre que C21 esconde en `entity.direccionFormat`.
+    // Medido: de 25 alquileres de Equipetrol sin nombre, 19 lo traían ahí y se tiraba. Sin
+    // nombre no hay match, y sin match la duda del lector no la mira ninguna superficie
+    // (ver superficie 4b). Probado: "Nano Tec By Smart Studio" → pm 129 (0.633) y
+    // "Eurodesign Leblanc" → pm 112 (1.000) — los edificios YA estaban en el catálogo.
+    // 🔑 Va al material como PISTA, no como dato: el LECTOR sigue decidiendo el nombre
+    // leyendo el aviso, y por eso se declara de dónde salió (`nombre_guess_fuente`).
+    const nombreGuess = p.nombre_edificio || (p.datos_json_enrichment?.llm_output?.nombre_edificio) || h.nombre_en_direccion || null;
+    const nombreGuessFuente = p.nombre_edificio ? 'columna'
+      : (p.datos_json_enrichment?.llm_output?.nombre_edificio ? 'llm'
+      : (h.nombre_en_direccion ? 'direccion_portal' : null));
     let candidatos = [];
     if (nombreGuess) {
       const { data } = await sb.rpc('buscar_proyecto_fuzzy', { p_nombre: nombreGuess, p_umbral_minimo: 0.3, p_limite: 5 });
@@ -179,7 +189,9 @@ async function prep() {
         area: p.area_total_m2 != null ? Number(p.area_total_m2) : (h.area_const_m2 ?? h.area_texto ?? null),
         n8n: { precio_mensual_bob: num(p.precio_mensual_bob), precio_mensual_usd: num(p.precio_mensual_usd), moneda: p.moneda_original, amoblado: p.amoblado, dorm: p.dormitorios, pm: p.id_proyecto_master, edif: p.nombre_edificio },
       },
-      nombre_guess: nombreGuess, match_candidatos: candidatos,
+      nombre_guess: nombreGuess, nombre_guess_fuente: nombreGuessFuente,
+      direccion_portal: h.direccion_portal ?? null,   // el crudo, para que el lector pueda contrastar
+      match_candidatos: candidatos,
       // --- PARA APLICAR ---
       _apply: {
         url: p.url, tipo_propiedad_original: p.tipo_propiedad_original,

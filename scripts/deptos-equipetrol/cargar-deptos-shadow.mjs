@@ -156,7 +156,15 @@ async function prep() {
 
     const disc = p.datos_json_discovery || {};
     // nombre-guess (solo para traer candidatos de referencia; el lector da el canónico)
-    const nombreGuess = p.nombre_edificio || (p.datos_json_enrichment?.llm_output?.nombre_edificio) || null;
+    // 3er fallback (22-ago-2026): el nombre que C21 esconde en `entity.direccionFormat`.
+    // Gemelo del cargador de alquiler — los dos se tocan JUNTOS: la vez pasada
+    // (`confianza_lector`, 29-jul) se agregó a uno y se olvidó el otro, y una tanda entera
+    // entró sin el campo mientras el audit reportaba "superficie 4 = 0" muy convencido.
+    // 🔑 Va como PISTA, no como dato: el LECTOR sigue decidiendo leyendo el aviso.
+    const nombreGuess = p.nombre_edificio || (p.datos_json_enrichment?.llm_output?.nombre_edificio) || h.nombre_en_direccion || null;
+    const nombreGuessFuente = p.nombre_edificio ? 'columna'
+      : (p.datos_json_enrichment?.llm_output?.nombre_edificio ? 'llm'
+      : (h.nombre_en_direccion ? 'direccion_portal' : null));
     let candidatos = [];
     if (nombreGuess) {
       const { data } = await sb.rpc('buscar_proyecto_fuzzy', { p_nombre: nombreGuess, p_umbral_minimo: 0.3, p_limite: 5 });
@@ -177,7 +185,9 @@ async function prep() {
         area: p.area_total_m2 != null ? Number(p.area_total_m2) : (h.area_const_m2 ?? h.area_texto ?? null),
         n8n: { precio_usd: p.precio_usd != null ? Number(p.precio_usd) : null, tc: p.tipo_cambio_detectado, dorm: p.dormitorios, pm: p.id_proyecto_master, edif: p.nombre_edificio },
       },
-      nombre_guess: nombreGuess, match_candidatos: candidatos,
+      nombre_guess: nombreGuess, nombre_guess_fuente: nombreGuessFuente,
+      direccion_portal: h.direccion_portal ?? null,   // el crudo, para que el lector pueda contrastar
+      match_candidatos: candidatos,
       // --- PARA APLICAR (no hace falta leerlo) ---
       _apply: {
         url: p.url, tipo_propiedad_original: p.tipo_propiedad_original, estado_construccion: p.estado_construccion,
