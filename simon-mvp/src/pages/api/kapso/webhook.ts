@@ -231,13 +231,33 @@ async function guardarSinProcesar(
   evento: string | null,
 ) {
   if (!descartes.length) return
+
+  // 🔴 QUÉ y CUÁNTO se descartó, SIEMPRE — aunque el guardado funcione.
+  // `simon_eventos_sin_procesar` es de la mig 319 y **hoy NO existe** (verificado en
+  // la base el 24-ago-2026): el insert de abajo falla y el catch lo silencia, así
+  // que hasta ahora el descarte no dejaba ningún rastro. Medido: los únicos que se
+  // descartan hoy son 2 números de Brasil (`fuera_de_bolivia`), y eso está BIEN —
+  // WhatsApp tiene restricciones allá, no son leads que perdamos.
+  // 🔑 Entonces esto no está acá por lo que se pierde hoy, sino porque **Meta está
+  // sacando el teléfono del payload**: el día que `sin_identidad` salte de 0 a 50,
+  // sin esta línea nos enteraríamos igual que ahora, o sea nunca. El conteo por
+  // motivo vale aunque la tabla no llegue nunca.
+  const porMotivo = descartes.reduce<Record<string, number>>((acc, d) => {
+    acc[String(d.motivo)] = (acc[String(d.motivo)] || 0) + 1
+    return acc
+  }, {})
+  const detalle = Object.entries(porMotivo).map(([m, n]) => `${m}=${n}`).join(' · ')
+  console.warn(`[kapso/webhook] ${descartes.length} evento(s) DESCARTADO(S) en "${evento ?? '?'}": ${detalle}`)
+
   try {
     const { error } = await sb.from('simon_eventos_sin_procesar').insert(
       descartes.map(d => ({ motivo: d.motivo, evento, payload: d.ev as object }))
     )
     if (error) throw error
   } catch (e) {
-    console.warn('[kapso/webhook] no se pudo guardar el evento sin procesar:', e)
+    // Meta NO reenvía: si esto falla, el payload se perdió. El conteo de arriba es
+    // lo único que queda — por eso va antes y fuera del try.
+    console.warn('[kapso/webhook] …y NO se pudieron guardar (se perdieron):', e)
   }
 }
 
