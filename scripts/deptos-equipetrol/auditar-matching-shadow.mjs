@@ -958,6 +958,73 @@ async function main() {
   // El VEREDICTO lo da el juez, no este script: acá va NULL y la bandeja muestra el
   // candidato con su contexto. Escribirlo como veredicto sería hacer pasar por
   // decisión lo que es una detección.
+  // ───────────────────────────────────────────────────────────────────────────
+  // 🧹 AUTO-CIERRE de la bandeja (25-ago-2026)
+  // ───────────────────────────────────────────────────────────────────────────
+  // La bandeja se ABRÍA sola pero no se CERRABA sola: el SQL del audit se aplica por
+  // fuera (UI de Supabase) y nada marcaba el ticket. El 25-ago `/admin/revisar` mostraba
+  // **15 pendientes y 9 ya estaban hechos** — uno visto 4 veces sin cambiar de estado.
+  // 🔑 El daño es de credibilidad, no de datos: una bandeja donde el 60% ya está resuelto
+  // deja de leerse, y el día que aparezca uno que importa va a estar entre fantasmas.
+  //
+  // El arreglo usa LA MISMA SEÑAL que el audit ya usa para no re-juzgar la prop — no
+  // inventa una tercera memoria:
+  //   · superficie 1 (sin match) → resuelta cuando la prop YA tiene id_proyecto_master
+  //   · superficies 2 y 4        → resueltas cuando la prop YA tiene `confirmado_por`
+  // Conservador a propósito: no cierra por "la prop desapareció" ni por antigüedad.
+  try {
+    const { data: pend, error: ePend } = await sb
+      .from('audit_hallazgos')
+      .select('id, propiedad_id, superficie, nombre_propuesto')
+      .eq('estado', 'pendiente');
+    if (ePend) throw ePend;
+
+    if (pend?.length) {
+      const ids = [...new Set(pend.map((t) => t.propiedad_id))];
+      const { data: props, error: eProps } = await sb
+        .from('propiedades_v2').select('id, id_proyecto_master, datos_json').in('id', ids);
+      if (eProps) throw eProps;
+      const porId = new Map((props || []).map((r) => [r.id, r]));
+
+      const aCerrar = [];
+      for (const t of pend) {
+        const pr = porId.get(t.propiedad_id);
+        if (!pr) continue;                                   // la prop ya no existe: no se toca
+        const tieneMatch = pr.id_proyecto_master != null;
+        const tieneTag = !!pr.datos_json?.trazabilidad?.confirmado_por;
+        const resuelto = t.superficie === 1 ? tieneMatch : (tieneTag || tieneMatch);
+        if (resuelto) aCerrar.push({ ...t, motivo: t.superficie === 1
+          ? `la prop ya tiene id_proyecto_master = ${pr.id_proyecto_master}`
+          : `la prop ya lleva el tag ${pr.datos_json?.trazabilidad?.confirmado_por || `pm ${pr.id_proyecto_master}`}` });
+      }
+
+      if (aCerrar.length) {
+        const { error: eCierre } = await sb.from('audit_hallazgos')
+          .update({
+            // 🔴 'aplicado', NO 'resuelto': el CHECK de la tabla solo admite
+            // pendiente | aplicado | descartado. Con 'resuelto' el UPDATE entero falla
+            // (violates check constraint) — pasó en la primera prueba, 25-ago.
+            estado: 'aplicado',
+            resuelto_at: new Date().toISOString(),
+            resuelto_por: `auditor_cola_shadow_auto_${new Date().toISOString().slice(0, 10)}`,
+            evidencia: 'Cierre automatico: la propiedad ya quedaba resuelta en la base cuando corrio el audit (el SQL se aplico por fuera de la bandeja).',
+          })
+          .in('id', aCerrar.map((t) => t.id))
+          .eq('estado', 'pendiente');                        // candado: no pisa una decisión humana
+        if (eCierre) throw eCierre;
+        console.log(`🧹 bandeja: ${aCerrar.length} ticket(s) cerrado(s) solos — ya estaban resueltos en la base:`);
+        for (const t of aCerrar.slice(0, 12)) {
+          console.log(`      #${t.id} · prop ${t.propiedad_id} · sup ${t.superficie}${t.nombre_propuesto ? ` "${t.nombre_propuesto}"` : ''} → ${t.motivo}`);
+        }
+        if (aCerrar.length > 12) console.log(`      … y ${aCerrar.length - 12} más`);
+      }
+    }
+  } catch (e) {
+    // No tumba el audit: cerrar la bandeja es higiene, no el trabajo. Pero se DECLARA.
+    console.warn(`⚠️  bandeja: no se pudo auto-cerrar lo ya resuelto → ${e?.message || e}`);
+  }
+
+
   try {
     const paraBandeja = [
       ...sup1.map((x) => ({ sup: 1, x, pm_actual: null })),
