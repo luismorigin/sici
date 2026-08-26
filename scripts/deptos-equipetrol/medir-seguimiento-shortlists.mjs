@@ -35,18 +35,30 @@
 //    recibe el mensaje entre 9 y 22 h después de SU shortlist, así que una marca
 //    mucho más vieja que eso sólo puede venir del marcado de hermanas.
 //
-// b) LAS DOS MITADES DEBEN MEDIR LA MISMA VENTANA. La primera versión medía
-//    "volvió a escribir" desde la PRIMERA shortlist en la línea de base (43,1%) y
-//    desde el SEGUIMIENTO en el otro grupo (25%). Esos dos números no se comparan:
-//    el primero incluye toda la conversación natural que sigue a recibir una
-//    selección. Ahora ambos miden la MISMA franja relativa — de +9 h a +57 h desde
-//    la última shortlist — que es exactamente cuando el seguimiento puede actuar.
+// b) LA VENTANA, corregida DOS veces — y la segunda la delató la evidencia.
+//    · v1 medía "volvió a escribir" desde la PRIMERA shortlist en la línea de base
+//      (43,1%) y desde el SEGUIMIENTO en el otro grupo (25%). No se comparan: el
+//      primero incluye toda la conversación natural que sigue a recibir una
+//      selección.
+//    · v2 midió +9h..+57h desde la última shortlist para ambos. Comparable, pero
+//      MAL: el seguimiento no llega a las +9 h exactas, llega en la primera corrida
+//      en franja, que puede ser a las +15 h. Todo lo que la persona escribió en el
+//      medio se le atribuía al mensaje. Se cayó solo — el porcentaje decía "1 de 2
+//      volvió a escribir" y los textos de abajo mostraban a las dos sin responder.
+//    · v3 (esta): 48 h DESDE EL MOMENTO DEL MENSAJE. Real para quien lo recibió;
+//      para la línea de base, el momento en que le habría llegado (shortlist +9 h).
+//    🔑 Que el script imprima los textos al lado de los porcentajes es lo que hizo
+//    visible el error. Un número solo no se habría contradicho con nada.
 //
 // ⚠️ LO QUE ESTE SCRIPT NO PUEDE VER SOLO: al founder probando con una shortlist
 // FRESCA. Ese caso es indistinguible de un cliente real y ninguna heurística lo
 // resuelve sin adivinar. Va por configuración: poné en simon-mvp/.env.local
 //
-//     SEGUIMIENTO_TELEFONOS_TEST=591XXXXXXXX,591YYYYYYYY
+//     SEGUIMIENTO_TELEFONOS_TEST=76308808
+//
+// Van los 8 dígitos del número, SIN el 591 y sin el +: se compara por los últimos
+// 8, así que una sola entrada captura las tres formas en que el mismo teléfono
+// quedó guardado. Varios números se separan con coma.
 //
 // Sin esa variable el script corre igual y avisa que no está excluyendo a nadie.
 // No se hardcodean teléfonos acá: es dato personal y el repo es compartido.
@@ -64,9 +76,14 @@ const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,
                         { auth: { persistSession: false } });
 
 const H = 3600e3;
-const soloDigitos = (t) => String(t || '').replace(/\D/g, '');
+// 🔑 Se compara por los ÚLTIMOS 8 DÍGITOS, que en Bolivia son el número real sin
+// prefijo. El mismo teléfono aparece en la tabla en varias formas —con `+591`, con
+// `591`, y a secas— y cada una es una fila distinta del GROUP BY: el founder tenía
+// TRES. Comparar el string completo obligaría a enumerar las variantes y acertarle
+// al formato; con los últimos 8 alcanza con poner el número una vez.
+const clave = (t) => String(t || '').replace(/\D/g, '').slice(-8);
 const TEST = new Set((process.env.SEGUIMIENTO_TELEFONOS_TEST || '')
-  .split(',').map(soloDigitos).filter(Boolean));
+  .split(',').map(clave).filter((x) => x.length === 8));
 const pct = (a, b) => (b ? (100 * a / b).toFixed(1) + '%' : '—');
 
 const { data: sls, error } = await sb.from('broker_shortlists')
@@ -92,7 +109,7 @@ for (const [tel, lista] of porTel) {
 
   const marca = lista.find((s) => s.seguimiento_enviado_at)?.seguimiento_enviado_at ?? null;
   const artefacto = marca !== null && (new Date(marca) - ultima) > 24 * H;
-  const esTest = TEST.has(soloDigitos(tel));
+  const esTest = TEST.has(clave(tel));
 
   filas.push({
     tel, nombre: lista[0].cliente_nombre, p1, ultima, n: lista.length,
@@ -102,14 +119,28 @@ for (const [tel, lista] of porTel) {
   });
 }
 
-// ¿Volvió a escribirle al bot en la franja +9h..+57h desde su última shortlist?
+// ¿Volvió a escribirle al bot DESPUÉS de que el mensaje llegó — o habría llegado?
+//
+// 🔴 LA VENTANA ARRANCA EN EL MENSAJE, NO EN LA SHORTLIST. La versión anterior
+// medía desde la shortlist +9 h para los dos grupos, buscando que fueran
+// comparables. Pero el seguimiento no llega a las +9 h exactas: llega en la
+// primera corrida en franja, que puede ser a las +15 h. Todo lo que la persona
+// escribió en el medio se contaba como si fuera respuesta al mensaje. Se notó
+// porque el porcentaje decía "1 de 2 volvió a escribir" y los textos de abajo
+// mostraban a las dos sin responder: el número se contradecía con la evidencia.
+//
+// Ahora ambos grupos miden 48 h DESDE EL MOMENTO DEL MENSAJE. Para quien lo
+// recibió, ese momento es el real. Para la línea de base es el momento en que le
+// habría llegado (la shortlist +9 h, el mínimo de la función). Sigue siendo
+// comparable, y ya no le atribuye al seguimiento nada anterior a él.
 for (const f of filas) {
-  const base = f.ultima.getTime();
+  const desde = f.seguimiento ? new Date(f.seguimiento).getTime()
+                              : f.ultima.getTime() + 9 * H;
   const { count } = await sb.from('simon_mensajes')
     .select('id', { count: 'exact', head: true })
     .eq('telefono', f.tel).eq('direccion', 'in')
-    .gt('created_at', new Date(base + 9 * H).toISOString())
-    .lt('created_at', new Date(base + 57 * H).toISOString());
+    .gt('created_at', new Date(desde).toISOString())
+    .lt('created_at', new Date(desde + 48 * H).toISOString());
   f.escribio = (count ?? 0) > 0;
 }
 
@@ -130,7 +161,7 @@ function bloque(titulo, g) {
   console.log(linea('pidió otra pasada 1 hora',     g.filter((f) => f.o1).length, g.length));
   console.log(linea('pidió otra pasadas 6 horas',   g.filter((f) => f.o6).length, g.length));
   console.log(linea('pidió otra pasado un día',     g.filter((f) => f.o24).length, g.length, '<- el fenómeno real'));
-  console.log(linea('volvió a escribir +9h..+57h',  g.filter((f) => f.escribio).length, g.length));
+  console.log(linea('volvió a escribir (48h)',  g.filter((f) => f.escribio).length, g.length));
 }
 
 console.log('='.repeat(78));
