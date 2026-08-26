@@ -55,7 +55,7 @@ zona**. Circuit breaker → no insistir; avisa solo por Slack con diagnóstico D
 
 ### 2b. Prep NUEVAS (read-only)
 ```
-node cargar-alquiler-shadow.mjs --nuevas output/discovery-alquiler-zn-<ts>.json 40
+node cargar-alquiler-shadow.mjs --nuevas output/discovery-alquiler-zn-<ts>.json 40 --zona=zona-norte
 ```
 ⚠️ **El `--prep` de existentes no se usa acá**: el discovery es shadow-relativo, así que lo que está
 en prod pero no en shadow ya viene como NUEVA.

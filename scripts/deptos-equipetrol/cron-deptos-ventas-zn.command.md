@@ -74,7 +74,7 @@ zona** (sin ese filtro marcaría toda Equipetrol como desaparecida). Mirá **NUE
 
 ### 2b. Prep NUEVAS (read-only)
 ```
-node cargar-deptos-shadow.mjs --nuevas output/discovery-deptos-zn-<ts>.json 40
+node cargar-deptos-shadow.mjs --nuevas output/discovery-deptos-zn-<ts>.json 40 --zona=zona-norte
 ```
 ⚠️ **El `--prep` de existentes NO se usa acá.** En ZN las "existentes" de prod entran por el camino
 de NUEVAS: el discovery es shadow-relativo (prod no participa), así que lo que está en prod pero no
