@@ -1,0 +1,14 @@
+-- =============================================================================
+-- 339 · ROLLBACK — volver al timeout default de pg_net (5 s)
+-- =============================================================================
+-- 🔑 Volver atrás NO arregla nada ni protege de nada: sólo hace que la respuesta
+-- del endpoint se vuelva a perder cuando hay 2 o más personas. Se deja escrito
+-- por completitud, no porque haya un motivo previsible para usarlo.
+--
+-- Para FRENAR el seguimiento —que es lo que uno realmente quiere en una urgencia—
+-- no se toca esta función:
+--
+--     SELECT cron.unschedule('seguimiento-shortlists');
+--
+-- Reaplicar la 338 devuelve la función a su forma anterior (sin el parámetro).
+-- =============================================================================

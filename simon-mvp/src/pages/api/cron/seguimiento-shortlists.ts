@@ -27,6 +27,20 @@ const KAPSO_BASE = 'https://api.kapso.ai/platform/v1'
 const WORKFLOW_ID = '7e219983-4fdc-47d7-920e-0a3a33bf780a'
 const MARCA = 'seguimiento:v1'
 
+/**
+ * 🔑 Vercel debe poder TERMINAR aunque pg_net ya haya dejado de escuchar.
+ *
+ * Medido el 26-ago: ~3 s de arranque + ~1,5 s por persona (cada una son dos
+ * llamadas a Kapso). Sin declarar nada corría con el default del plan, y un corte
+ * de Vercel a mitad de la lista es el caso feo: entre el `resume` y el marcado hay
+ * una ventana de ~200 ms en la que la persona YA recibió el mensaje y todavía no
+ * está marcada — y en una hora recibe otro.
+ *
+ * Va por ENCIMA del timeout de pg_net (30 s, mig 339) a propósito: si una corrida
+ * se pasa, lo que se pierde es el registro de la respuesta, no el trabajo.
+ */
+export const config = { maxDuration: 60 }
+
 /** Una persona que califica. Sin datos personales: la función SQL no los devuelve. */
 interface Candidata {
   hash: string
