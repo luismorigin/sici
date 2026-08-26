@@ -62,14 +62,33 @@ async function buscarEjecucion(conversationId: string, apiKey: string): Promise<
   return orden[0]?.id ?? null
 }
 
-/** Inyecta la marca en la conversación. El bot la lee y redacta él el mensaje. */
+/** Error del `resume`, con el cuerpo crudo de Kapso adentro. */
+class ResumeError extends Error {
+  constructor(readonly status: number, readonly cuerpo: string) {
+    super(`resume HTTP ${status}: ${cuerpo.slice(0, 300)}`)
+  }
+  /** 409 = "otro request está procesando esta ejecución". Transitorio: se reintenta. */
+  get esTransitorio(): boolean { return this.status === 409 }
+}
+
+/**
+ * Inyecta la marca en la conversación. El bot la lee y redacta él el mensaje.
+ *
+ * 🔑 Se guarda el CUERPO del error, no sólo el status. La doc de Kapso sólo documenta el
+ * 409 y **no dice qué pasa con una ejecución `ended`, `failed` o en handoff** — lab-kapso
+ * lo confirmó el 26-ago: no lo saben, porque su código nunca intentó ese camino. La
+ * primera vez que aparezca una respuesta rara queremos el texto, no un booleano.
+ */
 async function inyectarMarca(executionId: string, apiKey: string): Promise<void> {
   const r = await fetch(`${KAPSO_BASE}/workflow_executions/${executionId}/resume`, {
     method: 'POST',
     headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: { data: { text: MARCA } } }),
   })
-  if (!r.ok) throw new Error(`resume HTTP ${r.status}`)
+  if (!r.ok) {
+    const cuerpo = await r.text().catch(() => '(sin cuerpo)')
+    throw new ResumeError(r.status, cuerpo)
+  }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -139,10 +158,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       resultados.push({ hash: c.hash, ok: true })
     } catch (e) {
-      // Falló el envío: se registra el intento, no el envío → reintenta en 1 h.
       const motivo = e instanceof Error ? e.message : String(e)
+
+      // 🔑 409 = otro request está procesando esa ejecución. Es TRANSITORIO —
+      // típicamente el cliente escribiendo en el mismo momento, que Kapso encola con
+      // un debounce de 5 s. No se marca NADA: la corrida siguiente lo reintenta sin
+      // esperar el tope de 1 h. Tratarlo como error genérico dejaría a esa persona
+      // sin seguimiento por una condición que dura segundos.
+      if (e instanceof ResumeError && e.esTransitorio) {
+        console.log(`[seguimiento] 409 en ${c.hash} (ejecución ocupada) — se reintenta la próxima corrida`)
+        resultados.push({ hash: c.hash, ok: false, motivo: '409 transitorio' })
+        continue
+      }
+
+      // Cualquier otro fallo: se registra el INTENTO, no el envío → reintenta en 1 h
+      // y el guard de 22 h lo corta solo.
       await sb.rpc('marcar_seguimiento_shortlist', { p_hash: c.hash, p_enviado: false })
         .then(({ error: x }) => { if (x) console.error('[seguimiento] tampoco se pudo marcar el intento:', x.message) })
+      // El cuerpo crudo va al log a propósito: la doc de Kapso no cubre los estados
+      // `ended`/`failed`, así que el primer caso raro hay que poder leerlo entero.
       console.warn(`[seguimiento] no salió ${c.hash}: ${motivo}`)
       resultados.push({ hash: c.hash, ok: false, motivo })
     }
