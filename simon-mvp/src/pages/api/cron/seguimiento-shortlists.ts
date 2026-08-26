@@ -13,10 +13,17 @@
 // nuestro número**. Acá la lista se consulta a la base: aunque alguien dispare el
 // endpoint, lo peor que logra es adelantar un seguimiento que ya correspondía.
 //
-// 🔴 NO PRUEBA ENTREGA. Un `resume` aceptado por Kapso no garantiza que el mensaje
-// salga: es el bug D39 de lab-kapso (Kapso acepta, el bot redacta, Meta no entrega y
-// la conversación muere). Marcamos por resume-OK porque es lo que controlamos, pero
-// no es acuse de recibo.
+// 🔴 UN `resume` ACEPTADO NO PRUEBA NADA — y no es teoría: pasó el 26-ago-2026,
+// el primer día que esto corrió solo. Kapso aceptó, la marca llegó, el agente
+// corrió una iteración y volvió a dormirse sin redactar. Jenny e Israel quedaron
+// declarados como contactados sin haber recibido nada, y como el marcado impide el
+// reenvío, se perdieron los dos contactos.
+//
+// Esta advertencia YA ESTABA ESCRITA acá cuando ocurrió. No alcanzó, porque el
+// código marcaba por 2xx igual: una advertencia en un comentario no cambia lo que
+// el programa hace. Por eso ahora la garantía es estructural (mig 340) — este
+// endpoint sólo puede registrar INTENTOS, y quien declara el envío es
+// `confirmar_seguimientos_enviados()`, que exige un mensaje saliente.
 //
 // Ver: sql/migrations/338_seguimiento_shortlists.sql
 // ============================================================================
@@ -150,25 +157,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const ejecucion = await buscarEjecucion(c.conversation_id, apiKey)
       if (!ejecucion) {
-        // Sin ejecución viva no hay dónde inyectar. Se marca el INTENTO (no el
-        // envío) para no reintentar en la próxima corrida: el guard de 22 h la
-        // sacará sola.
-        await sb.rpc('marcar_seguimiento_shortlist', { p_hash: c.hash, p_enviado: false })
+        // Sin ejecución viva no hay dónde inyectar. Queda el intento registrado
+        // para no golpear en bucle; el guard de 22 h la saca sola.
+        await sb.rpc('marcar_intento_seguimiento', { p_hash: c.hash })
         resultados.push({ hash: c.hash, ok: false, motivo: 'sin ejecución viva' })
         continue
       }
       await inyectarMarca(ejecucion, apiKey)
 
-      // 🔑 Marca TODAS las shortlists de esa persona, no sólo ésta: el seguimiento
-      // es por PERSONA. La función resuelve el teléfono adentro de la base — por eso
-      // no viaja hasta acá.
-      const { error: eMarca } = await sb.rpc('marcar_seguimiento_shortlist', {
-        p_hash: c.hash, p_enviado: true,
-      })
+      // 🔴 ACÁ NO SE DECLARA NINGÚN ENVÍO — sólo el intento (mig 340).
+      // Hasta el 26-ago esta línea marcaba `enviado` porque el `resume` había
+      // devuelto 2xx. La corrida de las 14:00 marcó así a dos personas que NUNCA
+      // recibieron el mensaje: la marca llegó a Kapso, el agente corrió una
+      // iteración y volvió a dormirse sin redactar. Y como el marcado impide el
+      // reenvío por diseño, quedaron quemadas para siempre.
+      //
+      // Quien declara el envío ahora es `confirmar_seguimientos_enviados()`, que
+      // corre al principio del disparo siguiente y exige un mensaje SALIENTE
+      // posterior al intento. Si no salió, la persona vuelve a la cola sola.
+      //
+      // 🔑 Marca todas las shortlists de esa persona: el seguimiento es por
+      // PERSONA. El teléfono se resuelve dentro de la base, por eso no viaja acá.
+      const { error: eMarca } = await sb.rpc('marcar_intento_seguimiento', { p_hash: c.hash })
       if (eMarca) {
-        // El mensaje SALIÓ y no pudimos marcar: es el caso que hace remandar. Se
-        // grita en el log — el tope de 1 h de la función SQL contiene el daño.
-        console.error(`[seguimiento] ⚠️ ENVIADO pero NO MARCADO ${c.hash}: ${eMarca.message}`)
+        // Ya no es el caso grave que era: sin intento registrado se reintenta
+        // antes de tiempo, pero nadie queda declarado como contactado de más.
+        console.error(`[seguimiento] no se pudo registrar el intento ${c.hash}: ${eMarca.message}`)
       }
       resultados.push({ hash: c.hash, ok: true })
     } catch (e) {
@@ -185,9 +199,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue
       }
 
-      // Cualquier otro fallo: se registra el INTENTO, no el envío → reintenta en 1 h
-      // y el guard de 22 h lo corta solo.
-      await sb.rpc('marcar_seguimiento_shortlist', { p_hash: c.hash, p_enviado: false })
+      // Cualquier otro fallo: queda el intento → reintenta en 1 h y el guard de
+      // 22 h lo corta solo.
+      await sb.rpc('marcar_intento_seguimiento', { p_hash: c.hash })
         .then(({ error: x }) => { if (x) console.error('[seguimiento] tampoco se pudo marcar el intento:', x.message) })
       // El cuerpo crudo va al log a propósito: la doc de Kapso no cubre los estados
       // `ended`/`failed`, así que el primer caso raro hay que poder leerlo entero.
