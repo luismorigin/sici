@@ -8,7 +8,40 @@
 
 ---
 
-## A · SÓLO EL CAPTADOR PUEDE RESPONDER (4 casos)
+## A · ✅ RESUELTAS — el founder leyó los 4 avisos (27-ago)
+
+| id | edificio | qué resultó | qué se hizo |
+|---|---|---|---|
+| 8000510 | Nano Tec | **sigue en alquiler**; el texto ofrece la venta como alternativa | se tagueó `precio_confirmado_por` para que el audit no lo repita cada noche |
+| 3776 | Sky Luxia | vale **83.500** — el texto le gana al formulario del portal | precio corregido de 75.000 |
+| 1552 | Madero Residence | **aviso terminado** | dado de baja |
+| 8001103 | (era sin nombre) | **647 USD**, y el edificio es **PÖRA by Vertical Homes** | precio, edificio (pm 85) y piso 7 |
+
+🔑 **El caso 8001103 dejó un dato que vale más que el caso**: los 4.500 Bs que teníamos
+eran **647 × 6,96** — el precio convertido con el tipo de cambio muerto. No era una renta
+en bolivianos: era una conversión vieja que nadie había vuelto a mirar.
+
+⚠️ **Y una trampa que costó encontrar.** Al pasar ese precio de Bs a USD, la propiedad
+**desapareció del feed**. La causa: `tipo_cambio_detectado` quedó en `'bob'` de cuando el
+precio estaba en bolivianos, y `precio_normalizado_alquiler(NULL, 647, 'bob')` devuelve
+**NULL** — la vista lo descarta sin fallar. 👉 **Cambiar la moneda de un precio de alquiler
+son DOS campos**: el precio y su tag. Uno solo lo saca del feed en silencio.
+
+---
+
+## A-bis · lo que NO era un problema (medido el 27-ago)
+
+Mientras se investigaba lo anterior conté "25 alquileres invisibles por publicar en
+dólares". **Era falso: 19 de esos 25 están perfectamente en el feed.** La vista usa
+`precio_normalizado_alquiler(bob, usd, tag)`, que maneja las dos monedas — lo resolvió la
+**mig 332**, y el founder lo recordaba.
+
+De los 6 que sí están afuera: **4 tienen `area_total_m2` NULL** (el backlog conocido de los
+32 avisos sin área), 1 superó los 150 días, y el otro era el que yo mismo había roto.
+
+---
+
+## A-viejo · SÓLO EL CAPTADOR PUEDE RESPONDER (histórico)
 
 Ninguna de estas se resuelve mirando más datos: el dato que falta no existe de nuestro
 lado. Las cuatro son de **Century21** y **no tenemos el contacto guardado** — hay que
@@ -57,6 +90,18 @@ publicamos una renta que el aviso ya no ofrece.
 
 ## B · DECISIÓN TUYA, SIN CONSULTAR A NADIE (3)
 
+### B1 · ✅ HECHO (27-ago) — fueron 5, no 8
+
+3 de los 8 ya estaban registrados y 3 apuntaban a un nombre que no era el oficial
+(`Sky Design` es `Edif. SKY DESIGN - SKY Properties`). Se agregaron 5 con el candado del
+intruso dentro del UPDATE. Verificado contra el matcher: los 5 nombres devuelven ahora el
+edificio real con score 1.00.
+
+Y de paso se desactivaron **2 fichas de proyecto duplicadas** (`Brickell 8` pm 32 y
+`Torre Sirari` pm 520) — de las 9 detectadas, **7 ya estaban inactivas**.
+
+<details><summary>el detalle original</summary>
+
 ### B1 · Registrar 8 alias  ·  *barato, sin riesgo*
 
 El matcher duda cada noche por variantes de escritura. **Ninguno es un match equivocado**
@@ -77,6 +122,8 @@ gastar tiempo confirmando que están bien. Es ruido recurrente, no un error.
 proyecto con el *nombre oficial de otro* como alias (pm 35 tiene "Uptown NUU", que es el
 nombre del pm 54; pm 221 tiene tres alias de Santorini Suites). Agregar alias sin mirar
 eso empeora el problema.
+
+</details>
 
 ### B2 · Los 6 avisos a más de 2 km de su edificio  ·  *un rato de revisión*
 
