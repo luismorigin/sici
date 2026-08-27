@@ -489,7 +489,7 @@ async function apply(file) {
   console.log(`\n✍️  APPLY — ${conVer.length}/${doc.entradas.length} con veredicto${sinVer.length ? ` (faltan ${sinVer.length}: ${sinVer.map((e) => e.id).join(',')})` : ''}\n`);
 
   const filas = [], rechazados = [], aliasSugeridos = [], reporte = [], proyectos = [], descartes = [];
-  const areasAbsurdas = [], preciosSospechosos = [], zonasCorregidas = [];
+  const areasAbsurdas = [], preciosSospechosos = [], zonasCorregidas = [], zonasNoHeredadas = [];
   for (const e of conVer) {
     const v = e.veredicto;
     if (v.gate === 'rechazar') {
@@ -530,9 +530,16 @@ async function apply(file) {
     }
     // La zona sale del EDIFICIO cuando hay match. Se resuelve acá, después del matcher,
     // porque también aplica al `lector_fijo` (pm puesto a mano, que no pasa por el matcher).
-    if (match.pm != null) match.zona_pm = await zonaDelProyecto(sb, match.pm);
-    const _z = resolverZonaFila(e.zona, match.zona_pm);
-    if (_z.corregida) zonasCorregidas.push({ id: e.id, de: _z.desde, a: _z.zona, edif: v.nombre_edificio_canonico || `pm ${match.pm}` });
+    if (match.pm != null) {
+      const pmDatos = await zonaDelProyecto(sb, match.pm);
+      match.zona_pm = pmDatos.zona;
+      match.gps_pm = { latAviso: e._apply.latitud, lonAviso: e._apply.longitud,
+                       latPm: pmDatos.latitud, lonPm: pmDatos.longitud };
+    }
+    const _z = resolverZonaFila(e.zona, match.zona_pm, match.gps_pm);
+    const _edif = v.nombre_edificio_canonico || `pm ${match.pm}`;
+    if (_z.corregida) zonasCorregidas.push({ id: e.id, de: _z.desde, a: _z.zona, edif: _edif });
+    if (_z.lejos != null) zonasNoHeredadas.push({ id: e.id, km: _z.lejos, zona: e.zona, zonaPm: match.zona_pm, edif: _edif });
 
     if (v.alias_sugerido && match.pm) aliasSugeridos.push({ pm: match.pm, alias: v.alias_sugerido, edif: v.nombre_edificio_canonico, metodo: match.metodo });
 
@@ -757,6 +764,13 @@ async function apply(file) {
     // que su GPS de proyecto puede estar mal y vale mirarlo.
     console.log(`\n🗺️  ZONA HEREDADA DEL EDIFICIO (el pin del aviso decía otra cosa):`);
     for (const z of zonasCorregidas) console.log(`   ${z.id}: ${z.de} → ${z.a}   (${z.edif})`);
+  }
+  if (zonasNoHeredadas.length) {
+    // NO se hereda y se dice por qué. A esta distancia lo que falla no es el pin sino
+    // probablemente el MATCH — heredar consolidaría un match dudoso haciéndolo parecer
+    // coherente. Va al audit, no se resuelve acá.
+    console.log(`\n🚩 ZONA **NO** HEREDADA — el aviso está lejos de su edificio (¿match malo?):`);
+    for (const z of zonasNoHeredadas) console.log(`   ${z.id}: ${z.km} km de ${z.edif} · queda "${z.zona}" (el edificio dice "${z.zonaPm}") → revisar el match`);
   }
   const sinMatch = reporte.filter((r) => r.pm == null && r.edif);
   if (sinMatch.length) console.log(`\n⚠️  Con nombre pero sin auto-match (revisar o al audit): ${sinMatch.map((r) => `${r.id}(${r.edif})`).join(', ')}`);

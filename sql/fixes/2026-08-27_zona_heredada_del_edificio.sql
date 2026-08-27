@@ -10,16 +10,38 @@
 -- pin que publican los portales suele estar corrido. Ya está arreglado para lo que
 -- venga (commit c804353, `lib/zona-del-proyecto.mjs`); esto corrige lo ya cargado.
 --
--- 🔑 ALCANCE: 86 filas en 46 edificios — 57 activas y 29 de baja. Se corrigen las
--- de baja también: una prop dada de baja puede reactivarse, y volvería con la zona
--- mal. Sólo `status='completado'` y sólo cuando hay proyecto asignado.
+-- 🔑 ALCANCE: **80 de 86**. Se corrigen las de baja también (una prop dada de baja
+-- puede reactivarse y volvería con la zona mal); sólo `status='completado'` y sólo
+-- cuando hay proyecto asignado.
 --
--- ⚠️ ESTO CONFÍA EN EL GPS DEL PROYECTO. Si un proyecto master tiene mal su
--- ubicación, este UPDATE propaga ese error a todos sus anuncios. Es el
--- comportamiento correcto —el edificio es la fuente de verdad— pero significa que
--- un PM mal ubicado ahora se nota más. Caso a mirar: **Edificio Sirari Deluxe**,
--- cuyo proyecto dice `Equipetrol Centro` mientras sus avisos dicen `Sirari`. El
--- nombre sugiere Sirari; el GPS del PM dice otra cosa. No se resuelve acá.
+-- 🔴 LAS 6 QUE QUEDAN AFUERA, Y POR QUÉ. Un pin del portal se corre unos metros o un
+-- par de cuadras; no se va a 4 km. Distribución de las 86:
+--
+--        39  a menos de 500 m      ← el pin corrido, el caso normal
+--        25  entre 500 m y 1 km
+--        16  entre 1 y 2 km
+--         6  entre 2,7 y 4,0 km    ← NO se tocan
+--
+-- Las 6 lejanas son **todas de Zona Norte** y todas con el GPS del edificio
+-- **verificado visualmente** (`gps_verificado_visual = confirmed`). O sea: el
+-- edificio está bien ubicado y el aviso queda a 4 km. Lo que falla ahí no es el pin,
+-- es el MATCH — esa propiedad probablemente no es de ese edificio. Heredar la zona
+-- no arreglaría nada: le pondría la etiqueta de un edificio ajeno y encima haría
+-- parecer coherente un match dudoso. Van al audit, que tiene la superficie de
+-- "avisos lejos de su edificio" justamente para esto.
+--
+--     8000472 Condominio Zero 3,98 · 3428 Westgate 3,68 · 3515 Panorama 3,23
+--     8000473 Bizet 3,02 · 2010 Torre Moderna 2,93 · 8000724 Smart Studio Isuto 2,74
+--
+-- El cargador aplica el mismo corte (`KM_MAX_PARA_HEREDAR = 2` en
+-- `lib/zona-del-proyecto.mjs`), así que esto y la captura nocturna deciden igual.
+--
+-- ⚠️ ESTO CONFÍA EN EL GPS DEL PROYECTO. Si un PM tiene mal su ubicación, el UPDATE
+-- propaga ese error a todos sus anuncios. Es el comportamiento correcto —el edificio
+-- es la fuente de verdad— pero significa que un PM mal ubicado ahora se nota más.
+-- Caso a mirar: **Edificio Sirari Deluxe**, cuyo proyecto dice `Equipetrol Centro`
+-- mientras sus avisos dicen `Sirari`. El nombre sugiere Sirari; el GPS del PM dice
+-- otra cosa. Está a 0,6 km, así que entra en el UPDATE — pero conviene revisarlo.
 --
 -- 🔴 `'Sin zona'` NO se hereda. Ese valor significa dos cosas distintas — "no se
 -- pudo calcular" y "el edificio está fuera de todos los polígonos, correctamente"
@@ -34,15 +56,21 @@
 -- ── 1 · FOTO PREVIA (correr ANTES, guardar el resultado) ────────────────────
 SELECT p.id, p.zona AS zona_antes, pm.zona AS zona_despues, pm.nombre_oficial,
        p.es_activa, p.tipo_operacion,
-       CASE WHEN p.id >= 8000000 THEN 'hibrido' ELSE 'n8n viejo' END AS origen
+       round((ST_Distance(
+         ST_SetSRID(ST_MakePoint(p.longitud,p.latitud),4326)::geography,
+         ST_SetSRID(ST_MakePoint(pm.longitud,pm.latitud),4326)::geography)/1000)::numeric,2) AS km_al_edificio,
+       CASE WHEN ST_Distance(
+         ST_SetSRID(ST_MakePoint(p.longitud,p.latitud),4326)::geography,
+         ST_SetSRID(ST_MakePoint(pm.longitud,pm.latitud),4326)::geography) > 2000
+         THEN 'NO se toca -> revisar el match' ELSE 'se corrige' END AS que_pasa
 FROM propiedades_v2 p
 JOIN proyectos_master pm ON pm.id_proyecto_master = p.id_proyecto_master
 WHERE pm.zona IS NOT NULL AND pm.zona <> 'Sin zona'
   AND p.zona IS DISTINCT FROM pm.zona
   AND p.status = 'completado'
   AND NOT _is_campo_bloqueado(p.campos_bloqueados, 'zona')
-ORDER BY pm.nombre_oficial, p.id;
--- Esperado: 86 filas / 46 edificios (medido el 27-ago 11:00).
+ORDER BY km_al_edificio DESC, pm.nombre_oficial, p.id;
+-- Esperado: 86 filas -> 80 "se corrige" + 6 "NO se toca" (medido el 27-ago 11:00).
 
 
 -- ── 2 · EL UPDATE ───────────────────────────────────────────────────────────
@@ -67,15 +95,23 @@ UPDATE propiedades_v2 p
    -- bloqueada (verificado), pero el filtro va igual — mañana puede haberlo, y la
    -- función es la del proyecto, no un `? 'zona'` improvisado que no distingue
    -- el formato objeto con `bloqueado: true`.
-   AND NOT _is_campo_bloqueado(p.campos_bloqueados, 'zona');
+   AND NOT _is_campo_bloqueado(p.campos_bloqueados, 'zona')
+   -- El corte por DISTANCIA (ver cabecera): a mas de 2 km lo que falla es el match,
+   -- no el pin. Mismo umbral que el cargador. Sin GPS no se puede medir -> se hereda,
+   -- que es lo que hacia antes de existir este control.
+   AND (p.latitud IS NULL OR pm.latitud IS NULL
+        OR ST_Distance(ST_SetSRID(ST_MakePoint(p.longitud,p.latitud),4326)::geography,
+                       ST_SetSRID(ST_MakePoint(pm.longitud,pm.latitud),4326)::geography) <= 2000);
 
--- 🔴 MIRAR EL CONTEO ANTES DE COMMIT. Debe decir 86. Si dice mucho más, algo se
--- movió entre la foto previa y el UPDATE → ROLLBACK y volver a mirar.
+-- 🔴 MIRAR EL CONTEO ANTES DE COMMIT. Debe decir **80** (86 menos las 6 lejanas).
+-- Si dice 86, el filtro de distancia no se aplicó → ROLLBACK. Si dice mucho más,
+-- algo se movió entre la foto previa y el UPDATE → ROLLBACK y volver a mirar.
 COMMIT;
 
 
 -- ── 3 · VERIFICACIÓN (después) ──────────────────────────────────────────────
--- a) No debe quedar ninguna:
+-- a) Deben quedar EXACTAMENTE 6, las lejanas, y a propósito. Si da 0, se corrigieron
+--    de más; si da 86, no se corrigió nada.
 --    SELECT count(*) FROM propiedades_v2 p
 --      JOIN proyectos_master pm ON pm.id_proyecto_master = p.id_proyecto_master
 --     WHERE pm.zona IS NOT NULL AND pm.zona <> 'Sin zona'
