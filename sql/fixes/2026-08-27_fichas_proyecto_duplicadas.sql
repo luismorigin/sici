@@ -1,5 +1,9 @@
 -- =============================================================================
--- 27-ago-2026 · 9 fichas de proyecto duplicadas — se DESACTIVAN, no se borran
+-- 27-ago-2026 · fichas de proyecto duplicadas — se DESACTIVAN, no se borran
+-- ✅ APLICADO. Y de las 9, SIETE YA ESTABAN INACTIVAS: sólo hubo que desactivar
+--    pm 32 (Brickell 8) y pm 520 (Torre Sirari). El dato estaba a la vista y no lo
+--    crucé: al verificar el fuzzy vi "7 proyectos inactivos" y no me di cuenta de
+--    que eran exactamente éstas.
 -- =============================================================================
 -- QUÉ SON. Buscando "alias intrusos" (el patrón de la mig 342) aparecieron 12 alias
 -- que sí son el nombre oficial de otro proyecto — pero ese otro tiene **cero
@@ -102,8 +106,8 @@ UPDATE proyectos_master
                     WHERE x.id_proyecto_master = proyectos_master.id_proyecto_master
                       AND x.es_activa);
 
--- 🔴 CONTAR ANTES DEL COMMIT: deben ser 9 filas. Si son menos, alguna ficha tiene
---    propiedades activas → NO es duplicada vacía, mirar cuál antes de seguir.
+-- 🔴 CONTAR: fueron 2 filas (pm 32 y 520). Las otras 7 ya estaban inactivas, así
+--    que sus UPDATE tocan 0 y eso es correcto, no un fallo.
 COMMIT;
 
 
@@ -128,3 +132,20 @@ COMMIT;
 -- UPDATE proyectos_master SET activo = true
 --  WHERE id_proyecto_master IN (4,20,32,44,303,451,484,520,556);
 -- (los alias y amenidades del paso 1 se pueden dejar: son ganancia, no dependen de esto)
+
+
+-- =============================================================================
+-- RESULTADO — verificado contra el MATCHER, no contra el UPDATE
+-- =============================================================================
+-- Que el UPDATE se aplique no prueba que el problema se resolvió. Lo que lo prueba
+-- es que el fuzzy devuelva el edificio real:
+--
+--   "Brickell 8"        → 560 Brickell 8 Norte    (1.00)
+--   "Torre Sirari"      → 138 Edificio Sirari     (1.00)
+--   "Klug"              →  61 Edificio Klug       (1.00)
+--   "Mare"              →  65 Condominio Maré     (1.00)
+--   "Edificio Element"  →  74 Element by Elite    (1.00)
+--
+-- Ninguna ficha vacía aparece. Antes, un aviso que dijera "Klug" a secas podía
+-- terminar en el pm 44 —cero propiedades— y quedar aislado de su edificio.
+-- =============================================================================
