@@ -8,6 +8,75 @@
 
 ---
 
+## 0. 🔴 LO PRIMERO DE MAÑANA — la corrida de las 09:00 del seguimiento (26-ago-2026)
+
+**Encendido y probado, pero con UNA corrida real de una sola persona.** Mañana a las 09:00
+salen **4 mensajes** (Mario, Pablo, Carlos y Carla): el primer volumen. Es lo único del
+backlog que le escribe a clientes reales sin que nadie apriete un botón.
+
+```sql
+SELECT start_time, status, return_message
+FROM cron.job_run_details WHERE jobid = 9
+ORDER BY start_time DESC LIMIT 3;
+```
+
+🔑 **Cómo se lee el retorno — el número que importa son los REINTENTOS:**
+
+| dice | significa |
+|---|---|
+| `4 encolada(s) · N confirmada(s) de la anterior` | salió todo, el circuito anda |
+| `4 encolada(s) · 4 reintento(s)` | **el mensaje NO está saliendo** — mirar antes de que se acumule |
+| `sin candidatas` a las 09:00 | raro con 4 en cola: revisar el guard de 22 h |
+
+Si aparecen reintentos, el detalle está en `net._http_response` (ahora sí guarda el cuerpo,
+mig 339). **Frenar es una línea y no rompe nada:**
+`SELECT cron.unschedule('seguimiento-shortlists');`
+
+### Qué es esto y por qué costó un día entero
+Un mensaje, 9 h después de recibir una selección, a quien no volvió. Se encendió a las 13:35,
+**quemó a dos personas antes de las 15:00** (Jenny e Israel: marcadas como contactadas sin
+haber recibido nada, y el marcado impide el reenvío) y se reconstruyó entero en la tarde.
+Tres migraciones, cada una tapando un agujero distinto:
+
+- **339** — pg_net dejaba de escuchar a los 5 s: con 2+ personas la respuesta se perdía
+  siempre y no había registro de nada.
+- **340** — se marcaba "enviado" porque Kapso devolvía 2xx. Ahora el endpoint **sólo puede
+  registrar intentos** y el envío lo declara `confirmar_seguimientos_enviados()`, que exige
+  un mensaje SALIENTE y ningún entrante en el medio.
+- **341** — el `resume` no despierta al agente. lab-kapso midió que la variable es la **edad
+  de la ejecución** (1,1 h → sale · 5,2 h → nada, aun con 30 min de quietud), así que el caso
+  normal de esta función era siempre el caso que falla. Ahora el mensaje sale **directo** por
+  el proxy de Kapso (`api.kapso.ai/meta/whatsapp/v24.0/...`, misma API key, sin credenciales
+  de Meta) y no toca ninguna ejecución.
+
+**Probado punta a punta el 26-ago 20:33** con Ivana, shortlist de 10,0 h — el escenario que
+fallaba: HTTP 200 con cuerpo → intento → saliente registrado → confirmado a las 20:34:46 →
+0 en cola.
+
+### Lo que NO hay que hacer
+🔴 **No cerrar las ejecuciones viejas.** lab-kapso lo recomendó y después se desdijo con datos;
+verificado por acá: **29 mensajes entrantes tras 6+ h de silencio, 25 respondidos en menos de
+2 minutos** (los 4 restantes son del número del founder). Un entrante despierta cualquier
+ejecución — hay una de **287 h**, doce días. Sólo el `resume` falla. Cerrarlas le borraría a
+cada persona el nombre y el criterio ya dados, para arreglar algo que por esa vía no pasa.
+
+### Medir si sirve (no antes de unos días)
+`node scripts/deptos-equipetrol/medir-seguimiento-shortlists.mjs` — ya excluye las pruebas
+(`SEGUIMIENTO_TELEFONOS_TEST` en `.env.local`).
+🔑 **El 19% del pedido original NO es la línea de base**: contaba segundas shortlists de la
+misma sesión, y el universo tenía 27 pruebas. Medido sobre 47 personas reales, la tasa de
+pedir otra selección al día siguiente es **CERO**. No se trata de subir de 19 a 25: es pasar
+de cero a algo, y **la primera persona que pida una segunda selección ya es señal**.
+⚠️ Con ~4 shortlists/día, distinguir 5% de 10% pide 2-3 meses. No hay veredicto rápido.
+
+### Pendientes
+- Jenny e Israel **no se recuperan** (ventana vencida). Dos contactos perdidos.
+- Si el volumen crece, revisar el timeout de 30 s de pg_net: ~3 s de arranque + ~1,5 s por persona.
+- Backlog aparte: `claude_readonly` tiene EXECUTE en **46 de 49** funciones `SECURITY DEFINER`,
+  o sea que el rol "de solo lectura" puede escribir. No lo introdujo esto, se encontró acá.
+
+---
+
 ## 1. ✅ EL ADMIN — LOS TRES PASOS ESTÁN HECHOS (20-ago-2026)
 
 > Esta sección tenía el prompt para arrancar el **paso 2**. Quedó inválida al terminarse, y
