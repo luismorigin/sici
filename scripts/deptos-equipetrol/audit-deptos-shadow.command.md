@@ -134,6 +134,42 @@ en el anuncio?). Escribe `output/audit-shadow-<op>-<ts>.json` con el array `mate
   parecido al de agosto, sospechá que corriste con `--incluir-bajas`.
 
 ### 2. MOAT — el juez (subagentes-lectores en paralelo)
+### 🔴 ANTES DE CONVERTIR LOS VEREDICTOS EN SQL — medido el 27-ago sobre 90 casos
+
+Los subagentes-lectores razonan bien sobre el ANUNCIO, pero **no conocen el esquema ni la
+base**. Tres cosas fallan siempre y hay que filtrarlas antes de escribir un `UPDATE`:
+
+**1 · Proponen columnas que NO EXISTEN.** De los campos que sugirieron, **12 no son columnas
+de `propiedades_v2`**: `expensas_incluidas`, `equipamiento_canonico`, `amenidades`,
+`alias_sugerido`, `parqueo_precio_adicional_bob`, `expensas_bob`, `uso_inmueble`, `equipado`…
+Y cuatro existen **con otro nombre**:
+
+```
+area_m2                    → area_total_m2
+estacionamientos_incluidos → estacionamientos
+baulera_incluida           → baulera
+nombre_edificio_canonico   → nombre_edificio
+```
+
+👉 **Verificar SIEMPRE contra `information_schema.columns` antes de generar el SQL.** Un
+UPDATE con columna inventada falla; uno con la columna equivocada es peor. Lo que encontraron
+y no tiene dónde ir se anota en el backlog, no se improvisa una columna.
+
+**2 · Proponen alias que YA están registrados.** De 8 sugeridos, 3 ya existían. Verificar
+contra `alias_conocidos` antes de agregar.
+
+**3 · Llaman "canónico" al nombre COMERCIAL, que no es el `nombre_oficial` de la tabla.**
+`"Sky Design"` es en realidad `"Edif. SKY DESIGN - SKY Properties"`; `"Platinum 1"` es
+`"Edificio PLATINUM"`. Resolver el `id_proyecto_master` por búsqueda, nunca por nombre exacto.
+
+🔑 **Y verificar el EFECTO, no el UPDATE.** Que una fila se haya escrito no prueba que el
+problema se resolvió: el 27-ago un cambio de precio de Bs a USD dejó `tipo_cambio_detectado`
+en `'bob'`, `precio_normalizado_alquiler()` devolvió NULL y **la propiedad desapareció del
+feed sin que nada fallara**. La verificación buena es contra la vista o el matcher —
+`SELECT ... FROM v_mercado_*_shadow WHERE id = X` o `buscar_proyecto_fuzzy('nombre')` —, no
+contra la tabla.
+
+
 Leé el `output/audit-shadow-<op>-<ts>.json`. Dividí el array `material` en chunks de ~10 y lanzá
 **N subagentes en paralelo**. Cada subagente:
 - Lee su chunk + **`READER_SPEC.md`** (venta) / **`READER_SPEC_ALQUILER.md`** (alquiler).
