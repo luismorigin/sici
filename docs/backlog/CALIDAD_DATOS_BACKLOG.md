@@ -126,6 +126,77 @@ Si se hace, va con foto previa y evals por superficie.
 
 **Orden sugerido:** responder A (una lectura del portal) → recién entonces decidir B.
 
+## 🟡 El PIN GENÉRICO de C21 — 49 avisos mal ubicados en el mapa (27 Ago 2026)
+
+Cuando el captador no marca el mapa, C21 guarda un **punto por defecto**. No es un error
+aleatorio: es siempre la misma coordenada, y llega en cada captura.
+
+### Cuánto es (medido el 27-ago sobre las 1.770 filas con GPS)
+
+```
+223  coordenadas compartidas por más de un aviso   ← normal, son unidades del mismo edificio
+ 11  coordenadas con DOS O MÁS EDIFICIOS distintos ← esos son los pines genéricos
+ 75  avisos ahí · 55 activos
+```
+
+🔴 **Un solo pin explica casi todo**: `-17.76697, -63.19290` tiene **40 avisos de 24
+edificios distintos** (27 en el feed) — Sky Tower, Golden Tower, Madero Residence, Onix
+Art, Uptown Drei, Stratto Up y veinte más, todos en el mismo punto.
+
+⚠️ **"Comparten pin" NO es el criterio.** Platinum y Platinum II comparten coordenada a
+**10 metros** de sus edificios; Sky Design y Sky Elite a 130 m. Son vecinos y el pin está
+prácticamente bien. Lo que importa es **la distancia de cada aviso a SU edificio**:
+
+```
+56  avisos activos a más de 300 m de su edificio
+49  de esos, en el feed → se muestran mal en el mapa
+13  tienen el GPS del edificio VERIFICADO por el founder  ← corregibles hoy
+34  el edificio no tiene verificación                     ← NO tocar
+ 1,45 km  el más lejano
+```
+
+### Por qué NO se corrigieron los 13 (27-ago)
+
+**Los 13 están en la MISMA ZONA que su edificio.** Ninguno cambia de zona al corregirse, así
+que el error es sólo del pin en el mapa, no del filtro: una propiedad de Onix Art aparece a
+940 m de donde está, pero sigue saliendo en las búsquedas de Sirari. A ese zoom, muchas caen
+casi donde deben. **Es cosmética.**
+
+Y sobre todo: **corregirlos no evita que mañana entren más.** El pin por defecto va a seguir
+llegando en cada captura.
+
+🔴 **Los 34 sin verificar NO se tocan**, y no por prudencia genérica: sería reemplazar un GPS
+dudoso por otro GPS dudoso. La ficha del proyecto puede estar tan mal como el pin del portal
+y no hay con qué desempatar. Para esos el camino es al revés: **verificar el edificio
+primero** (son ~25 edificios; una pasada por Maps los resuelve para siempre y arregla todos
+sus avisos de una).
+
+### Lo que sí lo resuelve de raíz
+
+Que **el cargador reconozca el pin conocido y NO lo guarde** — dejando la propiedad sin GPS
+en vez de con uno falso — y que herede el del edificio cuando hay match. Un GPS ausente es
+honesto; uno falso ubica la propiedad a un kilómetro y nadie lo nota.
+
+Esto conecta con el fix de `pin generico + nombre con homonimos ya no se auto-confirma`
+(commit `e68dcc5`, 27-ago). Cuando se toque el cargador para eso, corregir los 13 de una.
+
+### Precedente: los 6 que SÍ se corrigieron (27-ago)
+
+Salieron del audit de drift por estar a 2,7–4,0 km de su edificio **y en otra zona**. Ahí el
+daño era real: Bizet aparecía junto a Casa Patio y Nature Residence.
+
+🔑 **El diagnóstico se dio vuelta a mitad de camino.** Se los había dejado afuera del fix de
+zona sospechando del match; la evidencia decía lo contrario — nombre exacto del edificio en
+el aviso, dos fijados por un juez, y **el texto de los propios avisos contradecía su
+coordenada** ("3er anillo externo" en Panorama, "Remanzo 3, zona norte" en Bizet). Lo que
+estaba mal era el pin, no el match.
+
+Se aplicó: GPS y zona del proyecto, **pin original guardado** en
+`datos_json.trazabilidad.pin_original_del_portal`, y `latitud`/`longitud`/`zona` **candados**
+para que ninguna captura los pise. Ver `sql/fixes/2026-08-27_zona_heredada_del_edificio.sql`.
+
+---
+
 ## Monoambientes catalogados como "1 dormitorio" — RESUELTO (22 May 2026)
 
 **Cierre (22 May 2026):** verificado contra prod. La corrección retroactiva ya estaba aplicada (302 props con señal monoambiente en `dorms=0`, 124 con candado manual + resto sostenido por el guardrail del merge). Quedaban 2 residuales activas en `v_mercado_*` (1926 venta `dorms=1`; 1943 alquiler `dorms=NULL`) — corregidas a `dorms=0` + candado (`motivo=correccion_monoambiente_retroactivo`). Barrido final: **cero props completadas con `dorms=1`/`NULL` + señal monoambiente**; las 27 con `dorms=NULL` restantes son `inactivo_confirmed`/`excluida_zona` (fuera de feed). Bug cerrado por ambos lados: retroactivo + guardrail merge (mig 246/247) para nuevas.
