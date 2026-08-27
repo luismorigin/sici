@@ -45,6 +45,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { detectarDuplicados } from '../auditoria-feed-ventas/lib/dup-checks.mjs';
 import { ZONAS_HIBRIDO } from './lib/zonas-hibrido.mjs';
+import { nucleo } from './lib/filtrar-alias.mjs';   // normaliza nombres de edificio (sin acentos ni prefijo)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -528,6 +529,17 @@ async function main() {
         s.dist_metros = s.gps_placeholder ? null : haversine(s.lat, s.lon, pm.latitud, pm.longitud);
       }
     }
+    // Catálogo completo (~600 filas) para poder contar HOMÓNIMOS del nombre. Se trae una
+    // sola vez: es la diferencia entre "el nombre identifica" y "el nombre es un token que
+    // responde a diez edificios". Si falla, el filtro sigue funcionando como antes.
+    let catalogoParaHomonimos = [];
+    {
+      const { data: cat, error: eCat } = await sb.from('proyectos_master')
+        .select('id_proyecto_master, nombre_oficial, alias_conocidos, activo');
+      if (eCat) console.log(`   ⚠️  No se pudo leer el catálogo para contar homónimos (${eCat.message}) — el filtro de ruido corre sin esa señal.`);
+      else catalogoParaHomonimos = cat || [];
+    }
+
     // ── Filtro de RUIDO (25-jul-2026) ─────────────────────────────────────────────
     // `nombre_unico_zona_dif` acumulaba 23/23 veredictos CONFIRMAR: gritaba lobo todas
     // las noches y el juez releía lo mismo. Las causas del falso positivo, medidas:
@@ -539,8 +551,50 @@ async function main() {
     // ⚠️ NO se toca el caso de riesgo REAL — nombres con hermanos numerados (Baruc Uno/II,
     // Condado II/III), donde el fuzzy sí falla. Esos siguen yendo al juez porque su GPS es
     // legítimo y su distancia, real.
+    // 🔴 EXCEPCIÓN AL FILTRO (27-ago-2026): pin genérico + nombre con HOMÓNIMOS = al juez.
+    // El 27-ago `8000909` estaba colgada de un edificio a 6.547 m y NINGUNA superficie la
+    // levantó: el filtro la había auto-confirmado por pin genérico. Se encontró tirando del
+    // hilo de otra prop, no por diseño.
+    // 🔑 El razonamiento del filtro es "el nombre coincide y la distancia es un artefacto del
+    // pin, así que no hay nada que juzgar". Eso vale cuando el nombre IDENTIFICA. Pero si el
+    // nombre es un token pelado con hermanos en el catálogo —"Portofino", con 10 fichas—,
+    // apagar la distancia deja el caso SIN NINGÚN discriminante, y la lista de
+    // auto-confirmados **se siente resuelta sin estarlo** (`feedback_verificado_no_es_exhaustivo`).
+    // El borde de zona <200 m NO se toca: ahí la distancia es real y chica, o sea el nombre
+    // coincide Y el edificio está al lado. El problema es solo el pin genérico.
     const RUIDO_METROS = 200;
-    sup2Auto = sup2.filter((s) => s.pm_nombre && (s.gps_placeholder || (s.dist_metros != null && s.dist_metros < RUIDO_METROS)));
+    const familiasPorNucleo = (() => {
+      const idx = new Map();
+      for (const pm of (catalogoParaHomonimos || [])) {
+        if (pm.activo === false) continue;
+        for (const c of [pm.nombre_oficial, ...(pm.alias_conocidos || [])]) {
+          const k = nucleo(c);
+          if (!k) continue;
+          if (!idx.has(k)) idx.set(k, new Set());
+          idx.get(k).add(pm.id_proyecto_master);
+        }
+      }
+      return idx;
+    })();
+    // cuántos pm distintos responden a ese nombre, contando los que lo llevan como PREFIJO
+    // ("portofino" es el comienzo de "portofino v", "portofino beni", …)
+    const homonimosDe = (nombre) => {
+      const n = nucleo(nombre);
+      if (!n) return 0;
+      const out = new Set();
+      for (const [k, pms] of familiasPorNucleo) {
+        if (k === n || k.startsWith(n + ' ')) for (const id of pms) out.add(id);
+      }
+      return out.size;
+    };
+    for (const s of sup2) {
+      if (s.gps_placeholder) {
+        s.homonimos_catalogo = homonimosDe(s.nombre_edificio);
+        if (s.homonimos_catalogo > 1) s.pin_generico_pero_ambiguo = true;
+      }
+    }
+    sup2Auto = sup2.filter((s) => s.pm_nombre && !s.pin_generico_pero_ambiguo
+      && (s.gps_placeholder || (s.dist_metros != null && s.dist_metros < RUIDO_METROS)));
     const autoIds = new Set(sup2Auto.map((s) => s.prop_id));
     sup2 = sup2.filter((s) => !autoIds.has(s.prop_id));
     // Superficie 5: recién ACÁ se conoce la distancia (necesita el GPS del pm). Se descarta
@@ -1230,7 +1284,8 @@ async function main() {
     for (const s of sup1Ruido.slice(0, 20)) console.log(`        ${s.prop_id} [${s.op}] "${s.nombre_edificio}" · ${s.ruido.tipo} (decidido ${s.ruido.decidido})`);
   }
   console.log(`  Superficie 2 (auto-match riesgoso nombre_unico_zona_dif): ${sup2.length}`);
-  for (const s of sup2.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'}, zona ${s.pm_zona || '?'} vs ${s.zona}) dist ${s.dist_metros ?? '?'}m${linkDe(s.url)}`);
+  for (const s of sup2.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'}, zona ${s.pm_zona || '?'} vs ${s.zona}) dist ${s.dist_metros ?? '?'}m` +
+    (s.pin_generico_pero_ambiguo ? `  ⚠️ pin genérico Y ${s.homonimos_catalogo} homónimos en el catálogo → sin discriminante, va al juez` : '') + linkDe(s.url));
   // Se DECLARA lo silenciado: un filtro que no se ve es un filtro que nadie audita.
   if (sup2Auto.length) {
     const nPin = sup2Auto.filter((s) => s.gps_placeholder).length;
