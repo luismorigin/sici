@@ -60,6 +60,26 @@ const LIMIT = (() => { const i = argv.indexOf('--limit'); return i >= 0 ? Number
 // defunciones. Con `--incluir-bajas` vuelve al comportamiento anterior, por si alguna
 // vez hay que revisar si una baja fue un falso positivo.
 const INCLUIR_BAJAS = argv.includes('--incluir-bajas');
+
+// 🔑 FOCO POR MACROZONA — OPT-IN, NUNCA POR DEFECTO.
+//     --macrozona=equipetrol   ·   --macrozona="zona norte"
+// Sin el flag barre TODO, y eso es deliberado: `/audit-cola-shadow` pasó dos días
+// auditando sólo Equipetrol sin que nadie lo notara, porque su default de zona era
+// `equipetrol`. *Un default seguro para escribir es peligroso para auditar* — lo que
+// no entra al barrido no falla, simplemente no se mira.
+//
+// Por eso el flag se llama `--macrozona` y no `--zona`: en los CARGADORES `--zona`
+// existe y tiene default `equipetrol`. Mismo nombre con default opuesto sería una
+// trampa. Acá no hay default: o lo pedís, o se barre todo.
+//
+// Las zonas de cada macrozona se leen de `zonas_geograficas`, no van hardcodeadas:
+// agregar una zona nueva no requiere tocar esto.
+const MACROZONA = (() => {
+  const i = argv.findIndex((a) => a === '--macrozona' || a.startsWith('--macrozona='));
+  if (i < 0) return null;
+  const v = argv[i].includes('=') ? argv[i].split('=').slice(1).join('=') : argv[i + 1];
+  return (v || '').trim() || null;
+})();
 const idsArg = (() => { const i = argv.indexOf('--ids'); return i >= 0 ? (argv[i + 1] || '').split(',').map((x) => Number(x.trim())).filter(Boolean) : null; })();
 
 // ---- umbral de cambio de precio (mismo criterio que la mensual): piso 1% para descartar
@@ -94,10 +114,30 @@ const COLS_VENTA = 'id,fuente,url,precio_usd,tipo_cambio_detectado,moneda_origin
 // `equipado` NO es columna de shadow (vive en datos_json.equipado) → se lee del JSON en el snapshot.
 const COLS_ALQ = 'id,fuente,url,precio_mensual_bob,precio_mensual_usd,moneda_original,amoblado,acepta_mascotas,dormitorios,banos,nombre_edificio,id_proyecto_master,es_activa,status,primera_ausencia_at,datos_json';
 
+/**
+ * Zonas de una macrozona, leídas de la tabla. Si el nombre no existe, ABORTA en vez de
+ * devolver una lista vacía: un filtro vacío auditaría cero filas y el resumen diría
+ * "0 hallazgos", que se lee igual que "está todo bien".
+ */
+async function zonasDeMacrozona(nombre) {
+  const { data, error } = await sb
+    .from('zonas_geograficas').select('nombre, zona_general');
+  if (error) throw error;
+  const norm = (s) => String(s || '').toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+  const zonas = (data || []).filter((z) => norm(z.zona_general) === norm(nombre)).map((z) => z.nombre);
+  if (!zonas.length) {
+    const opciones = [...new Set((data || []).map((z) => z.zona_general))].join(' | ');
+    console.error(`\n❌ --macrozona "${nombre}" no existe. Valores: ${opciones}\n`);
+    process.exit(1);
+  }
+  return zonas;
+}
+
 async function traerFilas() {
   let q = sb.from('propiedades_v2')
-    .select((OP === 'venta' ? COLS_VENTA : COLS_ALQ) + ',fecha_creacion')
+    .select((OP === 'venta' ? COLS_VENTA : COLS_ALQ) + ',fecha_creacion,zona')
     .eq('tipo_operacion', OP);
+  if (MACROZONA && !idsArg) q = q.in('zona', await zonasDeMacrozona(MACROZONA));
   // Las bajas no se re-fetchean salvo que se pidan (ver INCLUIR_BAJAS arriba).
   // Con `--ids` mandan los ids: si alguien pide una puntual, se trae aunque esté de baja.
   if (!INCLUIR_BAJAS && !idsArg) q = q.eq('es_activa', true);
@@ -136,7 +176,15 @@ async function main() {
   const dias = (f) => f.fecha_creacion ? Math.round((Date.now() - new Date(f.fecha_creacion)) / 86400e3) : null;
   const edades = filas.map(dias).filter((d) => d != null).sort((a, b) => b - a);
   const alcance = idsArg ? '--ids' : (INCLUIR_BAJAS ? 'activas + dadas de baja' : 'solo ACTIVAS');
-  console.log(`\n🔎 AUDIT SHADOW (${OP}) — ${filas.length} filas · ${alcance}${LIMIT && !idsArg ? ` · limit ${LIMIT}, las más viejas primero` : ''}. READ-ONLY, $0.`);
+  // 🔴 La macrozona se declara SIEMPRE, incluso cuando no se filtró. "todas las
+  // macrozonas" dicho en voz alta es lo que evita el caso de julio: auditar una sola
+  // y leer el resultado como si cubriera el sistema entero.
+  const foco = idsArg ? '' : ` · ${MACROZONA ? `SÓLO ${MACROZONA}` : 'todas las macrozonas'}`;
+  console.log(`\n🔎 AUDIT SHADOW (${OP}) — ${filas.length} filas · ${alcance}${foco}${LIMIT && !idsArg ? ` · limit ${LIMIT}, las más viejas primero` : ''}. READ-ONLY, $0.`);
+  if (MACROZONA) {
+    const otras = new Set(filas.map((f) => f.zona).filter(Boolean));
+    console.log(`   ⚠️  foco activo: lo de fuera de "${MACROZONA}" NO se está auditando. Zonas en este lote: ${[...otras].join(', ') || '—'}`);
+  }
   if (edades.length) {
     console.log(`   antigüedad de la lectura: la más vieja ${edades[0]} d · mediana ${edades[Math.floor(edades.length / 2)]} d`);
   }

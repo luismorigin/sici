@@ -65,12 +65,32 @@ mediana), para que un `--limit` no corte en silencio.
 ⚠️ Con `--incluir-bajas` vuelve al barrido completo. Sirve para un caso puntual: revisar
 si una baja fue un falso positivo. No es el uso normal.
 
-🔑 **El alcance NO tiene perilla de zona, y está bien así.** Barre Equipetrol **y** Zona
-Norte juntas (660 + 499 en venta, 395 + 216 en alquiler al 27-ago). No es que las
-distinga: no filtra por zona en absoluto. Eso lo salva del agujero que tuvo
-`/audit-cola-shadow`, que en julio auditaba sólo Equipetrol sin que nadie lo notara —
-*un default seguro para escribir es peligroso para auditar*. El costo es que el reporte
-mezcla dos macrozonas; se separa mirando la zona de cada caso.
+🔑 **EL FOCO POR MACROZONA ES OPT-IN, NUNCA DEFAULT.**
+
+```
+node auditar-shadow.mjs --op venta --macrozona equipetrol      # 479 activas
+node auditar-shadow.mjs --op alquiler --macrozona "zona norte" # 142
+node auditar-shadow.mjs --op venta                             # 882 — las dos juntas
+```
+
+Sin el flag barre **todo**, y eso es deliberado: `/audit-cola-shadow` pasó dos días
+auditando sólo Equipetrol sin que nadie lo notara, porque su default de zona era
+`equipetrol`. *Un default seguro para escribir es peligroso para auditar* — **lo que no
+entra al barrido no falla, simplemente no se mira.**
+
+Por eso el flag se llama `--macrozona` y no `--zona`: en los CARGADORES existe `--zona`
+y su default **es** `equipetrol`. Mismo nombre con default opuesto sería una trampa.
+
+Al arrancar declara la macrozona **siempre**, incluso cuando no se filtró
+(`todas las macrozonas`), y con foco activo avisa qué queda afuera. Decirlo en voz alta
+es lo que evita auditar una sola y leer el resultado como si cubriera el sistema entero.
+
+Tolera variantes de escritura (`"zona norte"`, `Zona-Norte`) y **aborta si el nombre no
+existe**, en vez de filtrar por una lista vacía: eso auditaría cero filas y el resumen
+diría "0 hallazgos", que se lee igual que "está todo bien". Las zonas de cada macrozona
+salen de `zonas_geograficas`, así que agregar una no requiere tocar el script.
+
+Volumen al 27-ago: Equipetrol 479 venta + 244 alquiler · Zona Norte 403 + 142.
 Para cada fila shadow: re-fetchea el anuncio (`fetchDetalleDepto`), calcula **drift** de descripción
 (`similarity.mjs`: bucket + flags semánticos), **cambio de precio en portal** (crudo de hoy vs el
 `senales_portal` guardado, umbral 1% graduado), y **matching-lite** (¿el `nombre_edificio` aún aparece
