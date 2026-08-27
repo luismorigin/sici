@@ -153,9 +153,9 @@ el GPS del proyecto está mal, arrastra a todos sus anuncios.
 
 | qué | estado | si no se hace |
 |---|---|---|
-| **Mig 319** · identidad del CRM sin teléfono | escrita, **no aplicada** | cuando Meta saque el teléfono del payload, los contactos nuevos no se identifican |
-| **`claude_readonly` con EXECUTE** en 46 de 49 funciones `SECURITY DEFINER` | detectado hoy | el rol "de solo lectura" puede escribir. No está expuesto a internet, pero contradice lo que el proyecto declara |
-| **Alias intrusos** (mig 342) | detectado, no corregido | el fuzzy sigue empatando dos edificios distintos en 1.0 |
+| **Mig 319** · identidad del CRM sin teléfono | escrita, **no aplicada** (re-verificado 27-ago: `simon_resolver_contacto()` y `simon_eventos_sin_procesar` no existen) | cuando Meta saque el teléfono del payload, los contactos nuevos no se identifican |
+| **`claude_readonly` con EXECUTE** en 46 de 49 funciones `SECURITY DEFINER` | detectado 27-ago · **sin cambios** (re-verificado el mismo dia) | el rol "de solo lectura" puede escribir. No está expuesto a internet, pero contradice lo que el proyecto declara. 🔑 Antes de revocar, listar qué consulta el MCP hoy que dejaría de andar: las migs 315/317 rompieron el bot 19 días por revocar sin mirar quién leía por dentro |
+| ~~**Alias intrusos** (mig 342)~~ | ✅ **RESUELTO 27-ago** | los 2 casos que la 342 denunciaba (Uptown NUU en pm 35, Santorini Suites en pm 221) ya estaban corregidos por alguien despues de esa migracion. Los 12 que aparecieron al buscarlos eran otra cosa —fichas duplicadas apuntando a proyectos VACIOS— y se desactivaron. Verificado: **cero alias que sean el nombre oficial de un edificio con propiedades reales** |
 | **32 avisos sin área** ocultos por un filtro que trata NULL como "chico" | en `CALIDAD_DATOS_BACKLOG.md` | 32 propiedades reales que nadie ve |
 
 ---
