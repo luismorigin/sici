@@ -42,10 +42,35 @@ con `READER_SPEC` (que sí conoce `oficial_viejo`/`bob`).
 
 ### 1. Correr el auditor determinístico (fetch $0, read-only)
 ```
-node auditar-shadow.mjs --op venta            # todo el shadow de venta
-node auditar-shadow.mjs --op alquiler --limit 40
-node auditar-shadow.mjs --op venta --ids 3519,3540   # ids puntuales
+node auditar-shadow.mjs --op venta            # todas las ACTIVAS de venta
+node auditar-shadow.mjs --op alquiler --limit 40      # las 40 con la lectura más vieja
+node auditar-shadow.mjs --op venta --ids 3519,3540    # ids puntuales (trae aunque estén de baja)
+node auditar-shadow.mjs --op venta --incluir-bajas    # + las dadas de baja (ver abajo)
 ```
+
+🔴 **DESDE EL 27-ago-2026 SÓLO BARRE LAS ACTIVAS, Y `--limit` TRAE LAS MÁS VIEJAS.**
+Hasta entonces tomaba **todas** las filas de la operación y las ordenaba por `id`:
+
+- **502 de 1.770 fetches (28%) eran a avisos ya dados de baja.** Ir a buscar la
+  descripción de uno que ya sabemos muerto devuelve 404 y no aporta: su baja ya está
+  registrada. El drift existe para detectar que un aviso **vivo** cambió por dentro.
+- **El orden por `id` hacía que `--limit` trajera lo peor.** Los ids bajos son las
+  viejas de n8n, muchas ya muertas — justo al revés de lo que hace falta. Ahora ordena
+  por antigüedad de captura, así que acotar con `--limit` prioriza lo que más tiempo
+  lleva sin que nadie lo mire.
+
+Al arrancar declara el alcance y la antigüedad de lo que trajo (la más vieja y la
+mediana), para que un `--limit` no corte en silencio.
+
+⚠️ Con `--incluir-bajas` vuelve al barrido completo. Sirve para un caso puntual: revisar
+si una baja fue un falso positivo. No es el uso normal.
+
+🔑 **El alcance NO tiene perilla de zona, y está bien así.** Barre Equipetrol **y** Zona
+Norte juntas (660 + 499 en venta, 395 + 216 en alquiler al 27-ago). No es que las
+distinga: no filtra por zona en absoluto. Eso lo salva del agujero que tuvo
+`/audit-cola-shadow`, que en julio auditaba sólo Equipetrol sin que nadie lo notara —
+*un default seguro para escribir es peligroso para auditar*. El costo es que el reporte
+mezcla dos macrozonas; se separa mirando la zona de cada caso.
 Para cada fila shadow: re-fetchea el anuncio (`fetchDetalleDepto`), calcula **drift** de descripción
 (`similarity.mjs`: bucket + flags semánticos), **cambio de precio en portal** (crudo de hoy vs el
 `senales_portal` guardado, umbral 1% graduado), y **matching-lite** (¿el `nombre_edificio` aún aparece
@@ -83,6 +108,10 @@ en el anuncio?). Escribe `output/audit-shadow-<op>-<ts>.json` con el array `mate
   Medido el 3-ago: de **53** fichas muertas, 36 ya de baja + 15 en cola + **2 residuales**. Mirar la
   lista cruda es mirar 51 de ruido. Si no hay residual imprime `✅ Sin bajas residuales` — explícito,
   para no confundir "revisé y está limpio" con "no revisé".
+  🔑 **Esa proporción cambió con el filtro de activas (27-ago): las "36 ya de baja" ya no aparecen**,
+  porque ni siquiera se fetchean. El ruido se elimina en el origen en vez de clasificarse después, así
+  que esperá muchas menos fichas muertas y casi todas de las clases que sí importan. Si ves un conteo
+  parecido al de agosto, sospechá que corriste con `--incluir-bajas`.
 
 ### 2. MOAT — el juez (subagentes-lectores en paralelo)
 Leé el `output/audit-shadow-<op>-<ts>.json`. Dividí el array `material` en chunks de ~10 y lanzá

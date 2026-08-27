@@ -52,6 +52,14 @@ const argv = process.argv.slice(2);
 const opArg = (() => { const i = argv.indexOf('--op'); return i >= 0 ? argv[i + 1] : 'venta'; })();
 const OP = opArg === 'alquiler' ? 'alquiler' : 'venta';
 const LIMIT = (() => { const i = argv.indexOf('--limit'); return i >= 0 ? Number(argv[i + 1]) : null; })();
+
+// 🔴 POR DEFECTO SOLO LAS ACTIVAS (27-ago-2026). Hasta hoy barría TODO, incluidas las
+// dadas de baja: **502 de 1.770, el 28%**. Ir a buscar la descripción de un aviso que
+// ya sabemos muerto es gasto puro — devuelve 404 y su baja ya está registrada. El
+// drift existe para detectar que un aviso VIVO cambió por dentro, no para reconfirmar
+// defunciones. Con `--incluir-bajas` vuelve al comportamiento anterior, por si alguna
+// vez hay que revisar si una baja fue un falso positivo.
+const INCLUIR_BAJAS = argv.includes('--incluir-bajas');
 const idsArg = (() => { const i = argv.indexOf('--ids'); return i >= 0 ? (argv[i + 1] || '').split(',').map((x) => Number(x.trim())).filter(Boolean) : null; })();
 
 // ---- umbral de cambio de precio (mismo criterio que la mensual): piso 1% para descartar
@@ -87,9 +95,21 @@ const COLS_VENTA = 'id,fuente,url,precio_usd,tipo_cambio_detectado,moneda_origin
 const COLS_ALQ = 'id,fuente,url,precio_mensual_bob,precio_mensual_usd,moneda_original,amoblado,acepta_mascotas,dormitorios,banos,nombre_edificio,id_proyecto_master,es_activa,status,primera_ausencia_at,datos_json';
 
 async function traerFilas() {
-  let q = sb.from('propiedades_v2').select(OP === 'venta' ? COLS_VENTA : COLS_ALQ).eq('tipo_operacion', OP);
+  let q = sb.from('propiedades_v2')
+    .select((OP === 'venta' ? COLS_VENTA : COLS_ALQ) + ',fecha_creacion')
+    .eq('tipo_operacion', OP);
+  // Las bajas no se re-fetchean salvo que se pidan (ver INCLUIR_BAJAS arriba).
+  // Con `--ids` mandan los ids: si alguien pide una puntual, se trae aunque esté de baja.
+  if (!INCLUIR_BAJAS && !idsArg) q = q.eq('es_activa', true);
   if (idsArg) q = q.in('id', idsArg);
-  q = q.order('id', { ascending: true });
+
+  // 🔑 ORDEN POR ANTIGÜEDAD DE CAPTURA, no por id. El híbrido lee cada aviso UNA vez,
+  // al capturarlo, así que la que más falta le hace releerse es la que hace más tiempo
+  // que nadie mira. Ordenar por `id` traía las de número más bajo — las viejas de n8n,
+  // muchas ya muertas — justo al revés de lo que necesita un `--limit`.
+  // Medido el 27-ago: 780 de 1.098 props del feed llevaban +24 días sin releerse, con
+  // 28 de promedio y la más vieja del 9-jul.
+  q = q.order('fecha_creacion', { ascending: true, nullsFirst: true });
   if (LIMIT && !idsArg) q = q.limit(LIMIT);
   const { data, error } = await q;
   if (error) throw error;
@@ -110,7 +130,17 @@ function comparableBaseline(sp, moneda) {
 
 async function main() {
   const filas = await traerFilas();
-  console.log(`\n🔎 AUDIT SHADOW (${OP}) — ${filas.length} filas${idsArg ? ' (--ids)' : LIMIT ? ` (limit ${LIMIT})` : ''}. READ-ONLY, $0.\n`);
+
+  // Qué se está auditando, dicho antes de empezar. Un `--limit` corta en silencio y
+  // sin esta línea no hay forma de saber qué quedó afuera ni cuán viejo es lo que entró.
+  const dias = (f) => f.fecha_creacion ? Math.round((Date.now() - new Date(f.fecha_creacion)) / 86400e3) : null;
+  const edades = filas.map(dias).filter((d) => d != null).sort((a, b) => b - a);
+  const alcance = idsArg ? '--ids' : (INCLUIR_BAJAS ? 'activas + dadas de baja' : 'solo ACTIVAS');
+  console.log(`\n🔎 AUDIT SHADOW (${OP}) — ${filas.length} filas · ${alcance}${LIMIT && !idsArg ? ` · limit ${LIMIT}, las más viejas primero` : ''}. READ-ONLY, $0.`);
+  if (edades.length) {
+    console.log(`   antigüedad de la lectura: la más vieja ${edades[0]} d · mediana ${edades[Math.floor(edades.length / 2)]} d`);
+  }
+  console.log('');
   if (!filas.length) { console.log('   (shadow vacío para esta operación — nada que auditar)\n'); return; }
 
   const material = [];          // los que van al JUEZ (drift / precio / matching / baja)
