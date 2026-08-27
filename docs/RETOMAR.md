@@ -96,41 +96,56 @@ de cero a algo, y **la primera persona que pida una segunda selección ya es se�
 
 ---
 
-## 0-bis · 🔜 EL DRIFT DE ZONA NORTE (pendiente al 27-ago-2026)
+## 0-bis · ✅ EL DRIFT DE ZONA NORTE — HECHO (27-ago-2026)
 
-Equipetrol se auditó entero el 27-ago (723 avisos). **Zona Norte queda pendiente: 545
-activas** (403 venta + 142 alquiler), ~1 hora de punta a punta.
+> Esta sección tenía el prompt para correrlo. Se **reemplaza** en vez de borrarse: lo que sirve
+> hacia adelante no son los comandos, son las tres cosas que se aprendieron corriéndolo.
 
-```bash
-node scripts/deptos-equipetrol/auditar-shadow.mjs --op venta --macrozona "zona norte"
-node scripts/deptos-equipetrol/auditar-shadow.mjs --op alquiler --macrozona "zona norte"
-```
+545 activas re-leídas contra su anuncio (403 venta + 142 alquiler). **Drift 1,8% / 2,2%** — la
+base está sana, mejor que Equipetrol. 79 sospechosos → 9 subagentes-lectores → **37 válidos,
+42 correcciones**. Todo aplicado el mismo día, verificado contra las vistas.
 
-Después, el juez: partir el `material` de cada JSON en chunks de ~10 y lanzar
-subagentes-lectores. **Todo el detalle está en `/audit-deptos-shadow`** — no hace falta
-contexto de la sesión del 27-ago.
+- 42 correcciones de precio/TC + `equipado` + 3 alias · **9 bajas residuales** · **7 portadas rotas**
+- Detalle y números: `scripts/deptos-equipetrol/output/audit-shadow-log.md` (gitignored)
 
-🔑 **Tres cosas que costaron descubrir y ya están en ese comando** (§2, "antes de convertir
-los veredictos en SQL"): los jueces proponen **12 columnas que no existen** (`area_m2` es
-`area_total_m2`, `baulera_incluida` es `baulera`…), proponen **alias ya registrados**, y
-llaman "canónico" al nombre comercial. Verificar contra `information_schema` antes de
-escribir el SQL.
+### 🔑 Lo que hay que saber la próxima vez
 
-⚠️ **Persistir los veredictos APENAS LLEGAN, no al final.** El 27-ago los jueces se cortaron
-a mitad por el límite de sesión: 5 de 10 completaron. Los que terminaron sirven igual, pero
-si no se guardan al vuelo se pierden con el contexto.
+**1 · Lo caro no es el drift, son los precios — y la mayoría NO son rebajas.** Hubo 57 cambios
+de precio en los portales y **tres mecanismos distintos se ven exactamente igual** en la alarma:
+- el portal sirve la **otra moneda** (todos los saltos >1.000% de alquiler: el aviso sigue igual);
+- **re-expresión de TC sobre el mismo precio en Bs** — los 9 de Barcelona "bajaron" 22% y el
+  precio en bolivianos no se movió; `8000865` es un ÷1,50 exacto;
+- el `base` del portal es el artefacto Bs/6,96 y lo guardado ya era correcto.
 
-### Qué esperar, según lo que dio Equipetrol
-```
-drift 3-4%          la base está sana; los avisos casi no cambian
-~12% al juez        de 723 fueron 90
-lo caro NO es el drift: son los precios desactualizados (24 en venta, bajas de hasta 22%)
-```
-Y el hallazgo que más rindió fue lateral: **19 fichas con las fotos reemplazadas**, que hacen
-que la card salga vacía en el feed. Es lo único que un usuario ve. Se resuelve con
-`node reparar-fotos.mjs output/audit-shadow-*.json` — no necesita juez.
+Sólo ~20 eran rebajas reales. **Leer el % sin leer el texto lleva a corregir lo que está bien.**
 
----
+**2 · Las bajas residuales están FUERA del verificador de forma permanente, no pendientes.**
+El verificador exige dos señales (ausencia del crawl + código HTTP) y estas **nunca van a cumplir
+la primera**: Remax las sigue mostrando en su listado aunque la ficha no exista. Sus 9
+`primera_ausencia_at` estaban en NULL — el contador nunca arrancó ni va a arrancar.
+🔴 **Y no alcanza con ponerles el contador a mano**: el verificador tiene un `else revive` que,
+ante algo con contador que sigue en el crawl, **le borra el contador sin chequear el HTTP**.
+Rebotarían para siempre. Automatizarlo exige un contador propio, aparte del suyo.
+
+**3 · Nueve chequeos HTTP seguidos desde una IP son UNA observación, no nueve.** Un bloqueo del
+portal explicaría los nueve de una. Lo que convierte la sospecha en evidencia es barato:
+**traer 2-3 CONTROLES de props vivas del mismo portal** y chequearlos en la misma sesión. Acá
+los controles dieron 200 sin redirigir y las 9 rebotaron a `remax.bo/` → recién ahí se bajaron.
+La evidencia quedó escrita en `datos_json.trazabilidad.baja_residual` de cada fila, porque
+`inactivo_confirmed` es terminal y un aviso sólo pausado no volvería solo.
+
+### Lo que quedó abierto
+- **`2703` Stone by Portobello dejó de ser una venta** — hoy el aviso dice "monoambiente en
+  alquiler, Bs 3.200". Los $51.000 guardados no tienen respaldo. Es cambio de operación.
+- **3 precios copiados por debajo del portal** (`8000966`, `8001066`, `8001115`) — error del
+  lector, no del aviso. Al resolverlos hay que taguear `precio_confirmado_por` con el precio
+  del momento, o vuelven cada noche.
+- **`8000530`** (¿aviso reciclado para otra unidad?) y **`8000642`** (se titula "EN ALQUILER" y
+  cotiza venta USD 120.000) — se dejaron sin tocar a propósito.
+- **Essenzia (`2722`, `2721`)**: guardadas 'preventa', el título dice "a estrenar". El estado de
+  obra del edificio se define una vez, no aviso por aviso.
+- ⚠️ **El audit de drift NO está en el ciclo de routines** — es manual. Por eso estas 9 bajas
+  esperaron desde el 29-jul. Las 8 routines de hoy son 4 capturas + audit de cola + 3 reintentos.
 
 ## 1. ✅ EL ADMIN — LOS TRES PASOS ESTÁN HECHOS (20-ago-2026)
 
