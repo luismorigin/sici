@@ -1,6 +1,6 @@
 # Deuda Técnica — SICI
 
-> Extraído de CLAUDE.md el 27 Feb 2026. Última actualización: 3 Ago 2026.
+> Extraído de CLAUDE.md el 27 Feb 2026. Última actualización: 27 Ago 2026.
 
 ## 🔴 TC Binance sin guardrails — salto de +7,6% en un día publicado sin control (22 Jul 2026)
 
@@ -28,6 +28,59 @@ en régimen viejo (ZN) salen de `config_global.tipo_cambio_paralelo`, alimentado
 
 ⚠️ n8n de producción suele diferir del repo (memoria `n8n_drift_repo_vs_prod`) — verificar el
 workflow REAL en la UI, no el JSON local. Hay un task chip pendiente de esta sesión con el detalle.
+
+## 🟡 El CARGADOR guarda el pin genérico de C21 — el audit ya lo detecta, la captura lo sigue metiendo (27 Ago 2026)
+
+**Contexto:** cuando el captador no marca el mapa, C21 devuelve un **punto por defecto**.
+Siempre el mismo. El cargador lo escribe en `latitud`/`longitud` como si fuera la ubicación
+real, y la propiedad queda a cientos de metros —o kilómetros— de su edificio.
+
+**Estado hoy:** el commit `e68dcc5` (27-ago) arregló que **el audit** no auto-confirme un
+match por pin genérico. Eso lo detecta después. **Pero el cargador lo sigue guardando**, así
+que cada captura vuelve a meter pines falsos.
+
+### La medida (27-ago, sobre 1.770 filas con GPS)
+
+```
+11  coordenadas con DOS O MÁS edificios distintos    ← los pines genéricos
+75  avisos ahí · 55 activos
+40  avisos de 24 edificios en UN solo punto: -17.76697, -63.19290
+49  avisos activos, en el feed, a más de 300 m de su edificio
+```
+
+### Qué habría que hacer en `cargar-deptos-shadow.mjs` / `cargar-alquiler-shadow.mjs`
+
+1. **Reconocer el pin genérico.** No hace falta hardcodear coordenadas: se detecta solo
+   —una coordenada con **2+ `id_proyecto_master` distintos** ya es sospechosa, y con 24 es
+   inequívoca. Conviene calcularlo contra la base, no con una lista fija que envejece.
+2. **NO guardarlo.** Dejar `latitud`/`longitud` en `NULL`.
+   🔑 **Un GPS ausente es honesto; uno falso ubica la propiedad a un kilómetro y nadie lo
+   nota.** El feed puede no dibujar el pin; lo que no puede es dibujarlo mal.
+3. **Heredar el del edificio cuando hay match**, igual que ya se hace con la zona
+   (`lib/zona-del-proyecto.mjs`) — y con el mismo corte de distancia.
+4. **Declararlo en el log del apply**, como se hace con la zona heredada. Un pin descartado
+   en silencio es tan opaco como uno guardado en silencio.
+
+⚠️ **Ojo con el orden:** hoy la zona se calcula desde el GPS del aviso. Si el GPS pasa a ser
+NULL, la zona tiene que salir del edificio o queda vacía — y una prop sin zona **desaparece
+del feed** sin fallar (la RPC filtra `pm.zona != 'Sin zona'`).
+
+### Lo que NO hay que hacer
+
+🔴 **Corregir masivamente los 49 de hoy.** Sólo **13** tienen el GPS del edificio verificado
+por el founder; los otros **34** apuntan a fichas sin verificar, y sería cambiar un GPS dudoso
+por otro. Además los 13 están **en la misma zona que su edificio**: el error es sólo del pin
+en el mapa, no del filtro. Es cosmética, y no evita que mañana entren más.
+
+👉 **El orden correcto es al revés**: primero el cargador deja de meterlos, y recién entonces
+se corrige lo acumulado. Detalle y medición: `docs/backlog/CALIDAD_DATOS_BACKLOG.md`
+§"El PIN GENÉRICO de C21".
+
+### Precedente aplicado
+Los **6** avisos que el audit de drift levantó por estar a 2,7–4,0 km **y en otra zona** sí se
+corrigieron el 27-ago: GPS y zona del proyecto, pin original guardado en
+`datos_json.trazabilidad.pin_original_del_portal`, y los tres campos **candados**. Ese es el
+patrón a repetir. Ver `sql/fixes/2026-08-27_zona_heredada_del_edificio.sql`.
 
 ## SEO de las superficies públicas nuevas — sitemap + robots (7 Jul 2026)
 
