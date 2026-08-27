@@ -14,22 +14,41 @@
 salen **4 mensajes** (Mario, Pablo, Carlos y Carla): el primer volumen. Es lo único del
 backlog que le escribe a clientes reales sin que nadie apriete un botón.
 
+🔴 **NO se revisa con `cron.job_run_details` ni con `net._http_response`.** Esta sección decía
+que ahí se leía el resultado y **las dos fuentes fallan** (comprobado la mañana del 27-ago):
+· `return_message` de un `SELECT` guarda **`"1 row"`**, no lo que la función devuelve — el texto
+  con los reintentos no queda en ningún lado;
+· `net._http_response` **se purga a las pocas horas**, así que a la mañana no hay rastro de la
+  corrida de anoche. Sirve sólo si se mira dentro de la misma ventana.
+
+**Lo único duradero es el estado en la base.** Esta query responde las tres preguntas de una —
+a quién le tocó, si se marcó, y si el mensaje REALMENTE salió:
+
 ```sql
-SELECT start_time, status, return_message
-FROM cron.job_run_details WHERE jobid = 9
-ORDER BY start_time DESC LIMIT 3;
+SELECT split_part(s.cliente_nombre,' ',1) AS nombre,
+       to_char(s.created_at - interval '4 hours','DD/MM HH24:MI') AS shortlist,
+       round((EXTRACT(epoch FROM (now()-s.created_at))/3600)::numeric,1) AS horas,
+       to_char(s.seguimiento_intentado_at - interval '4 hours','DD/MM HH24:MI:SS') AS intento,
+       to_char(s.seguimiento_enviado_at   - interval '4 hours','DD/MM HH24:MI:SS') AS enviado,
+       (SELECT to_char(max(m.created_at) - interval '4 hours','DD/MM HH24:MI:SS')
+          FROM simon_mensajes m
+         WHERE m.telefono = s.cliente_telefono AND m.direccion='out'
+           AND m.texto LIKE '%te dejo de nuevo la selección%') AS mensaje_salio,
+       to_char(s.created_at - interval '4 hours' + interval '22 hours','DD/MM HH24:MI') AS vence_guard
+FROM broker_shortlists s
+WHERE s.broker_slug='simon-asistente' AND s.created_at >= now() - interval '30 hours'
+ORDER BY s.created_at DESC;
 ```
 
-🔑 **Cómo se lee el retorno — el número que importa son los REINTENTOS:**
-
-| dice | significa |
+| lo que se ve | significa |
 |---|---|
-| `4 encolada(s) · N confirmada(s) de la anterior` | salió todo, el circuito anda |
-| `4 encolada(s) · 4 reintento(s)` | **el mensaje NO está saliendo** — mirar antes de que se acumule |
-| `sin candidatas` a las 09:00 | raro con 4 en cola: revisar el guard de 22 h |
+| `intento` y `enviado` con hora, `mensaje_salio` con hora | ✅ el circuito anda |
+| `intento` sí, `enviado` NULL, `mensaje_salio` NULL | **el mensaje no salió** — se reintenta solo, pero mirar |
+| `intento` sí, `mensaje_salio` sí, `enviado` NULL | salió y falta confirmar: pasa en el disparo siguiente |
+| todo NULL y `horas` > 9 | no le tocó todavía, o ya venció el guard |
 
-Si aparecen reintentos, el detalle está en `net._http_response` (ahora sí guarda el cuerpo,
-mig 339). **Frenar es una línea y no rompe nada:**
+🔑 **La columna que manda es `mensaje_salio`**, porque lee el saliente real. Las otras dos son
+marcas nuestras — y todo el desastre del 26-ago fue confiar en una marca. **Frenar es una línea:**
 `SELECT cron.unschedule('seguimiento-shortlists');`
 
 ### Qué es esto y por qué costó un día entero
