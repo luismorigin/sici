@@ -162,6 +162,25 @@ Con los `veredicto_audit` mergeados, armá el reporte ejecutivo:
   de bajas mal hecha saca del feed propiedades que SÍ existen.
 - **🏷️ Matching sospechoso** (nombre no aparece / sin-match-con-nombre) → juez decide ALIAS vs MISMATCH vs
   PM_NUEVO (mismo criterio que `/audit-cola-matching`); candar `id_proyecto_master` si es cluster numerado.
+- **📷 Fotos reemplazadas** (`fotos_rotas` del JSON) → **NO necesitan juez, y son lo ÚNICO del audit que
+  un usuario ve hoy mismo**: esas cards salen **vacías** en el feed. El captador cambió las imágenes del
+  aviso, las que teníamos dejaron de existir en el CDN, y como el aviso sigue vivo y el texto no cambió,
+  ni el verificador ni el drift de texto lo notan.
+
+  ```
+  node reparar-fotos.mjs output/audit-shadow-venta-<ts>.json output/audit-shadow-alquiler-<ts>.json
+  ```
+
+  Read-only: re-fetchea esos avisos, toma las `fotos_urls` de hoy y **emite el SQL** en
+  `output/reparar-fotos-<fecha>.sql`. Cada `UPDATE` deja la fecha y el motivo en el crudo.
+  🔑 **Lo que decide es la PORTADA, no el conjunto** — el feed muestra `fotos_urls[0]`, así que da igual
+  que sigan vivas 8 de 11 si la primera está rota.
+  ⚠️ **Si el portal no devuelve fotos, NO se toca y se declara.** Vaciar la lista se vería igual que
+  "esta propiedad no tiene fotos" y se pierde la señal de que hay algo roto.
+  ⚠️ **Que el conteo BAJE no es un error.** El 27-ago `8000198` pasó de 14 fotos a 1: verificado con tres
+  fetches, el captador dejó una sola. Una foto que carga vale más que catorce muertas.
+  📌 Este hallazgo existía desde el 3-ago y **este comando no lo mencionaba**, así que salía en el
+  resumen y nadie sabía qué hacer con él. De ahí que se acumularan 19.
 - **Preguntá al usuario** antes de aplicar cualquier `UPDATE`. NUNCA mutar sin OK.
 
 Registrá una línea en `output/audit-shadow-log.md` (fecha + op + números).
