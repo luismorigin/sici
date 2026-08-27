@@ -31,6 +31,7 @@ import { matchearPorNombre } from './lib/matcher.mjs';
 import { reBucket } from './lib/canonicalizar.mjs';
 import { reservarIdsShadow } from './lib/reservar-ids-shadow.mjs';
 import { resolverZona, conSufijo } from './lib/zonas-hibrido.mjs';
+import { zonaDelProyecto, resolverZonaFila } from './lib/zona-del-proyecto.mjs';
 import { detalleDesdeBase } from './lib/detalle-desde-base.mjs';
 import { leerRechazados, guardarRechazados, TTL_DIAS, UMBRAL_FETCH_FALLIDO, RAZON_FETCH_FALLIDO } from './lib/rechazados.mjs';
 import { traerTodo } from './lib/traer-todo.mjs';
@@ -394,7 +395,12 @@ function construirFila(e, v, match) {
     parqueo_precio_adicional: v.parqueo_precio_adicional_bob ?? null,
     baulera_incluido: bauleraIncl,
     baulera_precio_adicional: v.baulera_precio_adicional_bob ?? null,
-    latitud: a.latitud, longitud: a.longitud, zona: e.zona, microzona: a.microzona,
+    // 🔑 La ZONA la manda el EDIFICIO, no el pin del aviso (27-ago-2026). El GPS sigue
+    // siendo el del aviso — sólo la etiqueta de pertenencia se hereda. Si el proyecto no
+    // tiene zona usable, `match.zona_pm` viene null y queda la del aviso, como antes.
+    // Ver lib/zona-del-proyecto.mjs.
+    latitud: a.latitud, longitud: a.longitud,
+    zona: resolverZonaFila(e.zona, match?.zona_pm).zona, microzona: a.microzona,
     id_proyecto_master: match.pm, nombre_edificio: v.nombre_edificio_canonico || null,
     fecha_publicacion: a.fecha_publicacion, score_calidad_dato: a.score_calidad_dato,
     es_multiproyecto: v.es_multiproyecto ?? a.es_multiproyecto ?? false,
@@ -463,7 +469,7 @@ async function apply(file) {
   const sinVer = doc.entradas.filter((e) => !e.veredicto);
   console.log(`\n✍️  APPLY ALQUILER — ${conVer.length}/${doc.entradas.length} con veredicto${sinVer.length ? ` (faltan ${sinVer.length}: ${sinVer.map((e) => e.id).join(',')})` : ''}\n`);
 
-  const filas = [], rechazados = [], aliasSugeridos = [], reporte = [], descartes = [];
+  const filas = [], rechazados = [], aliasSugeridos = [], reporte = [], descartes = [], zonasCorregidas = [];
   for (const e of conVer) {
     const v = e.veredicto;
     if (v.gate === 'rechazar') {
@@ -480,6 +486,12 @@ async function apply(file) {
       match = await matchearPorNombre(sb, { nombre: v.nombre_edificio_canonico, zona: e.zona, lat: e._apply.latitud, lon: e._apply.longitud });
       if (!match.auto) match.pm = null;
     }
+    // La zona sale del EDIFICIO cuando hay match. Se resuelve acá, después del matcher,
+    // porque también aplica al `lector_fijo` (pm puesto a mano, que no pasa por el matcher).
+    if (match.pm != null) match.zona_pm = await zonaDelProyecto(sb, match.pm);
+    const _z = resolverZonaFila(e.zona, match.zona_pm);
+    if (_z.corregida) zonasCorregidas.push({ id: e.id, de: _z.desde, a: _z.zona, edif: v.nombre_edificio_canonico || `pm ${match.pm}` });
+
     if (v.alias_sugerido && match.pm) aliasSugeridos.push({ pm: match.pm, alias: v.alias_sugerido, edif: v.nombre_edificio_canonico, metodo: match.metodo });
 
     filas.push(construirFila(e, v, match));
@@ -641,6 +653,14 @@ async function apply(file) {
     writeFileSync(sqlFile, sql);
     console.log(`   📄 SQL listo (${porPm.size} edificios): ${sqlFile}`);
     console.log(`      Aplicarlo evita que estos edificios vuelvan a la cola en la proxima tanda.`);
+  }
+  if (zonasCorregidas.length) {
+    // Se declara SIEMPRE: el pin del portal manda al aviso a otra zona y, sin esta línea,
+    // el mismo edificio termina repartido en tres zonas sin que nada falle. Que aparezca
+    // seguido es lo esperado; que aparezca el MISMO edificio todas las noches significa
+    // que su GPS de proyecto puede estar mal y vale mirarlo.
+    console.log(`\n🗺️  ZONA HEREDADA DEL EDIFICIO (el pin del aviso decía otra cosa):`);
+    for (const z of zonasCorregidas) console.log(`   ${z.id}: ${z.de} → ${z.a}   (${z.edif})`);
   }
   const sinMatch = reporte.filter((r) => r.pm == null && r.edif);
   if (sinMatch.length) console.log(`\n⚠️  Con nombre pero sin auto-match: ${sinMatch.map((r) => `${r.id}(${r.edif})`).join(', ')}`);
