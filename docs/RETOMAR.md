@@ -96,6 +96,42 @@ de cero a algo, y **la primera persona que pida una segunda selección ya es se�
 
 ---
 
+## 0-bis · 🔜 EL DRIFT DE ZONA NORTE (pendiente al 27-ago-2026)
+
+Equipetrol se auditó entero el 27-ago (723 avisos). **Zona Norte queda pendiente: 545
+activas** (403 venta + 142 alquiler), ~1 hora de punta a punta.
+
+```bash
+node scripts/deptos-equipetrol/auditar-shadow.mjs --op venta --macrozona "zona norte"
+node scripts/deptos-equipetrol/auditar-shadow.mjs --op alquiler --macrozona "zona norte"
+```
+
+Después, el juez: partir el `material` de cada JSON en chunks de ~10 y lanzar
+subagentes-lectores. **Todo el detalle está en `/audit-deptos-shadow`** — no hace falta
+contexto de la sesión del 27-ago.
+
+🔑 **Tres cosas que costaron descubrir y ya están en ese comando** (§2, "antes de convertir
+los veredictos en SQL"): los jueces proponen **12 columnas que no existen** (`area_m2` es
+`area_total_m2`, `baulera_incluida` es `baulera`…), proponen **alias ya registrados**, y
+llaman "canónico" al nombre comercial. Verificar contra `information_schema` antes de
+escribir el SQL.
+
+⚠️ **Persistir los veredictos APENAS LLEGAN, no al final.** El 27-ago los jueces se cortaron
+a mitad por el límite de sesión: 5 de 10 completaron. Los que terminaron sirven igual, pero
+si no se guardan al vuelo se pierden con el contexto.
+
+### Qué esperar, según lo que dio Equipetrol
+```
+drift 3-4%          la base está sana; los avisos casi no cambian
+~12% al juez        de 723 fueron 90
+lo caro NO es el drift: son los precios desactualizados (24 en venta, bajas de hasta 22%)
+```
+Y el hallazgo que más rindió fue lateral: **19 fichas con las fotos reemplazadas**, que hacen
+que la card salga vacía en el feed. Es lo único que un usuario ve. Se resuelve con
+`node reparar-fotos.mjs output/audit-shadow-*.json` — no necesita juez.
+
+---
+
 ## 1. ✅ EL ADMIN — LOS TRES PASOS ESTÁN HECHOS (20-ago-2026)
 
 > Esta sección tenía el prompt para arrancar el **paso 2**. Quedó inválida al terminarse, y
