@@ -625,7 +625,7 @@ async function apply(file) {
   const okIds = new Set(filas.filter((f) => !fallidas.some((x) => x.id === f.id)).map((f) => f.id));
   const reemplazos = conVer
     .filter((e) => e._apply?.reemplaza_a?.id && okIds.has(e.id) && e._apply.reemplaza_a.id !== e.id)
-    .map((e) => ({ nueva: e.id, vieja: e._apply.reemplaza_a.id, cod: e._apply.reemplaza_a.codigo_c21 }));
+    .map((e) => ({ nueva: e.id, vieja: e._apply.reemplaza_a.id, cod: e._apply.reemplaza_a.codigo ?? e._apply.reemplaza_a.codigo_c21 }));
   let deduplicadas = 0;
   if (reemplazos.length) {
     // 🔴 `datos_json` se MERGEA, no se pisa: un update con objeto plano reemplaza la

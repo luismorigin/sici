@@ -88,7 +88,18 @@ operación mal tipeada / basura estructural / etc.) · **multiproyecto** desviad
 > lo edita (típicamente **baja el precio**). El discovery lo caza por el código y el cargador marca la
 > versión vieja como duplicada — o sea, **una fila sale del feed sin que nadie lo haya pedido**. Es una
 > mutación silenciosa: si no se reporta, nadie se entera. Buscá en el log de captura
-> `🔁 N con SLUG REESCRITO` (discovery) y `🔁 slug reescrito por C21: N/M viejas marcadas` (apply).
+> `🔁 N con SLUG REESCRITO` (discovery) y `🔁 slug reescrito por el portal: N/M viejas marcadas` (apply).
+> 🆕 **28-ago-2026 · TAMBIÉN REMAX, y por eso el log ya NO dice "por C21".** El mecanismo estaba
+> limitado a C21 por una línea del discovery, y Remax hace lo mismo: cambió el slug de
+> `venta-departamento-<cod>` a `venta-departamento-santa-cruz-de-la-sierra-<zona>-<cod>` y los
+> avisos re-entraron como NUEVOS. Encontrado a mano el 28-ago: **1728 ($188.000) y 8000799
+> ($180.000)**, el mismo depto, descripción con md5 idéntico, **los dos vivos en el feed**.
+> 🔑 **Ninguna superficie del audit puede ver esto**: la 3 agrupa por PRECIO (y el precio es justo
+> lo que cambió) y la 7 exige >30% de brecha y mismo edificio. La única evidencia es el código.
+> Medido sobre las 1.802 filas: el extractor cubre **100% de C21 y 100% de Remax**, da 19 grupos
+> con código repetido y **cero falsos positivos**. El código de Remax son DOS partes,
+> `<listado>-<unidad>`: los tres Berchatti comparten listado y se distinguen por `-15/-16/-17`,
+> que son tres departamentos distintos.
 > ⚠️ Si alguna dice **`cambió de zona (X → Y), revisar`**, subilo al parte: es raro y puede ser un error
 > de zona en el aviso.
 > 📉 **Y es señal de mercado, no solo de higiene**: un slug reescrito = aviso editado, y en 3 de los 5

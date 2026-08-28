@@ -182,27 +182,64 @@ const nuevas = portal.filter((p) => !shadowUrls.has(p.url) && !proyUrls.has(p.ur
 // 🔴 NO se filtran: se CAPTURAN (el precio nuevo es el vigente) y se marcan con
 // `reemplaza_a`; el cargador deduplica la vieja al aplicar. Evidencia: 8/8 casos del
 // histórico eran el mismo aviso, cero falsos positivos (verificado por HTTP el 4-ago).
-const codigoC21 = (url) => (String(url || '').match(/\/propiedad\/(\d+)[_-]/) || [])[1] || null;
-const porCodigoC21 = new Map();
+// 🆕 28-ago-2026 · TAMBIÉN REMAX. Hasta hoy esto era C21-only por una línea
+// (`if (nv.fuente !== 'century21') continue`), y Remax hace exactamente lo mismo:
+// cambió el slug de `venta-departamento-<cod>` a `venta-departamento-santa-cruz-de-la-
+// sierra-<zona>-<cod>` y los avisos re-entraron como NUEVOS. Resultado: el mismo depto
+// dos veces en el feed, con dos precios (1728 $188.000 y 8000799 $180.000, descripción
+// con md5 idéntico, los dos vivos hasta que se encontró a mano el 28-ago).
+//
+// 🔴 Ninguna superficie del audit puede ver esto: la 3 agrupa por PRECIO (y el precio es
+// justo lo que cambió) y la 7 exige >30% de brecha y mismo edificio. La única evidencia
+// es el código de la URL.
+//
+// MEDIDO antes de implementar, sobre las 505 URLs de Remax en base: **las 505 parsean**
+// (100%), dan 503 códigos distintos y **exactamente 2 grupos** con el mismo código y URL
+// distinta — Mare y el par de arriba, los dos el mismo aviso. **Cero falsos positivos.**
+//
+// 🔑 EL CÓDIGO DE REMAX SON DOS PARTES, `<listado>-<unidad>`, y las dos importan: los tres
+// Berchatti comparten el listado `1200346220` y se distinguen por `-15`/`-16`/`-17`, que
+// son TRES DEPARTAMENTOS DISTINTOS. Tomar solo el listado los fusionaría. La medición lo
+// comprueba: con las dos partes, Berchatti no aparece entre las colisiones.
+//
+// La fuente se deduce del HOST, no del campo `fuente`: así los dos patrones no pueden
+// pisarse entre sí y el índice nunca cruza un código de C21 con uno de Remax.
+const codigoAviso = (url) => {
+  const u = String(url || '');
+  if (/c21\.com\.bo/i.test(u)) {
+    const m = u.match(/\/propiedad\/(\d+)[_-]/);
+    return m ? `c21:${m[1]}` : null;
+  }
+  if (/remax\.bo/i.test(u)) {
+    const m = u.match(/-(\d{6,})-(\d+)\/?$/);
+    return m ? `remax:${m[1]}-${m[2]}` : null;
+  }
+  return null;
+};
+const porCodigoAviso = new Map();
 for (const r of shadowTodas) {
-  const c = codigoC21(r.url);
-  if (c && !porCodigoC21.has(c)) porCodigoC21.set(c, r);
+  const c = codigoAviso(r.url);
+  if (c && !porCodigoAviso.has(c)) porCodigoAviso.set(c, r);
 }
 let reescritos = 0;
 for (const nv of nuevas) {
-  if (nv.fuente !== 'century21') continue;
-  const c = codigoC21(nv.url);
+  // Ya NO se filtra por fuente: si la URL trae un código reconocible, sirve. Una fuente
+  // sin patrón devuelve null y se saltea sola — agregar un portal nuevo es agregar su
+  // patrón a `codigoAviso`, no tocar este bucle.
+  const c = codigoAviso(nv.url);
   if (!c) continue;
-  const vieja = porCodigoC21.get(c);
+  const vieja = porCodigoAviso.get(c);
   if (!vieja || vieja.url === nv.url) continue;
-  nv.reemplaza_a = { id: vieja.id, url: vieja.url, codigo_c21: c, zona_vieja: vieja.zona ?? null };
+  // `codigo` es el genérico; `codigo_c21` se sigue emitiendo para no romper un material
+  // viejo que se re-aplique (el cargador lee uno u otro).
+  nv.reemplaza_a = { id: vieja.id, url: vieja.url, codigo: c, codigo_c21: c, zona_vieja: vieja.zona ?? null };
   reescritos++;
 }
 if (reescritos) {
-  log(`   🔁 ${reescritos} con SLUG REESCRITO por C21 (mismo código, URL nueva) → se capturan y reemplazan a la vieja:`);
+  log(`   🔁 ${reescritos} con SLUG REESCRITO por el portal (mismo código, URL nueva) → se capturan y reemplazan a la vieja:`);
   for (const nv of nuevas.filter((n) => n.reemplaza_a)) {
     const cruzaZona = nv.reemplaza_a.zona_vieja && nv.reemplaza_a.zona_vieja !== zonaDe.get(nv.url);
-    log(`      cod ${nv.reemplaza_a.codigo_c21}: id ${nv.reemplaza_a.id} → nueva URL${cruzaZona ? `  ⚠️ cambió de zona (${nv.reemplaza_a.zona_vieja} → ${zonaDe.get(nv.url)}), revisar` : ''}`);
+    log(`      cod ${nv.reemplaza_a.codigo ?? nv.reemplaza_a.codigo_c21}: id ${nv.reemplaza_a.id} → nueva URL${cruzaZona ? `  ⚠️ cambió de zona (${nv.reemplaza_a.zona_vieja} → ${zonaDe.get(nv.url)}), revisar` : ''}`);
   }
 }
 

@@ -72,11 +72,11 @@ node discovery-deptos.mjs
 Sale a C21 + Remax (tipo=departamento, red ancha Equipetrol), filtra por `get_zona_by_gps` ∈ las 6
 microzonas, y diffea contra `propiedades_v2`. Mirá el resumen: **NUEVAS**, **existentes**,
 **desaparecidas**. Escribe `output/discovery-deptos-<ts>.json`.
-- 🔁 **4ª señal — SLUG REESCRITO por C21** (PR #64, 4-ago-2026). C21 arma la URL como
+- 🔁 **4ª señal — SLUG REESCRITO por el portal** (PR #64, 4-ago-2026). C21 arma la URL como
   `/propiedad/<codigo>_<slug>` y **reescribe el slug cuando el captador edita** (baja el precio, corrige la
   tipología, cambia el nombre del edificio). La URL cambia → el aviso entraría como NUEVO y el mismo depto
   quedaría dos veces, con dos precios. El discovery lo detecta por el código y lo imprime así:
-  `🔁 N con SLUG REESCRITO por C21 (mismo código, URL nueva)` + una línea por caso.
+  `🔁 N con SLUG REESCRITO por el portal (mismo código, URL nueva)` + una línea por caso.
   **NO se filtran: se capturan** (el precio nuevo es el vigente; saltearlas dejaría el viejo para siempre).
   Van marcadas con `reemplaza_a` en el JSON, y el `resumen` suma `slug_reescrito_c21`.
   ⚠️ Si alguna dice **`cambió de zona (X → Y), revisar`** → mirala: el índice de códigos se cruza contra
@@ -173,7 +173,7 @@ y **con-nombre-sin-auto-match** (= la cola de excepciones).
 reescrito, ver paso 1), después de escribir la nueva el cargador marca **la vieja** con
 `duplicado_de = <id nuevo>` + trazabilidad (`dedup_metodo='codigo_c21_identico_slug_reescrito'`,
 `dedup_por='cargador_slug_reescrito'`). Imprime:
-`🔁 slug reescrito por C21: N/M viejas marcadas como duplicadas <vieja>→<nueva>`.
+`🔁 slug reescrito por el portal: N/M viejas marcadas como duplicadas <vieja>→<nueva>`.
 Es el ÚNICO punto donde el apply toca filas que no vienen en el material. Guardas: candado
 `duplicado_de IS NULL` · se saltea si la fila nueva falló al escribir · se saltea si la vieja no existe ·
 `datos_json` se **mergea**, no se pisa. Reversible (`duplicado_de = NULL`).
