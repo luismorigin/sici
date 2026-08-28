@@ -126,6 +126,39 @@ carga, eso lo cubre el otro comando, `/audit-deptos-shadow`, que sí re-fetchea 
    Si algún día se extiende: la gemela es `v_mercado_alquiler_shadow` con `precio_mensual` en vez de
    `precio_norm`, y **hay que recalibrar el umbral** — 30% se midió sobre precios de venta.
 
+10. **LA PROP Y SU EDIFICIO EN MACROZONAS DISTINTAS** (20-ago-2026) — un edificio no está en dos
+   macrozonas. La `zona` de la prop la escribe el cargador desde el GPS del aviso, que a menudo es el
+   **pin genérico del portal**; la del edificio viene de la ficha. Si difieren de MACROZONA (no de zona:
+   entre zonas vecinas el borde es difuso y daría ruido), una de las dos está mal — y casi siempre es la
+   de la prop, que mientras tanto alimenta la mediana de una microzona ajena.
+   🔴 **Corregir el GPS NO recalcula la zona:** la tabla viva no tiene triggers → van en el MISMO UPDATE.
+
+11. **DOS FICHAS DEL CATÁLOGO QUE EL MATCHER VE COMO UNA** (28-ago-2026, mig 345) — la única superficie
+   que **no mira propiedades sino el CATÁLOGO**. `normalize_nombre()` borra el prefijo genérico y los
+   numerales romanos, así que dos fichas activas distintas colapsan al mismo texto: para
+   `buscar_proyecto_fuzzy()` son **el mismo edificio, con score idéntico**, y el desempate cae en el id
+   de ficha más bajo. Lee `v_colisiones_catalogo`.
+   🔑 **Lo que hace peligrosa a una colisión no es que exista: es la DISTANCIA.** Los tres "Condado"
+   están a 50 m — elegir mal no mueve ni la zona ni la mediana del m². Los dos "Domus Luxury" están a
+   2.375 m **y en macrozonas distintas**: ahí elegir mal manda la propiedad al mercado equivocado.
+   Por eso silencia las vecinas (misma macrozona y < 800 m, el mismo umbral que la superficie 5) y las
+   **declara contadas**; ordena por daño potencial: mismo nombre exacto → cruza macrozona → distancia.
+   🔴 **REPORTA, NO ARREGLA.** Lo que hoy salva a los homónimos lejanos es el discriminador de distancia,
+   que actúa **DESPUÉS** del fuzzy; la superficie existe para que se sepa de quién depende eso. Tocar
+   `normalize_nombre()` se midió y se descartó (`docs/reports/AUDITORIA_NORMALIZACION_NOMBRES_2026-08-27.md`).
+   ⚠️ **No depende de la zona auditada** — sale igual en los dos logs de la noche. La marca 🆕 sale de
+   `output/colisiones-catalogo-conocidas.json` y significa *"este audit nunca lo vio"*, **no** *"apareció
+   hoy en el catálogo"*; el archivo se escribe en un temporal y se renombra.
+   📌 **Por qué existe:** los tres alias intrusos de esta semana se encontraron **de rebote**, tirando del
+   hilo de una prop mal matcheada. El pm 156 "Condominio Portofino" llevó **nueve meses** capturando
+   propiedades ajenas sin que ninguna alarma lo viera.
+   🔎 **Se puede correr sola, en cualquier momento:**
+   ```
+   node auditar-matching-shadow.mjs --solo-colisiones
+   ```
+   No lee propiedades, no toca la bandeja `audit_hallazgos` y **no deja la marca de audit completo del
+   día** — o sea, no le miente a los reintentos agendados. Útil después de cargar fichas nuevas.
+
 ## Flujo de ejecución (desde `scripts/deptos-equipetrol/`)
 
 ### 0. 🔁 Si te disparó un REINTENTO agendado: `--si-falta` decide si te toca correr

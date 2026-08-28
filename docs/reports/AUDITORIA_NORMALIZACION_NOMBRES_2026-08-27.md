@@ -105,7 +105,7 @@ lo que el spec del lector asume (*"el matcher normaliza romano↔arábigo"*,
 
 ---
 
-## 4 · Dos fichas fantasma (patrón del pm 156)
+## 4 · Fichas sin props: 🔴 **la lectura de esta sección era EQUIVOCADA** (corregida 28-ago)
 
 Fichas activas del catálogo que **nunca tuvieron una sola propiedad**, o que quedaron sin ninguna:
 
@@ -115,11 +115,36 @@ Fichas activas del catálogo que **nunca tuvieron una sola propiedad**, o que qu
 | **35** | Edificio Uptown Equipetrol | Equipetrol Oeste | 0 | — |
 | 156 | Condominio Portofino | *Sin zona* | **0 (hoy)** | 2, las dos mal matcheadas |
 
-🔑 **El pm 73 es el más sospechoso**: comparte nombre exacto con el pm 356 "DOMUS LUXURY" (8 props
-vivas), están a **2.370 m**, y el 73 no tuvo nunca ninguna propiedad. O es un duplicado de catálogo,
-o es un edificio real que nunca se publicó. **Una ficha sin props no es un error** —un edificio puede
-no tener avisos— **pero una ficha sin props que además colisiona de nombre con otra que sí las tiene
-es exactamente el perfil del pm 156**, que hoy resultó llevar nueve meses capturando props ajenas.
+### 🔴 El pm 73 NO es el perfil del pm 156 — verificado el 28-ago-2026
+
+Esta sección decía que el pm 73 era "el más sospechoso" y proponía decidir si era duplicado del 356.
+**Está mal, y borrarlo o fusionarlo habría sido un error.** Lo que faltó mirar:
+
+- El pm 73 **tiene desarrollador cargado**: `Alborada Group Bolivia`, el mismo de Domus Deluxe (312),
+  Domus Infinity (18), Domus Insignia (19) y Domus Tower (84) — todas con props.
+- En esa familia hay **otras dos fichas con 0 props**: **Domus Black (571)** y **Domus Gold (572)**.
+- 👉 Son fichas cargadas **desde el material del desarrollador**, no derivadas de avisos. Una ficha así
+  nace vacía por diseño y se llena cuando el edificio se publica. *(Detalle: 571 y 572 tienen el campo
+  `desarrollador` en NULL — la familia se ve por el nombre, no por ese campo. Si alguna vez se usa
+  `desarrollador` como señal, esas dos no la llevan.)*
+
+🔑 **La lección de método:** "ficha activa sin props" se leyó como anomalía sin preguntar **de dónde
+salió la ficha**. Dos orígenes distintos producen el mismo síntoma: el catálogo del desarrollador
+(vacío legítimo, a la espera) y el mal matcheo histórico (vacío porque nunca acertó). El pm 156 era
+el segundo; el pm 73 es el primero. **El discriminante es el desarrollador y la familia, no el conteo.**
+
+### El problema real del pm 73 (que sí existe, y es otro)
+
+```
+buscar_proyecto_fuzzy('Domus Luxury')
+  → pm  73  "Domus Luxury"  [Equipetrol]   1.000   ← sale PRIMERO, y tiene 0 props
+  → pm 356  "DOMUS LUXURY"  [Zona Norte]   1.000   ← es el que corresponde, tiene 8
+```
+Empate perfecto a 2.375 m y en **macrozonas distintas**; el desempate cae en el id de ficha más bajo.
+**Hoy no hay daño** —las 8 props están bien colgadas del 356— y lo que las salva es el **discriminador
+de distancia, que actúa DESPUÉS del fuzzy**. Nada avisa de que esa sea la única red.
+
+👉 Eso es lo que motivó la **superficie 11 del audit** (mig 345), §5 fila 2.
 
 ---
 
@@ -128,8 +153,8 @@ es exactamente el perfil del pm 156**, que hoy resultó llevar nueve meses captu
 | # | acción | esfuerzo | por qué |
 |---|---|---|---|
 | 1 | ~~Anclar el paso 2 al inicio~~ | — | 🔴 **MEDIDO Y DESCARTADO el 27-ago — ver §6.** Arregla los nombres mutilados pero **no cambia un solo match**, y NO separa los dos Baruc Norte como se afirmaba acá (los dos tienen prefijo al inicio y los dos lo pierden igual) |
-| 2 | **Superficie nueva del audit: colisiones de normalización** | chico | Determinística, sin juez. Hoy levantaría los 11 grupos y avisaría cuando aparezca uno nuevo, en vez de descubrirlo de rebote |
-| 3 | **Revisar el pm 73 (Domus Luxury)** | 5 min | Decidir si es duplicado del 356 o edificio propio |
+| 2 | ✅ **Superficie 11 del audit: colisiones de catálogo** | chico | **HECHA el 28-ago** — mig 345 (`v_colisiones_catalogo`) + superficie 11 de `/audit-cola-shadow`. Determinística, sin juez. Reporta **8 pares** y silencia 9 vecinas declarándolas; marca 🆕 los que el audit nunca vio |
+| 3 | ~~Revisar el pm 73 (Domus Luxury)~~ | — | ✅ **REVISADO el 28-ago — NO se toca.** Es ficha de desarrollador, no duplicado. Ver §4 |
 | 4 | **Unificar romano↔arábigo** en el paso 3 | medio | Hace lo que el spec ya asume. **Necesita medición previa**: toca todos los nombres |
 | 5 | Barrido de alias intrusos | chico | Hoy da 0. Vale como red, no como cola |
 

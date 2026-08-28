@@ -40,7 +40,7 @@
 // ============================================================================
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { detectarDuplicados } from '../auditoria-feed-ventas/lib/dup-checks.mjs';
@@ -68,6 +68,11 @@ const SIN_GUARDA = argv.includes('--sin-guarda');
 // 🔑 Se agenda EL AUDIT varias veces en vez de que la última captura lo llame: si esa captura
 // falla o la cadena se desordena, un audit que depende de ella no corre nunca.
 const SI_FALTA = argv.includes('--si-falta');
+// 🧬 --solo-colisiones: corre SOLO la superficie 11 (el chequeo del CATÁLOGO) y sale.
+// No lee propiedades, no toca la bandeja `audit_hallazgos` y NO deja la marca de audit
+// completo del día — o sea, no le miente a los reintentos agendados. Sirve para revisar
+// el catálogo en cualquier momento sin correr el audit entero.
+const SOLO_COLISIONES = argv.includes('--solo-colisiones');
 let guardaGlobal = null, marcaCompletaGlobal = null;   // los usa el cierre para dejar la marca del dia
 let AVISO_ALCANCE = null;   // se llena si faltan capturas: se repite al final del resumen
 
@@ -233,7 +238,99 @@ const confianzaLector = (p) => p?.datos_json?.trazabilidad?.confianza_lector ?? 
 //    anuncio lo cubre `/audit-deptos-shadow`, que es el que sí re-fetchea.
 const confirmadoPorAuditor = (p) => p?.datos_json?.trazabilidad?.confirmado_por ?? null;
 
+function imprimirColisiones(sup11, sup11Vecinas) {
+  if (sup11.length) {
+    const nuevas = sup11.filter((c) => c.nuevo).length;
+    console.log(`  🧬 Superficie 11 (dos fichas del CATÁLOGO que el matcher ve como una): ${sup11.length} pares` +
+      (nuevas ? `  ·  🆕 ${nuevas} que este audit nunca vio` : ''));
+    console.log(`     ⚠️  No depende de la zona auditada: sale igual en los dos logs de la noche.`);
+    console.log(`         Lo que hoy los salva es el discriminador de DISTANCIA, que actúa DESPUÉS`);
+    console.log(`         del fuzzy. REPORTA, NO ARREGLA — tocar normalize_nombre() se midió y descartó.`);
+    for (const c of sup11) {
+      const sello = `${c.nuevo ? '🆕 ' : ''}${c.mismo_nucleo ? '🔴 mismo nombre' : '   numeral comido'}`;
+      console.log(`     ${sello} · "${c.normalizado}" · ${c.metros ?? '?'} m${c.cruza_macrozona ? '  ⚠️ CRUZA MACROZONA' : ''}`);
+      console.log(`        pm ${c.pm_a} "${c.nombre_a}" [${c.macrozona_a || 'sin macro'} · ${c.zona_a}] · ${c.props_a} props`);
+      console.log(`        pm ${c.pm_b} "${c.nombre_b}" [${c.macrozona_b || 'sin macro'} · ${c.zona_b}] · ${c.props_b} props`);
+    }
+    if (sup11Vecinas) console.log(`     └─ + ${sup11Vecinas} pares silenciados (misma macrozona y < ${COLISION_METROS} m: elegir mal no mueve ni la zona ni la mediana)`);
+    console.log('');
+  }
+}
+
+const COLISION_METROS = 800;   // el mismo umbral que la superficie 5, a propósito
+// ---------------------------------------------------------------------------
+// SUPERFICIE 11 — DOS FICHAS DEL CATÁLOGO QUE EL MATCHER VE COMO UNA (28-ago-2026)
+// ---------------------------------------------------------------------------
+// Las 10 superficies de arriba miran PROPIEDADES. Esta mira el CATÁLOGO, que es de
+// donde salen los errores que ninguna propiedad delata: `normalize_nombre()` borra el
+// prefijo genérico y los numerales romanos, así que dos fichas activas distintas pueden
+// colapsar al mismo texto. Para `buscar_proyecto_fuzzy()` son EL MISMO EDIFICIO, con
+// score idéntico, y el desempate termina cayendo en el id de ficha más bajo.
+//
+// 🔑 Por qué existe: los tres casos de esta semana (Eurodesign 18-ago, Uptown y
+// Portofino 27-ago) se descubrieron DE REBOTE, tirando del hilo de una propiedad mal
+// matcheada. Nunca porque algo los buscara. El pm 156 "Condominio Portofino" llevó
+// NUEVE MESES capturando propiedades ajenas sin que ninguna alarma lo viera.
+//
+// 🔑 LO QUE HACE PELIGROSA A UNA COLISIÓN NO ES QUE EXISTA: ES LA DISTANCIA. Los tres
+// "Condado" están a 50 m entre sí — elegir mal no mueve ni la zona ni la mediana del m².
+// Los dos "Domus Luxury" están a 2.375 m y en macrozonas distintas: ahí elegir mal manda
+// la propiedad al mercado equivocado. Por eso las vecinas (misma macrozona, < 800 m) se
+// silencian y se DECLARAN contadas, y el orden del reporte es el del daño potencial.
+//
+// 🔴 REPORTA, NO ARREGLA — igual que las superficies 5, 6 y 7. Lo que hoy salva a los
+// homónimos lejanos es el discriminador de DISTANCIA, que actúa DESPUÉS del fuzzy. Esta
+// superficie existe para que se sepa de quién depende eso, no para tocar el matcher:
+// cambiar `normalize_nombre()` mueve el matching entero y ya se midió y descartó
+// (docs/reports/AUDITORIA_NORMALIZACION_NOMBRES_2026-08-27.md §6).
+async function colisionesCatalogo() {
+  const sup11 = [];
+  let sup11Vecinas = 0;
+  {
+    const ARCHIVO_COLISIONES = join(OUT, 'colisiones-catalogo-conocidas.json');
+    let conocidas = new Set();
+    try {
+      if (existsSync(ARCHIVO_COLISIONES)) conocidas = new Set(JSON.parse(readFileSync(ARCHIVO_COLISIONES, 'utf8')));
+    } catch { /* archivo ilegible: se tratan todas como nuevas, que es el lado seguro */ }
+
+    const { data: col, error: eCol } = await sb.from('v_colisiones_catalogo').select('*');
+    if (eCol) {
+      console.log(`   ⚠️  Superficie 11 no pudo leer v_colisiones_catalogo (${eCol.message}) — se DECLARA, no se omite.`);
+      console.log(`       Si dice "does not exist": falta aplicar sql/migrations/345_vista_colisiones_catalogo.sql.`);
+    } else {
+      for (const c of col || []) {
+        const m = c.metros == null ? null : Number(c.metros);
+        // Vecinas: misma macrozona y pegadas. Dos torres del mismo predio con el mismo
+        // nombre son ruido — el error existe pero no tiene consecuencia medible.
+        if (!c.cruza_macrozona && m != null && m < COLISION_METROS) { sup11Vecinas++; continue; }
+        sup11.push({ ...c, metros: m, nuevo: !conocidas.has(`${c.pm_a}|${c.pm_b}`) });
+      }
+      sup11.sort((a, b) => (Number(b.mismo_nucleo) - Number(a.mismo_nucleo))
+        || (Number(b.cruza_macrozona) - Number(a.cruza_macrozona))
+        || ((b.metros ?? 0) - (a.metros ?? 0)));
+      // La marca 🆕 dice "este audit nunca lo vio", NO "apareció hoy en el catálogo".
+      // Se escribe en un temporal y se renombra: writeFileSync TRUNCA antes de fallar y este
+      // archivo es la única memoria de qué colisión ya se reportó (lección del 24-ago-2026).
+      try {
+        const todas = [...new Set([...conocidas, ...sup11.map((c) => `${c.pm_a}|${c.pm_b}`)])];
+        writeFileSync(`${ARCHIVO_COLISIONES}.tmp`, JSON.stringify(todas, null, 2));
+        renameSync(`${ARCHIVO_COLISIONES}.tmp`, ARCHIVO_COLISIONES);
+      } catch (e) { console.log(`   ⚠️  No se pudo guardar la memoria de colisiones (${e.message}) — mañana saldrán todas como nuevas.`); }
+    }
+  }
+
+  return { sup11, sup11Vecinas };
+}
+
 async function main() {
+  // Atajo del catálogo: no depende de la zona ni de las capturas de la noche.
+  if (SOLO_COLISIONES) {
+    const { sup11, sup11Vecinas } = await colisionesCatalogo();
+    console.log('');
+    if (!sup11.length) console.log('  🧬 Superficie 11: sin colisiones de catálogo con riesgo (0 pares).');
+    imprimirColisiones(sup11, sup11Vecinas);
+    return;
+  }
   console.log(`\n🔎 AUDIT MATCHING SHADOW — ops: ${OPS.join('+')}${LIMIT ? ` (limit ${LIMIT}/op)` : ''}. READ-ONLY, $0 (sin fetch).\n`);
 
   const guarda = await capturasDeHoyCorrieron();
@@ -991,6 +1088,8 @@ async function main() {
   }
 
 
+  const { sup11, sup11Vecinas } = await colisionesCatalogo();
+
   // ═══════════════════════════════════════════════════════════════════════════
   // PERSISTIR LOS HALLAZGOS DE MATCHING (mig 335) — la bandeja de /admin/revisar
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1150,10 +1249,14 @@ async function main() {
   const file = join(OUT, `audit-matching-shadow-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, ops: OPS, total_filas: filas.length,
-    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, superficie_6_estado_obra_contradictorio: sup6.length, superficie_6_props_afectadas: sup6.reduce((a, c) => a + c.props_afectadas, 0), superficie_7_brecha_precio: sup7.length, superficie_7_props_afectadas: sup7.reduce((a, c) => a + c.n, 0), superficie_10_macrozona_incoherente: sup10.length, ya_confirmados_por_auditor: supConfirmadas.length },
+    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, superficie_6_estado_obra_contradictorio: sup6.length, superficie_6_props_afectadas: sup6.reduce((a, c) => a + c.props_afectadas, 0), superficie_7_brecha_precio: sup7.length, superficie_7_props_afectadas: sup7.reduce((a, c) => a + c.n, 0), superficie_10_macrozona_incoherente: sup10.length, superficie_11_colisiones_catalogo: sup11.length, superficie_11_vecinas_silenciadas: sup11Vecinas, ya_confirmados_por_auditor: supConfirmadas.length },
     superficie_7_umbral_brecha_pct: BRECHA_SOSPECHOSA_PCT,
     superficie_9_moneda_incoherente: sup9.length,
     superficie_10: sup10,
+    // SUPERFICIE 11 — dos fichas ACTIVAS que el matcher no puede distinguir. Es del
+    // CATÁLOGO, no de la zona auditada: sale igual en los dos logs de la noche.
+    superficie_11: sup11,
+    superficie_11_vecinas_silenciadas: sup11Vecinas,
     superficie_5_umbral_metros: DISTANCIA_SOSPECHOSA_M,
     superficie_1: sup1, superficie_2: sup2,
     // Nombres YA juzgados como no-edificio (odónimo / familia ambigua) → no van al juez.
@@ -1274,6 +1377,7 @@ async function main() {
     if (sup10.length > 15) console.log(`     … y ${sup10.length - 15} más (todos en el JSON)`);
     console.log('');
   }
+  imprimirColisiones(sup11, sup11Vecinas);
   console.log(`  Superficie 1 (sin match + con nombre → PM_NUEVO/fuzzy): ${sup1.length}`);
   for (const s of sup1.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}"  cands:${s.candidatos.length}${s.candidatos[0] ? ` (mejor ${s.candidatos[0].nombre} ${s.candidatos[0].score})` : ''}${linkDe(s.url)}`);
   // Se DECLARA lo filtrado (regla 3 de NOMBRES_NO_EDIFICIO): un descarte invisible se lee
