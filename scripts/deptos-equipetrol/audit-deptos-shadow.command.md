@@ -196,6 +196,34 @@ Con los `veredicto_audit` mergeados, armá el reporte ejecutivo:
   el verificador las cierra esta noche. 🔑 **El audit señala, no da de baja por su cuenta** — la
   autoridad sigue siendo `verificador-deptos/alquiler.mjs` (2 señales + gracia 2d), porque una regla
   de bajas mal hecha saca del feed propiedades que SÍ existen.
+- **🔒 SELLAR los cambios de precio ya juzgados — PASO OBLIGATORIO (27-ago-2026)**
+
+  ```
+  node sellar-precio-portal.mjs output/audit-shadow-venta-<ts>.json output/audit-shadow-alquiler-<ts>.json
+  ```
+
+  🔴 **Sin esto, TODOS los cambios de precio que juzgaste vuelven idénticos la próxima corrida.**
+  El chequeo compara el portal de HOY contra `datos_json.senales_portal`, que es el testigo del
+  día que se **capturó** la propiedad — y ese testigo lo escriben sólo los cargadores, nada lo
+  refresca. Así que una vez que el portal se mueve, el caso se repite **para siempre**, aunque lo
+  hayas corregido. Medido: `8000642` se corrigió a los 120.000 que pedía el portal y volvió a
+  marcar "suba 26,3%" en la corrida siguiente. Con ~57 casos por corrida y cadencia mensual, la
+  lista arrastra todo el mes anterior y **la alarma muere de ruido**.
+
+  🔴 **NO se arregla refrescando `senales_portal`.** En VENTA-USD ese campo (`precio_candidato`) lo
+  comparte §COPIA MAL (`precio_bajo_el_portal`), que es ciego al portal de hoy **a propósito** —
+  corre antes del fetch, porque el error que busca nació entre el portal y el lector el día de la
+  captura. Pisarlo lo dejaría midiendo otra cosa. Por eso la memoria vive en un campo propio,
+  `datos_json.precio_portal_revisado`, y el audit lo usa como baseline nuevo con fallback al de
+  la captura.
+
+  🔑 **Se auto-invalida por construcción**: guarda el valor del portal en el momento de juzgarlo,
+  así que si el portal **vuelve a moverse** más que el umbral, el caso reaparece solo y sale
+  marcado `·RE` en el resumen. No es un "ya revisado" incondicional — esos tapan un problema nuevo
+  en algo que miraste hace meses.
+
+  ⚠️ **Aplicarlo DESPUÉS del juez, nunca antes**: sellar sin haber juzgado apaga una alarma real.
+  Si juzgaste sólo una parte, `--solo 3974,8000642`.
 - **🏷️ Matching sospechoso** (nombre no aparece / sin-match-con-nombre) → juez decide ALIAS vs MISMATCH vs
   PM_NUEVO (mismo criterio que `/audit-cola-matching`); candar `id_proyecto_master` si es cluster numerado.
 - **📷 Fotos reemplazadas** (`fotos_rotas` del JSON) → **NO necesitan juez, y son lo ÚNICO del audit que

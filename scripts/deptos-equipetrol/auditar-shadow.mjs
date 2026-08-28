@@ -268,13 +268,37 @@ async function main() {
     buckets[drift.bucket] = (buckets[drift.bucket] || 0) + 1;
 
     // 2) CAMBIO DE PRECIO en el portal (cabecera cruda) — lo que el discovery no ve
-    const base = comparableBaseline(sp, moneda);
+    //
+    // 🔑 MEMORIA (27-ago-2026). El baseline era SIEMPRE el testigo del día de la captura, y
+    // nada lo refresca nunca → una vez que el portal se movía, este chequeo repetía el MISMO
+    // caso en cada corrida para siempre, aunque ya lo hubieras juzgado y corregido. Medido:
+    // se corrigió 8000642 a los 120.000 que pedía el portal y volvió a marcar "suba 26,3%"
+    // en la corrida siguiente. Con ~57 casos por corrida y cadencia mensual, la lista arrastra
+    // todo el mes anterior y la alarma muere de ruido — el mismo agujero que ya se tapó en
+    // §COPIA MAL, en rechazados.json y en la 6ta reincidencia del dedup de K1.
+    //
+    // 🔴 NO se arregla refrescando senales_portal: en VENTA-USD ese campo (precio_candidato)
+    // lo comparte §COPIA MAL, que es ciego al portal de hoy A PROPÓSITO (corre antes del
+    // fetch). Pisarlo lo dejaría midiendo otra cosa. Por eso la memoria va en campo PROPIO.
+    //
+    // El baseline pasa a ser "el último valor del portal que alguien juzgó", con fallback al
+    // de la captura. Se auto-invalida por construcción: no es una marca de "ya revisado"
+    // incondicional — si el portal vuelve a moverse más que el umbral, el caso REAPARECE solo.
+    // Lo escribe sellar-precio-portal.mjs, después de que el juez se expidió.
+    const revisado = Number(dj.precio_portal_revisado?.portal);
+    const usaRevision = Number.isFinite(revisado) && revisado > 0;
+    const base = usaRevision ? revisado : comparableBaseline(sp, moneda);
     const hoy = comparablePortal(h, moneda);
     let precioFlag = null;
     if (base != null && hoy != null && base > 0) {
       const pct = Math.round(Math.abs(hoy - base) / base * 1000) / 10;
       const grado = gradoPrecio(pct);
-      if (grado) { precioFlag = { base, hoy, pct, grado, dir: hoy < base ? 'baja' : 'suba', moneda: moneda || '?' }; preciosCambio.push({ id: p.id, ...precioFlag }); }
+      if (grado) {
+        precioFlag = { base, hoy, pct, grado, dir: hoy < base ? 'baja' : 'suba', moneda: moneda || '?',
+                       baseline: usaRevision ? 'revisado' : 'captura',
+                       revisado_el: usaRevision ? (dj.precio_portal_revisado?.cuando ?? null) : null };
+        preciosCambio.push({ id: p.id, ...precioFlag });
+      }
     }
 
     // 3) MATCHING-lite: ¿el nombre del edificio aún aparece en el anuncio de hoy?
@@ -384,13 +408,24 @@ async function main() {
       precio_bajo_el_portal: precioBajoElPortal.length,
     },
     material, bajas, bajas_residual: bajasResidual, sin_match_con_nombre: sinMatchConNombre, fotos_rotas: fotosRotas,
+    // La lista COMPLETA, no solo el conteo: la consume sellar-precio-portal.mjs.
+    cambios_precio: preciosCambio,
     precio_bajo_el_portal: precioBajoElPortal,
   }, null, 2));
 
   console.log(`\n────────── RESUMEN AUDIT SHADOW (${OP}) ──────────`);
   console.log(`  Filas: ${filas.length}  ·  revisadas: ${revisados}  ·  fetch falló (posible baja): ${buckets.fetch_fallo}`);
   console.log(`  Drift: identicas ${buckets.identicas} · menor ${buckets.cambio_menor} · relevante ${buckets.cambio_relevante} · reescrita ${buckets.reescrita}  (drift ${driftPct}%)`);
-  console.log(`  💲 Cambios de precio en portal: ${preciosCambio.length}${preciosCambio.length ? '  → ' + preciosCambio.slice(0, 12).map((x) => `${x.id}(${x.dir}${x.pct}%)`).join(', ') : ''}`);
+  // Se declara contra QUÉ baseline se midió: "captura" = nadie lo juzgó nunca · "revisado" =
+  // ya se juzgó y el portal se volvió a mover. Sin esa distinción los dos se leen igual.
+  const cambNuevos = preciosCambio.filter((x) => x.baseline !== 'revisado');
+  const cambRe = preciosCambio.filter((x) => x.baseline === 'revisado');
+  console.log(`  💲 Cambios de precio en portal: ${preciosCambio.length}${preciosCambio.length ? '  → ' + preciosCambio.slice(0, 12).map((x) => `${x.id}(${x.dir}${x.pct}%${x.baseline === 'revisado' ? '·RE' : ''})`).join(', ') : ''}`);
+  if (preciosCambio.length) {
+    console.log(`       ${cambNuevos.length} sin juzgar nunca · ${cambRe.length} ya juzgados y el portal SE VOLVIÓ A MOVER (·RE)`);
+    console.log(`       🔑 Al terminar el juez, sellá con:  node sellar-precio-portal.mjs output/audit-shadow-${OP}-${TS}.json`);
+    console.log(`          Sin sellar, estos ${preciosCambio.length} vuelven idénticos la próxima corrida.`);
+  }
   console.log(`  🏷️  Matching sospechoso (nombre no aparece): ${matchingSospecha.length}${matchingSospecha.length ? '  → ' + matchingSospecha.slice(0, 12).map((x) => `${x.id}(${x.edif})`).join(', ') : ''}`);
   console.log(`  ⚠️  Sin match pero con nombre (cola PM_NUEVO/fuzzy): ${sinMatchConNombre.length}`);
   // La lista cruda queda como contexto (chica, entre paréntesis); lo que se GRITA es el residual.
