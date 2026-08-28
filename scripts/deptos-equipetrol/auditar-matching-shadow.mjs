@@ -160,7 +160,7 @@ function haversine(lat1, lon1, lat2, lon2) {
 // publicados con días de diferencia, pueden ser dos unidades del piso. Se muestra en sup.3.
 // `estado_construccion` + `fecha_discovery` los suma la SUPERFICIE 6 (6-ago-2026):
 // hacen falta para reproducir en JS la vigencia que en SQL calcula `es_propiedad_vigente()`.
-const COLS = 'id,fuente,url,tipo_operacion,latitud,longitud,zona,nombre_edificio,id_proyecto_master,piso,duplicado_de,campos_bloqueados,precio_usd,precio_mensual_usd,precio_mensual_bob,area_total_m2,fecha_publicacion,fecha_discovery,estado_construccion,datos_json';
+const COLS = 'id,fuente,url,tipo_operacion,latitud,longitud,zona,nombre_edificio,id_proyecto_master,piso,duplicado_de,campos_bloqueados,primera_ausencia_at,precio_usd,precio_mensual_usd,precio_mensual_bob,area_total_m2,fecha_publicacion,fecha_discovery,estado_construccion,datos_json';
 
 // 🔒 REGLA CRÍTICA #1 del proyecto: `campos_bloqueados` SIEMPRE se respetan (Manual > Automatic).
 // Si un humano ya decidió sobre este campo (ej. "este match es un FP, dejar sin pm"), el audit NO
@@ -774,6 +774,9 @@ async function main() {
       // precio+área iguales son UNA coincidencia, no dos (el precio sale del área) — es el
       // caso K1 y Sky Equinox, donde deduplicar escondería unidades reales.
       clave_fuerte: p.piso != null,
+      // AUSENTE DEL PORTAL (28-ago-2026): el verificador ya no lo encuentra. Solo decide
+      // quién sobrevive en un cluster; no cambia qué se agrupa. Ver dup-checks.mjs.
+      ausente: p.primera_ausencia_at != null,
     }));
     for (const c of detectarDuplicados(props)) {
       const r = realPorId.get(c.sobreviviente) || {};

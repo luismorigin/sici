@@ -22,10 +22,25 @@ const SIM_DUP = 90; // umbral de similitud de descripción para considerar dupli
 // Por eso `clave_fuerte` la setea el caller SOLO cuando el aviso trae `piso` explícito;
 // con piso null (comodín) el comportamiento no cambia y sigue mandando la descripción.
 //
-// props: [{ id, nombre_edificio, precio, area, descripcion, clave_fuerte? }]
+// props: [{ id, nombre_edificio, precio, area, descripcion, clave_fuerte?, ausente? }]
 //   · `clave_fuerte`: true si la clave del grupo incluye una señal que identifica la
 //     UNIDAD (hoy: el piso declarado). Opcional — los callers que no la pasan mantienen
 //     el comportamiento previo, byte por byte.
+//   · `ausente`: true si el aviso YA NO ESTÁ en el portal (`primera_ausencia_at` seteado).
+//     Solo decide QUIÉN SOBREVIVE dentro de un cluster ya formado — no agrupa ni desagrupa
+//     nada. Opcional, con la misma promesa: sin el campo, el orden es el de antes.
+//
+// 🔴 SOBREVIVIENTE (28-ago-2026) — antes era SIEMPRE el id más bajo, o sea el aviso MÁS
+// VIEJO. En una republicación el viejo es justamente el que se está muriendo: el 28-ago el
+// audit propuso tres dedups y en los TRES el sobreviviente estaba invertido (Uptown Drei
+// 187←8001130, Altamura 2044←8001144, Mare 8000098←8000800; los dos primeros con
+// `primera_ausencia_at` seteado ESE MISMO DÍA por el verificador).
+// 🔑 El síntoma es traicionero: aplicar la propuesta tal cual **saca del feed el aviso VIVO
+// y deja publicado el muerto**. En Uptown el departamento desaparecía entero, porque el
+// viejo ya estaba fuera del feed por antigüedad, y ningún número lo delataba.
+// ⚠️ Esto NO cubre el otro efecto: quedarse con el nuevo RESETEA la antigüedad (es para lo
+// que el portal recrea el aviso). Al aplicar hay que arrastrar `fecha_publicacion` del viejo
+// al sobreviviente y bloquearla. Ver docs/backlog/CALIDAD_DATOS_BACKLOG.md.
 // Devuelve clusters: [{ key, sobreviviente, duplicados:[ids], n, ejemplo, por_clave_fuerte }]
 export function detectarDuplicados(props) {
   // 1) agrupar por nombre normalizado + precio + área (candidatos)
@@ -45,7 +60,11 @@ export function detectarDuplicados(props) {
   const clusters = [];
   for (const [key, items] of grupos) {
     if (items.length < 2) continue;
-    const ordenados = [...items].sort((a, b) => a.id - b.id);
+    // Los ausentes del portal van al FINAL: dentro de un cluster, el sobreviviente es el
+    // primero de esta lista. Con `ausente` indefinido en todas, la resta da 0 y el orden
+    // colapsa al de antes (id ascendente) — byte por byte.
+    const ordenados = [...items].sort((a, b) =>
+      ((a.ausente === true) - (b.ausente === true)) || (a.id - b.id));
     const usados = new Set();
     for (let i = 0; i < ordenados.length; i++) {
       const base = ordenados[i];

@@ -1,6 +1,90 @@
 # Backlog Calidad de Datos — SICI
 
-> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 19 Ago 2026.
+> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 28 Ago 2026.
+
+## 🔴 El dedup elige el SOBREVIVIENTE por id más bajo — y hoy eso estuvo mal 3 de 3 (28 Ago 2026)
+
+`scripts/auditoria-feed-ventas/lib/dup-checks.mjs:47` ordena el grupo por id y toma el primero:
+
+```js
+const ordenados = [...items].sort((a, b) => a.id - b.id);
+...
+sobreviviente: base.id,   // = el id más bajo del cluster
+```
+
+**El id más bajo es el aviso MÁS VIEJO, y en una republicación el viejo es justamente el que se
+está muriendo.** El 28-ago el audit propuso tres dedups y en los tres el sobreviviente estaba
+invertido:
+
+| cluster | propuesto | correcto | evidencia |
+|---|---|---|---|
+| Uptown Drei | 187 | **8001130** | 187 con `primera_ausencia_at` = ese mismo día 16:36 |
+| Altamura | 2044 | **8001144** | 2044 con `primera_ausencia_at` = ese mismo día 17:06 |
+| Mare | 8000098 | **8000800** | el viejo arrastra un texto que dice "180.000 $us" con precio 173.000 |
+
+🔑 **El síntoma es traicionero: aplicar la propuesta tal cual saca del feed el aviso VIVO y deja
+publicado el muerto.** En Uptown habría desaparecido el departamento entero (187 ya estaba fuera del
+feed por antigüedad), y nada lo habría avisado.
+
+### ✅ ARREGLADO el 28-ago — pero solo cubre 2 de los 3 casos, y se sabe por qué
+
+`dup-checks.mjs` acepta ahora un campo opcional `ausente` (= `primera_ausencia_at` seteado) y ordena
+poniendo esos al final; el sobreviviente es el primero de la lista. `auditar-matching-shadow.mjs` se
+lo pasa. **Sin el campo el orden colapsa al de antes (id ascendente), byte por byte** — por eso las
+3 skills de prod que también importan esta librería no cambian de comportamiento.
+
+**Medido con la función REAL, no con una réplica** (la lección de esta semana), sobre las 1.249 filas
+activas y replayeando los 4 clusters de hoy:
+
+| prueba | resultado |
+|---|---|
+| No-regresión, todo el inventario, con y sin el campo | **membresía de los clusters IDÉNTICA** · 0 sobrevivientes cambian |
+| Replay Uptown Drei `187 / 8001130` | 187 → **8001130** ✅ |
+| Replay Altamura `2044 / 8001144` | 2044 → **8001144** ✅ |
+| Replay Mare `8000098 / 8000800` | 8000098 → 8000098 🔴 **no cambia** |
+
+🔴 **Mare NO se arregla, y el motivo importa: ninguno de los dos tiene `primera_ausencia_at`.** No es
+una republicación que el verificador haya visto morir — es **el mismo listado de Remax con la URL
+reescrita** (mismo id `120079022-34`, mismo UUID, las mismas 19 fotos), y el verificador no marcó
+ausente a ninguno. Lo que delató al viejo fue algo que ningún campo captura: **su descripción dice
+"180.000 $us" mientras su precio es 173.000** (el drift del 27-ago corrigió el número y no el texto).
+
+👉 Queda abierto: **cuando el cluster es una URL reescrita de Remax, el sobreviviente sigue saliendo
+mal y hay que elegirlo a mano.** Señal candidata a evaluar (sin medir todavía): `fecha_creacion` más
+reciente cuando los dos comparten el id de listado del portal. No se aplicó porque **el verificador
+de Remax tiene un falso-positivo conocido** (`bug_verificador_remax_falsos_positivos`) y conviene
+entender primero por qué no marcó ausente a ninguno de los dos.
+
+⚠️ **Y hay un segundo efecto que el arreglo no cubre: deduplicar hacia el nuevo RESETEA la
+antigüedad.** El portal recrea el aviso justamente para eso — Altamura pasaría de 199 días a 18,
+Uptown de 328 a 24. El 28-ago se resolvió a mano arrastrando `fecha_publicacion` del viejo al
+sobreviviente **y bloqueándola en `campos_bloqueados`** para que la captura no la pise. Si el dedup
+se automatiza, eso tiene que ir en el mismo movimiento.
+🔴 Ojo con la ventana del feed al arrastrar la fecha: la vista corta a **300 días**, salvo
+`preventa`/`en_construccion`/`en_pozo`, que van a **730**. Uptown con la fecha real (328 d) sigue en
+el feed **solo porque está tageado `preventa`**.
+
+## ⚠️ Berchatti Beni — dos criterios de dedup opuestos sobre el mismo caso (28 Ago 2026)
+
+Los avisos **8001153 / 8001154 / 8001155** son la republicación 1:1 de **8000494 / 8000495 / 8000496**
+(emparejados por UUID de listing de Remax; el portal cambió el id padre `120116002` → `1200346220` y
+corrió los sufijos). **No hay doble conteo hoy**: los tres viejos están inactivos y fuera del feed, y
+las fechas de publicación se heredaron bien (114/114/116 días, sin reseteo).
+
+**El problema es de criterio, no de datos.** En su momento alguien **dedupó 8000495 y 8000496 dentro
+de 8000494** — o sea, colapsó las tres unidades en una. El 28-ago el juez del audit recomendó
+**NO tocar** las tres nuevas, con esta evidencia: los 3 tienen **UUID de listing distinto** en el CRM
+de Remax y **3 sets de fotos distintos**.
+
+🔑 **Y por qué el detector automático las agrupa igual:** su criterio es "descripción ≥90% igual",
+pero **esa descripción la escribe nuestro propio lector** a partir de los campos estructurados
+(arranca *"Invertí en un departamento funcional…"*, con emojis) y **no contiene ni un dato de
+unidad** — ni piso, ni número, ni orientación. Dos unidades distintas de 31 m² / 1 dorm del mismo
+proyecto producen texto idéntico **por construcción**. En los clusters donde la descripción es el
+texto CRUDO del portal (con erratas y emojis del captador) el criterio sí discrimina.
+
+**Uno de los dos criterios está mal.** Se zanja abriendo las 3 URLs y comparando fotos y unidad —
+no se puede decidir desde la base. Hasta entonces, el eje horizontal (las 3 nuevas) queda sin tocar.
 
 ## 🔴 Avisos SIN NOMBRE DE EDIFICIO — en VENTA no se publican; en alquiler sí (19 Ago 2026)
 
