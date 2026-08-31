@@ -746,6 +746,7 @@ async function main() {
     : (Number(p.precio_mensual_usd) || Number(p.precio_mensual_bob) || 0);
   const realPorId = new Map(filas.map((p) => [p.id, { nombre: p.nombre_edificio, pm: p.id_proyecto_master, precio: precioDe(p), op: p.tipo_operacion, piso: p.piso, pub: p.fecha_publicacion ? String(p.fecha_publicacion).slice(0, 10) : null }]));
   const sup3 = [];
+  let sup3Revisados = 0;   // clusters silenciados porque un humano ya los juzgó (ver abajo)
   for (const op of OPS) {
     // SOLO props que NO traen `duplicado_de` (heredado de prod / verificador). Sin este filtro, el dedup
     // marcaría un sobreviviente ya elegido por prod como duplicado → CICLO A↔B (los dos se ocultan, el
@@ -778,7 +779,23 @@ async function main() {
       // quién sobrevive en un cluster; no cambia qué se agrupa. Ver dup-checks.mjs.
       ausente: p.primera_ausencia_at != null,
     }));
+    // 🔴 CLAVE DE RASTRO DE LA SUPERFICIE 3 (31-ago-2026) — el hueco que faltaba.
+    // Era la ÚNICA superficie sin forma de registrar un veredicto: un cluster juzgado
+    // "NO son duplicados" volvía TODAS las noches. Medido: Berchatti (8001153/54/55) se
+    // juzgó el 28-ago y reapareció intacto el 29, el 30 y el 31 — cuatro noches, cuatro
+    // veces el mismo trabajo. Es el mismo mecanismo que se cerró el 30-jul en las
+    // superficies 2 y 4 con `confirmado_por`.
+    //
+    // 🔑 SE SILENCIA EL CLUSTER, NO LA PROPIEDAD, y la diferencia importa: si se excluyeran
+    // las props marcadas, un aviso NUEVO que entre a ese mismo grupo se quedaría solo y el
+    // duplicado real pasaría inadvertido. Acá el cluster se arma completo como siempre y
+    // recién después se calla, y SOLO si TODOS sus integrantes están revisados. Basta que
+    // aparezca uno sin marcar para que el grupo entero vuelva al humano.
+    const revisadoDedup = new Set(
+      filas.filter((p) => p.datos_json?.trazabilidad?.dedup_revisado).map((p) => p.id));
     for (const c of detectarDuplicados(props)) {
+      const miembros = [c.sobreviviente, ...c.duplicados];
+      if (miembros.every((id) => revisadoDedup.has(id))) { sup3Revisados++; continue; }
       const r = realPorId.get(c.sobreviviente) || {};
       sup3.push({
         op, edificio: r.nombre || c.nombre_edificio, pm: r.pm ?? null,
@@ -1028,7 +1045,17 @@ async function main() {
         const t = desc.toLowerCase();
         const montoBs = t.match(/bs\.? ?([0-9][0-9.,]{4,})/);
         if (!montoBs) continue;
-        if (/\$us|usd|d[oó]lar/.test(t)) continue;   // habla en las dos monedas → no es inequivoco
+        // 🔴 CORREGIDO 31-ago-2026 — faltaba la forma `US$`. El guard buscaba `$us` (signo
+        // primero) y no reconocia `US$` (signo despues), asi que un aviso que dice
+        // "Precio de venta: US$ 85.000" pasaba como si hablara SOLO en bolivianos.
+        // Costo medido: `8001114` (Curupau Isuto) se levanto como falso positivo **cuatro
+        // noches seguidas** (28, 29, 30 y 31-ago) y se juzgo cuatro veces.
+        // 🔑 Verificado contra el caso que MOTIVO el detector antes de tocarlo: `8000699`
+        // (Vilareal Duo, el `bob` que estuvo 5 semanas con 66% de sobreprecio) NO menciona
+        // dolares en ninguna forma → el guard nuevo NO lo frena y el detector lo sigue viendo.
+        // Medido sobre el feed de venta completo: el guard viejo levanta 1, el nuevo 0, y el
+        // unico que deja de levantarse es el falso positivo. Cero efecto colateral.
+        if (/\$us|us\$|u\$s|usd|d[oó]lar/.test(t)) continue;   // habla en las dos monedas → no es inequivoco
         const bs = Number(montoBs[1].replace(/[.,]/g, '').slice(0, 9));
         sup9.push({
           prop_id: p.id, nombre_edificio: p.nombre_edificio, zona: p.zona,
@@ -1148,10 +1175,21 @@ async function main() {
         if (!pr) continue;                                   // la prop ya no existe: no se toca
         const tieneMatch = pr.id_proyecto_master != null;
         const tieneTag = !!pr.datos_json?.trazabilidad?.confirmado_por;
-        const resuelto = t.superficie === 1 ? tieneMatch : (tieneTag || tieneMatch);
+        // 🔴 CORREGIDO 30-ago-2026 — antes decía `tieneTag || tieneMatch` para las superficies
+        // 2 y 4, y eso las cerraba SIEMPRE en la primera corrida siguiente. Motivo: en esas dos
+        // superficies **tener match es la PRECONDICIÓN, no la resolución** — la 2 mira auto-matches
+        // riesgosos y la 4 los que el lector fijó con dudas: las dos, por definición, ya tienen
+        // `id_proyecto_master`. Así que `tieneMatch` era true siempre y el ticket se cerraba solo,
+        // sin que nadie hubiera juzgado nada.
+        // Medido el 30-ago: de 15 tickets de superficie 4 cerrados, **4 no tenían el tag** — los 4
+        // del 29-ago, cuyo SQL nunca se aplicó. El caso se veía en la misma corrida: el audit cerró
+        // los tickets y a la vez volvió a listar las mismas 4 props en la superficie 4.
+        // 🔑 Para la 2 y la 4 el ÚNICO cierre válido es el tag `confirmado_por`, que es el rastro
+        // que deja el juez. Para la 1 sí alcanza el match: ahí la resolución ES conseguir el pm.
+        const resuelto = t.superficie === 1 ? tieneMatch : tieneTag;
         if (resuelto) aCerrar.push({ ...t, motivo: t.superficie === 1
           ? `la prop ya tiene id_proyecto_master = ${pr.id_proyecto_master}`
-          : `la prop ya lleva el tag ${pr.datos_json?.trazabilidad?.confirmado_por || `pm ${pr.id_proyecto_master}`}` });
+          : `la prop ya lleva el tag ${pr.datos_json?.trazabilidad?.confirmado_por}` });
       }
 
       if (aCerrar.length) {
@@ -1278,6 +1316,9 @@ async function main() {
       dist_metros: s.dist_metros,
     })),
     superficie_3: sup3,
+    // Clusters que un humano YA juzgó (tag `dedup_revisado`) y por eso no se re-proponen.
+    // Se DECLARA el número: un descarte invisible se lee como "no había duplicados".
+    superficie_3_ya_revisados: sup3Revisados,
     superficie_4: sup4,
     // SUPERFICIE 5 — el match quedó LEJOS del edificio. REPORTA, NO DESCONECTA: medido el
     // 4-ago, la mitad de los sospechosos tenían el match BIEN y el pin del portal mal.
@@ -1402,6 +1443,8 @@ async function main() {
   const dupProps = sup3.reduce((a, c) => a + c.duplicados.length, 0);
   console.log(`  Superficie 3 (duplicados apart-hotel/republicación): ${sup3.length} clusters · ${dupProps} props a deduplicar`);
   for (const c of sup3.slice(0, 20)) console.log(`     [${c.op}] "${c.edificio}"${c.pm ? ` pm${c.pm}` : ''} $${c.precio} ${c.area}m² → sobrevive ${c.sobreviviente}, duplicados: ${c.duplicados.join(',')} (${c.n} avisos)${c.por_clave_fuerte ? ` · ⚑ por PISO ${c.piso}+área+precio (textos DIFIEREN) · publicados ${c.fechas_pub.length === 1 ? `el MISMO día (${c.fechas_pub[0]}) → fuerte` : `en fechas DISTINTAS (${c.fechas_pub.join(' vs ')}) → mirar`}` : ''}`);
+  // Se DECLARA lo silenciado: un cluster que no se ve no se distingue de uno que no existe.
+  if (sup3Revisados) console.log(`  └─ + ${sup3Revisados} cluster(s) que un humano YA juzgó (tag \`dedup_revisado\`) → no se re-proponen`);
   console.log(`  Superficie 4 (el LECTOR fijó el pm, con dudas): ${sup4.length}`);
   for (const s of sup4.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}" → pm ${s.pm_actual} (${s.pm_nombre || '?'})  confianza del lector: ${s.confianza_lector}${s.dist_metros != null ? ` · ${s.dist_metros}m` : ''}${linkDe(s.url)}`);
   // Con sup4 en 0 hay DOS motivos posibles y conviene no confundirlos en el parte matutino:
