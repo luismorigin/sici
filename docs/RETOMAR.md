@@ -8,11 +8,20 @@
 
 ---
 
-## 0. 🔴 LO PRIMERO DE MAÑANA — la corrida de las 09:00 del seguimiento (26-ago-2026)
+## 0. ✅ EL SEGUIMIENTO DE SHORTLISTS ANDA SOLO (encendido 26-ago · verificado 31-ago-2026)
 
-**Encendido y probado, pero con UNA corrida real de una sola persona.** Mañana a las 09:00
-salen **4 mensajes** (Mario, Pablo, Carlos y Carla): el primer volumen. Es lo único del
-backlog que le escribe a clientes reales sin que nadie apriete un botón.
+> Esta sección decía **"🔴 LO PRIMERO DE MAÑANA"** y apuntaba a la corrida del 27-ago. Ese
+> "mañana" quedó cinco días atrás y el circuito hace rato que funciona: leerla así mandaba a
+> revisar algo ya resuelto. Se **reemplaza** el encabezado y se conserva todo lo demás — el
+> cómo se revisa, el postmortem y los pendientes siguen valiendo.
+
+**Medido el 31-ago sobre los últimos 3 días:** 8 mensajes salidos, todos con envío confirmado
+contra el saliente real. 🔑 **Uno por PERSONA, no uno por shortlist** — se verificó justo
+porque una clienta tenía 3 shortlists en 6 minutos y las 3 quedaron marcadas: **recibió un
+solo mensaje**. La deduplicación funciona.
+
+Es lo único del backlog que le escribe a clientes reales sin que nadie apriete un botón, así
+que conviene saber revisarlo aunque ya no haya que vigilarlo a diario.
 
 🔴 **NO se revisa con `cron.job_run_details` ni con `net._http_response`.** Esta sección decía
 que ahí se leía el resultado y **las dos fuentes fallan** (comprobado la mañana del 27-ago):
