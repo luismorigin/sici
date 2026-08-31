@@ -19,7 +19,7 @@ import type { GetStaticProps } from 'next'
 import { type UnidadAlquiler, type FiltrosAlquiler, buscarUnidadesAlquiler } from '@/lib/supabase'
 import { displayZona } from '@/lib/zonas'
 import type { ZonaFiltroAlquiler } from '@/lib/macrozonas'
-import { dormLabel, formatPriceBob, firstName, nombreAlquiler } from '@/lib/format-utils'
+import { dormLabel, formatPriceBob, firstName, nombreAlquiler, areaTxt, areaCon } from '@/lib/format-utils'
 import { fbqTrack } from '@/lib/meta-pixel'
 import { trackEvent } from '@/lib/analytics'
 import { useWhatsAppCapture, triggerWhatsAppCapture, setDemoModeForCapture, setBrokerModeForCapture, setContactoDirectoForCapture } from '@/hooks/useWhatsAppCapture'
@@ -306,7 +306,7 @@ const handleWhatsAppLead = triggerWhatsAppCapture
 function buildShareWhatsAppUrl(p: UnidadAlquiler) {
   const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
   const zone = displayZona(p.zona)
-  const specs = `${dormLabel(p.dormitorios)} · ${Math.round(p.area_m2)}m² · ${formatPrice(p.precio_mensual_bob)}/mes`
+  const specs = `${dormLabel(p.dormitorios)} · ${areaCon(p.area_m2, ' · ')}${formatPrice(p.precio_mensual_bob)}/mes`
   const url = `https://simonbo.com/alquileres?id=${p.id}`
   const text = `Mira este depto en alquiler:\n\n${name} — ${zone}\n${specs}\n\n${url}`
   return `https://wa.me/?text=${encodeURIComponent(text)}`
@@ -316,7 +316,7 @@ function buildShareWhatsAppUrl(p: UnidadAlquiler) {
 function buildClientToBrokerAlquilerMessage(p: UnidadAlquiler, brokerName: string): string {
   const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
   const dorms = dormLabel(p.dormitorios)
-  return `Hola ${firstName(brokerName)}, me interesa este alquiler:\n\n${name} (${dorms} · ${Math.round(p.area_m2)}m² · ${formatPrice(p.precio_mensual_bob)}/mes)\n\n¿Podemos coordinar?`
+  return `Hola ${firstName(brokerName)}, me interesa este alquiler:\n\n${name} (${dorms} · ${areaCon(p.area_m2, ' · ')}${formatPrice(p.precio_mensual_bob)}/mes)\n\n¿Podemos coordinar?`
 }
 
 // Track share separately — call from onClick, not from URL builder
@@ -1582,7 +1582,7 @@ export default function FeedAlquileres({ macrozona,
       const lines = hearted.map(p => {
         const name = p.nombre_edificio || p.nombre_proyecto || 'Depto'
         const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
-        return `• ${name} (${dorms} · ${Math.round(p.area_m2)}m² · Bs ${Math.round(p.precio_mensual_bob).toLocaleString('es-BO')}/mes)`
+        return `• ${name} (${dorms} · ${areaCon(p.area_m2, ' · ')}Bs ${Math.round(p.precio_mensual_bob).toLocaleString('es-BO')}/mes)`
       }).join('\n')
       if (contactoDirecto) {
         msg = `Hola ${firstName(publicShare.broker.nombre)}, de los que me pasaste me interesaron:\n\n${lines}\n\n¿Tenés otras parecidas?`
@@ -2664,7 +2664,7 @@ export default function FeedAlquileres({ macrozona,
                 const lines = hearted.map(p => {
                   const name = p.nombre_edificio || p.nombre_proyecto || 'Depto'
                   const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
-                  return `• ${name} (${dorms} · ${Math.round(p.area_m2)}m² · Bs ${Math.round(p.precio_mensual_bob).toLocaleString('es-BO')}/mes)`
+                  return `• ${name} (${dorms} · ${areaCon(p.area_m2, ' · ')}Bs ${Math.round(p.precio_mensual_bob).toLocaleString('es-BO')}/mes)`
                 }).join('\n')
                 // B2C: el broker dueño es el bot → re-enfocar a "pedir más opciones"
                 // (el bot no coordina visitas; eso va por el captador). Los favoritos
@@ -3645,7 +3645,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
         </div>
         <div className="mfc-m-body">
           <div className="mfc-m-name">{spName}</div>
-          <div className="mfc-m-specs">{displayZona(sp.zona)} · {Math.round(sp.area_m2)}m² · {dormLabel(sp.dormitorios)}</div>
+          <div className="mfc-m-specs">{[displayZona(sp.zona), areaTxt(sp.area_m2), dormLabel(sp.dormitorios)].filter(Boolean).join(' · ')}</div>
           <div className="mfc-m-price">{formatPrice(sp.precio_mensual_bob)}<span>/mes</span></div>
           {spBadges.length > 0 && (
             <div className="mfc-m-badges">{spBadges.map((b, i) => <span key={i} className="mfc-m-badge">{b}</span>)}</div>
@@ -3691,7 +3691,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
       </div>
       <div className="map-float-body">
         <div className="map-float-name">{spName}</div>
-        <div className="map-float-zona">{displayZona(sp.zona)} · {Math.round(sp.area_m2)}m² · {dormLabel(sp.dormitorios)}</div>
+        <div className="map-float-zona">{[displayZona(sp.zona), areaTxt(sp.area_m2), dormLabel(sp.dormitorios)].filter(Boolean).join(' · ')}</div>
         <div className="map-float-price">{formatPrice(sp.precio_mensual_bob)}<span>/mes</span></div>
         {spBadges.length > 0 && (
           <div className="map-float-badges">{spBadges.map((b, i) => <span key={i} className="map-float-badge">{b}</span>)}</div>
@@ -3813,7 +3813,7 @@ const DesktopCard = memo(function DesktopCard({
         <div className="dc-price-block">
           <div className="dc-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
           <div className="dc-specs">
-            {[`${Math.round(p.area_m2)}m²`, dormLabel(p.dormitorios), p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null, p.piso ? `Piso ${p.piso}` : null].filter(Boolean).join(' · ')}
+            {[areaTxt(p.area_m2) || null, dormLabel(p.dormitorios), p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null, p.piso ? `Piso ${p.piso}` : null].filter(Boolean).join(' · ')}
           </div>
         </div>
         <div className="dc-specs-2">
@@ -4568,7 +4568,7 @@ function BottomSheet({
   }
 
   const features: Array<{ icon: string; label: string; value: string; highlight?: boolean }> = []
-  features.push({ icon: 'area', label: 'Area', value: `${Math.round(p.area_m2)}m²` })
+  if (p.area_m2 > 0) features.push({ icon: 'area', label: 'Area', value: areaTxt(p.area_m2) })
   features.push({ icon: 'bed', label: 'Tipo', value: dormLabel(p.dormitorios) })
   // Sin dato de baños → no mostrar el tile: un "—" comunica "dato roto"
   if (p.banos) features.push({ icon: 'bath', label: 'Banos', value: `${p.banos} bano${p.banos > 1 ? 's' : ''}` })
@@ -4605,7 +4605,7 @@ function BottomSheet({
         )}
       </div>
       <div className="bs-hr-specs">
-        {[dormLabel(p.dormitorios), `${Math.round(p.area_m2)}m²`, p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null, p.piso ? `Piso ${p.piso}` : null].filter(Boolean).join(' · ')}
+        {[dormLabel(p.dormitorios), areaTxt(p.area_m2) || null, p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : null, p.piso ? `Piso ${p.piso}` : null].filter(Boolean).join(' · ')}
       </div>
       {publicShareMode && priceSnapshot && priceSnapshot.bobSnapshot != null && priceSnapshot.bobActual != null && priceSnapshot.bobSnapshot > 0 && Math.abs((priceSnapshot.bobActual - priceSnapshot.bobSnapshot) / priceSnapshot.bobSnapshot) >= 0.01 && (
         <div className={`bs-hr-price-change ${priceSnapshot.bobActual < priceSnapshot.bobSnapshot ? 'down' : 'up'}`}>
@@ -4733,7 +4733,7 @@ function BottomSheet({
           {p.area_m2 > 0 && (
             <div className="bsm-stat">
               <svg className="bsm-stat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg>
-              <div className="bsm-stat-txt"><b>{Math.round(p.area_m2)}</b><span>m²</span></div>
+              <div className="bsm-stat-txt"><b>{p.area_m2 > 0 ? Math.round(p.area_m2) : 's/d'}</b><span>m²</span></div>
             </div>
           )}
           {p.banos !== null && p.banos > 0 && (
@@ -5028,7 +5028,7 @@ function BottomSheet({
                   <div className="bs-sim-info">
                     <div className="bs-sim-name">{spName}</div>
                     <div className="bs-sim-price">{formatPrice(sp.precio_mensual_bob)}/mes</div>
-                    <div className="bs-sim-specs">{Math.round(sp.area_m2)}m² · {dormLabel(sp.dormitorios)}</div>
+                    <div className="bs-sim-specs">{[areaTxt(sp.area_m2), dormLabel(sp.dormitorios)].filter(Boolean).join(' · ')}</div>
                   </div>
                 </button>
               )

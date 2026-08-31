@@ -120,3 +120,24 @@ export function formatPriceUSD(p: number | null | undefined): string {
 export function firstName(full: string): string {
   return full.trim().split(/\s+/)[0] || full
 }
+
+// ── ÁREA — el aviso puede no informarla, y eso NO es cero ────────────────────
+// Los mappers de los feeds hacen `parseFloat(p.area_m2) || 0`, así que "no lo
+// sabemos" llega como 0. Interpolarlo directo imprime "0 m²", que es AFIRMAR un
+// dato falso — y en los mensajes de WhatsApp se lo afirma al captador.
+// 🔑 El bot ya se comporta bien: sus RPC devuelven el área tal cual, sin COALESCE,
+//    así que un aviso sin dato le llega como `null`. Esto hace que el front haga
+//    lo mismo. Medido el 31-ago: 28 avisos activos no informan área — ni el portal
+//    ni el texto la traen, no hay nada que extraer.
+// ⚠️ NUNCA escribir `${Math.round(x.area_m2)}m²` a mano. Usar estos dos.
+
+/** "45m²" cuando se sabe · "" cuando no. Para JSX suelto. */
+export function areaTxt(a?: number | null): string {
+  return a && a > 0 ? `${Math.round(a)}m²` : ''
+}
+
+/** "45m² · " cuando se sabe · "" cuando no. El separador va ADENTRO para no
+ *  dejar " ·  · " colgando cuando falta el dato. */
+export function areaCon(a: number | null | undefined, sep: string): string {
+  return a && a > 0 ? `${Math.round(a)}m²${sep}` : ''
+}

@@ -36,7 +36,7 @@ import ReportPropertyModal from '@/components/broker/ReportPropertyModal'
 import DataReportsBanner from '@/components/broker/DataReportsBanner'
 import EdificioSelect from '@/components/feed/EdificioSelect'
 import IsotipoSimon from '@/components/feed/IsotipoSimon'
-import { firstName, dormLabelOrNull } from '@/lib/format-utils'
+import { firstName, dormLabelOrNull, areaTxt, areaCon } from '@/lib/format-utils'
 import { buildAtribucionWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
 import { parsearBusqueda } from '@/lib/busqueda-natural'
@@ -1493,7 +1493,7 @@ function MapFloatCard({ property: p, isFavorite, onClose, onOpenDetail, onToggle
       </div>
       <div className="mfc-body">
         <div className="mfc-name">{p.proyecto}</div>
-        <div className="mfc-specs">{displayZona(p.zona)} · {Math.round(p.area_m2)}m²{dorms ? ` · ${dorms}` : ''}</div>
+        <div className="mfc-specs">{displayZona(p.zona)}{areaTxt(p.area_m2) ? ` · ${areaTxt(p.area_m2)}` : ''}{dorms ? ` · ${dorms}` : ''}</div>
         <div className="mfc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
         <div className="mfc-m2">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</div>
         <button className="mfc-detail" onClick={onOpenDetail}>Ver detalles</button>
@@ -1527,7 +1527,7 @@ const MapRailCard = memo(function MapRailCard({ property: p, idx, isFavorite, on
       </div>
       <div className="mt-rc-body">
         <div className="mt-rc-name">{p.proyecto}</div>
-        <div className="mt-rc-specs">{displayZona(p.zona)}{dorms ? ` · ${dorms}` : ''} · {Math.round(p.area_m2)} m²</div>
+        <div className="mt-rc-specs">{displayZona(p.zona)}{dorms ? ` · ${dorms}` : ''}{areaTxt(p.area_m2) ? ` · ${areaTxt(p.area_m2)}` : ''}</div>
         <div className="mt-rc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
         {p.precio_m2 > 0 && <div className="mt-rc-m2">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</div>}
         {estado && <span className="mt-rc-tag">{estado}</span>}
@@ -1942,7 +1942,7 @@ function BottomSheet({ nombreMacrozona, property: p, isOpen, onClose, onShare, o
             <div className="bs-sim-info">
               <div className="bs-sim-name">{sp.proyecto}</div>
               <div className="bs-sim-price">$us {Math.round(sp.precio_usd).toLocaleString('en-US')}</div>
-              <div className="bs-sim-specs">{Math.round(sp.area_m2)}m²{dormLabelOrNull(sp.dormitorios) ? ` · ${dormLabelOrNull(sp.dormitorios)}` : ''}</div>
+              <div className="bs-sim-specs">{[areaTxt(sp.area_m2), dormLabelOrNull(sp.dormitorios)].filter(Boolean).join(' · ')}</div>
             </div>
           </button>
         ))}
@@ -1967,7 +1967,7 @@ function BottomSheet({ nombreMacrozona, property: p, isOpen, onClose, onShare, o
           {p.area_m2 > 0 && (
             <div className="bsm-stat">
               <svg className="bsm-stat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg>
-              <div className="bsm-stat-txt"><b>{Math.round(p.area_m2)}</b><span>m²</span></div>
+              <div className="bsm-stat-txt"><b>{p.area_m2 > 0 ? Math.round(p.area_m2) : 's/d'}</b><span>m²</span></div>
             </div>
           )}
           {p.banos !== null && (
@@ -2160,7 +2160,7 @@ function BottomSheet({ nombreMacrozona, property: p, isOpen, onClose, onShare, o
               {p.area_m2 > 0 && (
                 <div className="bs-feat">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="bs-fi"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg>
-                  <div className="bs-fv">{Math.round(p.area_m2)}m²</div>
+                  <div className="bs-fv">{areaTxt(p.area_m2) || 'área no informada'}</div>
                   <div className="bs-fl">Área</div>
                 </div>
               )}
@@ -2445,11 +2445,11 @@ function BottomSheet({ nombreMacrozona, property: p, isOpen, onClose, onShare, o
           <div className="bsm-aside">
           <div className="bs-sticky-footer">
             {publicShareMode && !contactoDirecto && publicShareBroker ? (
-              <a href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${firstName(publicShareBroker.nombre)}, me interesa: ${p.proyecto} (${p.dormitorios === 0 ? 'Mono' : p.dormitorios + ' dorm'}, ${Math.round(p.area_m2)}m², $us ${Math.round(p.precio_usd).toLocaleString('en-US')}).`)}`}
+              <a href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${firstName(publicShareBroker.nombre)}, me interesa: ${p.proyecto} (${p.dormitorios === 0 ? 'Mono' : p.dormitorios + ' dorm'}, ${areaCon(p.area_m2, ', ')}$us ${Math.round(p.precio_usd).toLocaleString('en-US')}).`)}`}
                 target="_blank" rel="noopener noreferrer" className="bs-wsp-cta"
                 onClick={(e) => {
                   e.preventDefault()
-                  const msg = `Hola ${firstName(publicShareBroker.nombre)}, me interesa: ${p.proyecto} (${p.dormitorios === 0 ? 'Mono' : p.dormitorios + ' dorm'}, ${Math.round(p.area_m2)}m², $us ${Math.round(p.precio_usd).toLocaleString('en-US')}).`
+                  const msg = `Hola ${firstName(publicShareBroker.nombre)}, me interesa: ${p.proyecto} (${p.dormitorios === 0 ? 'Mono' : p.dormitorios + ' dorm'}, ${areaCon(p.area_m2, ', ')}$us ${Math.round(p.precio_usd).toLocaleString('en-US')}).`
                   openWhatsApp(publicShareBroker.telefono, msg, { origen: 'sheet_public_share', propiedad_id: p.id, tipo_operacion: 'venta' })
                 }}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -2458,7 +2458,7 @@ function BottomSheet({ nombreMacrozona, property: p, isOpen, onClose, onShare, o
             ) : p.agente_telefono && (() => {
               const buildSheetMsg = (): string => {
                 const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
-                const specs = `${dorms ? `${dorms} · ` : ''}${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')}`
+                const specs = `${dorms ? `${dorms} · ` : ''}${areaCon(p.area_m2, ' · ')}$us ${Math.round(p.precio_usd).toLocaleString('en-US')}`
                 if (brokerMode && brokerInfo) {
                   const identidad = brokerInfo.inmobiliaria
                     ? `${brokerInfo.nombre} de ${brokerInfo.inmobiliaria}`
@@ -2602,7 +2602,7 @@ function priceChangeBadge(snap: { rawSnapshot: number | null; normSnapshot: numb
 // Usado en /b/[hash] para botones "Consultar por WA" en card o sheet.
 function buildClientToBrokerMessage(p: UnidadVenta, brokerName: string): string {
   const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
-  return `Hola ${firstName(brokerName)}, me interesa esta propiedad:\n\n${p.proyecto} (${dorms ? `${dorms} · ` : ''}${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})\n\n¿Podemos coordinar?`
+  return `Hola ${firstName(brokerName)}, me interesa esta propiedad:\n\n${p.proyecto} (${dorms ? `${dorms} · ` : ''}${areaCon(p.area_m2, ' · ')}$us ${Math.round(p.precio_usd).toLocaleString('en-US')})\n\n¿Podemos coordinar?`
 }
 
 // Mensaje WhatsApp del cliente al broker con LISTA de propiedades de interés.
@@ -2610,7 +2610,7 @@ function buildClientToBrokerMessage(p: UnidadVenta, brokerName: string): string 
 function buildClientShortlistInterestMessage(props: UnidadVenta[], brokerName: string): string {
   const lines = props.map(p => {
     const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
-    return `• ${p.proyecto} (${dorms ? `${dorms} · ` : ''}${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+    return `• ${p.proyecto} (${dorms ? `${dorms} · ` : ''}${areaCon(p.area_m2, ' · ')}$us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
   }).join('\n')
   return `Hola ${firstName(brokerName)}, estoy interesado en estas alternativas:\n\n${lines}\n\n¿Podemos coordinar?`
 }
@@ -2621,7 +2621,7 @@ function buildClientShortlistInterestMessage(props: UnidadVenta[], brokerName: s
 function buildAgentWaMessage(p: UnidadVenta, brokerInfo: { nombre: string; inmobiliaria?: string | null } | null, nombreMacrozona: string): string {
   if (brokerInfo) {
     const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
-    const specs = `${dorms ? `${dorms} · ` : ''}${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')}`
+    const specs = `${dorms ? `${dorms} · ` : ''}${areaCon(p.area_m2, ' · ')}$us ${Math.round(p.precio_usd).toLocaleString('en-US')}`
     const identidad = brokerInfo.inmobiliaria
       ? `${brokerInfo.nombre} de ${brokerInfo.inmobiliaria}`
       : `${brokerInfo.nombre}, broker independiente`
@@ -3064,7 +3064,7 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
     setViewerPhotos(p.fotos_urls)
     setViewerIndex(photoIdx)
     setViewerName(p.proyecto)
-    setViewerSubtitle(`${displayZona(p.zona)} · ${Math.round(p.area_m2)}m² · ${p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`} · $us ${Math.round(p.precio_usd).toLocaleString('en-US')}`)
+    setViewerSubtitle(`${displayZona(p.zona)} · ${areaCon(p.area_m2, ' · ')}${p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`} · $us ${Math.round(p.precio_usd).toLocaleString('en-US')}`)
     setViewerOpen(true)
     trackEvent('view_photos_venta', { property_id: p.id, property_name: p.proyecto, fotos_count: p.fotos_urls.length })
   }
@@ -3400,7 +3400,7 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
       : `${window.location.origin}/ventas`
     const url = `${baseUrl}?id=${p.id}`
     const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
-    const text = `Mirá esta propiedad: ${p.proyecto} (${dorms ? `${dorms}, ` : ''}${Math.round(p.area_m2)}m², $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+    const text = `Mirá esta propiedad: ${p.proyecto} (${dorms ? `${dorms}, ` : ''}${areaCon(p.area_m2, ', ')}$us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
 
     trackEvent('share_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), origen: publicShareMode ? 'public_share' : 'feed' })
 
@@ -3732,7 +3732,7 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
     if (hearted.length > 0) {
       const lines = hearted.map(p => {
         const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
-        return `• ${p.proyecto} (${dorms ? `${dorms} · ` : ''}${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+        return `• ${p.proyecto} (${dorms ? `${dorms} · ` : ''}${areaCon(p.area_m2, ' · ')}$us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
       }).join('\n')
       if (contactoDirecto) {
         msg = `Hola ${firstName(publicShare.broker.nombre)}, de las que me pasaste me interesaron:\n\n${lines}\n\n¿Tenés otras parecidas?`
@@ -4094,7 +4094,7 @@ export default function FeedVentas({ macrozona, head, seo, initialProperties = [
               if (hearted.length > 0) {
                 const lines = hearted.map(p => {
                   const dorms = dormLabelOrNull(p.dormitorios)   // null = el aviso no lo declara → se omite
-                  return `• ${p.proyecto} (${dorms ? `${dorms} · ` : ''}${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+                  return `• ${p.proyecto} (${dorms ? `${dorms} · ` : ''}${areaCon(p.area_m2, ' · ')}$us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
                 }).join('\n')
                 // B2C: el broker dueño es el bot → re-enfocar a "pedir más opciones"
                 // (el bot no coordina visitas; eso va por el captador). Los favoritos
