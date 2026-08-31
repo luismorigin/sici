@@ -1120,6 +1120,98 @@ async function main() {
 
   const { sup11, sup11Vecinas } = await colisionesCatalogo();
 
+  // ---------------------------------------------------------------------------
+  // SUPERFICIE 11b — UNA PROP CAYÓ DEL LADO EQUIVOCADO DE UNA COLISIÓN (31-ago-2026)
+  // ---------------------------------------------------------------------------
+  // La 11 mira el CATÁLOGO: qué fichas el matcher no puede distinguir. Esta mira si
+  // alguna PROPIEDAD ya cayó del lado equivocado de una de esas colisiones.
+  //
+  // 🔑 EL CASO QUE LA ORIGINÓ, con su cronología medida:
+  //   · 28-may  se crea pm 412 "Edificio Camila II"
+  //   · 29-jul  entra la prop 2702, cuyo aviso dice "Condominio Camila" SIN numeral.
+  //             En ese momento 412 era la ÚNICA "camila" del catálogo → el match era
+  //             correcto y defendible.
+  //   · 17-ago  se crea pm 584 "Condominio Camila". Desde ese día la prop le pertenece
+  //             a la 584 — y NADA la re-matcheó.
+  //   · 31-ago  se encuentra a mano, 14 días después, a 565 m de su ficha cuando la
+  //             correcta estaba a 3 m.
+  // 👉 El mecanismo de fondo es una regla conocida del proyecto: **el matcher no
+  //    re-matchea props viejas**, arregla lo que entra de ahí en adelante. Así que cada
+  //    ficha nueva puede dejar huérfanas propiedades ya capturadas, en silencio.
+  //
+  // 🔴 NINGUNA OTRA SUPERFICIE PODÍA VERLO: la 5 (match lejos) dispara a los 800 m y
+  // eran 565; la 2 (auto-match riesgoso) exige zona distinta y las dos fichas comparten
+  // zona. Por eso esto va acá y no es una variante de las que ya existen.
+  //
+  // 🔑 LA REGLA ES UNA CONJUNCIÓN, Y NINGUNA DE LAS DOS MITADES SIRVE SOLA — medido el
+  // 31-ago sobre las 985 props activas con ficha y nombre, ANTES de escribir el código:
+  //   · solo el NOMBRE (calza exacto con otra ficha y no con la suya) → **7 casos, los
+  //     7 falsos positivos**: avisos que dicen "Barcelona" a secas, colgados de
+  //     `pm 273 "CONDOMINIO BARCELONA 04.05 Miró Tower"` a 9 m —correctísimo— que calzan
+  //     por nombre con `pm 427 "Condominio Barcelona"`, a 6.838 m.
+  //   · solo la DISTANCIA (una hermana del grupo está más cerca) → **5 casos, 4 de
+  //     ruido**: Platinum 46 m vs 0, Condado 1.317 vs 1.277, Galil 304 vs 278, Barak
+  //     32 vs 30. Diferencias que son el error del pin, no del match.
+  //   · las DOS juntas → **1 caso, y era el real**. Cero falsos positivos.
+  // El nombre dice quién PODRÍA ser; la distancia dice quién ES.
+  //
+  // 🔴 REPORTA, NO DECIDE — como la 5, la 6 y la 7. El veredicto lo da un humano leyendo
+  // el aviso; acá sólo se dice "estas dos fichas se llaman igual y la otra está más cerca".
+  // Se saltean los PINES GENÉRICOS del portal: ahí la distancia es una ilusión y la
+  // conjunción se quedaría sin su árbitro.
+  const sup11b = [];
+  {
+    const { data: pmsAct, error: ePmA } = await sb.from('proyectos_master')
+      .select('id_proyecto_master,nombre_oficial,latitud,longitud')
+      .eq('activo', true);
+    if (ePmA) {
+      console.log(`   ⚠️  Superficie 11b no pudo leer proyectos_master (${ePmA.message}) — se DECLARA, no se omite.`);
+    } else {
+      // índice núcleo → fichas que se llaman así (mismo helper que usa el filtro de alias:
+      // saca el prefijo genérico y CONSERVA el numeral, que es lo que normalize_nombre borra)
+      const porNucleo = new Map();
+      for (const pm of pmsAct || []) {
+        if (pm.latitud == null || pm.longitud == null) continue;
+        const k = nucleo(pm.nombre_oficial);
+        if (!k) continue;
+        if (!porNucleo.has(k)) porNucleo.set(k, []);
+        porNucleo.get(k).push(pm);
+      }
+      const porPm = new Map((pmsAct || []).map((x) => [x.id_proyecto_master, x]));
+
+      for (const p of filas) {
+        if (p.duplicado_de != null || !p.nombre_edificio || p.id_proyecto_master == null) continue;
+        if (p.latitud == null || p.longitud == null) continue;
+        if (pinesGenericos.has(claveGps(p.latitud, p.longitud))) continue;   // la distancia no sería evidencia
+        if (candado(p, 'id_proyecto_master')) continue;                      // un humano ya lo decidió
+        const k = nucleo(p.nombre_edificio);
+        const homonimas = porNucleo.get(k) || [];
+        if (homonimas.length === 0) continue;
+        // si su PROPIA ficha se llama así, el match es coherente por nombre → no hay nada que decir
+        if (homonimas.some((f) => f.id_proyecto_master === p.id_proyecto_master)) continue;
+        const suya = porPm.get(p.id_proyecto_master);
+        if (!suya || suya.latitud == null) continue;
+        const dSuya = haversine(p.latitud, p.longitud, suya.latitud, suya.longitud);
+        // ...y de las que SÍ se llaman así, ¿alguna está más cerca? Esa es la mitad que arbitra.
+        const masCerca = homonimas
+          .map((f) => ({ f, d: haversine(p.latitud, p.longitud, f.latitud, f.longitud) }))
+          .filter((x) => x.d < dSuya)
+          .sort((a, b) => a.d - b.d)[0];
+        if (!masCerca) continue;
+        sup11b.push({
+          prop_id: p.id, op: p.tipo_operacion, url: p.url,
+          nombre_edificio: p.nombre_edificio, nucleo: k,
+          pm_actual: p.id_proyecto_master, pm_actual_nombre: suya.nombre_oficial,
+          metros_a_su_pm: dSuya,
+          pm_que_calza: masCerca.f.id_proyecto_master, pm_que_calza_nombre: masCerca.f.nombre_oficial,
+          metros_al_que_calza: masCerca.d,
+        });
+      }
+      sup11b.sort((a, b) => (b.metros_a_su_pm - b.metros_al_que_calza) - (a.metros_a_su_pm - a.metros_al_que_calza));
+    }
+  }
+
+
   // ═══════════════════════════════════════════════════════════════════════════
   // PERSISTIR LOS HALLAZGOS DE MATCHING (mig 335) — la bandeja de /admin/revisar
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1290,7 +1382,7 @@ async function main() {
   const file = join(OUT, `audit-matching-shadow-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, ops: OPS, total_filas: filas.length,
-    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, superficie_6_estado_obra_contradictorio: sup6.length, superficie_6_props_afectadas: sup6.reduce((a, c) => a + c.props_afectadas, 0), superficie_7_brecha_precio: sup7.length, superficie_7_props_afectadas: sup7.reduce((a, c) => a + c.n, 0), superficie_10_macrozona_incoherente: sup10.length, superficie_11_colisiones_catalogo: sup11.length, superficie_11_vecinas_silenciadas: sup11Vecinas, ya_confirmados_por_auditor: supConfirmadas.length },
+    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, superficie_6_estado_obra_contradictorio: sup6.length, superficie_6_props_afectadas: sup6.reduce((a, c) => a + c.props_afectadas, 0), superficie_7_brecha_precio: sup7.length, superficie_7_props_afectadas: sup7.reduce((a, c) => a + c.n, 0), superficie_10_macrozona_incoherente: sup10.length, superficie_11_colisiones_catalogo: sup11.length, superficie_11_vecinas_silenciadas: sup11Vecinas, superficie_11b_prop_del_lado_equivocado: sup11b.length, ya_confirmados_por_auditor: supConfirmadas.length },
     superficie_7_umbral_brecha_pct: BRECHA_SOSPECHOSA_PCT,
     superficie_9_moneda_incoherente: sup9.length,
     superficie_10: sup10,
@@ -1298,6 +1390,10 @@ async function main() {
     // CATÁLOGO, no de la zona auditada: sale igual en los dos logs de la noche.
     superficie_11: sup11,
     superficie_11_vecinas_silenciadas: sup11Vecinas,
+    // SUPERFICIE 11b — una PROP cayó del lado equivocado de una colisión: su nombre calza
+    // exacto con OTRA ficha activa (y no con la suya) Y esa otra está MÁS CERCA. Las dos
+    // mitades juntas: por separado dan 7 y 5 falsos positivos, juntas dieron 1 y era real.
+    superficie_11b: sup11b,
     superficie_5_umbral_metros: DISTANCIA_SOSPECHOSA_M,
     superficie_1: sup1, superficie_2: sup2,
     // Nombres YA juzgados como no-edificio (odónimo / familia ambigua) → no van al juez.
@@ -1422,6 +1518,18 @@ async function main() {
     console.log('');
   }
   imprimirColisiones(sup11, sup11Vecinas);
+  if (sup11b.length) {
+    console.log(`  🎯 Superficie 11b (una prop cayó del lado equivocado de una colisión): ${sup11b.length}`);
+    console.log(`     ⚠️  REPORTA, NO DECIDE. Dos señales que solas no sirven: el NOMBRE calza exacto`);
+    console.log(`         con otra ficha (y no con la suya) Y esa otra está MÁS CERCA. El nombre dice`);
+    console.log(`         quién PODRÍA ser; la distancia dice quién ES. Pines genéricos: salteados.`);
+    for (const s of sup11b) {
+      console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}"${linkDe(s.url)}`);
+      console.log(`        está en pm ${s.pm_actual} "${s.pm_actual_nombre}" a ${s.metros_a_su_pm} m`);
+      console.log(`        calza con pm ${s.pm_que_calza} "${s.pm_que_calza_nombre}" a ${s.metros_al_que_calza} m  ← ${s.metros_a_su_pm - s.metros_al_que_calza} m más cerca`);
+    }
+    console.log('');
+  }
   console.log(`  Superficie 1 (sin match + con nombre → PM_NUEVO/fuzzy): ${sup1.length}`);
   for (const s of sup1.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}"  cands:${s.candidatos.length}${s.candidatos[0] ? ` (mejor ${s.candidatos[0].nombre} ${s.candidatos[0].score})` : ''}${linkDe(s.url)}`);
   // Se DECLARA lo filtrado (regla 3 de NOMBRES_NO_EDIFICIO): un descarte invisible se lee

@@ -159,6 +159,33 @@ carga, eso lo cubre el otro comando, `/audit-deptos-shadow`, que sí re-fetchea 
    No lee propiedades, no toca la bandeja `audit_hallazgos` y **no deja la marca de audit completo del
    día** — o sea, no le miente a los reintentos agendados. Útil después de cargar fichas nuevas.
 
+11b. **UNA PROP CAYÓ DEL LADO EQUIVOCADO DE UNA COLISIÓN** (31-ago-2026) — la 11 mira el catálogo;
+   ésta mira si alguna **propiedad** ya cayó del lado malo. Nació de `2702`: el aviso dice *"Condominio
+   Camila"* sin numeral y estaba colgado de `pm 412 "Edificio Camila II"` **a 565 m**, cuando
+   `pm 584 "Condominio Camila"` está **a 3 m**.
+   🔑 **La cronología explica el mecanismo, y se repite:** la ficha 412 se creó el 28-may · la prop
+   entró el 29-jul, cuando 412 era la ÚNICA "camila" → **el match era correcto en ese momento** · la
+   584 se creó el 17-ago → desde ese día la prop le pertenecía a la 584, y **nada la re-matcheó**.
+   Estuvo mal 14 días. **El matcher no re-matchea props viejas**, así que cada ficha nueva puede dejar
+   huérfanas propiedades ya capturadas, en silencio.
+   🔴 **Ninguna otra superficie podía verlo:** la 5 dispara a los **800 m** y eran 565; la 2 exige
+   **zona distinta** y las dos fichas comparten zona.
+   🔑 **ES UNA CONJUNCIÓN, Y NINGUNA MITAD SIRVE SOLA** — medido sobre las 985 props activas con ficha
+   y nombre, ANTES de escribir el código:
+   · solo el **NOMBRE** (calza exacto con otra ficha y no con la suya) → **7 casos, los 7 falsos
+     positivos**: avisos que dicen "Barcelona" a secas, en `pm 273 "BARCELONA 04.05 Miró Tower"` a 9 m
+     —correcto— que calzan con `pm 427 "Condominio Barcelona"`, a **6.838 m**.
+   · solo la **DISTANCIA** (una hermana está más cerca) → **5 casos, 4 de ruido**: Platinum 46 vs 0,
+     Condado 1.317 vs 1.277, Galil 304 vs 278, Barak 32 vs 30 — el error del pin, no del match.
+   · **las dos juntas → 1 caso, y era el real.** El nombre dice quién PODRÍA ser; la distancia, quién ES.
+   Compara por **núcleo** (`nucleo()` de `lib/filtrar-alias.mjs`): saca el prefijo genérico y **CONSERVA
+   el numeral**, que es justo lo que `normalize_nombre` borra y por eso el matcher no lo ve.
+   Saltea **pines genéricos** (ahí la distancia es una ilusión) y props con **candado** en
+   `id_proyecto_master`. **REPORTA, NO DECIDE** — el veredicto lo da un humano leyendo el aviso.
+   ✅ **Validada contra el caso que la motivó** (regla del proyecto: un detector que da 0 hay que
+   probarlo contra su caso fundador, o no se distingue "limpio" de "roto"). Simulando 2702 en pm 412:
+   dispara, y ni el filtro de pin genérico ni el de candado la habrían suprimido.
+
 ## Flujo de ejecución (desde `scripts/deptos-equipetrol/`)
 
 ### 0. 🔁 Si te disparó un REINTENTO agendado: `--si-falta` decide si te toca correr
