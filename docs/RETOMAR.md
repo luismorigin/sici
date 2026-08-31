@@ -177,12 +177,18 @@ Se dejan escritos porque **cada uno resultó ser algo distinto de lo que parecí
 - Si algún mes aparecen 40 residuales en vez de 9, ahí se reevalúa.
 
 ### Lo que sigue abierto
-- **pm 73 "Domus Luxury"** — `buscar_proyecto_fuzzy('Domus Luxury')` da **empate 1.000 vs 1.000**
-  entre el pm 73 (Equipetrol Centro, 0 props) y el 356 (ZN, 8 props), a 2,37 km, y **el 73 sale
-  primero**. Hoy no hay daño (las 8 están bien en el 356); lo que las salva es el discriminador de
-  distancia, que actúa DESPUÉS del fuzzy. 🔴 **El 73 NO es una ficha basura**: tiene desarrollador
-  (Alborada Group Bolivia) y en esa familia hay otras dos con 0 props (Domus Black 571, Domus Gold
-  572) — se cargaron desde fichas de desarrollador. Es terreno de **matching**, no de drift.
+- **pm 73 "Domus Luxury" — YA TIENE SUPERFICIE, no hay que ir a buscarlo.** Lo cubre la
+  **superficie 11** de `/audit-cola-shadow` (mig 345, `v_colisiones_catalogo`), que es routine
+  nocturna: sale solo con `cruza_macrozona = true` y 2.375 m. Se deja anotado sólo porque el
+  diagnóstico costó y conviene no repetirlo:
+  `buscar_proyecto_fuzzy('Domus Luxury')` da **empate 1.000 vs 1.000** entre el pm 73 (Equipetrol
+  Centro, **0 props**) y el 356 (ZN, 8 props), y **el 73 sale primero**. Hoy no hay daño —las 8
+  están bien en el 356— y lo que las salva es el discriminador de **distancia**, que actúa DESPUÉS
+  del fuzzy.
+  🔴 **El 73 NO es una ficha basura y no se fusiona ni se borra**: tiene desarrollador cargado
+  (Alborada Group Bolivia) y en esa familia hay **otras dos con 0 props** —Domus Black (571) y
+  Domus Gold (572)—, todas cargadas desde fichas de desarrollador, no de avisos. Son dos edificios
+  distintos con el mismo nombre comercial. Terreno de **matching**, no de drift.
 
 ## 1. ✅ EL ADMIN — LOS TRES PASOS ESTÁN HECHOS (20-ago-2026)
 
