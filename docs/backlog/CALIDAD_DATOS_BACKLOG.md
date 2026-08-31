@@ -289,6 +289,92 @@ como una ficha normal a la que le falta un dato — que es exactamente lo que es
 dev server cachea el SSG. Sí se verificó ahí que el endpoint real `POST /api/alquileres` devuelve
 los 6 de Equipetrol con `area: null` y que no aparece ningún "0 m²" en lo renderizado.)
 
+## 🟡 DOS ÍNDICES PROPIOS para reemplazar la absorción de ventas (31 Ago 2026)
+
+> **Decisión del founder:** no se busca medir ventas —eso es inconocible desde un portal— sino
+> tener **referencias propias, declaradas como lo que son**. Son dos índices distintos, y el
+> segundo es el que ningún competidor puede construir.
+
+### El punto de partida: por qué la absorción "clásica" no se puede publicar hoy
+Medido el 31-ago sobre 1.144 activas y 371 bajas en 30 días:
+- Daría **32,4% de absorción mensual** — un tercio del mercado en un mes. Nadie lo creería, con razón.
+- **62,5% de esas bajas cayeron en días de 20 o más.** Sacando esos días queda **12,2%**.
+- El pico es **114 bajas el 30/07, todas de Equipetrol y 97% de Century21**. El mercado no hace eso:
+  es el rastro del cutover de n8n al híbrido. **No lo frenó el disyuntor** porque 114 sobre ~1.000
+  es 11%, debajo del umbral del 40%.
+- 🔑 **99,5% están etiquetadas igual (`aviso_terminado`)**, así que hoy **una baja provocada por
+  nuestro pipeline es indistinguible de una del mercado**. Ese es el problema real — no el de si
+  fue venta.
+
+---
+
+### ÍNDICE 1 · ABSORCIÓN DE ANUNCIOS (no de ventas)
+
+**Qué mide, dicho en la tarjeta:** *"X% de los avisos publicados salió del portal este mes."*
+Ni una palabra sobre ventas. Un aviso se va porque se vendió, se alquiló, el captador lo bajó, o
+venció. **No sabemos cuál, y se declara.**
+
+**Los ribetes, que van EN LA PANTALLA y no en una nota al pie:**
+1. *"Salir del portal no es vender."*
+2. *"Excluimos los días en que la caída fue nuestra"* — con el número de días excluidos a la vista.
+3. La serie **arranca en septiembre**: lo anterior está contaminado por el cutover.
+
+**Lo que hay que resolver antes:**
+- **Separar la baja del mercado de la nuestra.** Regla mínima y defendible: marcar los días cuyo
+  volumen supere N veces la mediana diaria y **declararlos excluidos** (no borrarlos: excluidos y
+  contados). Hoy no hay forma de distinguirlas por fila.
+- 🔑 **Bajar el umbral del disyuntor o hacerlo por FUENTE.** El del 30/07 pasó porque se mide sobre
+  el total; 114 bajas de Century21-Equipetrol en un día es una anomalía obvia mirando por fuente.
+- Publicar recién con **2-3 meses limpios**. Antes no hay con qué comparar.
+
+---
+
+### ÍNDICE 2 · MOVIMIENTO DE PRECIOS — el que nadie más puede tener
+
+**Qué mide:** *"X% de los deptos bajó su precio este mes, en promedio Y%."*
+Mide la presión del mercado **directamente**, y sobre avisos **que siguen vivos**.
+
+🔑 **Es estructuralmente superior al índice 1**: una rebaja es un **par observado** (precio antes,
+precio después, fecha) sobre un aviso que sigue publicado. **No hay nada que inferir, y el ruido
+de nuestro pipeline no entra** — porque no depende de que algo desaparezca.
+
+**La materia prima ya existe, sólo que se tira:**
+| pieza | estado |
+|---|---|
+| Precio **al capturar** (`datos_json.senales_portal.precio_candidato`) | ✅ 635 avisos de venta |
+| Precio **de hoy** | ✅ lo trae `/audit-deptos-shadow` en cada corrida |
+| El **par** guardado como serie | 🔴 **falta** — hoy se reporta y se descarta |
+| `precios_historial` (el viejo de n8n) | 🔴 congelado el 27/07, 44.910 filas muertas |
+
+**El plan, chico:**
+1. Tabla `precio_movimientos` (propiedad, precio_antes, precio_despues, fecha, veredicto).
+2. Que el audit de drift **escriba ahí** en vez de sólo reportar. Ya detecta todo lo necesario:
+   la corrida del 31-ago encontró **57 cambios** en Zona Norte.
+3. 🔴 **NO contar cambios crudos.** De esos 57, **sólo ~20 eran rebajas reales**; el resto era el
+   portal cambiando de moneda o re-expresando el TC (Barcelona ×9, `8000865` ÷1,50 exacto). El
+   factor los delata: **6,96 · 1,50 · ~12**. Sin ese filtro el índice mide el TC, no el mercado.
+4. Publicar con **2-3 corridas**. Con cadencia mensual, primer número útil en **octubre**.
+
+⚠️ El sellado del 31-ago (`datos_json.precio_portal_revisado`, mig 349) ya guarda `portal` y
+`base_anterior` por propiedad — es el par, pero suelto. Es el germen de esta tabla.
+
+---
+
+### Mientras tanto: tres KPIs que YA se pueden publicar
+Son hechos observados, sin ninguna inferencia. Medidos el 31-ago sobre el feed de venta:
+
+| dorms | avisos | días publicado (mediana) | >6 meses | $/m² |
+|---|---:|---:|---:|---:|
+| mono | 176 | **54** | 6% | $1.638 |
+| 1 dorm | 272 | **84** | 10% | $1.590 |
+| 2 dorms | 220 | **81** | 7% | $1.485 |
+| 3 dorms | 101 | **69** | 7% | $1.135 |
+
+1. **Días en mercado** — el aviso salió tal día y sigue ahí: no hay nada que suponer. Y dice algo
+   real: *un monoambiente se mueve en la mitad de tiempo que un 1 dorm.*
+2. **Stock estancado** — *"el 10% de los 1 dorm lleva más de 6 meses publicado"*. Dónde se traba.
+3. **Precio por m²** — ya publicado, y la curva avanza sola desde la mig 334.
+
 ## 🟡 El PIN GENÉRICO de C21 — 49 avisos mal ubicados en el mapa (27 Ago 2026)
 
 Cuando el captador no marca el mapa, C21 guarda un **punto por defecto**. No es un error

@@ -237,8 +237,17 @@ punta a punta: se descarta un hallazgo, corre el audit otra vez y **no lo re-abr
   👉 Se sacaron las **3 tarjetas muertas** (Matching 24h · Colas Revisión Humana · Health Check
   Workflows) y quedaron las que leen fuentes vivas. 🔑 El riesgo no era que no sirviera: era que
   **pintaba en verde un pipeline de n8n que NO vuelve**, y eso es peor que no tener panel.
-- **Mediados de septiembre**: reactivar el KPI de absorción, cuando `primera_ausencia_at`
-  acumule sus 30 días (hoy tiene 2). Comparar contra la serie vieja antes de encenderlo.
+- 🔄 **El KPI de absorción se REPLANTEÓ el 31-ago — no es "esperar a septiembre".** Esa línea
+  decía que faltaba que `primera_ausencia_at` acumulara 30 días, y **esa columna nunca los va a
+  acumular: se resetea cuando un aviso revive**. La fuente buena es `fecha_inactivacion`, que ya
+  tiene 45 días. 🔴 Pero el dato está SUCIO: daría **32,4%** de absorción mensual porque **62,5%
+  de las bajas caen en días de golpe** (114 el 30/07, todas de Equipetrol y 97% C21 — el rastro
+  del cutover, que el disyuntor no frenó por medirse sobre el total). Decisión del founder: **no
+  se busca medir ventas** —es inconocible desde un portal— sino **absorción DE ANUNCIOS declarada
+  como tal, con sus ribetes en pantalla**, más un segundo índice de **movimiento de precios** que
+  ningún portal puede tener. Plan completo de los dos:
+  `docs/backlog/CALIDAD_DATOS_BACKLOG.md` §DOS ÍNDICES PROPIOS. Mientras tanto hay 3 KPIs
+  publicables hoy (días en mercado, stock estancado, $/m²).
 
 ## 2. ✅ TIEMPO 2 DEL CUTOVER — EJECUTADO EL 17-ago-2026
 
