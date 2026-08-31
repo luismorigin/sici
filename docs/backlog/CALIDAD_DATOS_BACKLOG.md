@@ -276,12 +276,18 @@ tampoco viene en el estructurado del portal. No es un problema de extracción. C
   `calcular_confianza_datos` (ahí el filtro define qué alimenta una inferencia, es otro problema) ·
   `buscar_unidades_alquiler` (prod, régimen viejo) · `_trash_*`.
 
-#### Pendiente de una mirada humana
-Ver una de esas cards **pintada en pantalla**. No se pudo desde acá: la lista está virtualizada con
-scroll propio y el dev server cachea el SSG. Sí se verificó que el endpoint real
-(`POST /api/alquileres`) devuelve los 6 de Equipetrol con `area: null` —Omnia Prime, Legendary by
-EliTe, Siria 2, Portobello Green, Domus Tower, 8000319— y que **no aparece ningún "0 m²"** ni
-separador colgando en nada de lo renderizado.
+#### ✅ Verificado en pantalla por el founder (31-ago)
+Card de **`#8000004` Condominio Omnia Prime** (Sirari), la propiedad que hasta ese día estaba
+oculta: aparece en el feed, muestra `Bs 4.900/mes · 2 dorm · 2 baños · Parqueo · Baulera` y
+**omite la superficie sin decir "0 m²"** ni dejar separador colgando.
+
+🔑 **Y responde la objeción que este mismo documento le hacía a la opción 3**: se temía que "una
+card sin superficie al lado de otras con $/m² se lea como un error del sitio". **No pasa.** Se lee
+como una ficha normal a la que le falta un dato — que es exactamente lo que es.
+
+(Desde la sesión no se pudo llegar a esa card: la lista está virtualizada con scroll propio y el
+dev server cachea el SSG. Sí se verificó ahí que el endpoint real `POST /api/alquileres` devuelve
+los 6 de Equipetrol con `area: null` y que no aparece ningún "0 m²" en lo renderizado.)
 
 ## 🟡 El PIN GENÉRICO de C21 — 49 avisos mal ubicados en el mapa (27 Ago 2026)
 
