@@ -3,7 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import type { PropiedadSalud, MatchingSugerenciaConTipo, SinMatchRow } from '@/types/db-responses'
+import type { PropiedadSalud } from '@/types/db-responses'
 
 interface StatsProps {
   // Venta
@@ -32,43 +32,16 @@ interface StatsProps {
   sin_dormitorios: number
 }
 
-interface MatchingStats {
-  sugerencias_24h_venta: number
-  aprobadas_24h_venta: number
-  rechazadas_24h_venta: number
-  pendientes_venta: number
-  sugerencias_24h_alquiler: number
-  aprobadas_24h_alquiler: number
-  rechazadas_24h_alquiler: number
-  pendientes_alquiler: number
-}
-
 interface ProyectosStats {
   activos: number
   gps_verificado: number
   sin_desarrollador: number
 }
 
-interface ColasHITL {
-  cola_matching_venta: number
-  cola_matching_alquiler: number
-  cola_sin_match_venta: number
-  cola_sin_match_alquiler: number
-  cola_excluidas: number
-  cola_auto_aprobados: number
-}
-
 interface TCStats {
   tc_paralelo: string
   tc_oficial: string
   ultima_actualizacion: string | null
-}
-
-interface WorkflowHealth {
-  workflow_name: string
-  ultimo_run: string
-  horas_desde_run: number
-  ultimo_status: string
 }
 
 export default function DashboardSalud() {
@@ -78,11 +51,8 @@ export default function DashboardSalud() {
 
   // Stats
   const [propStats, setPropStats] = useState<StatsProps | null>(null)
-  const [matchStats, setMatchStats] = useState<MatchingStats | null>(null)
   const [proyStats, setProyStats] = useState<ProyectosStats | null>(null)
-  const [colas, setColas] = useState<ColasHITL | null>(null)
   const [tcStats, setTCStats] = useState<TCStats | null>(null)
-  const [workflows, setWorkflows] = useState<WorkflowHealth[]>([])
   const [chatStats, setChatStats] = useState<{ total: { messages: number; sessions: number; input_tokens: number; output_tokens: number; errors: number; cost_usd: number }; days: Array<{ date: string; messages: number; sessions: number; cost_usd: number }> } | null>(null)
 
   const fetchInitiated = useRef(false)
@@ -104,20 +74,6 @@ export default function DashboardSalud() {
   // Calcular alertas (useMemo ANTES de early returns — regla de hooks)
   const alertas = useMemo(() => {
     const nuevasAlertas: string[] = []
-
-    if (colas) {
-      const totalMatching = colas.cola_matching_venta + colas.cola_matching_alquiler
-      if (totalMatching > 10) {
-        nuevasAlertas.push(`${totalMatching} matches pendientes de revisión`)
-      }
-      const totalSinMatch = colas.cola_sin_match_venta + colas.cola_sin_match_alquiler
-      if (totalSinMatch > 20) {
-        nuevasAlertas.push(`${totalSinMatch} propiedades sin proyecto`)
-      }
-      if (colas.cola_excluidas > 30) {
-        nuevasAlertas.push(`${colas.cola_excluidas} excluidas por revisar`)
-      }
-    }
 
     if (propStats) {
       // Matching venta
@@ -142,21 +98,8 @@ export default function DashboardSalud() {
       }
     }
 
-    const workflowsRequeridos = [
-      'discovery_remax', 'discovery_century21', 'enrichment', 'enrichment_llm_venta', 'merge',
-      'verificador', 'matching_nocturno',
-      'discovery_remax_alquiler', 'discovery_c21_alquiler',
-      'enrichment_alquiler', 'merge_alquiler', 'verificador_alquiler'
-    ]
-    for (const wf of workflowsRequeridos) {
-      const found = workflows.find(w => w.workflow_name === wf)
-      if (found && found.horas_desde_run > 26) {
-        nuevasAlertas.push(`${wf.replace(/_/g, ' ')} no corrió en ${found.horas_desde_run.toFixed(0)}h`)
-      }
-    }
-
     return nuevasAlertas
-  }, [colas, propStats, workflows])
+  }, [propStats])
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null
@@ -169,11 +112,8 @@ export default function DashboardSalud() {
       // Fetch all stats in parallel
       await Promise.all([
         fetchPropiedadesStats(),
-        fetchMatchingStats(),
         fetchProyectosStats(),
-        fetchColasHITL(),
         fetchTCStats(),
-        fetchWorkflowHealth(),
         fetchChatStats(),
       ])
 
@@ -276,48 +216,6 @@ export default function DashboardSalud() {
     }
   }
 
-  async function fetchMatchingStats() {
-    if (!supabase) return
-
-    const { data } = await supabase
-      .from('matching_sugerencias')
-      .select('estado, created_at, fecha_revision, propiedad_id, propiedades_v2!inner(tipo_operacion)')
-
-    if (data) {
-      const now = new Date()
-      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-
-      const getTipo = (d: { propiedades_v2: { tipo_operacion: string | null }[] | { tipo_operacion: string | null } | null }) => {
-        const pv2 = Array.isArray(d.propiedades_v2) ? d.propiedades_v2[0] : d.propiedades_v2
-        const t = pv2?.tipo_operacion
-        return t === 'alquiler' ? 'alquiler' : 'venta'
-      }
-
-      const calc = (tipo: string) => {
-        const filtered = data.filter(d => getTipo(d) === tipo)
-        return {
-          sugerencias: filtered.filter(d => new Date(d.created_at) > yesterday).length,
-          aprobadas: filtered.filter(d => d.estado === 'aprobado' && d.fecha_revision && new Date(d.fecha_revision) > yesterday).length,
-          rechazadas: filtered.filter(d => d.estado === 'rechazado' && d.fecha_revision && new Date(d.fecha_revision) > yesterday).length,
-          pendientes: filtered.filter(d => d.estado === 'pendiente').length
-        }
-      }
-      const v = calc('venta')
-      const a = calc('alquiler')
-
-      setMatchStats({
-        sugerencias_24h_venta: v.sugerencias,
-        aprobadas_24h_venta: v.aprobadas,
-        rechazadas_24h_venta: v.rechazadas,
-        pendientes_venta: v.pendientes,
-        sugerencias_24h_alquiler: a.sugerencias,
-        aprobadas_24h_alquiler: a.aprobadas,
-        rechazadas_24h_alquiler: a.rechazadas,
-        pendientes_alquiler: a.pendientes,
-      })
-    }
-  }
-
   async function fetchProyectosStats() {
     if (!supabase) return
 
@@ -333,49 +231,6 @@ export default function DashboardSalud() {
         sin_desarrollador: activos.filter(p => !p.desarrollador || p.desarrollador.trim() === '').length
       })
     }
-  }
-
-  async function fetchColasHITL() {
-    if (!supabase) return
-
-    // Cola matching pendientes con tipo
-    const { data: matching } = await supabase
-      .from('matching_sugerencias')
-      .select('id, propiedades_v2!inner(tipo_operacion)')
-      .eq('estado', 'pendiente')
-
-    // Cola sin match con tipo (query directa en vez de RPC para tener tipo_operacion)
-    const { data: sinMatch } = await supabase
-      .from('propiedades_v2')
-      .select('id, tipo_operacion')
-      .eq('status', 'completado')
-      .is('id_proyecto_master', null)
-
-    // Cola excluidas - usar RPC (global)
-    const { data: excluidas } = await supabase.rpc('exportar_propiedades_excluidas')
-
-    // Cola auto-aprobados sin validar (global)
-    const { data: autoAprobados } = await supabase.rpc('contar_auto_aprobados_sin_validar')
-
-    const smRows = (sinMatch || []) as SinMatchRow[]
-    const getMatchTipo = (m: { propiedades_v2: { tipo_operacion: string | null }[] | { tipo_operacion: string | null } | null }) => {
-      const pv2 = Array.isArray(m.propiedades_v2) ? m.propiedades_v2[0] : m.propiedades_v2
-      return pv2?.tipo_operacion || 'venta'
-    }
-    const matchRows = matching || []
-    const matchVenta = matchRows.filter(m => getMatchTipo(m) !== 'alquiler').length
-    const matchAlq = matchRows.filter(m => getMatchTipo(m) === 'alquiler').length
-    const smVenta = smRows.filter(p => (p.tipo_operacion || 'venta') !== 'alquiler').length
-    const smAlq = smRows.filter(p => p.tipo_operacion === 'alquiler').length
-
-    setColas({
-      cola_matching_venta: matchVenta,
-      cola_matching_alquiler: matchAlq,
-      cola_sin_match_venta: smVenta,
-      cola_sin_match_alquiler: smAlq,
-      cola_excluidas: excluidas?.length || 0,
-      cola_auto_aprobados: autoAprobados || 0
-    })
   }
 
   async function fetchTCStats() {
@@ -404,77 +259,6 @@ export default function DashboardSalud() {
     }
   }
 
-  async function fetchWorkflowHealth() {
-    if (!supabase) return
-
-    // Workflows recurrentes que queremos monitorear
-    const workflowsRecurrentes = [
-      'discovery', 'discovery_remax', 'discovery_century21',
-      'enrichment', 'merge', 'matching_nocturno',
-      'tc_dinamico_binance', 'auditoria_diaria'
-    ]
-
-    const { data } = await supabase
-      .from('workflow_executions')
-      .select('workflow_name, finished_at, status')
-      .order('finished_at', { ascending: false })
-      .limit(200) // Solo los últimos 200 para mejor rendimiento
-
-    if (data) {
-      // Agrupar por workflow, quedarse con el más reciente
-      // Filtrar solo workflows recurrentes (no migraciones)
-      const workflowMap = new Map<string, WorkflowHealth>()
-      const now = new Date()
-
-      // Workflows deprecados (reemplazados por admin dashboard)
-      const workflowsDeprecados = [
-        'matching_supervisor', 'supervisor_sin_match', 'exportar_sin_match'
-      ]
-
-      for (const row of data) {
-        // Excluir migraciones, scripts one-time, y workflows deprecados
-        const nombreLower = row.workflow_name.toLowerCase()
-        if (nombreLower.includes('migracion') || nombreLower.includes('migration') ||
-            nombreLower.includes('fix_') || nombreLower.includes('script_') ||
-            workflowsDeprecados.includes(row.workflow_name)) {
-          continue
-        }
-
-        if (!workflowMap.has(row.workflow_name)) {
-          const finishedAt = new Date(row.finished_at)
-          const horasDiff = (now.getTime() - finishedAt.getTime()) / (1000 * 60 * 60)
-
-          workflowMap.set(row.workflow_name, {
-            workflow_name: row.workflow_name,
-            ultimo_run: row.finished_at,
-            horas_desde_run: Math.round(horasDiff * 10) / 10,
-            ultimo_status: row.status
-          })
-        }
-      }
-
-      // Ordenar por horario programado
-      const ordenWorkflows: Record<string, number> = {
-        'discovery_remax': 1,
-        'discovery_century21': 2,
-        'enrichment': 3,
-        'enrichment_llm_venta': 3.5,
-        'merge': 4,
-        'matching_nocturno': 5,
-        'auditoria_diaria': 6,
-        'tc_dinamico_binance': 7
-      }
-
-      const workflowsSorted = Array.from(workflowMap.values()).sort((a, b) => {
-        const ordenA = ordenWorkflows[a.workflow_name] ?? 99
-        const ordenB = ordenWorkflows[b.workflow_name] ?? 99
-        return ordenA - ordenB
-      })
-
-      setWorkflows(workflowsSorted)
-    }
-  }
-
   const formatHace = (isoDate: string) => {
     if (!isoDate) return '-'
     const diff = Date.now() - new Date(isoDate).getTime()
@@ -484,56 +268,6 @@ export default function DashboardSalud() {
     if (horas > 24) return `${Math.floor(horas / 24)}d`
     if (horas > 0) return `${horas}h`
     return `${mins}min`
-  }
-
-  const getWorkflowIcon = (wf: WorkflowHealth) => {
-    if (wf.horas_desde_run > 26) return '🔴'
-    if (wf.horas_desde_run > 12) return '🟡'
-    return '✅'
-  }
-
-  // Horarios programados de cada workflow (hora Bolivia)
-  const workflowSchedule: Record<string, string> = {
-    // Venta
-    'discovery_remax': '01:00 AM',
-    'discovery_century21': '01:00 AM',
-    'enrichment': '02:00 AM',
-    'enrichment_llm_venta': '02:15 AM',
-    'merge': '03:00 AM',
-    'verificador': '04:00 AM',
-    'matching_nocturno': '04:00 AM',
-    // Alquiler
-    'discovery_remax_alquiler': '02:00 AM',
-    'discovery_c21_alquiler': '02:15 AM',
-    'enrichment_alquiler': '03:00 AM',
-    'merge_alquiler': '04:00 AM',
-    'verificador_alquiler': '11:00 AM',
-    // Global
-    'auditoria_diaria': '09:00 AM',
-    'tc_dinamico_binance': 'cada 1h'
-  }
-
-  // Categorías de workflows
-  const workflowCategories: { label: string; color: string; workflows: string[] }[] = [
-    {
-      label: 'Pipeline Venta',
-      color: 'text-slate-700',
-      workflows: ['discovery_remax', 'discovery_century21', 'enrichment', 'enrichment_llm_venta', 'merge', 'verificador', 'matching_nocturno']
-    },
-    {
-      label: 'Pipeline Alquiler',
-      color: 'text-blue-600',
-      workflows: ['discovery_remax_alquiler', 'discovery_c21_alquiler', 'enrichment_alquiler', 'merge_alquiler', 'verificador_alquiler']
-    },
-    {
-      label: 'Servicios Globales',
-      color: 'text-slate-500',
-      workflows: ['tc_dinamico_binance', 'auditoria_diaria']
-    }
-  ]
-
-  const getSchedule = (workflowName: string): string => {
-    return workflowSchedule[workflowName] || '-'
   }
 
   return (
@@ -575,6 +309,21 @@ export default function DashboardSalud() {
         </header>
 
         <main className="max-w-7xl mx-auto py-6 px-6">
+          {/* Qué mide y qué NO — 31-ago-2026.
+              Se retiraron 3 tarjetas que leían fuentes CONGELADAS desde el 28-jul y por eso
+              pintaban en verde: "Matching (24h)" y "Colas Revisión Humana" (matching_sugerencias,
+              del supervisor HITL retirado el 20-ago) y "Health Check - Workflows"
+              (workflow_executions, el pipeline de n8n que NO vuelve).
+              🔑 Un panel que dice "sano" leyendo una tabla muerta es peor que no tener panel.
+              Lo que queda lee fuentes vivas: propiedades_v2, proyectos_master y config_global.
+              El estado de las capturas nocturnas NO se mira acá: se mira con /revisar-routines,
+              que lee los LOGS de las 5 routines, no la BD. */}
+          <div className="mb-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            Mide las fuentes <strong>vivas</strong>: inventario, calidad de datos, proyectos, bot y tipo de cambio.
+            <br />
+            El estado de las capturas nocturnas no se ve acá — eso es <code className="text-slate-800">/revisar-routines</code>, que lee los logs de cada corrida.
+          </div>
+
           {/* Alertas */}
           {alertas.length > 0 && (
             <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
@@ -723,107 +472,6 @@ export default function DashboardSalud() {
               )}
             </div>
 
-            {/* Matching */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <span>🔗</span> Matching (24h)
-              </h2>
-              {matchStats && (
-                <div className="text-sm">
-                  <div className="grid grid-cols-3 gap-2 mb-2 pb-2 border-b">
-                    <span className="text-slate-400 text-xs"></span>
-                    <span className="text-xs font-semibold text-slate-500 text-right">Venta</span>
-                    <span className="text-xs font-semibold text-blue-500 text-right">Alquiler</span>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-600">Sugerencias</span>
-                      <span className="font-semibold text-right">{matchStats.sugerencias_24h_venta}</span>
-                      <span className="font-semibold text-right">{matchStats.sugerencias_24h_alquiler}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-600">Aprobadas</span>
-                      <span className="font-semibold text-green-600 text-right">{matchStats.aprobadas_24h_venta}</span>
-                      <span className="font-semibold text-green-600 text-right">{matchStats.aprobadas_24h_alquiler}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-600">Rechazadas</span>
-                      <span className="font-semibold text-red-600 text-right">{matchStats.rechazadas_24h_venta}</span>
-                      <span className="font-semibold text-red-600 text-right">{matchStats.rechazadas_24h_alquiler}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 pt-2 border-t">
-                      <span className="text-slate-600">Pendientes</span>
-                      <span className={`font-semibold text-right ${matchStats.pendientes_venta > 10 ? 'text-red-600' : 'text-amber-600'}`}>
-                        {matchStats.pendientes_venta}
-                      </span>
-                      <span className={`font-semibold text-right ${matchStats.pendientes_alquiler > 10 ? 'text-red-600' : 'text-amber-600'}`}>
-                        {matchStats.pendientes_alquiler}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Colas HITL */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <span>👤</span> Colas Revisión Humana
-              </h2>
-              {colas && (
-                <div className="space-y-3">
-                  <div
-                    className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-slate-700">Matching pendientes</span>
-                      <span className="text-slate-400">→</span>
-                    </div>
-                    <div className="flex gap-3 text-sm">
-                      <span className={`font-bold ${colas.cola_matching_venta > 10 ? 'text-red-600' : 'text-amber-600'}`}>
-                        V: {colas.cola_matching_venta}
-                      </span>
-                      <span className={`font-bold ${colas.cola_matching_alquiler > 10 ? 'text-red-600' : 'text-blue-600'}`}>
-                        A: {colas.cola_matching_alquiler}
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-slate-700">Sin proyecto (huérfanas)</span>
-                      <span className="text-slate-400">→</span>
-                    </div>
-                    <div className="flex gap-3 text-sm">
-                      <span className={`font-bold ${colas.cola_sin_match_venta > 20 ? 'text-red-600' : 'text-orange-600'}`}>
-                        V: {colas.cola_sin_match_venta}
-                      </span>
-                      <span className={`font-bold ${colas.cola_sin_match_alquiler > 20 ? 'text-red-600' : 'text-blue-600'}`}>
-                        A: {colas.cola_sin_match_alquiler}
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    className="flex justify-between items-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
-                  >
-                    <span className="text-slate-700">Excluidas por revisar</span>
-                    <span className="font-bold text-slate-600">
-                      {colas.cola_excluidas} →
-                    </span>
-                  </div>
-                  <div
-                    className="flex justify-between items-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
-                  >
-                    <span className="text-slate-700">Auto-aprobados sin validar</span>
-                    <span className={`font-bold ${colas.cola_auto_aprobados > 50 ? 'text-amber-600' : 'text-green-600'}`}>
-                      {colas.cola_auto_aprobados} →
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Proyectos */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
@@ -920,73 +568,6 @@ export default function DashboardSalud() {
                 <p className="text-slate-500 text-sm">No hay datos de TC</p>
               )}
             </div>
-          </div>
-
-          {/* Health Workflows */}
-          <div className="mt-6 bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <span>⚙️</span> Health Check - Workflows
-            </h2>
-            {workflows.length > 0 ? (
-              <div className="space-y-5">
-                {workflowCategories.map((cat) => (
-                  <div key={cat.label}>
-                    <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${cat.color}`}>
-                      {cat.label}
-                    </p>
-                    <div className="grid grid-cols-6 gap-3">
-                      {cat.workflows.map((name) => {
-                        const wf = workflows.find(w => w.workflow_name === name)
-                        if (wf) {
-                          return (
-                            <div
-                              key={name}
-                              className={`p-3 rounded-lg border ${
-                                wf.horas_desde_run > 26
-                                  ? 'bg-red-50 border-red-200'
-                                  : wf.horas_desde_run > 12
-                                  ? 'bg-amber-50 border-amber-200'
-                                  : 'bg-green-50 border-green-200'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span>{getWorkflowIcon(wf)}</span>
-                                <span className="font-medium text-sm capitalize">
-                                  {name.replace(/_/g, ' ')}
-                                </span>
-                              </div>
-                              <p className="text-xs text-slate-500 mt-1">
-                                hace {formatHace(wf.ultimo_run)}
-                              </p>
-                              <p className="text-xs text-slate-400">
-                                🕐 {getSchedule(name)}
-                              </p>
-                            </div>
-                          )
-                        }
-                        // Workflow sin tracking todavía
-                        return (
-                          <div key={name} className="p-3 rounded-lg border bg-slate-50 border-slate-200 border-dashed">
-                            <div className="flex items-center gap-2">
-                              <span>⚪</span>
-                              <span className="font-medium text-sm capitalize text-slate-400">
-                                {name.replace(/_/g, ' ')}
-                              </span>
-                            </div>
-                            <p className="text-xs text-slate-400 mt-1">sin tracking</p>
-                            <p className="text-xs text-slate-300">
-                              🕐 {getSchedule(name)}
-                            </p>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-slate-500 text-sm">No hay datos de ejecuciones</p>
-            )}
           </div>
         </main>
       </div>

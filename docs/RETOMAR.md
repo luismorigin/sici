@@ -228,8 +228,15 @@ punta a punta: se descarta un hallazgo, corre el audit otra vez y **no lo re-abr
 - 🔴 **El login del admin se cuelga en local** ("Verificando acceso…") con sesión válida. La
   consulta que necesita responde en 622 ms; el evento que la dispara no llega. Se intentó un
   arreglo (el bypass de dev delega en `INITIAL_SESSION`) y **no era la causa** — revertido.
-- **Retirar `/admin/salud`**: sus 3 fuentes están mudas desde el 28-jul, así que muestra un
-  sistema sano que nadie está midiendo.
+- ✅ **`/admin/salud` — NO se retiró, se PODÓ (31-ago).** La instrucción anterior decía
+  "retirarlo porque sus 3 fuentes están mudas", y eso **dejó de ser cierto con el rename del
+  17-ago**: cuando se escribió, `propiedades_v2` era la tabla vieja de n8n; hoy ese nombre es
+  la tabla VIVA, así que el panel se le volvió a llenar solo sin tocar una línea. Medido el
+  31-ago: `propiedades_v2` y `config_global` con datos de ese mismo día · `workflow_executions`
+  y `matching_sugerencias` congeladas el 28-jul.
+  👉 Se sacaron las **3 tarjetas muertas** (Matching 24h · Colas Revisión Humana · Health Check
+  Workflows) y quedaron las que leen fuentes vivas. 🔑 El riesgo no era que no sirviera: era que
+  **pintaba en verde un pipeline de n8n que NO vuelve**, y eso es peor que no tener panel.
 - **Mediados de septiembre**: reactivar el KPI de absorción, cuando `primera_ausencia_at`
   acumule sus 30 días (hoy tiene 2). Comparar contra la serie vieja antes de encenderlo.
 

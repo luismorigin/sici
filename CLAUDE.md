@@ -372,8 +372,12 @@ Flujo prod (desde switch 7-jul): `simonbo.com (/) = Home` → buscador natural o
 
 ## Estado Actual
 
-`docs/backlog/` (pendientes). ⚠️ **`/admin/salud` NO sirve de termómetro**: sus 3 fuentes están mudas
-desde el 28-jul (`propiedades_v2`, `auditoria_snapshots`, `workflow_executions`).
+`docs/backlog/` (pendientes). 🟢 **`/admin/salud` SÍ sirve, desde que se podó el 31-ago.** Esta línea
+decía que sus 3 fuentes estaban mudas y **quedó vieja con el rename del 17-ago**: nombraba
+`propiedades_v2` —que entonces era la tabla de n8n y hoy es la VIVA— y `auditoria_snapshots`, que
+la página ni siquiera lee. Se retiraron las 3 tarjetas que leían lo congelado (`matching_sugerencias`
+del supervisor HITL retirado, y `workflow_executions` del n8n que no vuelve). Lo que queda lee
+fuentes vivas. 🔴 **El estado de las capturas nocturnas NO se mira ahí**: eso es `/revisar-routines`.
 
 ```sql
 -- 🟢 La tabla viva se llama `propiedades_v2` desde el TIEMPO 2 (17-ago, regla #3).
