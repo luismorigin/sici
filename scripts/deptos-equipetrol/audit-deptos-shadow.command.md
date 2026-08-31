@@ -119,7 +119,7 @@ en el anuncio?). Escribe `output/audit-shadow-<op>-<ts>.json` con el array `mate
   **fuera del universo del verificador** (`desaparecidas del discovery OR primera_ausencia_at no nulo`)
   porque el portal la sigue mostrando en su LISTADO aunque la ficha ya no exista → **casi ninguna se
   arregla sola**. Sale gritado con sus URLs, y también en el JSON como `bajas_residual`.
-  ⚠️ **Una clase SÍ se arregla sola desde el PR #64 (4-ago-2026): el slug reescrito de C21.** Cuando el
+  ⚠️ **Una clase SÍ se arregla sola desde el PR #64 (4-ago-2026): el slug reescrito del portal** — C21, y **también Remax desde el 28-ago-2026**. Cuando el
   captador edita el aviso, C21 reescribe el slug de `/propiedad/<codigo>_<slug>` y la URL vieja queda
   muerta con la prop activa — cae exacto en la definición de residual. Ahora el **discovery lo detecta
   por el código numérico** (el id real del aviso) y el **cargador marca la vieja `duplicado_de`**, así

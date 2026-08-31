@@ -63,7 +63,7 @@ acepta bolivianos a ese cambio), pero como validación de mercado, **no como blo
 
 El audit tiene 3 superficies (sin-match · auto-match riesgoso · duplicados) y **ninguna mira los
 matches que fija el lector**. (Ojo con la atribución: desde el **PR #64 (4-ago-2026)** el dedup ya no
-vive solo en el audit — la **republicación por slug reescrito de C21** se resuelve en la CAPTURA: el
+vive solo en el audit — la **republicación por slug reescrito** (C21 y, desde el 28-ago-2026, Remax) se resuelve en la CAPTURA: el
 discovery detecta el aviso por su código numérico y el cargador marca la URL vieja `duplicado_de`. La
 superficie de duplicados del audit sigue existiendo para todo lo demás.) En la tanda 2 eso eran **51 matches, 15 con `confianza: media`** que
 nadie iba a revisar nunca — correr el audit después del apply habría levantado 3 de 18.

@@ -509,7 +509,7 @@ ORDER BY km DESC;
 
 ---
 
-## Duplicados por slug reescrito de C21 — RESUELTO en pipeline (4 Ago 2026)
+## Duplicados por slug reescrito del portal — RESUELTO en pipeline (4 Ago 2026 · Remax sumado el 28 Ago)
 
 **Problema:** C21 arma la URL como `/propiedad/<codigo>_<slug>` y **reescribe el slug cuando el captador
 edita el aviso**. La URL cambia → el aviso entraba como NUEVO y el mismo depto quedaba dos veces en el

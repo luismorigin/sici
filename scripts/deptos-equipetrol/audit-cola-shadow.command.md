@@ -1,5 +1,5 @@
 ---
-description: Audita MATCHING + DUPLICADOS del feed SHADOW del híbrido (venta + alquiler) — tres superficies: sin-match-con-nombre (PM_NUEVO/fuzzy), auto-matches riesgosos (nombre_unico_zona_dif) y duplicados SIN código repetido (apart-hotel/republicación, agrupa por pm+precio+área; el slug reescrito de C21 ya lo caza el discovery desde el PR #64). El .mjs filtra $0 SIN fetch (lee el anuncio ya guardado); el VEREDICTO de matching lo dan subagentes-lectores (juez), el dedup es determinístico. SQL contra propiedades_v2 que aplica el humano. Read-only.
+description: Audita MATCHING + DUPLICADOS del feed SHADOW del híbrido (venta + alquiler) — 12 superficies, de sin-match-con-nombre y auto-matches riesgosos al dedup, la moneda, las macrozonas cruzadas y las colisiones del catálogo (la republicación por slug reescrito ya la caza el discovery desde el PR #64, en C21 y en Remax). El .mjs filtra $0 SIN fetch (lee el anuncio ya guardado); el VEREDICTO de matching lo dan subagentes-lectores (juez), el dedup es determinístico. SQL contra propiedades_v2 que aplica el humano. Read-only.
 ---
 
 # /audit-cola-shadow — Audit de matching del feed SHADOW (híbrido)
@@ -42,6 +42,11 @@ carga, eso lo cubre el otro comando, `/audit-deptos-shadow`, que sí re-fetchea 
 > cinco: la 4 (29-jul) y la 5 (4-ago) se sumaron al `.mjs` y **nunca se documentaron acá**. Quedan
 > descritas abajo en corto. La fuente de verdad de lo que se calcula es siempre
 > `auditar-matching-shadow.mjs`, no este archivo.
+> 🔁 **Y VOLVIÓ A PASAR — 31-ago-2026.** Esta vez el desfasaje estaba en el **CLAUDE.md**, que decía
+> *"7 superficies"* cuando el script tenía **12** (faltaban la 4b, la 9, la 10, la 11 y la 11b), y en el
+> `description:` del frontmatter de este mismo archivo, que seguía diciendo *"tres superficies"*.
+> 🔑 El frontmatter es el punto ciego típico: se audita el CUERPO del documento y el resumen de arriba
+> queda intacto. Lo cazó un barrido con otro patrón, no el primero.
 
 1. **SIN MATCH con nombre** — `id_proyecto_master IS NULL AND nombre_edificio IS NOT NULL`
    (`metodo` sin_match/fuzzy_debil/ambiguo). Candidatos **PM_NUEVO** (595 Bloque La Salle, 3660 Hamburgo)
