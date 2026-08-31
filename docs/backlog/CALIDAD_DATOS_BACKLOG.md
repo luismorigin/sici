@@ -2,7 +2,7 @@
 
 > Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 28 Ago 2026.
 
-## 🔴 El dedup elige el SOBREVIVIENTE por id más bajo — y hoy eso estuvo mal 3 de 3 (28 Ago 2026)
+## ✅ El dedup elegía el SOBREVIVIENTE por id más bajo — estuvo mal 3 de 3 (28 Ago · CERRADO)
 
 `scripts/auditoria-feed-ventas/lib/dup-checks.mjs:47` ordena el grupo por id y toma el primero:
 
@@ -49,11 +49,16 @@ reescrita** (mismo id `120079022-34`, mismo UUID, las mismas 19 fotos), y el ver
 ausente a ninguno. Lo que delató al viejo fue algo que ningún campo captura: **su descripción dice
 "180.000 $us" mientras su precio es 173.000** (el drift del 27-ago corrigió el número y no el texto).
 
-👉 Queda abierto: **cuando el cluster es una URL reescrita de Remax, el sobreviviente sigue saliendo
-mal y hay que elegirlo a mano.** Señal candidata a evaluar (sin medir todavía): `fecha_creacion` más
-reciente cuando los dos comparten el id de listado del portal. No se aplicó porque **el verificador
-de Remax tiene un falso-positivo conocido** (`bug_verificador_remax_falsos_positivos`) y conviene
-entender primero por qué no marcó ausente a ninguno de los dos.
+✅ **CERRADO el 28-ago, pero AGUAS ARRIBA — no por esta vía.** Acá quedaba abierto *"cuando el cluster
+es una URL reescrita de Remax, el sobreviviente sigue saliendo mal"*, y la salida no fue mejorar el
+desempate del dedup: fue **que el caso no llegue al dedup**. El discovery ya cazaba la republicación por
+slug reescrito de C21 y estaba limitado a esa fuente por una línea; desde `d45706c` **también caza la de
+Remax**, y ahí no hay que adivinar quién es el viejo — el discovery lo sabe, porque encontró la fila
+vieja por su código. Marca la nueva con `reemplaza_a` y el cargador deduplica al aplicar.
+🔑 **La lección de diseño:** el mejor arreglo de un desempate difícil fue no tener que desempatar.
+Medido sobre las 1.802 filas: el extractor cubre 100% de C21 y 100% de Remax, 19 grupos con código
+repetido, cero falsos positivos. Y destapó un caso vivo que nadie había visto: `1728` a $188.000 y
+`8000799` a $180.000, el mismo depto con descripción de md5 idéntico, **los dos en el feed**.
 
 ⚠️ **Y hay un segundo efecto que el arreglo no cubre: deduplicar hacia el nuevo RESETEA la
 antigüedad.** El portal recrea el aviso justamente para eso — Altamura pasaría de 199 días a 18,
@@ -64,7 +69,7 @@ se automatiza, eso tiene que ir en el mismo movimiento.
 `preventa`/`en_construccion`/`en_pozo`, que van a **730**. Uptown con la fecha real (328 d) sigue en
 el feed **solo porque está tageado `preventa`**.
 
-## ⚠️ Berchatti Beni — dos criterios de dedup opuestos sobre el mismo caso (28 Ago 2026)
+## ✅ Berchatti Beni — dos criterios de dedup opuestos sobre el mismo caso (28 Ago · ZANJADO el 31 Ago)
 
 Los avisos **8001153 / 8001154 / 8001155** son la republicación 1:1 de **8000494 / 8000495 / 8000496**
 (emparejados por UUID de listing de Remax; el portal cambió el id padre `120116002` → `1200346220` y
@@ -83,8 +88,25 @@ unidad** — ni piso, ni número, ni orientación. Dos unidades distintas de 31 
 proyecto producen texto idéntico **por construcción**. En los clusters donde la descripción es el
 texto CRUDO del portal (con erratas y emojis del captador) el criterio sí discrimina.
 
-**Uno de los dos criterios está mal.** Se zanja abriendo las 3 URLs y comparando fotos y unidad —
-no se puede decidir desde la base. Hasta entonces, el eje horizontal (las 3 nuevas) queda sin tocar.
+### ✅ ZANJADO el 31-ago-2026 — y por el caso hermano, no por Berchatti
+
+Se resolvió mirando **Gardenia**, que planteaba exactamente la misma pregunta: `8001089` y `8001174`,
+mismo listado padre de Remax (`1200164198`) con sufijo de unidad `-44` y `-50`, **idénticos en
+descripción, precio, área, baños y captador**. El founder abrió las dos URLs y comparó: **son dos
+unidades distintas.**
+
+👉 **El criterio queda fijado: en Remax el sufijo de unidad distingue DEPARTAMENTOS.** Con eso Berchatti
+(`-15`/`-16`/`-17`) también queda resuelto — la decisión de no deduplicarlos era la correcta, y la que
+está mal es la vieja, que fusionó `8000495` y `8000496` dentro de `8000494`. Esos tres ya están
+inactivos y fuera del feed, así que no hay nada que revertir.
+
+🔑 **Y se cerró el agujero que los hacía volver:** la superficie 3 era la ÚNICA sin clave de rastro, así
+que un cluster juzgado *"NO son duplicados"* reaparecía todas las noches — Berchatti volvió **cuatro
+noches seguidas** (28, 29, 30 y 31). Ahora respeta `datos_json.trazabilidad.dedup_revisado`, y los 5
+avisos de los dos casos quedaron marcados `NO_DEDUPLICAR`.
+⚠️ **Se silencia el CLUSTER, no la propiedad**: si mañana entra un aviso nuevo a ese grupo, el cluster
+tiene un integrante sin marcar y vuelve entero al humano. Excluir las props marcadas habría dejado a un
+duplicado real solo y sin detectar.
 
 ## 🔴 Avisos SIN NOMBRE DE EDIFICIO — en VENTA no se publican; en alquiler sí (19 Ago 2026)
 
