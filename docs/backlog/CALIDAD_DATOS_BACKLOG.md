@@ -168,7 +168,7 @@ salió de preguntar si el problema también pasaba en Equipetrol. Sí pasa.
 
 ---
 
-## 🔴 Avisos SIN ÁREA — el feed los oculta en silencio, y el filtro no hace lo que cree (13 Ago 2026)
+## ✅ Avisos SIN ÁREA — el feed los ocultaba en silencio (13 Ago · CERRADO el 31 Ago 2026)
 
 **Son dos problemas encadenados.** El primero es de captura; el segundo, de cómo el feed reacciona
 a ese hueco. Se pueden atacar por separado, pero la decisión del segundo depende de la respuesta
@@ -231,6 +231,57 @@ al lado es exactamente lo que costó caro con las migs 315/316/317 (ver la regla
 Si se hace, va con foto previa y evals por superficie.
 
 **Orden sugerido:** responder A (una lectura del portal) → recién entonces decidir B.
+
+
+### ✅ CERRADO el 31-ago-2026 — se hizo la opción 3, y costó DOS migraciones
+
+**Aplicado:** migs **348** (las 2 vistas de mercado) + **349** (las 2 RPC del feed), y antes de
+eso el blindaje del front (commit `ac04f8e`). Números finales medidos **contra la RPC**:
+`alquiler 314 → 330` (16 de 16) · `ventas 661 → 670` (9 de 12).
+
+Los **3 de venta que no entraron** (`8000022/23/24`) quedan afuera por **no tener edificio
+asignado** (`id_proyecto_master` nulo) — es el otro hueco de este mismo documento (§Avisos SIN
+NOMBRE DE EDIFICIO), no el del área.
+
+#### 🔴 Lo que salió distinto de lo previsto, y hay que recordar
+
+**1 · El orden importaba y no era obvio.** Abrir el filtro primero habría publicado **"0 m²"**:
+el mapper de alquileres hace `parseFloat(p.area_m2) || 0` y el área se imprimía en **26 lugares
+sin proteger**, tres de ellos el **mensaje de WhatsApp AL CAPTADOR**. Se blindaron los 26 con
+`areaTxt`/`areaCon` (`lib/format-utils.ts`) **antes** de tocar la base.
+🔑 El bot nunca tuvo el problema: sus RPC pasan el área sin `COALESCE`. El arreglo fue hacer que
+el front se comporte como el bot.
+
+**2 · Verificar contra la vista NO alcanzó — y ese es el hallazgo caro.** La 348 movió las vistas
+(762→774, 314→330), los seis chequeos dieron verde… y **el feed siguió mostrando lo mismo**.
+Porque **el feed no lee las vistas**: lee `buscar_unidades_simple_shadow` y
+`buscar_unidades_alquiler_shadow`, y **las dos tienen su propio `area_total_m2 >= 20`** adentro
+(la de alquiler ni pasa por la vista). Hizo falta la 349.
+👉 **Antes de dar por cerrado un cambio de filtro: preguntar qué función sirve la pantalla y medir
+ESA.** Un conteo correcto sobre el objeto equivocado se lee igual que un arreglo que funcionó —
+la misma forma del error que costó 19 días de bot caído.
+
+**3 · Los conteos de este documento eran de agosto.** Decía 13+19=32 ocultas; al 31-ago son **28**
+(12 venta + 16 alquiler). El inventario se mueve: **medir antes de citar**.
+
+**4 · El área NO era recuperable.** Se verificó: **0 de 28** mencionan metros en la descripción, y
+tampoco viene en el estructurado del portal. No es un problema de extracción. Casi todas son Remax
+(20,5% de su alquiler no informa área, contra 0,2% de C21) → §Problema A sigue abierto, ahí sí.
+
+#### Lo que NO se tocó, a propósito
+- **`snapshot_absorcion_mercado_shadow`** — sumar 28 al inventario metería un escalón de ~2,5% en
+  una serie que ya arrastra un corte declarado (3-ago). **Consecuencia asumida: el conteo del feed
+  y el del snapshot difieren en 28.**
+- `buscar_unidades_reales` (la usa `simon-advisor`, otro repo) · `inferir_datos_proyecto` y
+  `calcular_confianza_datos` (ahí el filtro define qué alimenta una inferencia, es otro problema) ·
+  `buscar_unidades_alquiler` (prod, régimen viejo) · `_trash_*`.
+
+#### Pendiente de una mirada humana
+Ver una de esas cards **pintada en pantalla**. No se pudo desde acá: la lista está virtualizada con
+scroll propio y el dev server cachea el SSG. Sí se verificó que el endpoint real
+(`POST /api/alquileres`) devuelve los 6 de Equipetrol con `area: null` —Omnia Prime, Legendary by
+EliTe, Siria 2, Portobello Green, Domus Tower, 8000319— y que **no aparece ningún "0 m²"** ni
+separador colgando en nada de lo renderizado.
 
 ## 🟡 El PIN GENÉRICO de C21 — 49 avisos mal ubicados en el mapa (27 Ago 2026)
 
