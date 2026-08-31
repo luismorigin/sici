@@ -96,7 +96,7 @@ de cero a algo, y **la primera persona que pida una segunda selección ya es se�
 
 ---
 
-## 0-bis · ✅ EL DRIFT DE ZONA NORTE — HECHO (27-ago-2026)
+## 0-bis · ✅ EL DRIFT DE ZONA NORTE — HECHO (27-28 ago 2026)
 
 > Esta sección tenía el prompt para correrlo. Se **reemplaza** en vez de borrarse: lo que sirve
 > hacia adelante no son los comandos, son las tres cosas que se aprendieron corriéndolo.
@@ -125,7 +125,8 @@ la primera**: Remax las sigue mostrando en su listado aunque la ficha no exista.
 `primera_ausencia_at` estaban en NULL — el contador nunca arrancó ni va a arrancar.
 🔴 **Y no alcanza con ponerles el contador a mano**: el verificador tiene un `else revive` que,
 ante algo con contador que sigue en el crawl, **le borra el contador sin chequear el HTTP**.
-Rebotarían para siempre. Automatizarlo exige un contador propio, aparte del suyo.
+Rebotarían para siempre. Automatizarlo exigiría un contador propio, aparte del suyo — 🔒 **y eso se
+DESCARTÓ el 28-ago**, ver abajo: sólo tenía sentido si el audit entraba a las routines.
 
 **3 · Nueve chequeos HTTP seguidos desde una IP son UNA observación, no nueve.** Un bloqueo del
 portal explicaría los nueve de una. Lo que convierte la sospecha en evidencia es barato:
@@ -134,18 +135,54 @@ los controles dieron 200 sin redirigir y las 9 rebotaron a `remax.bo/` → reci�
 La evidencia quedó escrita en `datos_json.trazabilidad.baja_residual` de cada fila, porque
 `inactivo_confirmed` es terminal y un aviso sólo pausado no volvería solo.
 
-### Lo que quedó abierto
-- **`2703` Stone by Portobello dejó de ser una venta** — hoy el aviso dice "monoambiente en
-  alquiler, Bs 3.200". Los $51.000 guardados no tienen respaldo. Es cambio de operación.
-- **3 precios copiados por debajo del portal** (`8000966`, `8001066`, `8001115`) — error del
-  lector, no del aviso. Al resolverlos hay que taguear `precio_confirmado_por` con el precio
-  del momento, o vuelven cada noche.
-- **`8000530`** (¿aviso reciclado para otra unidad?) y **`8000642`** (se titula "EN ALQUILER" y
-  cotiza venta USD 120.000) — se dejaron sin tocar a propósito.
-- **Essenzia (`2722`, `2721`)**: guardadas 'preventa', el título dice "a estrenar". El estado de
-  obra del edificio se define una vez, no aviso por aviso.
-- ⚠️ **El audit de drift NO está en el ciclo de routines** — es manual. Por eso estas 9 bajas
-  esperaron desde el 29-jul. Las 8 routines de hoy son 4 capturas + audit de cola + 3 reintentos.
+**4 · 🔒 EL SELLADO ES UN PASO OBLIGATORIO, no un opcional.** Al terminar el juez:
+
+```
+node sellar-precio-portal.mjs output/audit-shadow-venta-<ts>.json output/audit-shadow-alquiler-<ts>.json
+```
+
+Sin eso **todos los cambios de precio que juzgaste vuelven idénticos la próxima corrida**: el
+chequeo comparaba contra `senales_portal`, el testigo del día de la CAPTURA, y nada lo refresca.
+Se arregló el 28-ago (commit `2a72c6b`) con memoria en campo propio
+(`datos_json.precio_portal_revisado`) — 🔴 **NO refrescando `senales_portal`**, que en venta-USD lo
+comparte §COPIA MAL y es ciego al portal de hoy a propósito. Se auto-invalida: si el portal se
+mueve de nuevo, el caso reaparece marcado `·RE`.
+⚠️ Los ~57 casos del 27-ago **no quedaron sellados** (ese JSON aún no persistía la lista). No hay
+que forzarlo: se sellan solos en el próximo drift mensual.
+
+### ✅ Los 5 abiertos, resueltos el mismo día
+Se dejan escritos porque **cada uno resultó ser algo distinto de lo que parecía**:
+- **`2703` Stone by Portobello** — dejó de ser una venta (hoy: alquiler Bs 3.200). Baja con
+  `razon_inactiva='cambio_de_operacion: ...'`. 🔑 **No se convierte a alquiler a mano**: es otro
+  pipeline con sus propios campos; si el aviso está en el grid de alquiler, se captura solo.
+- **Los 3 "precio por debajo del portal" NO eran el mismo caso**: 1 error real (`8000966`, el
+  aviso dice "$US. 65.000 (TC 7)" y teníamos 62.000) y **2 falsas alarmas** (`8001115`, `8001066`:
+  lo guardado coincide EXACTO con el texto; el número raro es del estructurado de C21 — en
+  `8001066` el "35.030" del portal es su superficie, 35,03 m²). Los 3 tagueados.
+- **`8000530`** SÍ era la misma unidad (1 dorm, 40 m², "ingreso independiente dentro de una casa
+  familiar"); sólo cambió la referencia de ubicación. **`8000642`** es venta con el título mal
+  copiado: dice "EN ALQUILER" y cotiza "Venta: USD 120.000", sin ningún mensual.
+- **Essenzia NO llevó UPDATE, y ESO es lo correcto**: pm 366 ya tiene
+  `entrega_verificada='entregado'` (7-ago) y la vista devuelve `entrega_inmediata` origen
+  `verificado` para sus 11 props. El `preventa` de la columna es el **crudo del aviso** y debe
+  quedarse (crudo adentro / normalizado afuera). Pisarlo destruiría el registro para arreglar
+  algo que la vista ya arregla.
+
+### 🔒 DECIDIDO el 28-ago — no re-abrir
+- **El audit de drift SIGUE MANUAL, y se corre ~1 vez por mes.** No va al ciclo de routines: su
+  costo en rotativa no lo justifica. Las 8 routines son 4 capturas + audit de cola + 3 reintentos.
+- **El contador propio para bajas residuales se DESCARTÓ.** Tenía sentido sólo si el audit entraba
+  a las routines. Con cadencia mensual no aporta: chequear las residuales a mano —con controles
+  vivos— lleva cinco minutos dentro de una tarea que ya vas a hacer igual.
+- Si algún mes aparecen 40 residuales en vez de 9, ahí se reevalúa.
+
+### Lo que sigue abierto
+- **pm 73 "Domus Luxury"** — `buscar_proyecto_fuzzy('Domus Luxury')` da **empate 1.000 vs 1.000**
+  entre el pm 73 (Equipetrol Centro, 0 props) y el 356 (ZN, 8 props), a 2,37 km, y **el 73 sale
+  primero**. Hoy no hay daño (las 8 están bien en el 356); lo que las salva es el discriminador de
+  distancia, que actúa DESPUÉS del fuzzy. 🔴 **El 73 NO es una ficha basura**: tiene desarrollador
+  (Alborada Group Bolivia) y en esa familia hay otras dos con 0 props (Domus Black 571, Domus Gold
+  572) — se cargaron desde fichas de desarrollador. Es terreno de **matching**, no de drift.
 
 ## 1. ✅ EL ADMIN — LOS TRES PASOS ESTÁN HECHOS (20-ago-2026)
 
