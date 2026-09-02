@@ -54,8 +54,32 @@ no en el del audit. Si solo se mira el audit, se pasa.
 > `cron-deptos-alquiler-log.md` estaba en la **línea 2218**, con la del 18 arriba de todo, y el log del
 > audit acumula sus entradas al FINAL. Leer "la de arriba" reporta la noche equivocada, y eso no se
 > nota: los números son plausibles.
-> 👉 En cada log: `grep -n "^## <AAAA-MM-DD de hoy>"`. **Si un log no tiene entrada de hoy, esa
-> routine no corrió** — y eso es lo primero del parte, no un detalle.
+> 🔴 **Y BUSCÁ POR LA FECHA SOLA, NUNCA POR EL ENCABEZADO ENTERO** (lección del 2-sep-2026).
+> ```
+> grep -n "2026-09-02" <cada log>          ✅ lo encuentra siempre
+> grep -n "^## 2026-09-02" <cada log>      🔴 falla en el log del AUDIT
+> grep -n "^# Audit cola shadow — 2026-09-02"   🔴 falló el 2-sep
+> ```
+> **Los 4 logs de captura usan `## <fecha> …` pero el del audit usa `# <título> — <fecha>`**, o sea
+> la fecha NO va al principio. Y encima **el título del audit cambia de formato entre corridas**: el
+> 2-sep salió como `# 🌙 Audit cola shadow — 2026-09-02`, con un emoji adelante, y el patrón anclado
+> no matcheó.
+> 🔑 **Lo que pasó ese día es el modo de falla que hay que evitar: el parte reportó "el audit corrió
+> pero no escribió el log", y era FALSO.** El audit había corrido completo — juzgó los 2 casos,
+> escribió su entrada en la línea 6.740, dejó el SQL y avisó por Slack. Consecuencias: se reportó una
+> routine caída que no lo estaba, y **se hizo trabajar a un lector para re-decidir algo ya decidido**
+> — exactamente lo que las claves de rastro existen para evitar.
+> 👉 **Y confirmá con los ARTEFACTOS, no solo con el log.** El audit deja tres rastros y hay que
+> mirarlos antes de declararlo caído:
+> `output/audit-matching-shadow-<fecha>T*.json` (uno por zona) · `output/.audit-completo-<fecha>.json`
+> (la marca del día) · `output/audit-cola-shadow-<fecha>.sql` (el SQL). Si están, corrió.
+>
+> **Si un log no tiene entrada de hoy Y no hay artefactos, esa routine no corrió** — y eso es lo
+> primero del parte, no un detalle.
+> ⚠️ **La fecha de MODIFICACIÓN de un archivo tampoco sirve como prueba.** El 2-sep, buscando la
+> sesión del audit, tres `.jsonl` figuraban modificados esa mañana y su contenido era del **23, 26 y
+> 27 de agosto**. Para ubicar una sesión hay que buscar el timestamp DENTRO del archivo
+> (`grep -l '"timestamp":"<fecha>T08:5'`), igual que con `lastRunAt`.
 > (Si algún día se agenda `cron-casas` como routine nocturna, sumar su log; hoy no está agendada.)
 
 ## Pasos
