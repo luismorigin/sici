@@ -609,6 +609,45 @@ async function main() {
     const { data } = await sb.rpc('buscar_proyecto_fuzzy', { p_nombre: s.nombre_edificio, p_umbral_minimo: 0.3, p_limite: 5 });
     s.candidatos = (data || []).map((c) => ({ pm: c.id_proyecto, nombre: c.nombre, zona: c.zona, score: Number(c.score), tipo: c.match_tipo }));
   }
+
+  // ── CLAVE DE RASTRO DE LA SUPERFICIE 1 (2-sep-2026) ──────────────────────────
+  // El tercer hueco del mismo tipo, después del de las superficies 2/4 (30-jul, `confirmado_por`)
+  // y el de la 3 (31-ago, `dedup_revisado`). Un veredicto SIN_MATCH — "el aviso nombra un
+  // edificio pero NO se puede decidir cuál" — no tenía dónde escribirse, así que la prop volvía
+  // al juez todas las noches.
+  //
+  // 🔑 EL CASO: `8001233` dice *"Cond. Smart Studio 1.0"*. Compatible con Equipe 1.0 (pm 265,
+  // 847 m), con Isuto 1.0 (pm 261) y, forzando, con One Soul (pm 226, a 25 m, alias
+  // "Smart Studio One"). El aviso omite el token que desambigua. El juez lo descartó todo con
+  // evidencia: de 12 avisos de One Soul en base y archivo, NINGUNO lo escribe "1.0", y sus
+  // unidades miden 33,95-38,50 m² contra los 31,37 de éste.
+  // 👉 Y ya había pasado: la prop de archivo `1732` es el MISMO listado de Remax (120045045,
+  // unidad -72 contra -77), misma área y mismo GPS, y también quedó sin match. Nadie dejó rastro.
+  //
+  // ⚠️ NO ES lo mismo que `NOMBRES_NO_EDIFICIO`: ahí el nombre NO identifica un edificio (un
+  // odónimo, una familia). Acá sí lo identifica — lo que falta es con cuál de varios se corresponde.
+  //
+  // 🔑 EL RASTRO CADUCA SOLO SI EL CATÁLOGO CAMBIA. Silenciar para siempre sería peor que el
+  // problema: si mañana alguien crea la ficha o le carga el alias que faltaba, esta prop tiene
+  // que volver. Por eso el silencio se levanta cuando el fuzzy pasa a ofrecer un candidato
+  // **casi exacto** (≥ 0.95 = `nombre_normalizado` o `alias_exacto`): eso sólo ocurre si el
+  // catálogo se movió. Hoy el mejor candidato de 8001233 da 0,611 → se silencia.
+  const SCORE_REABRE = 0.95;
+  let sup1Revisadas = 0;
+  {
+    const antes = sup1.length;
+    const conservar = [];
+    for (const s of sup1) {
+      const fila = filas.find((f) => f.id === s.prop_id);
+      const rastro = fila?.datos_json?.trazabilidad?.sin_match_revisado;
+      const mejor = Math.max(0, ...(s.candidatos || []).map((c) => c.score || 0));
+      if (rastro && mejor < SCORE_REABRE) { sup1Revisadas++; continue; }
+      if (rastro) s.reabierta = `un humano la juzgó SIN_MATCH (${rastro}) pero ahora el fuzzy ofrece ${mejor} — el catálogo cambió`;
+      conservar.push(s);
+    }
+    sup1.length = 0; sup1.push(...conservar);
+    if (antes !== sup1.length) { /* el conteo se declara en el log, no se calla */ }
+  }
   // Superficies 2 y 4: traer nombre + GPS del pm actual → dist prop↔pm (¿el match tiene sentido
   // geográfico?). La 4 lo necesita igual que la 2: el juez tiene que ver CONTRA QUÉ edificio lo
   // ató el lector, no solo el número de pm.
@@ -1382,7 +1421,7 @@ async function main() {
   const file = join(OUT, `audit-matching-shadow-${TS}.json`);
   writeFileSync(file, JSON.stringify({
     generado: TS, ops: OPS, total_filas: filas.length,
-    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, superficie_6_estado_obra_contradictorio: sup6.length, superficie_6_props_afectadas: sup6.reduce((a, c) => a + c.props_afectadas, 0), superficie_7_brecha_precio: sup7.length, superficie_7_props_afectadas: sup7.reduce((a, c) => a + c.n, 0), superficie_10_macrozona_incoherente: sup10.length, superficie_11_colisiones_catalogo: sup11.length, superficie_11_vecinas_silenciadas: sup11Vecinas, superficie_11b_prop_del_lado_equivocado: sup11b.length, ya_confirmados_por_auditor: supConfirmadas.length },
+    resumen: { superficie_1_sin_match_con_nombre: sup1.length, superficie_1_ruido_conocido: sup1Ruido.length, superficie_1_ya_revisadas: sup1Revisadas, superficie_2_automatch_riesgoso: sup2.length, superficie_2_autoconfirmados_ruido: sup2Auto.length, superficie_3_clusters_duplicados: sup3.length, superficie_3_props_a_deduplicar: sup3.reduce((a, c) => a + c.duplicados.length, 0), superficie_4_lector_dudoso: sup4.length, superficie_5_distancia_sospechosa: sup5.length, superficie_6_estado_obra_contradictorio: sup6.length, superficie_6_props_afectadas: sup6.reduce((a, c) => a + c.props_afectadas, 0), superficie_7_brecha_precio: sup7.length, superficie_7_props_afectadas: sup7.reduce((a, c) => a + c.n, 0), superficie_10_macrozona_incoherente: sup10.length, superficie_11_colisiones_catalogo: sup11.length, superficie_11_vecinas_silenciadas: sup11Vecinas, superficie_11b_prop_del_lado_equivocado: sup11b.length, ya_confirmados_por_auditor: supConfirmadas.length },
     superficie_7_umbral_brecha_pct: BRECHA_SOSPECHOSA_PCT,
     superficie_9_moneda_incoherente: sup9.length,
     superficie_10: sup10,
@@ -1531,6 +1570,8 @@ async function main() {
     console.log('');
   }
   console.log(`  Superficie 1 (sin match + con nombre → PM_NUEVO/fuzzy): ${sup1.length}`);
+  // Se DECLARA lo silenciado: un veredicto invisible se lee como "no había nada que juzgar".
+  if (sup1Revisadas) console.log(`  └─ + ${sup1Revisadas} que un humano YA juzgó SIN_MATCH (tag \`sin_match_revisado\`) → vuelven solas si el catálogo les ofrece un candidato ≥ ${SCORE_REABRE}`);
   for (const s of sup1.slice(0, 20)) console.log(`     ${s.prop_id} [${s.op}] "${s.nombre_edificio}"  cands:${s.candidatos.length}${s.candidatos[0] ? ` (mejor ${s.candidatos[0].nombre} ${s.candidatos[0].score})` : ''}${linkDe(s.url)}`);
   // Se DECLARA lo filtrado (regla 3 de NOMBRES_NO_EDIFICIO): un descarte invisible se lee
   // como "no había nada". Estas props siguen sin match — que es el veredicto correcto —,
