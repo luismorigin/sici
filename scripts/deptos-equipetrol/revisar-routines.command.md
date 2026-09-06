@@ -64,6 +64,22 @@ no en el del audit. Si solo se mira el audit, se pasa.
 > la fecha NO va al principio. Y encima **el título del audit cambia de formato entre corridas**: el
 > 2-sep salió como `# 🌙 Audit cola shadow — 2026-09-02`, con un emoji adelante, y el patrón anclado
 > no matcheó.
+> 🔴 **Y UN MISMO ARCHIVO PUEDE TENER DOS SECCIONES CON ORDEN OPUESTO** (lección del 6-sep-2026).
+> `cron-deptos-ventas-log.md` tiene **arriba las corridas más nuevas primero** y **abajo un tramo
+> histórico cronológico**. Esa noche la entrada nueva se appendeó **abajo**, donde la vecina es la del
+> **31-ago**, y la propia routine leyó esa vecindad como "la última corrida": abrió su parte diciendo
+> **"5 noches sin corrida previa (1 al 5-sep)"**, siendo que había corrido las cinco, con entrada
+> propia (líneas 352, 284, 201, 81 y 3 del mismo archivo) y con sus `discovery-deptos-2026-09-0{1..5}T*.json`.
+> 🔑 **Es la vuelta de tuerca sobre la lección de arriba: no falló el patrón de búsqueda, falló
+> ASUMIR QUE EL ARCHIVO TIENE UN SOLO ORDEN.** "Buscar por fecha" encuentra la entrada; no dice nada
+> sobre qué hay a su lado. **La vecindad de una entrada NO prueba que sea la última** — para eso se
+> listan TODAS las fechas del archivo (`grep -n "^## 2026-09" <log>`) y se cruzan con los artefactos.
+> ⚠️ **Y el daño de esto no es reportar mal una noche: es que la premisa falsa se usa para EXPLICAR
+> números que estaban bien.** Ese log dedujo que las 58 desapariciones eran "acumulación de 6 días";
+> eran de **una** noche sobre 474 activas (12,2%), el mismo nivel que el 4-sep (59/465 = 12,7%). El
+> crawl estuvo sano en las dos lecturas — lo que estaba mal era la explicación, **y una explicación
+> falsa escrita en un log envejece como si fuera dato**. 👉 Si la encontrás, **corregila en el log**
+> (tachada y con el porqué al lado): eso es trabajo de este comando, y el audit lo delega acá.
 > 🔑 **Lo que pasó ese día es el modo de falla que hay que evitar: el parte reportó "el audit corrió
 > pero no escribió el log", y era FALSO.** El audit había corrido completo — juzgó los 2 casos,
 > escribió su entrada en la línea 6.740, dejó el SQL y avisó por Slack. Consecuencias: se reportó una
