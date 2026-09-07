@@ -155,9 +155,10 @@ BEGIN
       --    tampoco se calla para siempre — si no se puede verificar durante 3 h,
       --    eso ES la noticia (es el modo en que una alarma muere en silencio).
       IF v_est.fallos_seguidos + 1 = 6 THEN
+        -- 🔑 UN SOLO literal E'' por mensaje: Postgres NO concatena implicitamente
+        --    un literal normal con uno E'' (42601). Mezclarlos rompe la migracion.
         PERFORM public.slack_bot_aviso(format(
-          '⚠️ *No puedo verificar la conexión de WhatsApp* hace 3 h (6 intentos). %s'
-          E'\nNo significa que esté caído: significa que la alarma A está ciega. Revisar la API key y el host (app.kapso.ai).',
+          E'⚠️ *No puedo verificar la conexión de WhatsApp* hace 3 h (6 intentos). %s\nNo significa que esté caído: significa que la alarma A está ciega. Revisar la API key y el host (app.kapso.ai).',
           coalesce('· ' || v_est.detalle, '')));
       END IF;
 
@@ -177,9 +178,7 @@ BEGIN
       -- Avisa al detectarlo, y re-avisa cada 6 h mientras siga caído.
       IF v_est.alertado_at IS NULL OR v_est.alertado_at < NOW() - interval '6 hours' THEN
         v_msg := format(
-          E'🔴 *WhatsApp DESCONECTADO* — estado del número: `%s`.\n'
-          '_Meta cortó la Cloud API. Reconectar escaneando el QR desde el celular; no se arregla solo._\n'
-          '%s',
+          E'🔴 *WhatsApp DESCONECTADO* — estado del número: `%s`.\n_Meta cortó la Cloud API. Reconectar escaneando el QR desde el celular; no se arregla solo._\n%s',
           v_estado,
           CASE WHEN v_est.ultimo_ok_at IS NOT NULL
                THEN format('Último CONNECTED: %s (hace %s).',
@@ -245,9 +244,7 @@ BEGIN
     VALUES ('silencio', NOW(), format('0 entrantes entre 09:00 y 17:00 del %s', v_hoy));
 
     PERFORM public.slack_bot_aviso(format(
-      E'🔴 *WhatsApp en silencio* — CERO mensajes entrantes entre las 09:00 y las 17:00 de hoy (%s).\n'
-      '_En los últimos 24 días esto no pasó nunca salvo el corte del 6-sep; el día más flojo tuvo 5._\n'
-      'Si el número figura CONNECTED, el problema está del lado del webhook o de la campaña.',
+      E'🔴 *WhatsApp en silencio* — CERO mensajes entrantes entre las 09:00 y las 17:00 de hoy (%s).\n_En los últimos 24 días esto no pasó nunca salvo el corte del 6-sep; el día más flojo tuvo 5._\nSi el número figura CONNECTED, el problema está del lado del webhook o de la campaña.',
       to_char(v_hoy,'DD/MM')));
   END IF;
 
