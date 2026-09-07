@@ -15,6 +15,54 @@ const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKi
 const DEPTO_M2_MIN = 1000, DEPTO_M2_MAX = 4500; // rango $/m² coherente deptos Eq (p05 1498 · p95 3268)
 
 export const num = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : null; };
+
+// ---------------------------------------------------------------------------
+// MONTO DE DINERO en notación es-BO (7-sep-2026)
+// ---------------------------------------------------------------------------
+// 🔴 C21 manda `precioVenta` como STRING y **no siempre con el mismo formato**.
+// Medido contra el portal el 7-sep, dos avisos gemelos capturados la misma noche:
+//     122109 → precioVenta: "464.082"   ← separador de MILES (punto)
+//     122111 → precioVenta: "466900"    ← entero pelado
+// `Number("464.082")` da **464,082** — o sea 464 bolivianos, mil veces menos. No
+// lanza, no avisa: devuelve un número finito y positivo que `num()` acepta.
+//
+// 🔑 Y pegaba en DOS lugares, no en uno:
+//   · `precio_bob_portal` quedaba en 464 → el LECTOR tenía que cazarlo cruzando
+//     contra el aviso hermano (lo hizo, y se puso confianza `baja`);
+//   · `pickPrecioC21()` filtra candidatos por `> 1000`, así que 464 y 464/6,96
+//     caían los dos y `precio_fuente_usd` salía **null** — el precio se perdía
+//     entero, en silencio.
+// Ya había pasado el 29-jul con la prop 2123 (`504` por `504.000`); el detector
+// de `cargar-deptos-shadow.mjs` es la red de abajo, esto arregla el origen.
+//
+// ⚠️ NO se toca `num()`: lo usan el ÁREA (`m2C`) y el TC de Remax
+// (`exchange_rate_amount: 12.58`), donde el punto **sí** es decimal y colapsarlo
+// rompería los dos. El separador se interpreta distinto según el campo, así que
+// el parser de dinero tiene que ser propio.
+//
+// Regla: si hay punto y coma, el ÚLTIMO que aparece es el decimal. Si hay uno
+// solo, es de MILES cuando se repite o cuando lo siguen exactamente 3 dígitos
+// (`"464.082"`), y decimal cuando lo siguen 1 o 2 (`"12,50"`). Un precio de
+// inmueble no tiene 3 decimales, así que la regla no tiene zona gris real.
+// (Remax no lo necesita: manda números de verdad — verificado el 7-sep.)
+export function parseMontoBO(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number') return Number.isFinite(v) && v > 0 ? v : null;
+  let s = String(v).trim().replace(/[^\d.,]/g, '');   // fuera "Bs", "$us", espacios
+  if (!s) return null;
+  const puntos = (s.match(/\./g) || []).length;
+  const comas = (s.match(/,/g) || []).length;
+  if (puntos && comas) {
+    const decEsPunto = s.lastIndexOf('.') > s.lastIndexOf(',');
+    s = decEsPunto ? s.split(',').join('') : s.split('.').join('').replace(',', '.');
+  } else if (comas) {
+    s = (comas > 1 || /,\d{3}$/.test(s)) ? s.split(',').join('') : s.replace(',', '.');
+  } else if (puntos) {
+    if (puntos > 1 || /\.\d{3}$/.test(s)) s = s.split('.').join('');
+  }
+  const n = Number(s);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 // dorms: 0 = monoambiente VÁLIDO, por eso no alcanza con `num()` (que descartaría el 0).
 // 🔴 Pero `Number(null)` es 0, así que hasta el 22-ago-2026 un portal que NO declaraba
 // dormitorios entraba como 0 = MONOAMBIENTE. Caso 8001021: C21 manda `recamaras: null`,
@@ -91,7 +139,11 @@ const decodeEnt = (s) => s.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replac
 // basura vs precioVenta=52600 real). Elegir el candidato con $/m² coherente de depto.
 function pickPrecioC21(e) {
   const m2 = num(e.m2C) || num(e.m2T) || 0;
-  const cand = [Number(e.precioVenta), Number(e.precioVenta) / 6.96, Number(e.precio)].filter((v) => v > 1000);
+  // 🔴 `precioVenta` va por `parseMontoBO`, NO por `Number`: llega como string y a
+  // veces con el punto de miles ("464.082"). Con `Number` los dos candidatos que
+  // salen de él caían bajo el filtro `> 1000` y el precio se perdía entero.
+  const pv = parseMontoBO(e.precioVenta);
+  const cand = [pv, pv != null ? pv / 6.96 : null, Number(e.precio)].filter((v) => v > 1000);
   if (!cand.length) return null;
   if (!m2) return cand.sort((a, b) => b - a)[0];
   const coh = cand.filter((v) => v / m2 >= DEPTO_M2_MIN && v / m2 <= DEPTO_M2_MAX);
@@ -187,7 +239,7 @@ export async function fetchC21Depto(url) {
     // precio + TC
     precio_fuente_usd: pickPrecioC21(e), moneda: e.moneda || null,
     tc_portal: null,                       // C21 no expone TC estructurado (precioFormat = precioVenta/6.96 SIEMPRE)
-    precio_bob_portal: num(e.precioVenta),  // candidato BOB; el LECTOR computa ratio = precioVenta / precio_del_texto
+    precio_bob_portal: parseMontoBO(e.precioVenta),  // candidato BOB; el LECTOR computa ratio = precioVenta / precio_del_texto
     // nombre del edificio que C21 esconde en la dirección (ver nombreDesdeDireccion)
     nombre_en_direccion: nombreDesdeDireccion(e.direccionFormat),
     direccion_portal: e.direccionFormat || null,
