@@ -141,6 +141,20 @@ fecha — una prop nueva puede "no aparecer" solo por eso. Verificar con `{"ids"
 ### 7. Log + Slack
 Registrá en **`output/cron-deptos-alquiler-zn-log.md`** (archivo PROPIO, no el de Equipetrol).
 
+🔴 **NO AFIRMES NADA SOBRE NOCHES ANTERIORES SIN LISTAR ANTES TODAS LAS FECHAS DEL LOG** (6-7-sep-2026).
+Estos logs pueden tener **DOS SECCIONES CON ORDEN OPUESTO**: arriba las corridas más nuevas primero,
+abajo un tramo histórico cronológico. Si appendeás abajo, tu vecina es una entrada **vieja**; si mirás
+solo arriba, **faltan** las noches que están abajo. **Las dos lecturas mienten y ninguna falla.**
+Pasó dos noches seguidas en los logs de Equipetrol: el **6-sep** el de VENTA abrió con *"5 noches sin
+corrida previa"* habiendo corrido las cinco, y el **7-sep** el de ALQUILER declaró faltantes cuatro
+entradas que existían.
+👉 Antes de escribir *"no corrió"*, *"es la primera vez"* o *"hace N noches que"*:
+`grep -n "^## 2026-09" output/cron-deptos-alquiler-zn-log.md` y cruzá con los artefactos
+(`discovery-alquiler-zn-<fecha>T*.json`). La **vecindad** de una entrada no prueba nada.
+🔑 **El daño no es reportar mal una noche: la premisa falsa arrastra una EXPLICACIÓN entera** — el 7-sep
+el log de alquiler Eq inventó *"corridas diferidas por máquina dormida"* para explicar noches que habían
+corrido normalmente. Una explicación falsa escrita en un log envejece como si fuera dato.
+
 ```
 node notificar-slack.mjs "<resumen>"
 ```

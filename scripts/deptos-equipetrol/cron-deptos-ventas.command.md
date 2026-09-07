@@ -243,6 +243,23 @@ Reportá al usuario: cuántos escritos/rechazados/retenidos, las correcciones no
 corrupto cazado, TC re-clasificado, match recuperado), y **la cola de excepciones** (PM_NUEVO a crear,
 ambiguos, sin-match). Registrá una línea en `output/cron-deptos-ventas-log.md` (fecha + números).
 
+🔴 **NO AFIRMES NADA SOBRE NOCHES ANTERIORES SIN LISTAR ANTES TODAS LAS FECHAS DEL LOG** (6-7-sep-2026).
+Estos logs tienen **DOS SECCIONES CON ORDEN OPUESTO**: arriba las corridas más nuevas primero, abajo un
+tramo histórico cronológico. Si appendeás abajo, tu vecina es una entrada **vieja**; si mirás solo
+arriba, **faltan** las noches que están abajo. **Las dos lecturas mienten y ninguna falla.**
+Pasó dos noches seguidas, en dos archivos distintos:
+· el **6-sep** este mismo log abrió con *"5 noches sin corrida previa (1 al 5-sep)"* — había corrido las
+  cinco, con entrada propia en las líneas 352, 284, 201, 81 y 3;
+· el **7-sep** el log de ALQUILER declaró que faltaban las entradas del 5 y el 6 en dos logs — estaban
+  las cuatro (3753 y 3810 en alquiler; 3 y 3556 en ventas).
+👉 Antes de escribir *"no corrió"*, *"es la primera vez"* o *"hace N noches que"*:
+`grep -n "^## 2026-09" output/cron-deptos-ventas-log.md` y cruzá con los artefactos
+(`discovery-deptos-<fecha>T*.json`). La **vecindad** de una entrada no prueba nada.
+🔑 **El daño no es reportar mal una noche: la premisa falsa arrastra una EXPLICACIÓN entera.** El 6-sep
+dedujo que las 58 desapariciones eran *"acumulación de 6 días"* cuando eran de **una** (12,2% sobre 474
+activas, el nivel normal), y el 7-sep inventó *"corridas diferidas por máquina dormida"*. Una explicación
+falsa escrita en un log envejece como si fuera dato.
+
 📌 **El log DEBE declarar el tipo de cambio del paso 0**, en una línea: el valor aplicado y la
 variación, o **por qué no se aplicó** si falló. Sin eso, un TC congelado vuelve a ser invisible — que
 es exactamente cómo pasó desapercibido 16 días. Ejemplos:

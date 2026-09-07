@@ -168,6 +168,22 @@ preview headless). Chequeá: precio Bs display + USD normalizado (Binance vivo, 
 Reportá: escritos/rechazados/bajas, correcciones notables vs n8n (moneda Remax corregida, TC re-clasificado,
 match recuperado), y la cola de excepciones (PM_NUEVO, ambiguos, sin-match). Log en `output/cron-deptos-alquiler-log.md`.
 
+🔴 **NO AFIRMES NADA SOBRE NOCHES ANTERIORES SIN LISTAR ANTES TODAS LAS FECHAS DEL LOG** (6-7-sep-2026).
+Estos logs tienen **DOS SECCIONES CON ORDEN OPUESTO**: arriba las corridas más nuevas primero, abajo un
+tramo histórico cronológico. Si appendeás abajo, tu vecina es una entrada **vieja**; si mirás solo
+arriba, **faltan** las noches que están abajo. **Las dos lecturas mienten y ninguna falla.**
+Pasó dos noches seguidas, en dos archivos distintos:
+· el **6-sep** el log de VENTA abrió con *"5 noches sin corrida previa (1 al 5-sep)"* — había corrido las cinco;
+· el **7-sep** este mismo log declaró que faltaban las entradas del 5 y el 6 en dos logs — estaban las
+  cuatro (líneas 3753 y 3810 acá; 3 y 3556 en el de ventas).
+👉 Antes de escribir *"no corrió"*, *"es la primera vez"* o *"hace N noches que"*:
+`grep -n "^## 2026-09" output/cron-deptos-alquiler-log.md` y cruzá con los artefactos
+(`discovery-alquiler-<fecha>T*.json`). La **vecindad** de una entrada no prueba nada.
+🔑 **El daño no es reportar mal una noche: la premisa falsa arrastra una EXPLICACIÓN entera.** El 6-sep
+dedujo que 58 desapariciones eran *"acumulación de 6 días"* cuando eran de **una**, y el 7-sep inventó
+*"corridas diferidas por máquina dormida"*. Una explicación falsa escrita en un log envejece como si
+fuera dato.
+
 **Y mandá el aviso a Slack** — el cron corre de noche sin nadie mirando; sin esto el founder queda ciego
 (y n8n, que hoy sí avisa, se va a apagar):
 ```
