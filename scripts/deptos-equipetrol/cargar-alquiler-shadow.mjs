@@ -399,8 +399,16 @@ function construirFila(e, v, match) {
     // siendo el del aviso — sólo la etiqueta de pertenencia se hereda. Si el proyecto no
     // tiene zona usable, `match.zona_pm` viene null y queda la del aviso, como antes.
     // Ver lib/zona-del-proyecto.mjs.
+    //
+    // 🔴 EL TERCER ARGUMENTO NO ES OPCIONAL ACÁ (8-sep-2026). Esta llamada es la que
+    // ESCRIBE la columna, y hasta hoy iba sin `gps_pm` → `resolverZonaFila` no podía
+    // evaluar el tope de 2 km y heredaba SIEMPRE. La de la línea ~497, que sí lo pasaba,
+    // sólo alimenta el log: el guardarraíl **avisaba que había frenado y no frenaba**.
+    // Se encontró en el cargador de VENTA (caso 8001337 "Blue Box", 2.318 m) y este
+    // archivo tenía el mismo par de llamadas, así que se corrige igual aunque acá todavía
+    // no hubiera producido ninguna fila mal zonificada.
     latitud: a.latitud, longitud: a.longitud,
-    zona: resolverZonaFila(e.zona, match?.zona_pm).zona, microzona: a.microzona,
+    zona: resolverZonaFila(e.zona, match?.zona_pm, match?.gps_pm).zona, microzona: a.microzona,
     id_proyecto_master: match.pm, nombre_edificio: v.nombre_edificio_canonico || null,
     fecha_publicacion: a.fecha_publicacion, score_calidad_dato: a.score_calidad_dato,
     es_multiproyecto: v.es_multiproyecto ?? a.es_multiproyecto ?? false,

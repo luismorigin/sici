@@ -388,8 +388,19 @@ function construirFila(e, v, match) {
     // siendo el del aviso — sólo la etiqueta de pertenencia se hereda. Si el proyecto no
     // tiene zona usable, `match.zona_pm` viene null y queda la del aviso, como antes.
     // Ver lib/zona-del-proyecto.mjs.
+    //
+    // 🔴 EL TERCER ARGUMENTO NO ES OPCIONAL ACÁ (8-sep-2026). Esta llamada es la que
+    // ESCRIBE la columna, y hasta hoy iba sin `gps_pm` → `resolverZonaFila` no podía
+    // evaluar el tope de 2 km y heredaba SIEMPRE. La llamada de la línea ~539, que sí lo
+    // pasaba, sólo alimenta el log. 🔑 Resultado: el guardarraíl **avisaba que había
+    // frenado y no frenaba** — el peor modo de falla posible, porque quien lee el log
+    // queda tranquilo. Caso real: 8001337 (Blue Box), aviso de Equipetrol Norte colgado
+    // por homonimia del pm 468 (Zona Norte) a 2.318 m; el log dijo "🚩 ZONA NO HEREDADA"
+    // y la fila salió al feed con la zona de la otra macrozona, alimentando su mediana.
+    // Alcance medido el 8-sep: 1 sola fila en toda la base viva. No había contaminación
+    // acumulada, había una trampa armada.
     latitud: a.latitud, longitud: a.longitud,
-    zona: resolverZonaFila(e.zona, match?.zona_pm).zona, microzona: a.microzona,
+    zona: resolverZonaFila(e.zona, match?.zona_pm, match?.gps_pm).zona, microzona: a.microzona,
     id_proyecto_master: match.pm, nombre_edificio: v.nombre_edificio_canonico || null,
     fecha_publicacion: a.fecha_publicacion, fecha_discovery: a.fecha_discovery ?? null, score_calidad_dato: a.score_calidad_dato,
     es_multiproyecto: v.es_multiproyecto ?? a.es_multiproyecto ?? false,        // ← taguea multiproyecto (no rechaza)
