@@ -726,6 +726,49 @@ WHERE url LIKE '%remax.bo%' AND substring(url from '-(\d{8,}-\d+)$') IS NOT NULL
 GROUP BY 1 HAVING COUNT(*) > 1;
 ```
 
+### 🔴 ABIERTO — la fila que sobrevive al dedup NO hereda el match (14 Sep 2026)
+
+**Lo de arriba dice "RESUELTO en pipeline" y lo está para el DUPLICADO. No lo está para el MATCH.**
+
+El dedup por código elige bien qué fila sobrevive —la nueva, que trae el precio vigente— pero
+**la nueva se matchea desde cero**, así que todo lo que se había decidido sobre ese aviso queda
+encerrado en la fila descartada.
+
+**El caso que lo destapó, medido:** el aviso C21 `121252` (Torres Soho) entró el 21-ago como `8001286`,
+y el **4-sep el founder dictó a mano** que pertenecía al **pm 509**, contra la evidencia del área, con
+candado formato-objeto y `confirmado_por='founder_2026-09-04'`. El **12-sep C21 reescribió el slug**;
+el cargador hizo su trabajo y marcó `8001286` con `duplicado_de=8001473`. Resultado:
+
+| | `8001286` (descartada) | `8001473` (viva en el feed) |
+|---|---|---|
+| `id_proyecto_master` | **509** | **NULL** |
+| `confirmado_por` | `founder_2026-09-04` | — |
+| candado | sí | — |
+| precio | $214.798 (crudo-falso ÷6,96) | **$130.000** ✅ |
+
+🔑 **Una decisión humana explícita se descartó en silencio y nada falló.** El feed siguió sirviendo la
+propiedad, ahora **sin edificio** — fuera del filtro por edificio, del agregado del proyecto y de las
+comparables de esa ficha. En pantalla se ve una propiedad normal.
+
+**Alcance medido, no supuesto:** se barrió toda la base buscando la misma forma —filas con
+`duplicado_de` que tienen `id_proyecto_master` mientras su sobreviviente activo no lo tiene— y
+**da exactamente 1: esta**. No hay contaminación acumulada; hay una causa viva que ya se manifestó.
+
+**Query de detección (re-medible):**
+```sql
+SELECT v.id AS viva, d.id AS descartada, d.id_proyecto_master AS pm_perdido,
+       d.datos_json->'trazabilidad'->>'confirmado_por' AS quien_lo_decidio, d.dedup_por
+FROM propiedades_v2 d
+JOIN propiedades_v2 v ON v.id = d.duplicado_de
+WHERE d.id_proyecto_master IS NOT NULL AND v.id_proyecto_master IS NULL AND v.es_activa;
+```
+
+**Qué falta decidir (cambio de pipeline, no un UPDATE):** si el cargador debe copiar
+`id_proyecto_master`, `campos_bloqueados` y el bloque `confirmado_*` de la fila vieja a la nueva cuando
+deduplica **por código de aviso** — que es el único dedup donde consta que son el MISMO anuncio, no dos
+unidades parecidas. ⚠️ No confundir con el dedup de la superficie 3 (apart-hoteles), donde heredar sería
+un error.
+
 ---
 
 ## Hallazgos del resumen mensual Equipetrol (13 May 2026)
