@@ -56,11 +56,19 @@ log y se sigue. A mano: `node scripts/deptos-equipetrol/capturar-tc-binance.mjs`
 
 ## MCP Servers
 
+Se declaran en `claude_desktop_config.json` (Claude Desktop) — **no hay `.mcp.json` en este repo**, y las sesiones de Claude Code heredan los del Desktop.
+
 ```json
-{ "postgres-sici": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://claude_readonly:***@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"] } }
+{ "postgres-sici": {
+    "command": "C:\\Users\\LUCHO\\AppData\\Roaming\\npm\\postgres-mcp.cmd",
+    "env": { "POSTGRES_CONNECTION_STRING": "postgresql://claude_readonly.<ref>:***@aws-1-sa-east-1.pooler.supabase.com:6543/postgres" } } }
 ```
 
-Server oficial Anthropic, **readonly por diseño** (solo tool `query` para SELECT; `claude_readonly` tiene SELECT en todas las tablas — defense in depth). **Mutations (UPDATE/INSERT/DELETE)** no son ejecutables desde el MCP: el patrón canónico es Claude genera el SQL, el humano lo aplica desde Supabase UI o psql.
+Paquete `@henkey/postgres-mcp-server`. 🔴 **El readonly lo impone el ROL DE LA BASE, no el paquete** — el server expone tools de escritura (`pg_execute_mutation`, `pg_manage_schema`, `pg_manage_rls`…) y **todas mueren en `42501 permission denied` antes de tocar una fila**: `claude_readonly` tiene SELECT en las 74 tablas de `public` y **cero** INSERT/UPDATE/DELETE (medido 16-sep-2026). `.claude/settings.local.json` pre-aprueba **solo `pg_execute_query`**; las otras 10 se retiraron ese día. **Mutations**: el patrón canónico sigue siendo Claude genera el SQL, el humano lo aplica desde Supabase UI o psql.
+
+⚠️ **Esto se rompió una vez y nadie lo notó:** hasta el 16-sep-2026 el server corría con el rol **`postgres`** (INSERT/UPDATE/DELETE/TRUNCATE + `rolbypassrls`) mientras esta sección describía el readonly. No fallaba nada — simplemente la barrera no existía. 👉 Al tocar la config, verificar con `SELECT current_user`, no con lo que dice el archivo.
+
+🔴 **`command` apunta al shim global, NO a `npx`**: con `npx -y <paquete>` el server se baja del registry en cada arranque (~95 s) y el pool de Cowork/Code lo corta a los 54 s — el síntoma es "Failed" en la UI de MCP sin ningún error de conexión. Instalación: `npm install -g @henkey/postgres-mcp-server`.
 
 ## n8n Environment Variables
 
