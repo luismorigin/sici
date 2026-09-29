@@ -46,7 +46,10 @@ export const ZONAS_HIBRIDO = {
     macrozona: 'equipetrol',
     usaPoligono: false,
     sufijoArchivo: '',
-    m2Tipico: { min: 1700, max: 2200 },
+    // RE-MEDIDA 28-sep-2026: p25–p75 de `v_mercado_venta_shadow` (n=397, mediana $1.667).
+    // Antes decía { 1700, 2200 } — p50–p90 del 28-jul, o sea la mitad DE ARRIBA de la
+    // distribución. Ver el porqué en READER_SPEC.md §banda de $/m².
+    m2Tipico: { min: 1480, max: 1905 },
     zonas: [
       'Equipetrol Centro',
       'Equipetrol Norte',
@@ -76,22 +79,22 @@ export const ZONAS_HIBRIDO = {
     // Viru ($1.051/m²) hay 38%. Con la banda global (1.500-1.900) la periferia entera queda
     // "por debajo de lo normal" y el lector podría forzar un TC para acomodarla.
     // Por eso la banda es POR MICROZONA. `default` es el respaldo para las que tienen n<5.
-    m2Tipico: { min: 1280, max: 1900 },   // p25-p90 de ZN entera (respaldo, más ancho a propósito)
-    m2TipicoPorZona: {
-      '3er-4to anillo Banzer-Alemana':        { min: 1690, max: 2010, n: 20 },
-      '2do-3er anillo Banzer-Alemana':        { min: 1640, max: 2090, n: 76 },
-      '3er-4to anillo La Salle-Banzer':       { min: 1570, max: 1870, n: 47 },
-      '2do-3er anillo La Salle-Banzer':       { min: 1510, max: 1930, n: 33 },
-      '6to-8vo anillo Banzer-Alemana':        { min: 1450, max: 1970, n: 18 },
-      '6to-8vo anillo Radial 26-Banzer':      { min: 1420, max: 1780, n: 46 },
-      '4to-6to anillo Radial 26-Banzer':      { min: 1420, max: 1800, n: 72 },
-      '4to-6to anillo Banzer-Alemana':        { min: 1400, max: 1740, n: 100 },
-      '8vo anillo Viru Viru - Banzer-G77':    { min: 1050, max: 1560, n: 9 },
-    },
-    // ⚠️ Todo esto sale de data del scraper viejo (v16.5, sin auditar) → es una referencia
-    // para DESEMPATAR cuando el texto no trae precio, no una verdad sobre el mercado. Y con
-    // n<20 la mediana es frágil (el 8vo anillo son 9 props). Recalcular cuando el híbrido
-    // haya releído ZN — ahí el número pasa a valer de verdad.
+    // RE-MEDIDA 28-sep-2026: p25–p75 de `v_mercado_venta_shadow` (n=400, mediana $1.246),
+    // DESPUÉS de aplicar las 46 correcciones del drift de ZN — la banda se mide sobre precios
+    // que ella misma ayudó a clasificar, así que se re-mide después de un audit, nunca antes.
+    // Antes decía { 1280, 1900 }, del 28-jul y con el método viejo (p50–p90).
+    m2Tipico: { min: 1020, max: 1460 },
+    //
+    // 🗑️ `m2TipicoPorZona` (9 microzonas, calibrada el 28-jul) se BORRÓ el 28-sep-2026.
+    // Dos razones, las dos medidas:
+    //   1. **Nadie la leía.** El material se arma con `ZONA.m2Tipico` (la global) en los dos
+    //      cargadores; un `grep m2TipicoPorZona` daba UN solo hit: su propia definición.
+    //      Era trabajo escrito y muerto, y peor: una tercera versión de la verdad (el spec
+    //      decía 1500–1900, el código 1280–1900 y esta tabla otra cosa por zona).
+    //   2. **Conectarla no mejora.** Backtest sobre 81 props etiquetadas por el TEXTO del
+    //      aviso, con las bandas calculadas EXCLUYENDO esas 81: global 2 errores / 43 decididas,
+    //      por microzona 2 errores / 40 decididas. Más complejidad, mismo error, menos casos
+    //      resueltos. Si algún día se re-intenta, que sea con ese backtest, no a ojo.
     // Las 14 microzonas ZN. Verificadas una a una contra `zonas_geograficas`
     // (28-jul-2026): las 14 existen con este nombre exacto. Espejo de
     // `ZONAS_ZONA_NORTE` en `simon-mvp/src/lib/zonas.ts` — si una cambia, cambian las dos.

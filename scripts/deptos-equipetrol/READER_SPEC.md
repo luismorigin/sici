@@ -19,6 +19,18 @@
 > alinea con alquiler v2 — ver §BAÑOS). **②** BLOQUE / PISO COMPLETO / lote de N unidades juntas → **`es_multiproyecto`**
 > (no es una unidad comparable; el $/m² NO lo detecta, discrimina cuántas unidades vende el aviso — caso real 3742
 > Rhodium "SE VENDE PISO COMPLETO"; ver §GATE + MULTIPROYECTO).
+>
+> **v4.4 (28-sep-2026)** — 🔴 **la banda de $/m² por zona estaba mal medida Y mal construida.** Los números:
+> ZN decía $1.500–1.900 y la mediana real es **$1.246** (25% de error). El método: se usaba **p50–p90**, la
+> mitad de ARRIBA de la distribución, lo que empuja el desempate bob-vs-USD hacia la lectura más cara de forma
+> sistemática. Ahora es **p25–p75** + una **zona ambigua declarada** alrededor del punto de empate
+> (`mediana × 1,319`, que es donde las dos lecturas quedan equidistantes porque siempre difieren por
+> `6,96 / tasa_paralelo` ≈ 0,575). **Y un paso nuevo de desempate: las hermanas del MISMO edificio**, que es
+> lo que realmente resolvió el caso fundador (Ares by Elite, 2 props infladas 45%). En ZN la zona ambigua es
+> el **24% del inventario**, así que el paso nuevo no es un detalle.
+> 🟢 **La regla quedó ASIMÉTRICA y BACKTESTEADA sobre 81 props etiquetadas por el texto del aviso: 1 error
+> contra los 10 de la banda vieja.** La banda sólo confirma USD; cuando la lectura que encaja es la de
+> bolivianos, decide el edificio, no la banda. Ver §banda de $/m² para la tabla del backtest.
 
 ## Entrada (lo que el lector LEE)
 Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente, sin regex):
@@ -117,13 +129,105 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 > Equipetrol a una zona más barata hace clasificar mal el tipo de cambio, en silencio. La banda viene en el
 > material (`m2_tipico`); si no viene, usá la de la tabla:
 >
-> | Zona | Banda típica $/m² | Medido sobre |
-> |---|---|---|
-> | Equipetrol | **$1.700 – $2.200** | p50–p90, n=381 |
-> | Zona Norte | **$1.500 – $1.900** | p50–p90, n=428 · ZN es ~12% más barata |
+> | Zona | Banda típica $/m² | Zona AMBIGUA (no decidir) | Medido sobre |
+> |---|---|---|---|
+> | Equipetrol | **$1.480 – $1.905** | $1.870 – $2.530 | p25–p75, n=397 · mediana $1.667 |
+> | Zona Norte | **$1.020 – $1.460** | $1.400 – $1.890 | p25–p75, n=400 · mediana $1.246 |
 >
-> Método (para recalcular cuando haga falta): $/m² sobre el precio **crudo** de las activas con tag directo,
-> percentil 50 a 90. Validación: ese cálculo sobre Equipetrol reproduce el 1.700–2.200 que esta spec ya usaba.
+> 🟢 **ESTOS NÚMEROS YA ESTÁN EN EL CÓDIGO** (`lib/zonas-hibrido.mjs`, `m2Tipico`), que es de donde
+> salen de verdad: el cargador los mete en el material como `m2_tipico` y **el lector usa ESE valor,
+> no esta tabla**. La tabla es el respaldo para cuando el material no lo trae.
+> ⚠️ **Por eso corregir sólo esta tabla NO cambia nada** — pasó el 28-sep: se editó el spec y la
+> captura habría seguido usando la banda vieja. Si se re-mide, se tocan LOS DOS.
+> 🗑️ La antigua `m2TipicoPorZona` (banda por microzona de ZN) **se borró**: nadie la leía y el
+> backtest mostró que conectarla no mejora (2 errores / 40 decididas, contra 2 / 43 de la global).
+>
+> 🔴 **CORREGIDA EL 28-sep-2026, y el error NO era sólo que los números estuvieran viejos.** La tabla decía
+> Equipetrol $1.700–2.200 y ZN **$1.500–1.900**, medidas el 28-jul sobre **p50–p90**. Dos cosas estaban mal:
+> · **Los números:** la mediana REAL de ZN es **$1.246**, no ~$1.700. La banda estaba **25% alta**, y decía
+>   "ZN es ~12% más barata" cuando hoy es **25%** más barata que Equipetrol.
+> · **El método, que es lo grave:** `p50–p90` es la **mitad de arriba** de la distribución, no "lo típico".
+>   Una banda corrida hacia arriba empuja el desempate hacia la lectura **más cara** de forma sistemática.
+> 🔑 **Por qué eso rompe justo acá:** las dos lecturas del mismo número (USD directo vs bob) difieren SIEMPRE
+> por el mismo factor, `6.96 / tasa_paralelo` ≈ **0,575**. O sea los candidatos son `X` y `0,575·X`. El punto
+> donde las dos quedan igual de lejos de la mediana es **mediana × 1,319** = **$1.643/m² en ZN** ($2.198 en
+> Equipetrol) — y la banda vieja de ZN (1.500–1.900) **contenía ese punto entero**. Toda ambigüedad se
+> resolvía hacia USD, en silencio.
+> 📌 **Caso fundador: `8001199` / `8001200` (Ares by Elite, ZN).** Se publicaron a **$1.775 y $1.857/m²**
+> cuando su edificio vale **~$1.200/m²**: con la banda vieja el `usd_m2` caía "en banda" (1.775 ∈ 1.500–1.900)
+> y el `bob_m2` (1.021) quedaba afuera → USD directo, y quedó 45% inflado.
+> 🔑 **Pero la banda nueva TAMPOCO los resuelve sola, y hay que decirlo:** 1.775 cae justo en la zona ambigua
+> de ZN (1.400–1.890). Lo que de verdad los resolvió fue **mirar las otras unidades del MISMO edificio** —
+> los 4 hermanos del pm 404 dan $1.200/m² parejo. De ahí sale el paso 2 de abajo. **El drift NO podía
+> encontrarlos** (el portal nunca les movió el precio): salieron barriendo la base por la firma
+> `precio_usd × 6,96 = Bs redondo`, que en todo el feed dio exactamente estos 2 casos vivos.
+>
+> 🔴 **LA BANDA ES ASIMÉTRICA: sólo sirve para CONFIRMAR una lectura en USD. Orden de desempate:**
+> 1. **`usd_m2` DENTRO de la banda y `bob_m2` FUERA → USD directo.** Es el único caso que la banda decide sola.
+> 2. **CUALQUIER otro caso — incluido `bob_m2` dentro de la banda — NO lo decide la banda: mirá las otras
+>    unidades del MISMO edificio.** El material trae la tabla `edificios_m2` (nombre → $/m²). 🔴 **Decidí
+>    SÓLO con las entradas `base: "declarado"`** (hermanas cuyo TEXTO declara la moneda). Las `base: "feed"`
+>    son CONTEXTO, no evidencia: vienen del feed y pueden estar contaminadas por el mismo error que estás
+>    tratando de resolver. **Medido el 28-sep: decidiendo con las del feed, ZN acertaba 16 de 24; decidiendo
+>    sólo con las declaradas, 23 de 26.** Y pedí al menos 2 hermanas: con una sola es una anécdota.
+>    🔑 **Por qué `bob_m2` en banda NO alcanza para decir bob:** "bolivianos plausibles" y "dólares caros" son
+>    **el mismo número**. Si el `bob_m2` cae en 1.020–1.460, el `usd_m2` cae necesariamente en 1.774–2.539, que
+>    es un aviso caro pero perfectamente real. Sin las hermanas, esa rama es una moneda al aire.
+> 3. **Si el edificio no tiene otras unidades vivas:** **NO adivines**. `confianza: "baja"` + las DOS lecturas
+>    en `notas`, y que lo juzgue `/audit-cola-shadow` con el aviso a la vista. Inventar un precio que el
+>    anuncio no declara es peor que declarar la duda.
+>
+> ✅ **BACKTEST (28-sep-2026) — la regla está MEDIDA, no supuesta.** Se etiquetaron **81 props C21 de ZN cuyo
+> TEXTO declara la moneda** (13 en Bs · 68 en USD) — verdad independiente de cualquier banda — y se corrió
+> cada regla a ciegas contra ellas:
+>
+> | regla | errores | decide bien | manda a hermanas |
+> |---|---|---|---|
+> | Banda vieja (1.500–1.900, simétrica) | **10** | 18 | — |
+> | Banda nueva simétrica (1.020–1.460) | 7 | 29 | 40 |
+> | Distancia log a la mediana (margen 1,5×) | 12 | 57 | 12 |
+> | 🟢 **Banda nueva ASIMÉTRICA (la de arriba)** | **1** | 28 | 52 |
+>
+> 🟢 **CORRIDA FINAL DE LA CASCADA COMPLETA (28-sep, `node backtest-banda.mjs`), 167 casos etiquetados por
+> el TEXTO en las dos macrozonas:**
+>
+> | paso | casos | acierta | falla |
+> |---|---|---|---|
+> | 1 · banda | 52 | 50 | 2 |
+> | 2 · hermanas declaradas | 39 | 36 | 3 |
+> | 3 · humano (declara la duda) | 76 | — | — |
+> | **total que decide sola** | **91** | **86 (94,5%)** | **5** |
+>
+> Contra los **10 errores** de la banda vieja, que además no mandaba nada a revisión: decidía todo, y el
+> 12% de lo que decidía en ZN estaba mal **en silencio**.
+> ⚠️ **El backtest es PESIMISTA a propósito:** ignora el texto del aviso para poder medir el desempate. En
+> producción el texto decide primero, y sólo ~30% de los avisos C21 llegan a esta cascada (60 de 196 en 30
+> días) → **a revisión humana va ~1 aviso cada 2 noches**, no el 45% que sugiere la tabla.
+> 🔁 **Re-correr `backtest-banda.mjs` cada vez que se toque la banda o esta cascada.** Es el script que
+> existe para que no se vuelva a cambiar este criterio a ojo — pasó dos veces el mismo día.
+>
+> 🔑 **La asimetría es lo que baja los errores de 10 a 1.** La banda simétrica arregla los casos tipo Ares pero
+> **introduce 6 errores nuevos en la dirección contraria** (lee como bolivianos avisos caros que sí están en
+> dólares). Mandar esa rama a las hermanas los elimina.
+> 📏 **Y el paso 2 tiene con qué resolver, también medido:** de los 52 que manda a hermanas, **38 (73%) tienen
+> al menos una hermana viva** y 29 tienen dos o más. Los ~14 sin hermanas caen al paso 3, que es declarar la
+> duda — no adivinar.
+> ⚠️ **El primer backtest daba lo contrario y estaba MAL: usaba como verdad el `tipo_cambio_detectado` actual,
+> que en buena parte lo puso la banda vieja** — la regla vieja se calificaba a sí misma y "ganaba" 73 a 18.
+> La verdad tiene que venir del TEXTO del aviso, que ninguna banda tocó.
+>
+> Método (para recalcular — hacerlo cada 2-3 meses, la banda envejece con el mercado y con el TC):
+> ```sql
+> SELECT zona_general,
+>        round(percentile_cont(0.25) WITHIN GROUP (ORDER BY precio_m2)) p25,
+>        round(percentile_cont(0.50) WITHIN GROUP (ORDER BY precio_m2)) mediana,
+>        round(percentile_cont(0.75) WITHIN GROUP (ORDER BY precio_m2)) p75,
+>        round(percentile_cont(0.50) WITHIN GROUP (ORDER BY precio_m2) * 1.319) punto_de_empate
+> FROM v_mercado_venta_shadow WHERE precio_m2 IS NOT NULL GROUP BY 1;
+> ```
+> ⚠️ **Es circular por construcción y hay que saberlo:** la banda se mide sobre precios que la banda ayudó a
+> clasificar. Por eso se re-mide DESPUÉS de un audit de drift (cuando los errores de moneda ya se corrigieron)
+> y nunca antes. Los valores de arriba son del 28-sep, justo después de aplicar las 46 correcciones de ZN.
 >
 > 🔴 **Modo `--local` (material armado desde lo guardado, sin ir al portal): `precio_bob_portal` viene NULL a
 > propósito.** En Zona Norte el `precio_bs` guardado resultó ser `precio_usd × 6.96` en **435 de 435** props —
@@ -139,7 +243,10 @@ Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente
 > - `usd_m2` en banda y `bob_m2` muy bajo → **USD directo** (`precio_usd = precio_candidato`, tag `no_especificado`,
 >   `moneda_original='USD'`). El vendedor pensó en dólares; el BOB era USD×6.96.
 > - `bob_m2` en banda y `usd_m2` muy alto → **bob** (`precio_usd = precio_bob_portal`, tag `bob`). Bolivianos genuinos.
-> - Ambos en banda → mirá el tipo de unidad (mono amoblado tolera $/m² más alto → USD). Ninguno → el más cercano a la banda.
+> - Ambos en banda → mirá el tipo de unidad (mono amoblado tolera $/m² más alto → USD).
+> - 🔴 **Ninguno en banda, o el `usd_m2` cae en la ZONA AMBIGUA → NO uses "el más cercano a la banda"** (así se
+>   inflaron los 2 Ares): aplicá el **orden de desempate** de la sección de la banda — hermanas del mismo
+>   edificio primero, y si no hay, `confianza: "baja"` con las dos lecturas anotadas.
 > - Ejemplos reales: Sky Eclipse 3434 → USD $1.643/m² (bob daría $1.085) → **USD**. Maré 3580 → bob $2.104/m²
 >   (USD daría $3.187) → **bob**. Los desarrolladores difieren: Maré cotiza en Bs, Sky Eclipse en USD.
 > - Si el texto SÍ dice 'Bs X' explícito → `bob` (el texto manda). Si dice USD / '6.96' / 'Bs 7' → esas reglas ganan.
