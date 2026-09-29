@@ -35,6 +35,7 @@ import { detalleDesdeBase } from './lib/detalle-desde-base.mjs';
 import { leerRechazados, guardarRechazados, TTL_DIAS, UMBRAL_FETCH_FALLIDO, RAZON_FETCH_FALLIDO } from './lib/rechazados.mjs';
 import { traerTodo } from './lib/traer-todo.mjs';
 import { filtrarAliasSugeridos, declararDescartes } from './lib/filtrar-alias.mjs';
+import { medirBanda, comparablesPorPm, edificiosPorNombre } from './lib/banda-m2.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = 'C:/Users/LUCHO/Desktop/Censo inmobiliario/sici';
@@ -141,7 +142,14 @@ async function prep() {
   // el BOB con la MISMA tasa (mata la divergencia C21-BOB). Fuente: config_global.
   const { data: tcRow } = await sb.from('config_global').select('valor').eq('clave', 'tipo_cambio_paralelo').single();
   const tasaParalelo = tcRow?.valor != null ? Number(tcRow.valor) : null;
-  console.log(`\n🔎 PREP — material de lectura para ${lote.length} deptos${idsArg ? ' (--ids)' : ` (hasta ${N} frescos, agnóstico a fuente)`}. zona=${ZONA.nombre}. tasa_paralelo=${tasaParalelo}. ${LOCAL ? 'MODO LOCAL: desde lo guardado, sin salir al portal.' : ''} NO escribe a la BD.\n`);
+  // 🎛️ La banda de $/m² de la zona, MEDIDA sobre el feed vivo (antes era una constante que
+  // nadie recalculaba y llegó a estar 25% arriba). Con freno: si se aleja >15% de la del
+  // código NO se aplica sola — ver lib/banda-m2.mjs.
+  const banda = await medirBanda(sb, ZONA.zonas, ZONA.m2Tipico);
+  console.log(`\n🔎 PREP — material de lectura para ${lote.length} deptos${idsArg ? ' (--ids)' : ` (hasta ${N} frescos, agnóstico a fuente)`}. zona=${ZONA.nombre}. tasa_paralelo=${tasaParalelo}. ${LOCAL ? 'MODO LOCAL: desde lo guardado, sin salir al portal.' : ''} NO escribe a la BD.`);
+  console.log(`   🎛️ banda $/m²: ${banda.min}-${banda.max} (${banda.fuente}${banda.n ? `, n=${banda.n}` : ''}${banda.mediana ? `, mediana ${banda.mediana}` : ''})`);
+  if (banda.aviso) console.log(`   ${banda.aviso}`);
+  console.log('');
   const entradas = [];
   let sinTexto = 0;
   for (const p of lote) {
@@ -212,10 +220,28 @@ async function prep() {
   }
   // El material dice de qué ZONA es y de dónde salió el texto: el lector y el --apply pueden
   // verificar que están trabajando sobre lo que creen (lección del pisado de chunks del 28-jul).
+  // 🏢 LOS COMPARABLES DEL EDIFICIO — lo que permite al lector desempatar bob-vs-USD SIN
+  // llamar a un humano. Antes el material traía los NOMBRES de los candidatos y no sus
+  // precios, así que el paso 2 del spec era una promesa que nadie podía cumplir y todo lo
+  // dudoso caía a "confianza baja". Una sola consulta para todo el lote.
+  const comparables = await comparablesPorPm(sb, entradas.flatMap((e) => (e.match_candidatos || []).map((c) => c.pm)));
+  let conComparables = 0;
+  for (const e of entradas) {
+    for (const c of e.match_candidatos || []) {
+      const cmp = comparables.get(Number(c.pm));
+      if (cmp) { c.m2_del_edificio = cmp.mediana_m2; c.n_unidades = cmp.n; }
+    }
+    if ((e.match_candidatos || []).some((c) => c.m2_del_edificio != null)) conComparables++;
+  }
+  const edificiosM2 = await edificiosPorNombre(sb, ZONA.zonas, tasaParalelo);
+  console.log(`   🏢 comparables: ${conComparables}/${entradas.length} entradas con candidato tasado · tabla de ${edificiosM2.length} edificios de la zona`);
+
   const file = join(OUT, conSufijo(`material-${TS}.json`, ZONA));
   writeFileSync(file, JSON.stringify({
     generado: TS, spec: 'READER_SPEC.md', zona: ZONA.id, origen: LOCAL ? 'base' : 'portal',
-    m2_tipico: ZONA.m2Tipico, total: entradas.length, entradas,
+    m2_tipico: { min: banda.min, max: banda.max }, m2_tipico_fuente: banda.fuente, m2_tipico_n: banda.n ?? null,
+    edificios_m2: edificiosM2,
+    total: entradas.length, entradas,
   }, null, 2));
   console.log(`\n💾 ${file}`);
   if (sinTexto) console.log(`   ⚠️  ${sinTexto} sin descripción guardada (quedaron afuera; esas sí necesitan fetch)`);
@@ -333,12 +359,35 @@ async function prepNuevas(discoveryFile, n) {
   //      salían llamándose `lectura-venta-<fecha>-cN.json`, exactamente el nombre que usa Equipetrol
   //      → vuelve la colisión que se arregló el 28-jul (el que escribe segundo pisa al primero).
   //   2. Sin `m2_tipico` el lector se queda SIN la banda de $/m² de su zona y juzga el TC contra la
-  //      de Equipetrol ($1.700-2.200) cuando la de ZN es $1.280-1.900 → un precio correcto de ZN
-  //      parece bajo y el lector puede "corregirlo" mal. Es error de DATOS, no de archivo.
+  //      de Equipetrol cuando la de ZN es más baja → un precio correcto de ZN parece bajo y el
+  //      lector puede "corregirlo" mal. Es error de DATOS, no de archivo.
+  // 🆕 28-sep-2026: las DOS rutas miden la banda en vivo y adjuntan los comparables del edificio.
+  // Si una sola lo hiciera, el lector juzgaría con criterios distintos según por dónde entró el
+  // aviso — el mismo tipo de divergencia silenciosa que este comentario ya documenta.
+  const banda = await medirBanda(sb, ZONA.zonas, ZONA.m2Tipico);
+  console.log(`   🎛️ banda $/m²: ${banda.min}-${banda.max} (${banda.fuente}${banda.n ? `, n=${banda.n}` : ''})`);
+  if (banda.aviso) console.log(`   ${banda.aviso}`);
+  const comparables = await comparablesPorPm(sb, entradas.flatMap((e) => (e.match_candidatos || []).map((c) => c.pm)));
+  let conComparables = 0;
+  for (const e of entradas) {
+    for (const c of e.match_candidatos || []) {
+      const cmp = comparables.get(Number(c.pm));
+      if (cmp) { c.m2_del_edificio = cmp.mediana_m2; c.n_unidades = cmp.n; }
+    }
+    if ((e.match_candidatos || []).some((c) => c.m2_del_edificio != null)) conComparables++;
+  }
+  // 🔑 En ESTA ruta `match_candidatos` viene vacío A PROPÓSITO (el lector nombra el edificio
+  // leyendo el aviso), así que los comparables por candidato no aplican: lo que sirve es la
+  // TABLA de $/m² por edificio de la zona, que el lector consulta DESPUÉS de identificarlo.
+  const edificiosM2 = await edificiosPorNombre(sb, ZONA.zonas, tasaParalelo);
+  console.log(`   🏢 tabla de comparables: ${edificiosM2.length} edificios de la zona con $/m² conocido`);
+
   const file = join(OUT, conSufijo(`material-nuevas-${TS}.json`, ZONA));
   writeFileSync(file, JSON.stringify({
     generado: TS, spec: 'READER_SPEC.md', zona: ZONA.id, origen: 'discovery-nuevas',
-    m2_tipico: ZONA.m2Tipico, total: entradas.length, entradas,
+    m2_tipico: { min: banda.min, max: banda.max }, m2_tipico_fuente: banda.fuente, m2_tipico_n: banda.n ?? null,
+    edificios_m2: edificiosM2,
+    total: entradas.length, entradas,
   }, null, 2));
   console.log(`\n💾 ${file}`);
   console.log(`   📊 Tráfico: ${trafico.resumen()}${process.env.PROXY_URL ? ' (por proxy)' : ' (IP directa, $0)'}`);

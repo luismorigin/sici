@@ -38,10 +38,16 @@ ok(zn.zonas.length === 14, `ZN tiene 14 microzonas (tiene ${zn.zonas.length})`);
 ok(zn.sufijoArchivo === '-zn', 'ZN escribe con sufijo propio');
 // La banda de $/m² tiene que ser PROPIA de cada zona. Heredar la de Equipetrol en una zona más
 // barata hace que el lector desempate mal el tipo de cambio, y no da ningún error al hacerlo.
-ok(zn.m2Tipico != null, 'ZN tiene su propia banda de $/m2 (calibrada 28-jul: 1500-1900)');
+ok(zn.m2Tipico != null, 'ZN tiene su propia banda de $/m2 (re-medida 28-sep: 1020-1460)');
 ok(zn.m2Tipico.min !== eq.m2Tipico.min || zn.m2Tipico.max !== eq.m2Tipico.max,
    '🔑 la banda de ZN NO es la de Equipetrol');
-ok(zn.m2Tipico.max < eq.m2Tipico.max, 'ZN es más barata que Equipetrol (medido: ~12%)');
+ok(zn.m2Tipico.max < eq.m2Tipico.max, 'ZN es más barata que Equipetrol (medido 28-sep: 25%)');
+// 🔴 La banda se re-mide p25–p75 (el MEDIO de la distribución), no p50–p90: una banda corrida
+// hacia arriba empuja el desempate bob-vs-USD hacia la lectura más cara, en silencio.
+ok(zn.m2Tipico.min < 1246 && zn.m2Tipico.max > 1246,
+   'la banda de ZN contiene su mediana ($1.246) — si no, está corrida');
+ok(eq.m2Tipico.min < 1667 && eq.m2Tipico.max > 1667,
+   'la banda de Equipetrol contiene su mediana ($1.667) — si no, está corrida');
 
 console.log('\n=== 3. Los archivos de una zona no pisan los de la otra ===');
 const pref = (z) => `discovery-deptos${ZONAS_HIBRIDO[z].sufijoArchivo}-`;
