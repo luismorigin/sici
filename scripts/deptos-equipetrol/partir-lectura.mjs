@@ -48,8 +48,17 @@ chunks.forEach((c, i) => {
   // equivocado (o alguien lo renombra), puede detectarlo antes de aplicar el spec que no
   // corresponde. `m2_tipico` viaja para que el lector desempate el TC con la banda de SU
   // zona y no con la de Equipetrol.
+  // 🔴 Y `edificios_m2` TAMBIÉN, desde el 29-sep-2026. El cargador la calcula (131 edificios
+  // de la zona con su $/m²) y la guarda en el material, pero este partidor no la copiaba al
+  // chunk — así que el PASO 2 de la cascada del spec v4.4 ("desempatá con las hermanas del
+  // edificio") era INEJECUTABLE en la ruta nocturna, que es la única que parte en chunks.
+  // No fallaba: el lector caía al paso 3 y declaraba la duda, o sea mandaba a un humano casos
+  // que la tabla resolvía sola. Lo cazó un lector el 29-sep avisando "el chunk no trae la tabla".
+  // 🔑 El backtest no podía verlo: lee el material DIRECTO, sin pasar por acá. Una pieza puede
+  // estar bien construida, bien medida y aun así no llegar al lugar donde se usa.
   writeFileSync(f, JSON.stringify({
     operacion: op, zona: zonaId, m2_tipico: doc.m2_tipico ?? null,
+    edificios_m2: doc.edificios_m2 ?? null,
     chunk: i + 1, total_chunks: chunks.length, entradas: c,
   }, null, 2));
   console.log(`chunk ${i + 1}: ${c.length} props → ${f}`);
