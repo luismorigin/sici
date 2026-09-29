@@ -468,6 +468,7 @@ async function main() {
   let sup2 = [], sup2Auto = [];
   const sup4 = [];   // el lector fijo el pm con confianza no-alta (superficie 4, 29-jul-2026)
   const sup4b = [];  // el lector dudo y NO hay match: nadie las miraba (superficie 4b, 22-ago-2026)
+  const sinNombreVerificadas = [];  // salieron de la 4b: se comprobo que el aviso NO publica el edificio
   let sup5 = [];     // match con DISTANCIA sospechosa prop↔pm (superficie 5, 4-ago-2026)
   const pmRiesgoIds = new Set();
 
@@ -569,9 +570,23 @@ async function main() {
     // 🔴 REPORTA, NO DECIDE: que el lector dudara no dice QUÉ está mal — puede ser el nombre, el
     // precio, el área o nada. Es una cola de lectura priorizada, no un veredicto.
     // ⚠️ La PRIMERA corrida trae el backlog acumulado (~50), no la tasa nocturna.
+    //
+    // 🔒 SALIDA DE LA COLA (29-sep-2026): `trazabilidad.sin_nombre_verificado`. Sin esto la 4b
+    // no tenía forma de cerrarse — una prop cuyo aviso REALMENTE no nombra el edificio vuelve
+    // todas las noches y se re-juzga para siempre, que es justo lo que las claves de rastro
+    // existen para evitar. Se pone SÓLO tras comprobar, campo por campo, que el nombre no está
+    // en ninguna fuente: descripción, slug, `direccion_portal` y `titulo`.
+    // 🔑 Es una clave PROPIA, no `confirmado_por`: esa afirma "el match es correcto" y acá no hay
+    // match. Lo que se afirma es "el aviso no publica el edificio", que es otra cosa.
+    // Revocable: `datos_json #- '{trazabilidad,sin_nombre_verificado}'` y vuelve a la cola.
     else if (p.id_proyecto_master == null && !candado(p, 'id_proyecto_master')
-             && confianzaLector(p) && confianzaLector(p) !== 'alta') {
+             && confianzaLector(p) && confianzaLector(p) !== 'alta'
+             && !p.datos_json?.trazabilidad?.sin_nombre_verificado) {
       sup4b.push({ ...base, metodo: metodo || 'sin_metodo', confianza_lector: confianzaLector(p) });
+    }
+    else if (p.id_proyecto_master == null && p.datos_json?.trazabilidad?.sin_nombre_verificado) {
+      sinNombreVerificadas.push({ id: p.id, op: p.tipo_operacion, zona: p.zona,
+        por: p.datos_json.trazabilidad.sin_nombre_verificado });
     }
     // SUPERFICIE 5 — el match está LEJOS del edificio (4-ago-2026)
     // Cierra el FIX B1 que quedó pendiente desde el 30-may (BITACORA:669). Las superficies
@@ -1476,6 +1491,7 @@ async function main() {
     // SUPERFICIE 4b — el lector dudó y NO hay match. La 4 sólo mira las dudas que ADEMÁS
     // tuvieron match; éstas no las miraba nadie. `baja` antes que `media`. REPORTA, NO DECIDE:
     // la duda no dice qué está mal, sólo que hay que leer el aviso.
+    sin_nombre_verificadas: sinNombreVerificadas,
     superficie_4b: sup4b.slice().sort((a, b) =>
       (a.confianza_lector === 'baja' ? 0 : 1) - (b.confianza_lector === 'baja' ? 0 : 1) || a.prop_id - b.prop_id),
     // Matches de superficie 2/4 que un juez YA confirmó (tag `datos_json.trazabilidad.confirmado_por`).
@@ -1619,6 +1635,13 @@ async function main() {
     console.log(`     ${s.prop_id} [${s.op}] zona ${s.zona || '—'} · método ${s.metodo} · confianza del lector: ${s.confianza_lector}${linkDe(s.url)}`);
   }
   if (sup4bOrd.length > 20) console.log(`     … y ${sup4bOrd.length - 20} más (la lista completa va en el JSON)`);
+  // 🔒 Y se DECLARA lo que salió de la cola por verificación de nombre — un descarte silencioso
+  // sería peor que la cola larga: nadie sabría que esas props dejaron de mirarse.
+  if (sinNombreVerificadas.length) {
+    console.log(`  └─ + ${sinNombreVerificadas.length} fuera de la cola: se comprobó que el aviso NO publica el edificio`);
+    console.log(`        (descripción, slug, dirección del portal y título revisados campo por campo)`);
+    console.log(`        para devolverlas: datos_json #- '{trazabilidad,sin_nombre_verificado}'`);
+  }
   // Se DECLARA lo excluido por confirmación previa (mismo criterio que los otros dos filtros).
   if (supConfirmadas.length) {
     const n2 = supConfirmadas.filter((s) => s.superficie === 2).length;
