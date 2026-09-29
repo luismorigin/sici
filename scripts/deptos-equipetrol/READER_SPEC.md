@@ -444,6 +444,15 @@ intenta predecir todo. Se separa en:
 - Ambos `null` si no se mencionan (no asumir). El flag NO inventa ítems específicos del `equipamiento_canonico`.
 
 ### NOMBRE DE EDIFICIO (para matching, name-first)
+> 🗺️ **Dónde mirar, por portal** (medido el 29-sep-2026 sobre las props que quedaron sin edificio):
+> · **C21** → el **slug** y sobre todo `direccion_portal` (**70%** lo trae ahí). Su `titulo` es
+>   genérico ("DEPARTAMENTO EN VENTA") y casi nunca sirve.
+> · **Remax** → la **descripción** y el **`titulo`** ("CONDOMINIO GOLDEN TOWER", "…EN ATLANTIS
+>   TOWERS", "…EN COND. ULUPICA": **3 de 17**). Su `direccion_portal` suele traer una referencia de
+>   calle ("Segundo anillo El Cristo"), no el nombre, y su slug **solo trae la zona**.
+> 🔑 O sea: **los dos portales esconden el nombre en campos distintos**, y hasta el 29-sep el lector
+> no veía ninguno de los dos en la ruta de props nuevas (`titulo` iba `null` y `direccion_portal` se
+> descartaba al armar el chunk).
 - Leé el nombre del **slug (C21) / descripción (Remax)** y entregá el **canónico**: romano→arábigo
   ("Stone III"→"Stone 3"), sin sufijos de marketing ("by SmartStudio" queda si es parte del nombre real).
 - 🆕 **TERCERA FUENTE, y hay que mirarla SIEMPRE: `direccion_portal`** (29-sep-2026). Es la dirección

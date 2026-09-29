@@ -285,7 +285,10 @@ async function prepNuevas(discoveryFile, n) {
     const crudo = num(nv.precio_raw);
     entradas.push({
       id, fuente: nv.fuente, zona: nv.zona || null, slug: slugDe(nv.url),
-      titulo: null, subtitulo: null, descripcion: h.descripcion || null,
+      // 🔴 El TÍTULO viaja desde el 29-sep-2026; antes iba `null` y en REMAX ahi vive el
+      // nombre del edificio ("CONDOMINIO GOLDEN TOWER", "...EN ATLANTIS TOWERS"). Medido:
+      // 3 de los 17 avisos de Remax que quedaron sin edificio lo traian en el titulo.
+      titulo: h.titulo || null, subtitulo: null, descripcion: h.descripcion || null,
       senales: {
         precio_mensual_crudo: crudo, moneda_original: moneda,
         precio_contrato_discovery: crudo != null ? { precio: crudo, moneda } : null,

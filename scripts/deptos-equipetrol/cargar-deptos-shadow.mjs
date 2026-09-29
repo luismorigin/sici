@@ -315,7 +315,10 @@ async function prepNuevas(discoveryFile, n) {
     const area = h.area_const_m2 ?? h.area_texto ?? null;
     entradas.push({
       id, fuente: nv.fuente, zona: nv.zona || null, slug: slugDe(nv.url),
-      titulo: null, subtitulo: null, descripcion: h.descripcion || null,
+      // 🔴 El TÍTULO viaja desde el 29-sep-2026; antes iba `null` y en REMAX ahi vive el
+      // nombre del edificio ("CONDOMINIO GOLDEN TOWER", "...EN ATLANTIS TOWERS"). Medido:
+      // 3 de los 17 avisos de Remax que quedaron sin edificio lo traian en el titulo.
+      titulo: h.titulo || null, subtitulo: null, descripcion: h.descripcion || null,
       senales: {
         precio_candidato: h.precio_fuente_usd, precio_bob_portal: h.precio_bob_portal ?? null,
         tasa_paralelo: tasaParalelo, tc_portal: h.tc_portal ?? null, moneda: h.moneda,

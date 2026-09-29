@@ -243,6 +243,10 @@ export async function fetchC21Depto(url) {
     // nombre del edificio que C21 esconde en la dirección (ver nombreDesdeDireccion)
     nombre_en_direccion: nombreDesdeDireccion(e.direccionFormat),
     direccion_portal: e.direccionFormat || null,
+    // Por simetría con Remax (29-sep-2026). ⚠️ En C21 el encabezado es GENÉRICO
+    // ("DEPARTAMENTO EN VENTA") y casi nunca nombra el edificio — acá el que sirve es
+    // `direccionFormat`. Viaja igual para que el lector tenga la misma forma en los dos portales.
+    titulo: (e.encabezado || '').trim() || null,
     _diag: { precio: e.precio, precioVenta: e.precioVenta, precioFormat: e.precioFormat, m2C: e.m2C },
   };
 }
@@ -279,6 +283,17 @@ export async function fetchRemaxDepto(url) {
     // fecha REAL del anuncio (días-en-mercado); NO la de scraping
     fecha_publicacion: normFecha(l.date_of_listing ?? li.date_of_listing ?? l.published_at ?? l.created_at),
     fotos_urls: fotosUrls, cantidad_fotos: fotosUrls.length,
+    // 🔴 TÍTULO Y UBICACIÓN — se empezaron a devolver el 29-sep-2026. En Remax **el nombre del
+    // edificio vive en el TÍTULO**, no en la descripción ni en el slug (que solo trae la zona):
+    // "CONDOMINIO GOLDEN TOWER", "…EN ATLANTIS TOWERS", "…EN COND. ULUPICA". Medido sobre los 17
+    // avisos de Remax que estaban sin edificio: **3 lo traían en el título** y el lector nunca lo
+    // vio, porque el extractor no devolvía el campo y `prepNuevas` mandaba `titulo: null`.
+    // 🔑 `location_information` se mapea a `direccion_portal`, el MISMO nombre que usa C21 para su
+    // `direccionFormat`: así Remax entra al mecanismo que ya existe en vez de necesitar uno propio.
+    // Ojo: en Remax suele traer una referencia ("Segundo anillo El Cristo"), no el nombre — por eso
+    // el que pesa acá es el título, al revés que en C21.
+    titulo: (l.title || '').trim() || null,
+    direccion_portal: (l.location_information || '').replace(/\s+/g, ' ').trim() || null,
     descripcion: (l.description_website || l.marketing_description || '').trim(),
     area_const_m2: num(li.construction_area_m) || num(li.land_m2), // suele venir null en detalle -> discovery lo cubre
     area_texto: parseAreaTexto(l.description_website || l.marketing_description || ''), // respaldo si falta la estructurada
