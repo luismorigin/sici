@@ -187,8 +187,23 @@ Leé el `output/audit-shadow-<op>-<ts>.json`. Dividí el array `material` en chu
 ### 3. Reportar + SQL sugerido (read-only)
 Con los `veredicto_audit` mergeados, armá el reporte ejecutivo:
 - **🔴 Correcciones confirmadas** (precio/TC/estado cambió en el anuncio) → `UPDATE propiedades_v2
-  SET ... , fecha_actualizacion=NOW() WHERE id=X;` (+ refrescar `datos_json.contenido.descripcion` con la
-  de hoy, para que no reaparezca en cada corrida — mismo patrón §4.5 de la mensual).
+  SET ... , fecha_actualizacion=NOW() WHERE id=X;`
+  🔴 **Y DESPUÉS, SIN EXCEPCIÓN, REFRESCAR EL TEXTO GUARDADO — PASO OBLIGATORIO (29-sep-2026):**
+  ```
+  node refrescar-texto-corregidos.mjs "<la marca que pusiste en drift_corregido_por>"
+  ```
+  Re-lee el aviso del portal, compara con lo guardado y emite el SQL **sólo de los que cambiaron**,
+  en bloques de 15 (la UI de Supabase se corta con archivos grandes).
+  🔑 **Por qué es obligatorio y no un "además":** esta corrección sale del aviso **de hoy**, pero
+  `datos_json.contenido.descripcion` queda con el texto de la **captura**. Después
+  `/audit-cola-shadow` —que **NO sale al portal por diseño**— lee ese texto viejo y **propone
+  DESHACER la corrección**, citando el precio anterior con total convicción. **No falla: te pide
+  romper algo que estaba bien.**
+  📌 **Caso real:** el 28-sep el drift pasó `3678` a `$us 79.000` (lo que el portal decía). El 29-sep
+  el audit pidió volverlo a `bob` con `Bs 1.100.000` — el texto guardado. Las dos lecturas eran
+  correctas **sobre fuentes distintas**. Se refrescaron 36 descripciones del lote de ZN.
+  ⚠️ Se pasó por alto **las dos veces** que se corrió el drift (23-sep Eq y 28-sep ZN) porque estaba
+  escrito como un paréntesis. Por eso ahora es un paso con su comando.
 - **💀 Bajas residuales** (`bajas_residual` del JSON) → las únicas que requieren acción. Confirmá el
   status HTTP a mano (**C21: 404 · Remax: 302**, que son las mismas señales que usa el verificador) y
   recién ahí proponé el `UPDATE ... status='inactivo_confirmed', es_activa=false,
