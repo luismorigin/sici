@@ -33,10 +33,19 @@ const sufZona = zonaId === 'equipetrol' ? '' : `-${zonaId === 'zona-norte' ? 'zn
 // Fecha local (no UTC): el log y los nombres tienen que coincidir con el día que ve el humano.
 const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 // Solo lo que el LECTOR necesita (descripción + señales + candidatos). Sin _apply/fotos (peso).
+// 🔴 `direccion_portal` VIAJA desde el 29-sep-2026, y es el SEGUNDO campo que este
+// partidor descartaba el mismo día (el otro fue `edificios_m2`, más abajo). El cargador
+// lo pone en el material con el comentario "el crudo, para que el lector pueda
+// contrastar" — y acá se perdía, así que el lector nunca lo vio.
+// 🔑 LO QUE COSTÓ, medido sobre las 99 props de la cola 4b (sin edificio porque el aviso
+// no lo nombra): **70% tiene el nombre del edificio en la dirección del captador**
+// (C21 `entity.direccionFormat`). De 82 avisos de C21: 22 con match exacto, 27 ambiguos,
+// 8 edificios nuevos. Se recuperaron 14 a mano el 29-sep; el resto se acumuló durante meses.
 const livianas = doc.entradas.map((e) => ({
   id: e.id, fuente: e.fuente, zona: e.zona, slug: e.slug,
   titulo: e.titulo, subtitulo: e.subtitulo, descripcion: e.descripcion,
   senales: e.senales, nombre_guess: e.nombre_guess, match_candidatos: e.match_candidatos,
+  direccion_portal: e.direccion_portal ?? null,
 }));
 
 const OUT = join(__dirname, 'output');

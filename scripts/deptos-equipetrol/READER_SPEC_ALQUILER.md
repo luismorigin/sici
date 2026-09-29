@@ -314,6 +314,15 @@ Leé el nombre del slug (C21) / descripción (Remax), entregá el canónico (rom
 Crudo distinto del canónico → `alias_sugerido`. Sin nombre en ninguna fuente → `null` (el matcher devuelve
 `sin_nombre`; NO se fuerza por GPS). NUNCA devolver "Alquiler"/"Departamento"/direcciones como nombre.
 
+🆕 **TERCERA FUENTE, mirala SIEMPRE: `direccion_portal`** (29-sep-2026) — la dirección que cargó el
+captador, tal cual. **Muy seguido el nombre del edificio está ahí y no en la descripción**
+(`"avenida beni edificio soul parc"`, `"condominio Eurodesign Leblanc, Equipetrol"`). Medido sobre las
+props sin edificio: **el 70% lo traía acá**. Tomá solo el nombre propio y descartá lo geográfico.
+⚠️ **No tiene más autoridad que la descripción**: si se contradicen, manda la descripción y la
+discrepancia va en `notas` con confianza baja. Y un nombre acá **no autoriza a ignorar la distancia** —
+el matcher cruza nombre + zona, y lo que quede lejos lo levanta el audit.
+Detalle y medición completa: `READER_SPEC.md` §NOMBRE DE EDIFICIO.
+
 ### MULTIPROYECTO — igual que venta (menos frecuente en alquiler)
 `es_multiproyecto: true` (+ `gate: aceptar`) para avisos a nivel proyecto (rangos "desde", tipologías sin unidad).
 El cargador lo desvía a `proyectos_detectados`, no al feed. En alquiler es raro (los proyectos se venden, no se

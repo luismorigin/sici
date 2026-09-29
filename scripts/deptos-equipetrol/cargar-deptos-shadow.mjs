@@ -323,6 +323,13 @@ async function prepNuevas(discoveryFile, n) {
         area, n8n: null,                            // NUEVA: sin referencia n8n (no la trajo el pipeline viejo)
       },
       nombre_guess: null, match_candidatos: [],     // el lector da el nombre; el matcher lo resuelve en --apply
+      // 🔴 …pero la DIRECCIÓN CRUDA del portal sí viaja (29-sep-2026). No contradice la
+      // línea de arriba: `nombre_guess` se deja en null a propósito para no sesgar al lector
+      // con un candidato ya masticado del catálogo; esto es un dato del PROPIO aviso que
+      // hasta hoy no veía. Medido sobre las 99 props sin edificio de la cola: **el 70% lleva
+      // el nombre del edificio acá** ("Condominio Torre Chiquitana", "Edificio Lofty Green")
+      // aunque la descripción no lo mencione — que es justo por qué quedaron sin matchear.
+      direccion_portal: h.direccion_portal ?? null,
       _apply: {
         url: nv.url, tipo_propiedad_original: 'departamento', estado_construccion: null,
         latitud: nv.lat ?? null, longitud: nv.lon ?? null, microzona: null,

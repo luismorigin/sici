@@ -296,6 +296,11 @@ async function prepNuevas(discoveryFile, n) {
         area, n8n: null,                                    // NUEVA: sin referencia n8n (no la trajo el pipeline viejo)
       },
       nombre_guess: null, match_candidatos: [],             // el lector da el nombre; el matcher lo resuelve en --apply
+      // 🔴 La DIRECCIÓN CRUDA del portal sí viaja (29-sep-2026) — gemelo del cambio en
+      // `cargar-deptos-shadow.mjs`. `nombre_guess` sigue en null a propósito (no sesgar al
+      // lector con un candidato del catálogo); esto es un dato del PROPIO aviso. En la cola
+      // de props sin edificio, el 70% lleva el nombre acá aunque la descripción no lo diga.
+      direccion_portal: h.direccion_portal ?? null,
       _apply: {
         url: nv.url, tipo_propiedad_original: 'departamento',
         latitud: nv.lat ?? null, longitud: nv.lon ?? null, microzona: null,

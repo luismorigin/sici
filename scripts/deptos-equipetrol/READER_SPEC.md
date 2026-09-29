@@ -31,6 +31,19 @@
 > 🟢 **La regla quedó ASIMÉTRICA y BACKTESTEADA sobre 81 props etiquetadas por el texto del aviso: 1 error
 > contra los 10 de la banda vieja.** La banda sólo confirma USD; cuando la lectura que encaja es la de
 > bolivianos, decide el edificio, no la banda. Ver §banda de $/m² para la tabla del backtest.
+>
+> **v4.5 (29-sep-2026)** — 🆕 **TERCERA FUENTE para el nombre del edificio: `direccion_portal`**, la
+> dirección que el captador cargó en el portal. **Medido sobre las 99 props que estaban sin edificio
+> justamente porque el aviso no lo nombra: el 70% lo traía ahí** (`"Condominio Torre Chiquitana
+> Dpto. 1201"`, `"Edificio Lofty Green"`). Se recuperaron 14 a mano ese día — nombre exacto del catálogo,
+> misma zona y edificio a ≤162 m — y quedaron 27 ambiguas, 8 edificios nuevos y 9 con el nombre peleado
+> con el GPS. Ver §NOMBRE DE EDIFICIO para cómo leerla y sus dos límites (no le gana a la descripción,
+> y no autoriza a ignorar la distancia).
+> 🔴 **El dato se capturaba desde el 22-ago y el lector NUNCA lo vio**: `partir-lectura.mjs` lo descartaba
+> al armar el chunk, igual que descartaba `edificios_m2`. **Los dos huecos eran el mismo archivo y se
+> encontraron el mismo día** — el segundo lo cazó un lector avisando que le faltaba la tabla.
+> 🔑 La lección va más allá del spec: *medir que una regla acierta no prueba que la regla LLEGUE* — el
+> backtest lee el material directo, sin pasar por el partidor. Memoria `feedback_medir_la_regla_no_prueba_la_ruta`.
 
 ## Entrada (lo que el lector LEE)
 Por depto, el `--prep` arma un bundle con TODO el texto disponible (multi-fuente, sin regex):
@@ -433,9 +446,26 @@ intenta predecir todo. Se separa en:
 ### NOMBRE DE EDIFICIO (para matching, name-first)
 - Leé el nombre del **slug (C21) / descripción (Remax)** y entregá el **canónico**: romano→arábigo
   ("Stone III"→"Stone 3"), sin sufijos de marketing ("by SmartStudio" queda si es parte del nombre real).
+- 🆕 **TERCERA FUENTE, y hay que mirarla SIEMPRE: `direccion_portal`** (29-sep-2026). Es la dirección
+  que el captador cargó en el portal, tal cual. **Muchísimas veces el nombre del edificio está ahí y
+  NO en la descripción**: `"Condominio Torre Chiquitana Dpto. 1201, Norte, Santa Cruz"`,
+  `"Edificio Lofty Green"`, `"PORA VERTICAL HOMES, CALLE LAS DALIAS"`.
+  🔑 **Medido el 29-sep sobre las 99 props que estaban sin edificio justamente porque el aviso no lo
+  nombra: el 70% lo traía en este campo.** El lector no lo veía porque `partir-lectura.mjs` lo
+  descartaba al armar el chunk — la captura sí lo traía desde el 22-ago.
+  - El campo **mezcla nombre y calle**: tomá solo el nombre propio y descartá lo geográfico
+    (`"Av. Beni, entre 3er y 2do Anillo, Condominio Torre Chiquitana"` → **"Torre Chiquitana"**;
+    `"av perimetral 6 sn, Norte, Santa Cruz, Bolivia"` → **no hay nombre**).
+  - ⚠️ **Es un dato del aviso, no del catálogo: no tiene más autoridad que la descripción.** Si la
+    descripción nombra un edificio y la dirección otro, **manda la descripción** y la discrepancia va
+    en `notas` con confianza baja — el captador puede haber copiado la dirección de otra publicación.
+  - ⚠️ **Un nombre acá NO autoriza a saltarse la distancia.** El matcher cruza nombre + zona; si el
+    edificio del catálogo queda lejos, lo levanta el audit. Medido el 29-sep: de 22 matches por esta
+    vía, **8 tenían el edificio a más de 300 m** (uno a 6.385 m, en otra macrozona) y eran sospechosos.
 - Si el nombre crudo del portal difiere del canónico → poné el crudo en `alias_sugerido`.
-- Si NO hay nombre en ninguna fuente → `nombre_edificio_canonico: null` (el matcher devuelve `sin_nombre`;
-  NO se fuerza por GPS — los anunciantes lo ponen mal). Queda sin match → lo levanta el audit/lector luego.
+- Si NO hay nombre en ninguna fuente **(slug, descripción Y `direccion_portal`)** →
+  `nombre_edificio_canonico: null` (el matcher devuelve `sin_nombre`; NO se fuerza por GPS — los
+  anunciantes lo ponen mal). Queda sin match → lo levanta el audit/lector luego.
 
 ### GATE (aceptar/rechazar) + MULTIPROYECTO
 - **rechazar** = basura REAL que no se debe guardar: baulera/parqueo/depósito suelto, otra operación mal tipeada
