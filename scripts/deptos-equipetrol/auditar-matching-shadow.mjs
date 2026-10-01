@@ -1137,8 +1137,23 @@ async function main() {
   // donde no está. Dos casos en una semana: 8000944 (Smart Quipe, monoambiente de
   // USD 52.000 zonificado en el 6to-8vo anillo de ZN estando en Equipetrol Centro) y
   // 8000995 (Edificio García, en ZN estando en Av. Busch). Los dos se encontraron a mano.
-  // 🔑 Se compara MACROZONA, no zona: entre zonas vecinas de la misma macrozona el borde
-  // es difuso y daría ruido; entre macrozonas no hay ambigüedad posible.
+  // 🔑 Se compara MACROZONA **y, desde el 30-sep-2026, también la ZONA**.
+  // Originalmente miraba sólo la macrozona, razonando que "entre zonas vecinas de la misma
+  // macrozona el borde es difuso y daría ruido". 🔴 **Ese supuesto se midió y es falso.**
+  // Sobre las 1.178 props activas con edificio:
+  //   · `p.zona <> pm.zona`                       → **2 casos, los 2 reales, 0 falsos positivos**
+  //   · distancia > 10× la dispersión de hermanas → 39 (ruido)
+  //   · la regla de la superficie 5 (>800 m)      → 35 (no los distingue)
+  // 🔑 Por qué NO hay ruido de borde, que es lo que no se vio en agosto: la `zona` de la prop
+  // **no se deriva de un borde ambiguo** — la escribe el cargador con `get_zona_by_gps` desde el
+  // pin del aviso, y la del pm sale de su ficha. Son la MISMA función sobre dos puntos. Sólo
+  // difieren cuando el pin está realmente mal, no cuando el edificio está cerca de un límite.
+  // Los 2 casos: 8001718 (Macororó 16/17, hermanas a 71 m y ésta a 3.068) y 8001732 (Condominio
+  // TRIII, hermanas a 6 m y ésta a 3.557). En los dos el match ya estaba confirmado por el juez:
+  // lo que fallaba era el pin.
+  // ⚠️ La severidad NO es la misma y por eso viaja `cruza_macrozona`: cruzar macrozona manda la
+  // prop al mercado equivocado; cambiar de anillo dentro de la misma macrozona sólo ensucia la
+  // mediana de una microzona. Se ordenan las graves primero.
   const sup10 = [];
   {
     const macroDe = (zona) => {
@@ -1160,15 +1175,19 @@ async function main() {
       const pm = porPmZona.get(p.id_proyecto_master);
       if (!pm || !pm.zona) continue;
       const mProp = macroDe(p.zona), mEdif = macroDe(pm.zona);
-      if (!mProp || !mEdif || mProp === mEdif) continue;
+      if (!mProp || !mEdif) continue;          // zona fuera de toda macrozona conocida → no se juzga
+      if (p.zona === pm.zona) continue;        // coinciden → nada que mirar
       sup10.push({
         prop_id: p.id, op: p.tipo_operacion, url: p.url,
         zona_prop: p.zona, macrozona_prop: mProp,
         pm: p.id_proyecto_master, pm_nombre: pm.nombre_oficial,
         zona_pm: pm.zona, macrozona_pm: mEdif,
+        cruza_macrozona: mProp !== mEdif,
         lat: p.latitud, lon: p.longitud,
       });
     }
+    // Las graves primero: cruzar macrozona manda la prop a otro mercado.
+    sup10.sort((a, b) => Number(b.cruza_macrozona) - Number(a.cruza_macrozona) || a.prop_id - b.prop_id);
   }
 
 
@@ -1560,13 +1579,17 @@ async function main() {
     console.log('');
   }
   if (sup10.length) {
-    console.log(`  🗺️  Superficie 10 (la prop y su EDIFICIO en macrozonas distintas): ${sup10.length}`);
-    console.log(`     ⚠️  Un edificio no está en dos macrozonas. La zona de la prop la escribe el`);
-    console.log(`         cargador desde el GPS del aviso — que suele ser el pin genérico del portal.`);
+    const n10Macro = sup10.filter((s) => s.cruza_macrozona).length;
+    console.log(`  🗺️  Superficie 10 (la prop y su EDIFICIO en zonas distintas): ${sup10.length}`
+      + (sup10.length ? ` · ${n10Macro} cruzan MACROZONA · ${sup10.length - n10Macro} cambian de anillo` : ''));
+    console.log(`     ⚠️  Un edificio no está en dos zonas. La de la prop la escribe el cargador desde`);
+    console.log(`         el GPS del aviso — que suele ser el pin genérico del portal.`);
     console.log(`         Mientras no se corrija, esa prop alimenta la mediana de una microzona ajena.`);
     console.log(`         🔴 Corregir el GPS NO recalcula la zona: va en el MISMO UPDATE.`);
+    console.log(`     🔑 Cruzar macrozona la manda a OTRO MERCADO; cambiar de anillo sólo ensucia una`);
+    console.log(`        microzona. Medido el 30-sep: comparar la zona da 0 falsos positivos.`);
     for (const s of sup10.slice(0, 15)) {
-      console.log(`     ${s.prop_id} [${s.op}] "${s.pm_nombre}" (pm ${s.pm})${linkDe(s.url)}`);
+      console.log(`     ${s.cruza_macrozona ? '🔴' : '🟡'} ${s.prop_id} [${s.op}] "${s.pm_nombre}" (pm ${s.pm})${linkDe(s.url)}`);
       console.log(`        prop dice: ${s.zona_prop} [${s.macrozona_prop}]  ·  edificio: ${s.zona_pm} [${s.macrozona_pm}]`);
     }
     if (sup10.length > 15) console.log(`     … y ${sup10.length - 15} más (todos en el JSON)`);
