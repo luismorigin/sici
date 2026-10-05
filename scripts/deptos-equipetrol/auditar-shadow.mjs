@@ -160,6 +160,20 @@ async function traerFilas() {
 // venta: USD → precio_fuente_usd · BOB → precio_bob_portal
 // alquiler: USD → precio_fuente_usd · BOB → precio_bob_portal (el fetcher da ambos candidatos)
 const comparablePortal = (h, moneda) => (moneda === 'BOB' ? (h.precio_bob_portal ?? null) : (h.precio_fuente_usd ?? null));
+
+// 🔴 ALQUILER DE CENTURY21 — el testigo de precio es `precioRenta`, NO el de venta (5-oct-2026).
+// El comparable de arriba sale de `precioVenta`: en un alquiler sin precio de venta no compara nada
+// (el filtro `> 1000` de pickPrecioC21 lo deja en null) y en uno mixto compara contra el precio de
+// venta. Medido sobre Zona Norte: 7 de 9 alertas de precio eran artefactos (+1.500% a +21.000%) y
+// los cambios REALES de renta no se veian. `precioRenta` viene a veces en bolivianos y a veces como
+// el equivalente en USD de una ficha en dolares (la ficha 2815: guardada en USD 970, el portal da
+// 6.751,2 = 970 x 6,96), asi que se alinea la unidad contra el baseline antes de medir.
+const TC_FIJO_PORTAL = 6.96;
+function alinearUnidad(base, v) {
+  if (!(base > 0) || !(v > 0)) return v;
+  return [v, v / TC_FIJO_PORTAL, v * TC_FIJO_PORTAL]
+    .reduce((mejor, c) => (Math.abs(c - base) < Math.abs(mejor - base) ? c : mejor));
+}
 // Baseline: lo que dijo el portal AL CARGAR (senales_portal). Nombres distintos venta/alq.
 function comparableBaseline(sp, moneda) {
   if (!sp) return null;
@@ -194,6 +208,7 @@ async function main() {
   const material = [];          // los que van al JUEZ (drift / precio / matching / baja)
   const buckets = { identicas: 0, cambio_menor: 0, cambio_relevante: 0, reescrita: 0, fetch_fallo: 0 };
   const bajas = [], preciosCambio = [], matchingSospecha = [], sinMatchConNombre = [], fotosRotas = [];
+  const operacionCambiada = [];   // alquiler C21 que el portal YA NO clasifica como 'renta' (5-oct-2026)
   const precioBajoElPortal = [];   // ver §COPIA MAL más abajo
 
   for (const p of filas) {
@@ -285,16 +300,29 @@ async function main() {
     // de la captura. Se auto-invalida por construcción: no es una marca de "ya revisado"
     // incondicional — si el portal vuelve a moverse más que el umbral, el caso REAPARECE solo.
     // Lo escribe sellar-precio-portal.mjs, después de que el juez se expidió.
+    const usaRenta = OP === 'alquiler' && p.fuente === 'century21' && h.precio_renta != null;
     const revisado = Number(dj.precio_portal_revisado?.portal);
-    const usaRevision = Number.isFinite(revisado) && revisado > 0;
+    // Un sello hecho con OTRO testigo (el campo de venta, como los del 5-oct a la manana) no sirve para
+    // medir contra precioRenta: se ignora y se cae al baseline de la captura.
+    const selloValido = !usaRenta || dj.precio_portal_revisado?.testigo === 'renta';
+    const usaRevision = Number.isFinite(revisado) && revisado > 0 && selloValido;
     const base = usaRevision ? revisado : comparableBaseline(sp, moneda);
-    const hoy = comparablePortal(h, moneda);
+    const hoy = usaRenta ? alinearUnidad(base, h.precio_renta) : comparablePortal(h, moneda);
+    // Ya coincidimos con el portal de HOY: no hay nada desactualizado que arreglar. El baseline es el
+    // precio de la CAPTURA y no se actualiza cuando una correccion posterior lo cambia (8000530 la
+    // corrigio un drift el 27-ago y seguia marcada; las filas corregidas el 5-oct harian lo mismo). Sin
+    // esta condicion cada fila corregida reaparece como alerta hasta que alguien la selle.
+    const guardadoHoy = Number(moneda === 'USD' ? p.precio_mensual_usd : p.precio_mensual_bob);
+    const yaCoincide = usaRenta && guardadoHoy > 0 && hoy != null
+      && !gradoPrecio(Math.round(Math.abs(hoy - guardadoHoy) / guardadoHoy * 1000) / 10);
     let precioFlag = null;
-    if (base != null && hoy != null && base > 0) {
+    if (base != null && hoy != null && base > 0 && !yaCoincide) {
       const pct = Math.round(Math.abs(hoy - base) / base * 1000) / 10;
       const grado = gradoPrecio(pct);
       if (grado) {
         precioFlag = { base, hoy, pct, grado, dir: hoy < base ? 'baja' : 'suba', moneda: moneda || '?',
+                       testigo: usaRenta ? 'renta' : 'campo_precio',
+                       ...(usaRenta && hoy !== h.precio_renta ? { hoy_crudo: h.precio_renta } : {}),
                        baseline: usaRevision ? 'revisado' : 'captura',
                        revisado_el: usaRevision ? (dj.precio_portal_revisado?.cuando ?? null) : null };
         preciosCambio.push({ id: p.id, ...precioFlag });
@@ -346,14 +374,21 @@ async function main() {
       }
     }
 
-    // ¿va al juez? drift fuerte, o cambio de precio, o sospecha de matching.
-    const revisar = drift.bucket === 'reescrita' || drift.bucket === 'cambio_relevante' || precioFlag || matchFlag || drift.tiene_flag_semantico;
+    // 🔀 ¿el portal todavia lo clasifica como ALQUILER? Un aviso que el captador pasa a anticretico o a
+    // venta sigue respondiendo 200, asi que el verificador (que solo mira HTTP) lo da por vivo para
+    // siempre — caso 8000963 (Ares), que ademas dejo de figurar en el listado de alquileres 3 noches.
+    const opPortal = h.tipo_operacion_portal || null;
+    const operacionFlag = (OP === 'alquiler' && p.fuente === 'century21' && opPortal && opPortal !== 'renta') ? `operacion:${opPortal}` : null;
+    if (operacionFlag) operacionCambiada.push({ id: p.id, url: p.url, operacion_portal: opPortal, precio_venta_portal: h.precio_bob_portal ?? null });
+
+    // ¿va al juez? drift fuerte, o cambio de precio, o sospecha de matching, o cambio de operacion.
+    const revisar = drift.bucket === 'reescrita' || drift.bucket === 'cambio_relevante' || precioFlag || matchFlag || drift.tiene_flag_semantico || operacionFlag;
     if (revisar) {
       material.push({
         id: p.id, fuente: p.fuente, url: p.url,
         // qué disparó la revisión (para el juez y para el reporte)
         motivos: [drift.bucket !== 'identicas' && drift.bucket !== 'cambio_menor' ? `drift:${drift.bucket}` : null,
-                  precioFlag ? `precio:${precioFlag.dir}${precioFlag.pct}%` : null,
+                  precioFlag ? `precio:${precioFlag.dir}${precioFlag.pct}%` : null, operacionFlag,
                   matchFlag, drift.tiene_flag_semantico ? 'flags:' + Object.keys(drift.flags_semanticos).join(',') : null].filter(Boolean),
         drift: { bucket: drift.bucket, similitud_pct: drift.similitud_pct, flags_semanticos: drift.flags_semanticos, palabras_agregadas: drift.palabras_agregadas, palabras_quitadas: drift.palabras_quitadas },
         precio_portal: precioFlag,
@@ -406,11 +441,13 @@ async function main() {
       bajas_residual: bajasResidual.length, bajas_en_cola: bajasEnCola.length, bajas_ya_inactivas: bajasYaInactivas.length,
       cambios_precio: preciosCambio.length, matching_sospecha: matchingSospecha.length, sin_match_con_nombre: sinMatchConNombre.length, fotos_rotas: fotosRotas.length,
       precio_bajo_el_portal: precioBajoElPortal.length,
+      operacion_cambiada: operacionCambiada.length,
     },
     material, bajas, bajas_residual: bajasResidual, sin_match_con_nombre: sinMatchConNombre, fotos_rotas: fotosRotas,
     // La lista COMPLETA, no solo el conteo: la consume sellar-precio-portal.mjs.
     cambios_precio: preciosCambio,
     precio_bajo_el_portal: precioBajoElPortal,
+    operacion_cambiada: operacionCambiada,
   }, null, 2));
 
   console.log(`\n────────── RESUMEN AUDIT SHADOW (${OP}) ──────────`);
@@ -425,6 +462,10 @@ async function main() {
     console.log(`       ${cambNuevos.length} sin juzgar nunca · ${cambRe.length} ya juzgados y el portal SE VOLVIÓ A MOVER (·RE)`);
     console.log(`       🔑 Al terminar el juez, sellá con:  node sellar-precio-portal.mjs output/audit-shadow-${OP}-${TS}.json`);
     console.log(`          Sin sellar, estos ${preciosCambio.length} vuelven idénticos la próxima corrida.`);
+  }
+  if (OP === 'alquiler') {
+    console.log(`  🔀 El portal ya NO lo trae como alquiler: ${operacionCambiada.length}${operacionCambiada.length ? '  → ' + operacionCambiada.map((x) => `${x.id}(${x.operacion_portal})`).join(', ') : ''}`);
+    if (operacionCambiada.length) console.log(`       Siguen respondiendo 200, por eso el verificador no los ve. El juez decide la baja.`);
   }
   console.log(`  🏷️  Matching sospechoso (nombre no aparece): ${matchingSospecha.length}${matchingSospecha.length ? '  → ' + matchingSospecha.slice(0, 12).map((x) => `${x.id}(${x.edif})`).join(', ') : ''}`);
   console.log(`  ⚠️  Sin match pero con nombre (cola PM_NUEVO/fuzzy): ${sinMatchConNombre.length}`);

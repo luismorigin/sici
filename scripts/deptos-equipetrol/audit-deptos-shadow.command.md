@@ -99,6 +99,22 @@ en el anuncio?). Escribe `output/audit-shadow-<op>-<ts>.json` con el array `mate
 - Circuit breaker (🛑) → IP bloqueada, **no insistas**, reintentá en horas. Pausa+jitter entre requests.
 - El resumen impreso ya te da el panorama: buckets de drift, cambios de precio, matching sospechoso,
   sin-match-con-nombre, y **fichas que no responden**.
+- 💲 **ALQUILER de Century21: el testigo de precio es `precioRenta`, NO el de venta (5-oct-2026).** Una ficha C21
+  trae DOS campos (`precioRenta` y `precioVenta`) y el comparable de este audit salia del de VENTA: en un
+  alquiler SIN precio de venta no comparaba nada (el filtro `> 1000` de `pickPrecioC21` lo dejaba en null
+  → los cambios reales de renta eran invisibles) y en uno mixto comparaba contra el precio de venta
+  ("suba" de 1.500% a 21.000%: **7 de 9 alertas eran artefactos** en el barrido de Zona Norte). Ahora usa
+  `precio_renta` del fetcher, alinea la unidad contra el baseline (a veces el portal da el equivalente en
+  USD de una ficha en dolares: ×/÷ 6,96) y **no marca si el precio guardado ya coincide con el del portal**
+  (el baseline es el de la CAPTURA y no se actualiza al corregir: sin esto cada fila corregida reaparece).
+  🔑 **Los sellos de `sellar-precio-portal.mjs` ahora llevan `testigo`**: un sello hecho con el campo de
+  venta (anteriores al 5-oct) se IGNORA para C21 alquiler. Verificado el 5-oct: los 7 artefactos dejaron de
+  marcarse; quedaron los desajustes reales entre el campo del portal y nuestro precio.
+  🔀 **Y detecta el cambio de OPERACION:** si el portal ya no clasifica el aviso como `renta` (anticretico,
+  venta) sale como `🔀 El portal ya NO lo trae como alquiler` y va al juez. El verificador no puede verlo:
+  solo mira HTTP, y esa URL sigue respondiendo 200 (caso 8000963, Ares).
+  ⚠️ Un lector que juzga un precio de C21 debe bajar el JSON (`?json=true`: tipoOperacion, precioRenta,
+  precioVenta): sin el JSON un lector se creyo una "baja" falsa (8001567 Mythos, el 5-oct).
 - 💰 **`precio_bajo_el_portal` (3-ago-2026) — el único chequeo que NO mira el portal de hoy.** Compara,
   dentro de la misma fila, `precio_usd` contra `senales_portal.precio_candidato` (el testigo que el
   portal traía al capturar) y levanta lo que quedó **3-15% POR DEBAJO**. Todo el resto de este audit

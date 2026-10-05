@@ -240,6 +240,15 @@ export async function fetchC21Depto(url) {
     precio_fuente_usd: pickPrecioC21(e), moneda: e.moneda || null,
     tc_portal: null,                       // C21 no expone TC estructurado (precioFormat = precioVenta/6.96 SIEMPRE)
     precio_bob_portal: parseMontoBO(e.precioVenta),  // candidato BOB; el LECTOR computa ratio = precioVenta / precio_del_texto
+    // 🔴 5-oct-2026 — Century21 trae DOS campos de precio por ficha y todo lo de arriba sale del de VENTA.
+    // Para un alquiler eso mide el campo equivocado: en un aviso mixto (renta + venta) da el precio de
+    // venta (Bs 1.603.800 contra un alquiler de Bs 7.500) y, si la ficha no tiene precio de venta, el
+    // filtro `> 1000` de pickPrecioC21 lo deja en null y NO SE COMPARA NADA. Se exponen aparte, sin
+    // tocar los de arriba (los cargadores de venta dependen de ellos): `precio_renta` es el campo de
+    // alquiler y `tipo_operacion_portal` dice como clasifica el portal el aviso HOY ('renta' / 'venta').
+    // Lo usa auditar-shadow.mjs para alquiler. Ver memoria project_c21_dos_campos_de_precio_renta_vs_venta.
+    precio_renta: parseMontoBO(e.precioRenta),
+    tipo_operacion_portal: e.tipoOperacion || null,
     // nombre del edificio que C21 esconde en la dirección (ver nombreDesdeDireccion)
     nombre_en_direccion: nombreDesdeDireccion(e.direccionFormat),
     direccion_portal: e.direccionFormat || null,

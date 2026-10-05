@@ -88,7 +88,8 @@ for (const c of filas) {
   L.push(`-- ${c.id} · ${c.op} · ${c.dir} ${c.pct}%  ${c.base} → ${c.hoy}${c.baseline === 'revisado' ? '  (ya venia sellado: el portal se movio DE NUEVO)' : ''}`);
   L.push(`UPDATE propiedades_v2 SET`);
   L.push(`  datos_json = jsonb_set(coalesce(datos_json,'{}'::jsonb), '{precio_portal_revisado}',`);
-  L.push(`    jsonb_build_object('portal', ${c.hoy}, 'cuando', ${q(hoy)}, 'quien', 'audit drift (juez)',`);
+  // `testigo`: con que campo del portal se midio. Un sello de OTRO testigo no vale para el actual.
+  L.push(`    jsonb_build_object('portal', ${c.hoy}, 'cuando', ${q(hoy)}, 'quien', 'audit drift (juez)',${c.testigo ? ` 'testigo', ${q(c.testigo)},` : ''}`);
   L.push(`                       'base_anterior', ${c.base}, 'nota', ${q(nota)}), true),`);
   L.push(`  fecha_actualizacion = NOW() WHERE id = ${c.id};`);
 }
